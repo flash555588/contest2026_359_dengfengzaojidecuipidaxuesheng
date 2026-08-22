@@ -1,0 +1,12 @@
+{
+  "ts": "2026-08-21T15:04:09.547Z",
+  "kind": "sdk_messages",
+  "tool": "opencode",
+  "team_id": "contest2026_359_dengfengzaojidecuipidaxuesheng",
+  "version": "1.4.0",
+  "context": {
+    "sessionId": "ses_fdbc1d7dcffeKInvyAXn0xGr9K"
+  },
+  "message": "fetch failed",
+  "stack": "TypeError: fetch failed"
+}
