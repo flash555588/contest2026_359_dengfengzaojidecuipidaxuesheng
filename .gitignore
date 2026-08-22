@@ -1,0 +1,27 @@
+# Build artifacts
+build/
+out/
+*.o
+*.a
+*.elf
+*.hex
+*.map
+
+# Local Cursor skill junctions (skills live in sibling ../.claude/)
+.cursor/skills/
+
+# Collector identity (local only)
+.env
+
+# NuttX ELF without extension (firmware staging)
+firmware/**/nuttx
+
+# Build dependency files
+.depend
+Make.dep
+
+# Log template placeholder
+logs/your-github-login/
+
+# Configure-generated board link; its target is local-workspace specific
+board/esp32p4-common/board
