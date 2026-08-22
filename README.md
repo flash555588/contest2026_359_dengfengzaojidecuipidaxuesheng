@@ -1,148 +1,103 @@
-# contest2026_359_dengfengzaojidecuipidaxuesheng
+# ESP32-P4 Function-EV-Board openvela 新硬件适配
 
-👋 欢迎参加 **2026 首届 openvela AI 硬件开发者大赛**！
+本项目面向 2026 首届 openvela AI 硬件开发者大赛“新硬件适配”赛道，目标是在乐鑫 ESP32-P4 Function-EV-Board v1.4 上完成 openvela/NuttX 启动、外部 PSRAM、MIPI-DSI LCD、触摸和图形桌面的板级适配。
 
-这是组委会为你的队伍创建的**专属参赛仓库**（本仓为样例/模板，队伍编号 `359`；你看到的将是你自己的 `contest2026_<编号>_<队伍名>`）。比赛期间，你的全部参赛代码、打包产物与 AI Coding 日志都提交到这里。
+当前已在 ESP32-P4 芯片 revision v1.0 实板上完成 Simple Boot、NuttShell、32 MB PSRAM 和 7 英寸 1024×600 MIPI-DSI 显示链路的 bring-up。LCD 已能稳定全屏输出 DSI Host 彩条测试图案；当前固件默认保留该诊断模式，用于隔离面板时序与帧缓冲 DMA 问题。
 
-> 本仓既是「代码仓」，又内置了一键拉取整套 openvela 工程的 `repo` 清单（manifest）。你只需跟它打交道，**自始至终只动一个文件夹**。
+## 适配亮点
 
----
+- 针对 ESP32-P4 revision v1.0 增加 `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` 启动路径，并将 CPU 定档在实测稳定的 CPLL 90 MHz。
+- 修复 Simple Boot 下看门狗、时钟、MSPI/XIP 初始化顺序问题，使 NSH 可稳定启动。
+- 初始化 32 MB PSRAM，为 1024×600 RGB565 帧缓冲提供空间。
+- 接入 Espressif MIPI-DSI Host、DPI Bridge、DPHY LDO 和 EK79007 类面板初始化流程。
+- 按原厂 1024×600 配置校正 52 MHz DPI 像素时钟、900 Mbps 双 Lane 和水平/垂直消隐参数。
+- 增加 DSI/DPI 寄存器、时钟、帧计数和中断状态诊断接口，支持测试图案与帧缓冲路径 A/B 定位。
+- 保存可烧录固件、实板启动日志以及 AI Coding 会话日志，便于复现和审阅。
 
-## 一、先读这些官方文档
+## 硬件环境
 
-**通用（所有赛道必读）：**
+| 项目 | 配置 |
+| --- | --- |
+| 开发板 | ESP32-P4 Function-EV-Board v1.4 |
+| 主芯片 | ESP32-P4 revision v1.0 |
+| Flash | 16 MB，DIO，80 MHz |
+| PSRAM | 32 MB |
+| 屏幕 | 7 英寸 MIPI-DSI，1024×600，RGB565 |
+| DSI | 2 Lane，900 Mbps，DPI 52 MHz |
+| 串口 | CP2102N，UART0 GPIO37/38，115200 |
+| LCD 控制 | RST GPIO27，背光 GPIO26 |
 
-| 文档                                                                                                                                     | 用途                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [《大赛总览》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)                        | 赛道、流程、评分、资源，建议先通读             |
-| [《参赛代码提交指南》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)           | 仓库获取、提交流程、时间与权限（**以此为准**） |
-| [《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md) | 如何导出 AI 对话日志并提交到 `logs/`           |
+## 目录结构
 
-**按你的赛道选读（三选一）：**
+```text
+board/esp32p4-function-ev-board/  板级配置、启动、LCD、触摸与桌面代码
+board/esp32p4-common/             ESP32-P4 公共板级支持 overlay
+chip/esp32p4/                     ESP32-P4 架构和 Espressif 驱动 overlay
+firmware/esp32p4-nsh/             可烧录固件与启动日志
+logs/flash555588/                 AI Coding 日志和实板工作记录
+tools/                             WSL 构建、同步、检查与 Windows 烧录工具
+contest2026_*.xml                 repo manifest 与 linkfile 映射
+```
 
-| 赛道                  | 教程导航                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 快应用 / 手表应用创新 | [快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)                         |
-| AI 硬件产品创新       | [AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)              |
-| 新硬件适配            | [新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md) |
+`contest2026_359_dengfengzaojidecuipidaxuesheng.xml` 会把仓内板级与芯片 overlay 映射到 openvela 编译树，不需要直接修改工作区中的 `nuttx/` 或 `vendor/` 仓库。
 
----
-
-## 二、第一步：拉取完整工程
-
-用组委会提供的命令一键拉取「openvela 全量源码 + 你的专属仓」：
+## 获取工程
 
 ```bash
 repo init -u https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng \
-  -b dev-ai-contest-2026 -m contest2026_359_dengfengzaojidecuipidaxuesheng.xml
+  -b dev-ai-contest-2026 \
+  -m contest2026_359_dengfengzaojidecuipidaxuesheng.xml
 repo sync -c -j8
 ```
 
-同步后，你的整个仓库位于工作区的 `contest2026_359_dengfengzaojidecuipidaxuesheng/`，openvela 全量源码在外层（`nuttx/`、`apps/`、`packages/`、`vendor/` 等）。
+## 构建
 
----
-
-## 三、第二步：在哪里写代码
-
-**只在自己的仓目录 `contest2026_359_dengfengzaojidecuipidaxuesheng/` 里开发。** 不同作品形态放在对应子目录，manifest 会通过 `<linkfile>` 把它们**软链**到 openvela 编译树该在的位置——你不用手动 copy：
-
-| 作品形态 | 你的代码放这里             | 系统自动映射到                                 |
-| -------- | -------------------------- | ---------------------------------------------- |
-| 应用     | `app/hello_app/`           | `packages/demos/contest2026_359_hello_app`     |
-| 快应用   | `quickapp/hello_quickapp/` | `packages/apps/contest2026_359_hello_quickapp` |
-| 板级适配 | `board/contest_board/`     | `vendor/openvela/boards/contest2026_359_board` |
-
-> 用不到的形态目录可以删掉；新增作品时按同样规则加子目录，并在 `contest2026_359_dengfengzaojidecuipidaxuesheng.xml` 里补一条 `<linkfile>` 映射即可。**生产仓库（packages/nuttx/vendor 等）零改动。**
-
-建议仓库目录约定（便于评委定位）：
-
-```text
-app/ | quickapp/ | board/   # 你的作品代码
-logs/                       # AI Coding 日志（主动导出后提交，格式见 logs/README.md）
-README.md                   # 作品说明（提交前请改成你自己的，见第六节）
-```
-
-> 仓内附带了一个 `.gitignore.example`，给出了**编译产物**等不需要进仓的文件示例。如需启用，`cp .gitignore.example .gitignore` 后按需增删即可。**注意 `logs/` 下最终导出的 AI Coding 日志必须提交，不要忽略。**
->
-> `logs/` 的目录结构与提交格式见 [logs/README.md](logs/README.md)。
-
----
-
-## 四、第三步：编译与运行
-
-编译/运行步骤随作品形态不同而不同，请参考你所在赛道的教程导航：
-
-- 快应用 / 手表应用：[快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)（含模拟器与开发板部署）。
-- AI 硬件产品创新：[AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)（环境搭建、编译烧录、Skill 开发）。
-- 新硬件适配：[新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md)（BSP 移植、最小 NSH 基线）。
-
-子目录已通过 manifest 中的 `<linkfile>` 软链进 openvela 编译树，因此构建在 openvela 工作区**根目录**（即你这个仓的上一级）进行。openvela 使用 `build.sh` 作为统一入口，接收一个 **board config 路径**作为参数：
+当前构建流程在 WSL 中执行。仓内脚本会把 overlay 同步到 openvela 工作树并构建 ESP32-P4 NSH 配置：
 
 ```bash
-# 进入 openvela 工作区根目录（你的仓的上一级）
-cd ..
-
-# 通用语法：第一个参数是 board config 路径，第二个参数可以是 menuconfig / distclean 等
-./build.sh <board-config-path> [menuconfig|distclean] [-j8]
+python tools/wsl_build_p4_nsh.py
+python tools/wsl_copy_firmware.py
 ```
 
-> 具体的 board config 路径、目标产物、模拟器/真机部署方式请以你所在赛道的教程导航为准。本仓 `app/` `quickapp/` `board/` 三个示例骨架对应的 Kconfig 选项可通过 `menuconfig` 启用。
+底层构建入口为 `tools/wsl_make_p4_nsh.sh`。详细的启动、镜像生成和调试说明见 `board/esp32p4-function-ev-board/README.md` 与 `DISPLAY_PLAN.md`。
 
----
+## 生成镜像与烧录
 
-## 五、第四步：提交作品
+在 Windows 仓库根目录使用 esptool 生成 Simple Boot 镜像：
 
-1. **fork** 你的专属仓 → 开发 → `git commit` 并推送 → 向专属仓发起 **Pull Request**，可**自行 review 并合入**（无需等组委会）。
-2. **AI Coding 日志**：与 AI 工具的对话会自动记录到本机 staging（不会自动上传），需你**主动导出/打包**选定会话到仓内 `logs/` 目录后一并提交。详见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
-3. 若需改动 **nuttx 等公共仓库**，不在本仓改，而是 fork 对应公共仓、以 PR 提交到 `dev-ai-contest-2026` 分支，由组委会 review 后合入。
-
-> ⏰ **提交作品截止：9 月 20 日**。截止后统一收回 push 权限，仍可查看 / clone。
->
-> 获奖后再按要求将作品 PR 至 openvela 上游对应仓库（走标准 PR + CI 流程）。
-
-### 关于 PR 与 CLA
-
-- 本仓所有改动通过 **Pull Request** 合入（分支保护强制，可自行合入自己的 PR）。
-- 首次贡献需在[**官网签署 CLA**](https://openvela.com/#/community/cla)；PR 上会自动跑 `cla/signature` 检查，在官网签署成功后，在 PR 评论 `/check-cla` 复检即可通过。
-
----
-
-## 六、提交前：把本 README 改成你的作品说明
-
-本文件目前是组委会给的**使用说明书**。**作品提交前，请把它替换成你自己作品的说明**，方便评委快速了解你做了什么、怎么跑起来。建议至少包含以下内容：
-
-```markdown
-# <你的作品名>
-
-## 一、作品简介
-<一句话/一段话说明这个作品是什么、解决什么问题、亮点在哪>
-
-## 二、选题方向
-<快应用 / 手表应用创新 ｜ AI 硬件产品创新 ｜ 新硬件适配 ｜ 自定方向，并简述理由>
-
-## 三、目录结构
-<列出你这个仓里各目录/文件的作用，例如：>
-- `app/xxx/`        — <说明>
-- `board/xxx/`      — <说明>
-- `quickapp/xxx/`   — <说明>
-- `logs/`           — AI Coding 日志
-- `docs/` 或其他    — <说明>
-
-## 四、运行方式
-<拉取工程后，如何编译、烧录/部署、运行的完整步骤；最好能让评委照着一步步复现>
-
-## 五、AI Coding 使用说明
-<说明本作品如何借助 AI 辅助开发：
-- 在需求拆解 / 方案设计 / 编码 / 调试 / 文档等环节如何与 AI 协作；
-- AI 对开发效率或质量带来的实际帮助。
-完整对话日志见 logs/ 目录>
+```powershell
+python -m esptool --chip esp32p4 elf2image --ram-only-header `
+  --flash_mode dio --flash_freq 80m --flash_size 16MB `
+  -o firmware\esp32p4-nsh\nuttx.bin firmware\esp32p4-nsh\nuttx
 ```
 
-> 提示：将会根据「作品本身 + 你的 README 说明 + `logs/` 里的 AI Coding 日志」来理解和评估你的作品，README 写清楚很重要。
+按住 BOOT、点按 RST 进入下载模式后执行：
 
----
+```powershell
+powershell -File tools\flash_p4_nsh.ps1
+```
 
-## 附：仓库命名规范
+脚本默认通过 COM7 以 460800 波特率将镜像烧录到 `0x2000`。如设备端口不同，请先修改脚本中的串口参数。
 
-`contest2026_<编号>_<队伍名>` — 编号三位零填充；队名 slug（全小写、英文/拼音、连字符）。例：`contest2026_359_dengfengzaojidecuipidaxuesheng`。
-（仓库由组委会统一创建，**每队仅一个仓**，无需自行命名。）
+## 验证
+
+串口使用 115200 波特率。成功启动后应看到：
+
+```text
+WARNING: NuttX supports ESP32-P4 chip revision > v3.0 (chip revision is v1.0).
+Ignoring this error and continuing because CONFIG_ESP32P4_SELECTS_REV_LESS_V3 is set...
+NuttShell (NSH)
+nsh>
+```
+
+显示验证的当前判据是屏幕稳定覆盖全屏彩条。`esp32p4_display.c` 中的 `LCD_HOST_PATTERN_TEST` 默认设为 `1`，图案由 DSI Host 生成并绕过 PSRAM/DMA，可用于确认 DPHY、面板初始化和 DPI 时序链路。切换为帧缓冲模式前需继续验证 DW-GDMA 的连续整帧传输。
+
+实板启动记录见 `firmware/esp32p4-nsh/bootlog.txt` 和 `logs/flash555588/`。
+
+## AI Coding 使用说明
+
+本项目使用 AI 辅助进行需求拆解、ESP32-P4 v1.0 勘误核对、Simple Boot 启动故障定位、时钟/XIP 实验设计、MIPI-DSI 驱动移植、DMA 与显示异常分析、代码审查和文档整理。完整的选定会话和工作记录位于 `logs/flash555588/`。
+
+## 当前状态与后续工作
+
+当前提交是可复现的阶段性基线：NSH、PSRAM 和 MIPI-DSI 全屏测试图案已通过实板验证。后续将完成 DW-GDMA 帧缓冲连续传输、GT911 触摸实测和 LVGL 桌面回归，并把适合上游的芯片层与板级改动拆分为独立 PR。

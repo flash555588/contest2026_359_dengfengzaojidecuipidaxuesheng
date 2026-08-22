@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Minimal kconfig-tweak compatible helper for NuttX sethost.sh."""
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+
+def norm(name: str) -> str:
+    return name if name.startswith("CONFIG_") else "CONFIG_" + name
+
+
+def load(path: Path) -> str:
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+def enable(text: str, name: str) -> str:
+    n = norm(name)
+    text = re.sub(rf"^# {n} is not set\s*$", f"{n}=y", text, flags=re.M)
+    text = re.sub(rf"^{n}=.*$", f"{n}=y", text, flags=re.M)
+    if re.search(rf"^{n}=", text, flags=re.M) is None:
+        text += f"\n{n}=y\n"
+    return text
+
+
+def disable(text: str, name: str) -> str:
+    n = norm(name)
+    text = re.sub(rf"^{n}=.*$", f"# {n} is not set", text, flags=re.M)
+    if re.search(rf"^# {n} is not set", text, flags=re.M) is None and re.search(rf"^{n}=", text, flags=re.M) is None:
+        text += f"\n# {n} is not set\n"
+    return text
+
+
+def set_val(text: str, name: str, value: str) -> str:
+    n = norm(name)
+    text = re.sub(rf"^# {n} is not set\s*$", f"{n}={value}", text, flags=re.M)
+    text = re.sub(rf"^{n}=.*$", f"{n}={value}", text, flags=re.M)
+    if re.search(rf"^{n}=", text, flags=re.M) is None:
+        text += f"\n{n}={value}\n"
+    return text
+
+
+def main() -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--file", default=".config")
+    p.add_argument("--enable", action="append", default=[])
+    p.add_argument("--disable", action="append", default=[])
+    p.add_argument("--set-val", nargs=2, action="append", default=[])
+    p.add_argument("--set-str", nargs=2, action="append", default=[])
+    args = p.parse_args()
+    path = Path(args.file)
+    text = load(path)
+    for name in args.disable:
+        text = disable(text, name)
+    for name in args.enable:
+        text = enable(text, name)
+    for name, value in args.set_val:
+        text = set_val(text, name, value)
+    for name, value in args.set_str:
+        text = set_val(text, name, f'"{value}"')
+    path.write_text(text, encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
