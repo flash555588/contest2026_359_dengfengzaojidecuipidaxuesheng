@@ -16,7 +16,7 @@ SRC = Path(
     "/mnt/c/Users/flash/Desktop/openvela-contest/"
     "contest2026_359_dengfengzaojidecuipidaxuesheng/chip/esp32p4/common-espressif"
 )
-KEEP = {"Kconfig", "Make.defs", "CMakeLists.txt"}
+KEEP = {"Make.defs", "CMakeLists.txt"}
 NUTTX_INCLUDE = Path(os.environ.get("OPENVELA_ROOT", "/home/flash/vela-p4")) / "nuttx/include/nuttx"
 
 
