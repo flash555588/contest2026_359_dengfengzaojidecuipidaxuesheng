@@ -15,7 +15,7 @@ dst_root = Path(
     "contest2026_359_dengfengzaojidecuipidaxuesheng/firmware/esp32p4-nsh"
 )
 parser = argparse.ArgumentParser()
-parser.add_argument("--variant", choices=("v1.x", "v3.2"))
+parser.add_argument("--variant", choices=("v1.x", "v3.2", "v3.2-usb"))
 args = parser.parse_args()
 
 dst = dst_root if args.variant is None else dst_root / args.variant

@@ -26,11 +26,22 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <nuttx/board.h>
 
 #include "esp32p4-function-ev-board.h"
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define app_progress(s) ets_printf(s)
+#else
+#  define app_progress(s)
+#endif
 
 #ifdef CONFIG_BOARDCTL
 
@@ -57,13 +68,51 @@
 
 int board_app_initialize(uintptr_t arg)
 {
+  int ret;
+
+  app_progress("A0\n");
 #ifdef CONFIG_BOARD_LATE_INITIALIZE
   /* Board initialization already performed by board_late_initialize() */
 
-  return OK;
+  ret = OK;
 #else
-  return esp_bringup();
+  ret = esp_bringup();
 #endif
+
+  app_progress("A1\n");
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  /* Probe the NuttX upper-half console independently from the ROM UART.
+   * O_NONBLOCK guarantees that a broken TX interrupt cannot stall board
+   * bring-up while the diagnostic result is still printed by the ROM path.
+   */
+
+  {
+    static const char probe[] = "NSH console probe\r\n";
+    int fd;
+    int errcode;
+    ssize_t nwritten = -1;
+
+    errno = 0;
+    fd = open("/dev/console", O_WRONLY | O_NONBLOCK);
+    errcode = errno;
+    app_progress("C0\n");
+
+    if (fd >= 0)
+      {
+        errno = 0;
+        nwritten = write(fd, probe, sizeof(probe) - 1);
+        errcode = errno;
+        close(fd);
+      }
+
+    ets_printf("C1 fd=%d wr=%ld errno=%d\n", fd,
+               (long)nwritten, errcode);
+  }
+#endif
+
+  return ret;
 }
 
 #endif /* CONFIG_BOARDCTL */

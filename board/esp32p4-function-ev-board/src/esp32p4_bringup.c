@@ -145,6 +145,14 @@
 
 #include "esp32p4-function-ev-board.h"
 
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define bringup_progress(s) ets_printf(s)
+#else
+#  define bringup_progress(s)
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -188,6 +196,7 @@ static const struct gt9xx_board_s g_touch =
 
 int esp_bringup(void)
 {
+  bringup_progress("A2\n");
 #ifdef PSRAM_SIMPLE_BOOT
   /* Simple Boot PSRAM bring-up. Runs here (console alive) so every step
    * is visible; the early-start attempt in esp_start.c was removed because
@@ -225,6 +234,7 @@ int esp_bringup(void)
   printf("PSRAM: size=%u initialized=%d\n",
          (unsigned)esp_psram_get_size(),
          esp_psram_is_initialized() ? 1 : 0);
+  bringup_progress("A3\n");
 
 #ifdef GT911_SIMPLE_BOOT
   {
@@ -243,6 +253,7 @@ int esp_bringup(void)
       }
 
     printf("TOUCH: gt911 /dev/input0 -> %d\n", tret);
+    bringup_progress("A4\n");
   }
 #endif
 
@@ -250,8 +261,10 @@ int esp_bringup(void)
   int dret;
   {
     extern int esp32p4_display_init(void);
+    bringup_progress("A5\n");
     dret = esp32p4_display_init();
     printf("DISP: display_init -> %d\n", dret);
+    bringup_progress("A6\n");
   }
 #endif
 
@@ -260,6 +273,7 @@ int esp_bringup(void)
     {
       extern int esp32p4_desktop_start(void);
       esp32p4_desktop_start();
+      bringup_progress("A7\n");
     }
 #endif /* CONFIG_ESPRESSIF_MIPI_DSI && CONFIG_GRAPHICS_LVGL */
 #endif
@@ -643,5 +657,6 @@ int esp_bringup(void)
    * capabilities.
    */
 
+  bringup_progress("A8\n");
   return ret;
 }

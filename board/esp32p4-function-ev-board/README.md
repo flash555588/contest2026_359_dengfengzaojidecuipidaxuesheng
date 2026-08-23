@@ -10,7 +10,7 @@
 | 芯片 revision | **v1.0**（不是官方文档里的 P4X v3.1） |
 | Kconfig | v1.x 使用 `configs/nsh`；v3.2 使用 `configs/nsh-v3` |
 | 烧录对象 | **只烧 P4**，不烧 C6（板上 C6 保持原样未启用） |
-| 串口 | COM7（CP2102N），UART0 TX=GPIO37 / RX=GPIO38，115200 |
+| 串口 | `nsh` / `nsh-v3` 使用 COM7（CP2102N），UART0 TX=GPIO37 / RX=GPIO38，115200；`nsh-v3-usb` 使用 P4 烧录口的 USB Serial/JTAG |
 | Flash | 16MB，DIO 模式 |
 
 注意：网上多数 ESP32-P4 资料按 P4X v3.1 编写，本板是 v1.0，勘误表共 4 条（APM-560 / ECDSA_DS-837 / I2C-308 / RMT-176），其中仅 APM-560 与启动路径相关，正常启动下无未授权主机访问条件，已排除为主因。
@@ -38,6 +38,10 @@ python tools/wsl_copy_firmware.py --variant v1.x
 
 python tools/wsl_build_p4_nsh.py nsh-v3
 python tools/wsl_copy_firmware.py --variant v3.2
+
+# v3.2 + display + USB Serial/JTAG console（与烧录监控同口）
+python tools/wsl_build_p4_nsh.py nsh-v3-usb
+python tools/wsl_copy_firmware.py --variant v3.2-usb
 ```
 
 产物分别位于 `firmware/esp32p4-nsh/v1.x/` 和 `firmware/esp32p4-nsh/v3.2/`，每套包含 bin、ELF、hex、map 与最终 `.config`。不要混用两个 revision 的镜像。
@@ -52,6 +56,8 @@ python tools/wsl_copy_firmware.py --variant v3.2
 powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7
 # 仅在确认芯片为 v3.2 后使用：
 powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7
+# NSH 与烧录口共用 P4 原生 USB Serial/JTAG：
+powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2-usb -Port COM23
 ```
 
 脚本把所选镜像写到偏移 **0x2000**（ESP32-P4 Simple Boot app offset），默认 460800 baud，flash 参数为 DIO / 80 MHz / 16 MiB。`0x0` 是错误地址，不能使用。
@@ -60,7 +66,7 @@ powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7
 
 ## 串口验证
 
-打开 COM7，115200。预期启动序列：
+打开对应串口：`nsh` / `nsh-v3` 用 COM7 115200，`nsh-v3-usb` 用烧录口（例如 COM23）115200。预期启动序列：
 
 1. ROM 加载 Simple Boot 镜像后打印 **SHA-256 Expected 全 0 —— 这是 `--ram-only-header` 的正常现象**，不是错误；
 2. 随后出现 N 系面包屑和 XIP 段表（`map_rom_segments` 成功的标志）；
