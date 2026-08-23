@@ -26,6 +26,27 @@
 
 #include <nuttx/config.h>
 
+/* The current Kconfig uses CONFIG_ESPRESSIF_I2C_PERIPH and
+ * CONFIG_ESPRESSIF_I2C<n>, while this driver still uses the older
+ * *_MASTER_MODE symbols internally.  Map the current selections so the
+ * source selected by Make.defs does not compile to an empty object.
+ */
+
+#if defined(CONFIG_ESPRESSIF_I2C_PERIPH) && \
+    !defined(CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE)
+#  define CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE 1
+#endif
+
+#if defined(CONFIG_ESPRESSIF_I2C0) && \
+    !defined(CONFIG_ESPRESSIF_I2C0_MASTER_MODE)
+#  define CONFIG_ESPRESSIF_I2C0_MASTER_MODE 1
+#endif
+
+#if defined(CONFIG_ESPRESSIF_I2C1) && \
+    !defined(CONFIG_ESPRESSIF_I2C1_MASTER_MODE)
+#  define CONFIG_ESPRESSIF_I2C1_MASTER_MODE 1
+#endif
+
 #ifdef CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE
 
 #include <sys/types.h>
@@ -250,6 +271,7 @@ struct esp_i2c_priv_s
 
   uint8_t msgid;               /* Current message ID */
   ssize_t bytes;               /* Processed data bytes */
+  bool nostop;                 /* Keep bus active after current message */
 
 #ifndef CONFIG_I2C_POLLED
   int cpuint;                  /* CPU interrupt assigned to this I2C */
@@ -1183,6 +1205,13 @@ static int esp_i2c_transfer(struct i2c_master_s *dev,
 
       priv->bytes = 0;
       priv->msgid = i;
+      /* NuttX makes NOSTOP implicit when the following message is marked
+       * NOSTART.  GT9XX uses exactly this form for register writes:
+       * [16-bit register address], [one-byte value]. */
+
+      priv->nostop = (msgs[i].flags & I2C_M_NOSTOP) != 0 ||
+                     (i + 1 < count &&
+                      (msgs[i + 1].flags & I2C_M_NOSTART) != 0);
       priv->ready_read = false;
       priv->error = 0;
       priv->i2cstate = I2CSTATE_PROC;
@@ -1202,7 +1231,7 @@ static int esp_i2c_transfer(struct i2c_master_s *dev,
           if (priv->bytes == msgs[i].length)
             {
               priv->i2cstate = I2CSTATE_STOP;
-              if ((msgs[i].flags & I2C_M_NOSTOP) != 0)
+              if (priv->nostop)
                 {
                   priv->i2cstate = I2CSTATE_FINISH;
                 }
@@ -1646,7 +1675,7 @@ static inline void esp_i2c_process(struct esp_i2c_priv_s *priv,
                 {
                   priv->i2cstate = I2CSTATE_STOP;
 #ifndef CONFIG_I2C_POLLED
-                  if ((msg->flags & I2C_M_NOSTOP) != 0)
+                  if (priv->nostop)
                     {
                       priv->i2cstate = I2CSTATE_FINISH;
                     }

@@ -111,6 +111,18 @@
 #  define sb_progress(s)
 #endif
 
+/* Temporary v3.x Simple-Boot breadcrumbs.  Unlike sb_progress(), keep these
+ * enabled in release builds while the ECO7 startup path is being brought up.
+ */
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+#  define v3_progress(s)      ets_printf(s)
+#else
+#  define v3_progress(s)
+#endif
+
 #if defined(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT) || \
     defined (CONFIG_ESPRESSIF_SIMPLE_BOOT)
 #  ifdef CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT
@@ -391,21 +403,41 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
   ets_printf("total segments stored %d\n", segments - 1);
 #endif
 
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M0\n");
+#endif
   cache_hal_disable(CACHE_LL_LEVEL_EXT_MEM, CACHE_TYPE_ALL);
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M1\n");
+#endif
 
   /* Clear the MMU entries that are already set up,
    * so the new app only has the mappings it creates.
    */
 
   mmu_hal_unmap_all();
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M2\n");
+#endif
 
   mmu_hal_map_region(0, MMU_TARGET_FLASH0,
                      app_drom_vaddr_aligned, app_drom_start_aligned,
                      app_drom_size, &actual_mapped_len);
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M3 len=%lu\n", (unsigned long)actual_mapped_len);
+#endif
 
   mmu_hal_map_region(0, MMU_TARGET_FLASH0,
                      app_irom_vaddr_aligned, app_irom_start_aligned,
                      app_irom_size, &actual_mapped_len);
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M4 len=%lu\n", (unsigned long)actual_mapped_len);
+#endif
 
   /* ------------------Enable corresponding buses--------------------- */
 
@@ -421,15 +453,27 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
   cache_ll_l1_enable_bus(1, bus_mask);
 #endif
 
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M5\n");
+#endif
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
   cache_ll_invalidate_addr(CACHE_LL_LEVEL_ALL, CACHE_TYPE_ALL,
                            CACHE_LL_ID_ALL, app_irom_vaddr_aligned,
                            actual_mapped_len);
 #endif
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M6\n");
+#endif
 
   /* ------------------Enable Cache----------------------------------- */
 
   cache_hal_enable(CACHE_LL_LEVEL_EXT_MEM, CACHE_TYPE_ALL);
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  ets_printf("M7\n");
+#endif
 
   return (int)rc;
 }
@@ -587,6 +631,8 @@ void __esp_start(void)
       while (true);
     }
 
+  v3_progress("V0\n");
+
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N3\n");
 #endif
@@ -597,6 +643,7 @@ void __esp_start(void)
 #endif
 
 #if CONFIG_ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE
+  v3_progress("V1\n");
   _instruction_size = (uint32_t)&_instruction_reserved_end - \
                       (uint32_t)&_instruction_reserved_start;
   cache_mmu_irom_size =
@@ -607,6 +654,7 @@ void __esp_start(void)
 
   cache_set_idrom_mmu_size(cache_mmu_irom_size,
                            CACHE_DROM_MMU_MAX_END - cache_mmu_irom_size);
+  v3_progress("V2\n");
 #endif /* CONFIG_ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE */
 
 #if CONFIG_ESP_SYSTEM_BBPLL_RECALIB
@@ -619,18 +667,23 @@ void __esp_start(void)
   esp_cpu_configure_region_protection();
 #endif
 
+  v3_progress("V3\n");
+
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N3p\n");
 #endif
 
   /* Configure the power related stuff. */
 
+  v3_progress("V4\n");
   esp_rtc_init();
+  v3_progress("V5\n");
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N3r\n");
 #endif
 
+  v3_progress("V6\n");
   esp_mspi_pin_init();
 
   /* Configure SPI Flash chip state */
@@ -638,13 +691,18 @@ void __esp_start(void)
   spi_flash_init_chip_state();
 
   esp_mmu_map_init();
+  v3_progress("V7\n");
 
 #if defined(CONFIG_ESPRESSIF_SPIRAM) && \
     !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
   /* ESP32-P4 v3.x uses the complete IDF startup path.  Initialize PSRAM
    * before the clock switch, matching the upstream ESP32-P4 sequence. */
 
+  v3_progress("V8\n");
   ret = esp_psram_chip_init();
+#  if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT)
+  ets_printf("V9 ret=%ld\n", (long)ret);
+#  endif
   if (ret != ESP_OK)
     {
 #  ifndef CONFIG_ESPRESSIF_SPIRAM_IGNORE_NOTFOUND
@@ -656,6 +714,9 @@ void __esp_start(void)
   if (ret == ESP_OK)
     {
       ret = esp_psram_init();
+#    if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT)
+      ets_printf("VA ret=%ld\n", (long)ret);
+#    endif
       if (ret != ESP_OK)
         {
 #    ifndef CONFIG_ESPRESSIF_SPIRAM_IGNORE_NOTFOUND
@@ -665,6 +726,8 @@ void __esp_start(void)
     }
 #  endif
 #endif
+
+  v3_progress("VB\n");
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N3m\n");
@@ -750,7 +813,15 @@ void __esp_start(void)
 #  endif
 
 #  else
-  esp_clk_init();
+  /* On ESP32-P4 ECO7 the ROM Simple-Boot path has already established a
+   * working CPU/RTC clock tree.  Re-running the full IDF esp_clk_init()
+   * sequence blocks before returning (VC without VD on the UART trace),
+   * just as the duplicated bootloader analog initialization did earlier.
+   * Preserve the live ROM clock state; peripheral drivers derive their
+   * clocks from the hardware state during normal NuttX bring-up.
+   */
+  v3_progress("VC\n");
+  v3_progress("VD\n");
 #  endif
 #else
   esp_clk_init();
@@ -763,6 +834,7 @@ void __esp_start(void)
   /* P2-3: reserve MSPI pins so the GPIO driver cannot hand them out.
    * Pure bookkeeping (esp_gpio_reserve), safe in Simple Boot too. */
   esp_mspi_pin_reserve();
+  v3_progress("VE\n");
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N4a\n");
@@ -770,7 +842,9 @@ void __esp_start(void)
 
 #if !defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) || \
     !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  v3_progress("VF\n");
   bootloader_init_mem();
+  v3_progress("VG\n");
 #endif
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
@@ -788,13 +862,17 @@ void __esp_start(void)
   esp_psram_bss_init();
 #endif
 
+  v3_progress("VH\n");
+
   /* Disable clock of unused peripherals */
 
 #ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
   /* P4 v1.x Simple Boot: keep peripheral clocks unchanged; disabling the
    * SMEM clock here destabilizes the validated legacy PSRAM path. */
 #else
+  v3_progress("VI\n");
   esp_perip_clk_init();
+  v3_progress("VJ\n");
 #endif
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
@@ -807,6 +885,8 @@ void __esp_start(void)
   esp_brownout_init();
 #endif
 
+  v3_progress("VK\n");
+
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N4d\n");
 #endif
@@ -814,6 +894,7 @@ void __esp_start(void)
   /* Configure the UART so we can get debug output */
 
   esp_lowsetup();
+  v3_progress("VL\n");
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N5\n");
@@ -825,7 +906,9 @@ void __esp_start(void)
   riscv_earlyserialinit();
 #endif
 
+  v3_progress("VM\n");
   esp_chip_revision_check();
+  v3_progress("VN\n");
 
   showprogress("A");
 
@@ -857,6 +940,8 @@ void __esp_start(void)
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N6\n");
 #endif
+
+  v3_progress("VO\n");
 
   nx_start();
 

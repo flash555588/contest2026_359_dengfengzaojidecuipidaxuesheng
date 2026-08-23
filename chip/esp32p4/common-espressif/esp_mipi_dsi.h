@@ -93,6 +93,22 @@ struct esp_mipi_dsi_timing_diagnostics_s
   uint32_t host_vactive_lines;
 };
 
+/* Read-back of the live DW-GDMA channel and its single frame descriptor. */
+
+struct esp_mipi_dsi_dma_diagnostics_s
+{
+  uint32_t last_transfer_items;
+  uint32_t last_fifo_items;
+  uint32_t last_common_status;
+  uint32_t live_transfer_items;
+  uint32_t live_fifo_items;
+  uint32_t current_lli;
+  uint32_t lli_source;
+  uint32_t lli_block_items;
+  uint32_t lli_control_low;
+  uint32_t lli_control_high;
+};
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -237,6 +253,9 @@ int esp_mipi_dsi_get_diagnostics(FAR uint32_t *dma_frames,
 
 int esp_mipi_dsi_get_timing_diagnostics(
       FAR struct esp_mipi_dsi_timing_diagnostics_s *diag);
+
+int esp_mipi_dsi_get_dma_diagnostics(
+      FAR struct esp_mipi_dsi_dma_diagnostics_s *diag);
 
 /****************************************************************************
  * Name: esp_mipi_dsi_video_start

@@ -39,6 +39,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#if defined(CONFIG_ESPRESSIF_I2C_PERIPH) && \
+    !defined(CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE)
+#  define CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE 1
+#endif
+
 #ifndef __ASSEMBLY__
 
 #ifdef CONFIG_ESPRESSIF_I2C0

@@ -402,6 +402,58 @@ config ESPRESSIF_SPIFLASH
 	bool "SPI Flash"
 	default n
 
+menuconfig ESPRESSIF_SPIRAM
+	bool "External SPI RAM"
+	depends on ESPRESSIF_ESP32P4
+	default n
+	---help---
+		Enable the ESP32-P4 external PSRAM controller and memory mapping.
+
+if ESPRESSIF_SPIRAM
+
+config ESPRESSIF_SPIRAM_BOOT_INIT
+	bool "Initialize PSRAM during startup"
+	default y
+	---help---
+		Initialize and map PSRAM before NuttX creates the system heap.
+
+config ESPRESSIF_SPIRAM_IGNORE_NOTFOUND
+	bool "Continue boot when PSRAM is not found"
+	default n
+
+config ESPRESSIF_SPIRAM_MEMTEST
+	bool "Test PSRAM during startup"
+	default n
+
+config ESPRESSIF_SPIRAM_USER_HEAP
+	bool "Add PSRAM to the user heap"
+	depends on MM_REGIONS > 1
+	default n
+	---help---
+		Register the mapped external RAM as an additional NuttX user-heap
+		region. CONFIG_MM_REGIONS must also leave room for this region.
+
+config ESPRESSIF_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+	bool "Allow external-memory BSS"
+	default n
+
+choice ESPRESSIF_SPIRAM_SPEED
+	prompt "PSRAM clock speed"
+	default ESPRESSIF_SPIRAM_SPEED_80M
+
+config ESPRESSIF_SPIRAM_SPEED_20M
+	bool "20 MHz"
+
+config ESPRESSIF_SPIRAM_SPEED_80M
+	bool "80 MHz"
+
+config ESPRESSIF_SPIRAM_SPEED_200M
+	bool "200 MHz"
+
+endchoice # ESPRESSIF_SPIRAM_SPEED
+
+endif # ESPRESSIF_SPIRAM
+
 config ESPRESSIF_DMA
 	bool "General DMA (GDMA)"
 	default n
@@ -1999,6 +2051,7 @@ menuconfig ESPRESSIF_MIPI_DSI
 	select ESPRESSIF_LDO
 	select DRIVERS_VIDEO
 	select MIPI_DSI
+	select FB_UPDATE
 	---help---
 		Enable the Espressif MIPI-DSI host driver behind NuttX's
 		generic mipi_dsi_host_ops API.  Board- and panel-agnostic: LP
@@ -2026,5 +2079,23 @@ config ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS
 	int "Default DSI lane bit rate (Mbps)"
 	default 1000
 	range 80 1500
+
+config ESPRESSIF_MIPI_DSI_TEST_PATTERN
+	bool "Use the DSI host color-bar generator"
+	default n
+	---help---
+		Use the DSI host's internal color-bar generator instead of the
+		framebuffer and DW-GDMA pixel path.  This is intended only for
+		panel/link diagnostics; normal board configurations should leave
+		it disabled so that /dev/fb0 can be registered.
+
+config ESPRESSIF_MIPI_DSI_FIXED_SOURCE_TEST
+	bool "Repeat one 64-bit framebuffer word for DMA diagnostics"
+	default n
+	---help---
+		Keep the DW-GDMA source address fixed while transferring a complete
+		frame.  This isolates sequential PSRAM/cache reads from DSI bridge
+		frame generation.  It is a bring-up diagnostic only and normal board
+		configurations must leave it disabled.
 
 endif # ESPRESSIF_MIPI_DSI

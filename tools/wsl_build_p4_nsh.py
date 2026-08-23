@@ -13,6 +13,8 @@ if CONFIG_NAME not in {"nsh", "nsh-v3"}:
     raise SystemExit(f"unsupported config: {CONFIG_NAME}")
 
 LOG = ROOT / f"{CONFIG_NAME}_build.log"
+APPLY_OVERLAY = Path(__file__).with_name("apply_esp32p4_overlay.py")
+PATCH_SIMPLE_BOOT = Path(__file__).with_name("wsl_patch_p4_simple_boot.py")
 CFG = (
     "../vendor/espressif/boards/esp32p4/esp32p4-function-ev-board/configs/"
     + CONFIG_NAME
@@ -35,6 +37,7 @@ env["PATH"] = (
 )
 env["CROSSDEV"] = "riscv32-esp-elf-"
 env["PYTHONUNBUFFERED"] = "1"
+env["OPENVELA_ROOT"] = str(ROOT)
 
 def run(cmd):
     print("+", " ".join(cmd), flush=True)
@@ -52,6 +55,29 @@ def run(cmd):
 
 LOG.write_text("", encoding="utf-8")
 run([str(GCC), "--version"])
+run([sys.executable, str(APPLY_OVERLAY)])
+run([sys.executable, str(PATCH_SIMPLE_BOOT)])
+
+# LVGL 9.2.1's Kconfig exports empty string attributes as C string literals
+# (for example, CONFIG_LV_ATTRIBUTE_LARGE_CONST="").  Its generated
+# lv_conf_internal.h then uses that literal in declaration position.  Supply
+# empty command-line definitions until the upstream configuration is fixed.
+lvgl_makefile = ROOT / "apps/graphics/lvgl/Makefile"
+lvgl_text = lvgl_makefile.read_text(encoding="utf-8")
+lvgl_anchor = "include $(APPDIR)/Make.defs\n"
+lvgl_compat = (
+    "\n# ESP32-P4/OpenVela LVGL 9.2.1 empty Kconfig attribute compatibility\n"
+    'CFLAGS += "-DLV_ATTRIBUTE_MEM_ALIGN="\n'
+    'CFLAGS += "-DLV_ATTRIBUTE_LARGE_CONST="\n'
+)
+if "LVGL 9.2.1 empty Kconfig attribute compatibility" not in lvgl_text:
+    if lvgl_anchor not in lvgl_text:
+        raise SystemExit(f"cannot patch LVGL compatibility in {lvgl_makefile}")
+    lvgl_makefile.write_text(
+        lvgl_text.replace(lvgl_anchor, lvgl_anchor + lvgl_compat, 1),
+        encoding="utf-8",
+    )
+    print("LVGL: patched empty Kconfig attributes", flush=True)
 
 # The local overlay's PSRAM speed choice is sourced once per Espressif
 # architecture. Give it a stable name so kconfiglib merges those definitions
@@ -79,5 +105,6 @@ chip_link = NUTTX / "arch/risc-v/src/chip"
 if chip_link.is_symlink() or chip_link.exists():
     chip_link.unlink()
 run(["bash", "./tools/configure.sh", "-l", CFG])
+run(["make", "clean"])
 run(["make", "-j2"])
 print("BUILD_OK", flush=True)
