@@ -61,6 +61,14 @@
 #include "soc/clk_tree_defs.h"
 #include "periph_ctrl.h"
 
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define serial_progress(...) ets_printf(__VA_ARGS__)
+#else
+#  define serial_progress(...)
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -348,6 +356,17 @@ static int uart_handler(int irq, void *context, void *arg)
   uint32_t tx_mask = UART_INTR_TXFIFO_EMPTY | UART_INTR_TX_DONE;
   uint32_t rx_mask = UART_INTR_RXFIFO_TOUT | UART_INTR_RXFIFO_FULL;
   uint32_t int_status = uart_hal_get_intsts_mask(priv->hal);
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  static bool reported;
+
+  if (!reported)
+    {
+      reported = true;
+      serial_progress("SI irq=%d status=%lx\n", irq,
+                      (unsigned long)int_status);
+    }
+#endif
 
 #ifdef HAVE_RS485
   if ((int_status & UART_INTR_TX_BRK_IDLE) != 0 &&
@@ -657,10 +676,14 @@ static int esp_attach(uart_dev_t *dev)
 
   source = uart_periph_signal[priv->id].irq;
 
+  serial_progress("SA source=%d\n", source);
+
   priv->cpuint = esp_setup_irq(source, priv->int_pri,
                                ESP_IRQ_TRIGGER_LEVEL,
                                uart_handler,
                                dev);
+
+  serial_progress("SB cpuint=%d\n", priv->cpuint);
 
   /* Attach and enable the IRQ */
 
@@ -732,6 +755,16 @@ static void esp_txint(uart_dev_t *dev, bool enable)
 {
   struct esp_uart_s *priv = dev->priv;
   uint32_t ints_mask = UART_INTR_TXFIFO_EMPTY | UART_INTR_TX_DONE;
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  static bool reported;
+
+  if (enable && !reported)
+    {
+      reported = true;
+      serial_progress("ST\n");
+    }
+#endif
 
   if (enable)
     {
@@ -751,6 +784,46 @@ static void esp_txint(uart_dev_t *dev, bool enable)
 
 #ifndef CONFIG_SUPPRESS_SERIAL_INTS
       uart_hal_ena_intr_mask(priv->hal, ints_mask);
+#endif
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+      /* On ESP32-P4 rev >= 3, enabling TXFIFO_EMPTY can deliver one edge
+       * before the upper-half queue is observed by the ISR.  Kick the
+       * standard NuttX transmitter synchronously so the first console
+       * bytes cannot remain queued forever.  If more than one FIFO of data
+       * remains, the enabled interrupt continues the transfer normally.
+       */
+
+      uart_xmitchars(dev);
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+      static bool kick_reported;
+
+      if (!kick_reported)
+        {
+          unsigned int queued;
+
+          kick_reported = true;
+          queued = (dev->xmit.head >= dev->xmit.tail)
+                   ? dev->xmit.head - dev->xmit.tail
+                   : dev->xmit.size - dev->xmit.tail + dev->xmit.head;
+
+          /* Distinguish a queueing bug from a UART/pin configuration bug:
+           * SX reports the state after the standard NuttX kick, while R is
+           * emitted through the same low-level console path used by early
+           * boot.  If R appears without the probe text, compare FIFO and
+           * interrupt state to locate the stage that swallowed it.
+           */
+
+          serial_progress("SX fifo=%u q=%u raw=%08lx ena=%08lx\n",
+                          uart_hal_get_txfifo_len(priv->hal), queued,
+                          uart_hal_get_intsts_mask(priv->hal),
+                          uart_hal_get_intr_ena_status(priv->hal));
+          riscv_lowputc('R');
+        }
+#endif
 #endif
     }
   else
@@ -921,8 +994,21 @@ static int esp_receive(uart_dev_t *dev, unsigned int *status)
   struct esp_uart_s *priv = dev->priv;
   int inout_rd_len = 1;
   uint8_t buf;
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  static bool reported;
+#endif
 
   uart_hal_read_rxfifo(priv->hal, &buf, &inout_rd_len);
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  if (!reported)
+    {
+      reported = true;
+      serial_progress("SR byte=%02x\n", buf);
+    }
+#endif
 
   /* Since we don't have error bits associated with receive, we set zero */
 
@@ -1312,6 +1398,9 @@ void riscv_earlyserialinit(void)
 
 void riscv_serialinit(void)
 {
+  int ret;
+
+  serial_progress("S0\n");
 #ifdef HAVE_SERIAL_CONSOLE
 #  ifdef CONFIG_LPUART0_SERIAL_CONSOLE
   /* To use LPUART as console properly, device
@@ -1320,11 +1409,13 @@ void riscv_serialinit(void)
 
   esp_setup(&CONSOLE_DEV);
 #  endif
-  uart_register("/dev/console", &CONSOLE_DEV);
+  ret = uart_register("/dev/console", &CONSOLE_DEV);
+  serial_progress("S1 ret=%d\n", ret);
 #endif
 
 #ifdef TTYS0_DEV
-  uart_register("/dev/ttyS0", &TTYS0_DEV);
+  ret = uart_register("/dev/ttyS0", &TTYS0_DEV);
+  serial_progress("S2 ret=%d\n", ret);
 #endif
 
 #ifdef TTYS1_DEV
