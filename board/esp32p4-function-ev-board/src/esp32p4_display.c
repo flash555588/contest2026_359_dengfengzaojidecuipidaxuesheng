@@ -33,6 +33,14 @@
 #define FB_BYTES_PER_PIXEL (FB_BPP / 8)
 #define FB_SIZE            (FB_W * FB_H * FB_BPP / 8)
 
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define lcd_progress(s) ets_printf(s)
+#else
+#  define lcd_progress(s)
+#endif
+
 static FAR uint8_t *g_fb;
 static volatile bool g_ready;
 static uint32_t g_update_count;
@@ -104,6 +112,8 @@ int esp32p4_display_init(void)
       return OK;
     }
 
+  lcd_progress("L0\n");
+
   /* A cold-powered panel needs its control pins in a deterministic state
    * before the DPHY and DSI host are enabled.  Keep both the backlight and
    * the active-low reset asserted throughout host initialization. */
@@ -161,6 +171,8 @@ int esp32p4_display_init(void)
     {
       return ret;
     }
+
+  lcd_progress("L1\n");
 
   /* 3. Panel hardware reset, active low */
 
@@ -319,6 +331,8 @@ int esp32p4_display_init(void)
     {
       return ret;
     }
+
+  lcd_progress("L2\n");
 #endif
 
   /* 7. Go live, then backlight on */
@@ -329,6 +343,12 @@ int esp32p4_display_init(void)
     {
       return ret;
     }
+
+  lcd_progress("L3\n");
+
+  esp_configgpio(LCD_BL_GPIO, OUTPUT);
+  esp_gpiowrite(LCD_BL_GPIO, true);
+  printf("DISP: backlight on after video start\n");
 
   nxsig_usleep(250 * 1000);
   ret = esp_mipi_dsi_get_diagnostics(&dma_frames, &dma_status,
@@ -351,6 +371,7 @@ int esp32p4_display_init(void)
          (unsigned long)host_int_st0, (unsigned long)host_int_st1,
          (unsigned long)host_vid_pkt_status, (unsigned long)host_phy_status,
          (unsigned long)host_color_coding);
+  lcd_progress("L4\n");
 
   ret = esp_mipi_dsi_get_timing_diagnostics(&timing_diag);
   printf("DISP: brg words=%lu fifo=%08lx pix=%08lx "
@@ -406,6 +427,7 @@ int esp32p4_display_init(void)
          (unsigned long)dma_diag.lli_block_items,
          (unsigned long)dma_diag.lli_control_low,
          (unsigned long)dma_diag.lli_control_high, ret);
+  lcd_progress("L5\n");
 
   g_fb     = fb;
   g_ready  = true;
@@ -421,7 +443,8 @@ int esp32p4_display_init(void)
 
   esp_configgpio(LCD_BL_GPIO, OUTPUT);
   esp_gpiowrite(LCD_BL_GPIO, true);
-  printf("DISP: backlight on\n");
+  printf("DISP: backlight already on\n");
+  lcd_progress("L6\n");
 
   return OK;
 }

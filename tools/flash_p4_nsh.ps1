@@ -5,7 +5,7 @@
 # Download mode: hold BOOT, tap RST, then run this script.
 
 param(
-    [ValidateSet("selected", "v1.x", "v3.2")]
+    [ValidateSet("selected", "v1.x", "v3.2", "v3.2-usb")]
     [string]$Variant = "selected",
     [string]$Port = "COM7",
     [int]$Baud = 460800
