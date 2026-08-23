@@ -358,7 +358,7 @@ config ESPRESSIF_I2C0
 config ESPRESSIF_I2C1
 	bool "I2C 1"
 	default n
-	depends on ARCH_CHIP_ESP32H2
+	depends on ESPRESSIF_ESP32P4 || ESPRESSIF_ESP32H2
 	select ESPRESSIF_I2C
 	select I2C
 	select ESPRESSIF_I2C_PERIPH
@@ -2077,7 +2077,7 @@ config ESPRESSIF_MIPI_DSI_LANES
 
 config ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS
 	int "Default DSI lane bit rate (Mbps)"
-	default 1000
+	default 900
 	range 80 1500
 
 config ESPRESSIF_MIPI_DSI_TEST_PATTERN
