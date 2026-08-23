@@ -80,7 +80,7 @@ NuttX 0.0.0 dd92bcf4-dirty Aug 21 2026 19:38:54 risc-v esp32p4-function-ev-board
 
 看到 `nsh>` 且 `uname -a` 显示 `risc-v esp32p4-function-ev-board` 即启动通过。继续执行 `ps`、`free`；当前配置为 init/NSH 分配 16 KiB 栈并为 IRQ 分配 8 KiB 栈，避免显示初始化后的 `ps` 覆盖栈底 TLS。
 
-显示默认走 PSRAM RGB565 framebuffer。v1.x 使用 80 MHz PSRAM 与已实测全屏的 24 MHz DPI，v3.2 使用 200 MHz PSRAM 与原厂 48 MHz DPI；共同参数为 1024×600、2 Lane、1000 Mbps、水平 `10/120/120`、垂直 `1/20/10`。冷启动时背光与 RESET 先保持关闭/拉低，DPHY 和 DSI Host 就绪后再释放 RESET 并等待 120 ms。启动后先显示 3 秒全屏色条，再进入浅色 LVGL 桌面。`DESKTOP: touch ready` 证明 GT911 已被 LVGL 打开；实际点击应输出 `TOUCH: pressed x=... y=...`。
+显示默认走 PSRAM RGB565 framebuffer。v1.x 使用 80 MHz PSRAM 与已实测全屏的 24 MHz DPI，v3.2 使用 200 MHz PSRAM 与原厂 52 MHz DPI；共同参数为 1024×600、2 Lane、900 Mbps、水平 `10/160/160`、垂直 `1/23/12`。冷启动时背光与 RESET 先保持关闭/拉低，DPHY 和 DSI Host 就绪后再释放 RESET 并等待 120 ms。启动后先显示 3 秒全屏色条，再进入浅色 LVGL 桌面。`DESKTOP: touch ready` 证明 GT911 已被 LVGL 打开；实际点击应输出 `TOUCH: pressed x=... y=...`。主页的 `touch test` 页面用于验收按下、拖动、释放和坐标方向。
 
 ## 当前时钟与外设配置
 
@@ -100,7 +100,7 @@ NuttX 0.0.0 dd92bcf4-dirty Aug 21 2026 19:38:54 risc-v esp32p4-function-ev-board
 ## 已知限制
 
 1. **360MHz 不可用**：Phase-2-1b 实验证实，在 Simple Boot 的 ROM 时钟阶段对 MSPI/SPLL 做重配（含先强制 SPLL=480M）会立即挂死 XIP；正确路径需完整时钟树重建（rtc_clk_init 级别），列为后续专项。当前 CPLL 90MHz 为实测稳定档位。
-2. **LCD/触摸仍需继续验收**：v1.x 已实测 24 MHz 全屏画面且颜色正常；冷上电重复性与 GT911 实际点击坐标/方向仍以当前实板观察为最终判据。
+2. **LCD/触摸已实测通过**：v1.x 已实测 24 MHz 全屏画面；2026-08-23 修复固件已通过连续复位回归，并实测 GT911 点击/拖动坐标（`TOUCH: pressed x=... y=...`，方向正确）。真实断电冷启动与 v3.2 芯片实板回归仍以当前实板观察为最终判据。
 3. **面包屑已部分收编**：esp_start.c 的 N 系列已收进 CONFIG_DEBUG_FEATURES（默认静默）；bootloader 阶段的 B0-B3 四个字符因 HAL 编译单元看不到 NuttX 调试配置而保留常开。
 4. **ESP32-C6 保持原样未启用**：本移植只针对 P4 核。
 
