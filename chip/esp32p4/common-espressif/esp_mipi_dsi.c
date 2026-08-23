@@ -136,6 +136,9 @@ struct esp_mipi_dsi_priv_s
   bool test_pattern_enabled;         /* Host VPG bypasses bridge/DMA */
   volatile uint32_t dma_tfr_count;   /* Completed full-frame transfers */
   volatile uint32_t dma_last_status; /* Last DW-GDMA interrupt status */
+  volatile uint32_t dma_last_amount; /* Completed 64-bit items */
+  volatile uint32_t dma_last_fifo;   /* Items left in channel FIFO */
+  volatile uint32_t dma_last_common; /* DW-GDMA common error status */
   bool video_running;                /* Host in HS video mode */
 };
 
@@ -278,6 +281,11 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
   if ((status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) != 0 &&
       priv->dma_enabled)
     {
+      priv->dma_last_amount = dw_gdma_ll_channel_get_trans_amount(
+                                dev, ESP_MIPI_DSI_DMA_CHAN);
+      priv->dma_last_fifo = dw_gdma_ll_channel_get_fifo_remain(
+                              dev, ESP_MIPI_DSI_DMA_CHAN);
+      priv->dma_last_common = dw_gdma_ll_get_common_intr_status(dev);
       priv->dma_tfr_count++;
       esp_mipi_dsi_dma_restart(priv);
     }
@@ -1496,6 +1504,7 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
 {
   FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
   FAR dw_gdma_link_list_item_t *lli_nc;
+  lcd_color_format_t input_fmt;
   size_t expect;
   uint32_t block_items;
   int ret;
@@ -1585,7 +1594,11 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
   dw_gdma_ll_lli_set_dst_trans_width(lli_nc, DW_GDMA_TRANS_WIDTH_64);
   dw_gdma_ll_lli_set_src_burst_items(lli_nc, DW_GDMA_BURST_ITEMS_512);
   dw_gdma_ll_lli_set_dst_burst_items(lli_nc, DW_GDMA_BURST_ITEMS_256);
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI_FIXED_SOURCE_TEST
+  dw_gdma_ll_lli_set_src_burst_mode(lli_nc, DW_GDMA_BURST_MODE_FIXED);
+#else
   dw_gdma_ll_lli_set_src_burst_mode(lli_nc, DW_GDMA_BURST_MODE_INCREMENT);
+#endif
   dw_gdma_ll_lli_set_dst_burst_mode(lli_nc, DW_GDMA_BURST_MODE_FIXED);
   dw_gdma_ll_lli_set_src_burst_len(lli_nc, 16);
   dw_gdma_ll_lli_set_dst_burst_len(lli_nc, 16);
@@ -1600,6 +1613,14 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
       nxmutex_unlock(&priv->lock);
       return ret;
     }
+
+  /* bpp describes the memory-side pixel stream.  ESP32-P4 revision 1.x
+   * shares one raw pixel type between bridge input and output, so boards
+   * targeting that silicon must configure the DPI path to the same format.
+   * Later revisions expose independent input/output format fields. */
+
+  input_fmt = bpp == 16 ? LCD_COLOR_FMT_RGB565 : LCD_COLOR_FMT_RGB888;
+  mipi_dsi_brg_ll_set_input_color_format(priv->hal.bridge, input_fmt);
 
   /* Bridge expects DW-GDMA as flow controller. */
 
@@ -1768,6 +1789,50 @@ int esp_mipi_dsi_get_timing_diagnostics(
   diag->host_vback_porch_lines = host->vid_vbp_lines.vbp_lines;
   diag->host_vfront_porch_lines = host->vid_vfp_lines.vfp_lines;
   diag->host_vactive_lines = host->vid_vactive_lines.v_active_lines;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: esp_mipi_dsi_get_dma_diagnostics
+ *
+ * Description:
+ *   Snapshot the DW-GDMA transfer counters and the active frame LLI.  This
+ *   distinguishes a real full-frame transfer from a premature completion
+ *   interrupt, which is especially important while validating ESP32-P4
+ *   revision 1.x silicon.
+ ****************************************************************************/
+
+int esp_mipi_dsi_get_dma_diagnostics(
+      FAR struct esp_mipi_dsi_dma_diagnostics_s *diag)
+{
+  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
+  FAR dw_gdma_link_list_item_t *lli;
+  FAR dw_gdma_dev_t *dev;
+  irqstate_t flags;
+
+  if (diag == NULL || priv->dw_hal.dev == NULL || priv->lli_nc == NULL)
+    {
+      return -EAGAIN;
+    }
+
+  dev = priv->dw_hal.dev;
+  lli = priv->lli_nc;
+  flags = spin_lock_irqsave(&priv->dmalock);
+  diag->last_transfer_items = priv->dma_last_amount;
+  diag->last_fifo_items = priv->dma_last_fifo;
+  diag->last_common_status = priv->dma_last_common;
+  diag->live_transfer_items = dw_gdma_ll_channel_get_trans_amount(
+                                dev, ESP_MIPI_DSI_DMA_CHAN);
+  diag->live_fifo_items = dw_gdma_ll_channel_get_fifo_remain(
+                            dev, ESP_MIPI_DSI_DMA_CHAN);
+  diag->current_lli = (uint32_t)
+    dw_gdma_ll_channel_get_current_link_list_item_addr(
+      dev, ESP_MIPI_DSI_DMA_CHAN);
+  diag->lli_source = lli->sar_lo.sar0;
+  diag->lli_block_items = lli->block_ts_lo.block_ts + 1;
+  diag->lli_control_low = lli->ctrl_lo.val;
+  diag->lli_control_high = lli->ctrl_hi.val;
+  spin_unlock_irqrestore(&priv->dmalock, flags);
   return OK;
 }
 
