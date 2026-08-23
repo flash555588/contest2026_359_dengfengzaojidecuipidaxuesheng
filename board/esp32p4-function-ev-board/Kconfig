@@ -1,0 +1,14 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_BOARD_CUSTOM || ARCH_BOARD_ESP32P4_FUNCTION_EV_BOARD
+
+config ESP32P4_FUNCTION_EV_BOARD_UART0
+	bool
+	default y
+	---help---
+		Function EV Board v1.4 UART0 is CP2102N: TX=GPIO37, RX=GPIO38.
+
+endif # ARCH_BOARD_CUSTOM || ARCH_BOARD_ESP32P4_FUNCTION_EV_BOARD
