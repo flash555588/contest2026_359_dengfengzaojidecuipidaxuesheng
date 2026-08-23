@@ -111,13 +111,13 @@
 #  define sb_progress(s)
 #endif
 
-/* Temporary v3.x Simple-Boot breadcrumbs.  Unlike sb_progress(), keep these
- * enabled in release builds while the ECO7 startup path is being brought up.
+/* Temporary ESP32-P4 Simple-Boot breadcrumbs.  Keep these enabled for both
+ * revisions while the v1.x startup path is being brought up; they use only
+ * the ROM console and make a silent clock/PSRAM hang immediately visible.
  */
 
 #if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
-    defined(CONFIG_ARCH_CHIP_ESP32P4) && \
-    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+    defined(CONFIG_ARCH_CHIP_ESP32P4)
 #  define v3_progress(s)      ets_printf(s)
 #else
 #  define v3_progress(s)
@@ -777,10 +777,13 @@ void __esp_start(void)
   {
     rtc_cpu_freq_config_t newc;
 
+    v3_progress("RC0\n");
     if (rtc_clk_cpu_freq_mhz_to_config(90, &newc))
       {
         rtc_clk_cpu_freq_set_config(&newc);
       }
+
+    v3_progress("RC1\n");
   }
 
 #ifdef CONFIG_ESPRESSIF_SPIRAM
@@ -794,21 +797,26 @@ void __esp_start(void)
     extern int   esp_ldo_channel_acquire(struct esp_ldo_config_t *config);
     extern int   esp_psram_chip_init(void);
     extern int   esp_psram_init(void);
-    int pret;
+    int pret = -1;
 
     psram_ldo.chan_id    = 2;      /* VDD_PSRAM domain */
     psram_ldo.voltage_mv = 1800;
     psram_ldo.handler    = NULL;
 
     pret = esp_ldo_channel_acquire(&psram_ldo);
+    v3_progress("RP0\n");
     if (pret == OK)
       {
         pret = esp_psram_chip_init();
+        v3_progress("RPC\n");
         if (pret == 0)
           {
-            esp_psram_init();
+            pret = esp_psram_init();
+            ets_printf("RPP ret=%ld\n", (long)pret);
           }
       }
+
+    ets_printf("RPE ret=%ld\n", (long)pret);
   }
 #  endif
 

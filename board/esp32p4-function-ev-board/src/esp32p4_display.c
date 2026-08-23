@@ -4,7 +4,7 @@
  * Simple Boot display bring-up for the 7" 1024x600 MIPI-DSI panel
  * (EK79007-class driver IC on the LCD adapter board).
  *
- * Sequence: power DPHY LDO -> DSI host init (2 lanes @1Gbps) -> panel
+ * Sequence: power DPHY LDO -> DSI host init (2 lanes @900Mbps) -> panel
  * hard reset (GPIO27) -> vendor init cmds over LP DCS -> DPI timing ->
  * framebuffer (PSRAM) bind -> video start -> backlight (GPIO26).
  ****************************************************************************/
@@ -138,14 +138,14 @@ int esp32p4_display_init(void)
 
   nxsig_usleep(20 * 1000);
 
-  /* 2. DSI host: match Espressif's EK79007 reference profile exactly.
-   * Keeping the lane rate, pixel format, and blanking timings as one
-   * coherent profile is important: mixing the old 52 MHz profile with the
-   * current 48 MHz profile compresses the generated image horizontally. */
+  /* 2. DSI host: match Espressif's EK79007 component reference profile
+   * exactly.  Keeping the lane rate, pixel clock, and blanking timings as
+   * one coherent profile is essential: mixing profiles makes a cold-started
+   * panel lock onto an incomplete active window. */
 
   memset(&bus, 0, sizeof(bus));
   bus.num_data_lanes     = 2;
-  bus.lane_bit_rate_mbps = 1000;
+  bus.lane_bit_rate_mbps = 900;
 
   ret = esp_mipi_dsi_initialize(&bus);
   printf("DISP: dsi host init -> %d\n", ret);
@@ -241,20 +241,25 @@ int esp32p4_display_init(void)
   dpi.h_res              = FB_W;
   dpi.v_res              = FB_H;
   dpi.hsync_pulse_width  = 10;
-  dpi.hsync_back_porch   = 120;
-  dpi.hsync_front_porch  = 120;
+  dpi.hsync_back_porch   = 160;
+  dpi.hsync_front_porch  = 160;
   dpi.vsync_pulse_width  = 1;
-  dpi.vsync_back_porch   = 20;
-  dpi.vsync_front_porch  = 10;
+  dpi.vsync_back_porch   = 23;
+  dpi.vsync_front_porch  = 12;
   /* Revision 1.x cannot run this board's 32 MiB PSRAM reliably at 200 MHz.
    * Its 80 MHz memory setting is paired with a 24 MHz pixel clock to halve
    * scanout bandwidth while preserving the complete 1024x600 active area.
    * This 30 Hz mode has been verified physically to fill the panel. */
 
 #ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+  /* Revision 1.x boards pair the same official blanking windows with a
+   * lower pixel clock because their 80 MHz PSRAM setup cannot sustain the
+   * full scanout bandwidth.  This verified 30 Hz mode still addresses the
+   * complete 1024x600 active area. */
   dpi.dpi_clock_freq_mhz = 24;
 #else
-  dpi.dpi_clock_freq_mhz = 48;
+  /* Official ESP32-P4 EK79007 1024x600@60Hz pixel clock. */
+  dpi.dpi_clock_freq_mhz = 52;
 #endif
   dpi.virtual_channel    = 0;
   dpi.format             = MIPI_DSI_FMT_RGB565;
