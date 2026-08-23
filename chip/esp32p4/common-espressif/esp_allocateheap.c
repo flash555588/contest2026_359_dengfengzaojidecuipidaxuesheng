@@ -45,6 +45,15 @@
 #  include "esp_private/esp_psram_extram.h"
 #endif
 
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    defined(CONFIG_ARCH_CHIP_ESP32P4) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define heap_progress(...) ets_printf(__VA_ARGS__)
+#else
+#  define heap_progress(...)
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -86,6 +95,7 @@ uintptr_t _heap_start;
 
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
+  heap_progress("K0\n");
   /* These values come from the linker scripts
    * (<chip>_<legacy/mcuboot>_sections.ld and <chip>_flat_memory.ld).
    * Check boards/risc-v/espressif.
@@ -124,6 +134,9 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 #endif
 #endif
   _heap_start = (uintptr_t)*heap_start;
+  heap_progress("K1 base=%08lx size=%lu\n",
+                (unsigned long)(uintptr_t)*heap_start,
+                (unsigned long)*heap_size);
 }
 
 /****************************************************************************
@@ -183,6 +196,7 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
 #if CONFIG_MM_REGIONS > 1
 void riscv_addregion(void)
 {
+  heap_progress("K2\n");
 #if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
   /* ESP32-P4 rev < v3 has non-contiguous SRAM: sram_low + sram_high.
    * The primary heap is in sram_low. Add sram_high as a second region.
@@ -217,5 +231,6 @@ void riscv_addregion(void)
     }
 #  endif
 #endif
+  heap_progress("K3\n");
 }
 #endif

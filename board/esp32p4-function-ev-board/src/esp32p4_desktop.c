@@ -21,6 +21,14 @@
 #define DESKTOP_W  1024
 #define DESKTOP_H  600
 
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define desktop_progress(...) ets_printf(__VA_ARGS__)
+#else
+#  define desktop_progress(...)
+#endif
+
 static lv_obj_t *g_clock_label;
 static lv_obj_t *g_touch_label;
 
@@ -140,21 +148,40 @@ static int desktop_ui(void)
 
 static int desktop_task(int argc, FAR char *argv[])
 {
+  unsigned int loops = 0;
+
+  desktop_progress("T0\n");
   /* Leave the driver's full-screen color bars visible briefly.  This makes
    * it possible to distinguish the continuous scanout path from the first
    * LVGL framebuffer update on physical hardware. */
 
   printf("DESKTOP: color bars hold for 3s\n");
   nxsig_usleep(3 * 1000 * 1000);
+  desktop_progress("T1\n");
 
   if (desktop_ui() != 0)
     {
       return EXIT_FAILURE;
     }
 
+  desktop_progress("T2\n");
+
   while (1)
     {
+      if (loops < 4)
+        {
+          desktop_progress("T3 loop=%u\n", loops);
+        }
+
       uint32_t next = lv_timer_handler();
+
+      if (loops < 4)
+        {
+          desktop_progress("T4 loop=%u next=%lu\n", loops,
+                           (unsigned long)next);
+        }
+
+      loops++;
       nxsig_usleep((next < 5 ? 5 : next > 50 ? 50 : next) * 1000);
     }
 
@@ -168,7 +195,10 @@ static int desktop_task(int argc, FAR char *argv[])
 int esp32p4_desktop_start(void)
 {
 #ifdef CONFIG_GRAPHICS_LVGL
-  int pid = task_create("desktop", 100, 32768, desktop_task, NULL);
+  /* Keep the UI below NSH/init priority so a display fault cannot starve
+   * the shell while the panel path is still being qualified on v3.x. */
+
+  int pid = task_create("desktop", 80, 32768, desktop_task, NULL);
   printf("DESKTOP: task -> %d\n", pid);
   return pid < 0 ? -1 : OK;
 #else
