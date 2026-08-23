@@ -639,10 +639,38 @@ void __esp_start(void)
 
   esp_mmu_map_init();
 
+#if defined(CONFIG_ESPRESSIF_SPIRAM) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+  /* ESP32-P4 v3.x uses the complete IDF startup path.  Initialize PSRAM
+   * before the clock switch, matching the upstream ESP32-P4 sequence. */
+
+  ret = esp_psram_chip_init();
+  if (ret != ESP_OK)
+    {
+#  ifndef CONFIG_ESPRESSIF_SPIRAM_IGNORE_NOTFOUND
+      PANIC();
+#  endif
+    }
+
+#  ifdef CONFIG_ESPRESSIF_SPIRAM_BOOT_INIT
+  if (ret == ESP_OK)
+    {
+      ret = esp_psram_init();
+      if (ret != ESP_OK)
+        {
+#    ifndef CONFIG_ESPRESSIF_SPIRAM_IGNORE_NOTFOUND
+          PANIC();
+#    endif
+        }
+    }
+#  endif
+#endif
+
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N3m\n");
 #endif
 
+#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
   /* P4 v1.0 minimal clock bring-up (Simple Boot).
    *
    * The full esp_clk_init() cannot run in Simple Boot until the complete
@@ -674,6 +702,7 @@ void __esp_start(void)
    * rtc_clk_xtal_freq_get() otherwise warns "invalid RTC_XTAL_FREQ_REG"
    * and falls back to the same 40MHz assumption. */
   rtc_clk_xtal_freq_update(SOC_XTAL_FREQ_40M); /* XTAL_FREQ_UPDATE_DONE */
+#endif /* CONFIG_ESP32P4_SELECTS_REV_LESS_V3 */
 
 
   /* Configures the CPU clock, RTC slow and fast clocks, and performs
@@ -681,7 +710,7 @@ void __esp_start(void)
    */
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
-
+#  ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
   {
     rtc_cpu_freq_config_t newc;
 
@@ -718,11 +747,14 @@ void __esp_start(void)
           }
       }
   }
-#endif
+#  endif
 
+#  else
+  esp_clk_init();
+#  endif
 #else
   esp_clk_init();
-#endif
+#endif /* CONFIG_ESPRESSIF_SIMPLE_BOOT */
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N4\n");
@@ -736,7 +768,8 @@ void __esp_start(void)
   sb_progress("N4a\n");
 #endif
 
-#if !defined(CONFIG_ESPRESSIF_SIMPLE_BOOT)
+#if !defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) || \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
   bootloader_init_mem();
 #endif
 
@@ -757,8 +790,12 @@ void __esp_start(void)
 
   /* Disable clock of unused peripherals */
 
-  /* P2-3: TEMP-DISABLED for PSRAM debug (suspected SMEM gate conflict)
-  esp_perip_clk_init();*/
+#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+  /* P4 v1.x Simple Boot: keep peripheral clocks unchanged; disabling the
+   * SMEM clock here destabilizes the validated legacy PSRAM path. */
+#else
+  esp_perip_clk_init();
+#endif
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   sb_progress("N4c\n");

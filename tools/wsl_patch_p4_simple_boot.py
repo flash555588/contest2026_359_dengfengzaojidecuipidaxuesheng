@@ -203,6 +203,102 @@ def main() -> None:
     patch(BL, OLD_CLK, NEW_CLK, "bootloader-clk")
     patch(BL, OLD_HW, NEW_HW, "bootloader-skip-hw")
     patch(BL, OLD_SKIPCLK, NEW_SKIPCLK, "bootloader-skip-clk")
+
+    # The legacy Simple Boot bypasses are required only by P4 v1.x.  On
+    # v3.x, run the complete IDF hardware/clock/flash initialization path.
+    bltext = BL.read_text(encoding="utf-8")
+    bltext = bltext.replace(
+        "#if !defined(__NuttX__)\n",
+        "#if !defined(__NuttX__) || !CONFIG_ESP32P4_SELECTS_REV_LESS_V3\n",
+    )
+    bltext = bltext.replace(
+        "#if !CONFIG_APP_BUILD_TYPE_RAM && !defined(__NuttX__)\n",
+        "#if !CONFIG_APP_BUILD_TYPE_RAM && "
+        "(!defined(__NuttX__) || !CONFIG_ESP32P4_SELECTS_REV_LESS_V3)\n",
+    )
+    bltext = bltext.replace(
+        '#if defined(__NuttX__)\n    ets_printf("B3\\n");\n    return ESP_OK;\n#endif',
+        '#if defined(__NuttX__) && CONFIG_ESP32P4_SELECTS_REV_LESS_V3\n'
+        '    ets_printf("B3\\n");\n    return ESP_OK;\n#endif',
+    )
+
+    old_hw_body = """static inline void bootloader_hardware_init(void)
+{
+    _regi2c_ctrl_ll_master_enable_clock(true); // keep ana i2c mst clock always enabled in bootloader
+    regi2c_ctrl_ll_master_configure_clock();
+
+    unsigned chip_version = efuse_hal_chip_revision();
+    if (!ESP_CHIP_REV_ABOVE(chip_version, 1)) {
+        // On ESP32P4 ECO0, the default (power on reset) CPLL and SPLL frequencies are very high, lower them to avoid bias may not be enough in bootloader
+        // And we are fixing SPLL to be 480MHz after app is up
+        REGI2C_WRITE_MASK(I2C_CPLL, I2C_CPLL_OC_DIV_7_0, 6); // lower default cpu_pll freq to 400M
+        REGI2C_WRITE_MASK(I2C_SYSPLL, I2C_SYSPLL_OC_DIV_7_0, 8); // lower default sys_pll freq to 480M
+        esp_rom_delay_us(100);
+    }
+    REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1, 10);
+    REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1_PVT, 10);
+
+#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
+    // IDF-10019 TODO: This is temporarily for ESP32P4-ECO0, please remove it when eco0 is not widly used.
+    if (likely(ESP_CHIP_REV_ABOVE(chip_version, 1))) {
+        bootloader_init_mspi_clock();
+    }
+#endif
+}
+"""
+    new_hw_body = """static inline void bootloader_hardware_init(void)
+{
+#if defined(__NuttX__)
+    ets_printf("H0\\n");
+#endif
+    _regi2c_ctrl_ll_master_enable_clock(true); // keep ana i2c mst clock always enabled in bootloader
+    regi2c_ctrl_ll_master_configure_clock();
+#if defined(__NuttX__)
+    ets_printf("H1\\n");
+#endif
+
+    unsigned chip_version = efuse_hal_chip_revision();
+#if defined(__NuttX__)
+    ets_printf("H2 rev=%u\\n", chip_version);
+#endif
+    if (!ESP_CHIP_REV_ABOVE(chip_version, 1)) {
+        // On ESP32P4 ECO0, the default (power on reset) CPLL and SPLL frequencies are very high, lower them to avoid bias may not be enough in bootloader
+        // And we are fixing SPLL to be 480MHz after app is up
+        REGI2C_WRITE_MASK(I2C_CPLL, I2C_CPLL_OC_DIV_7_0, 6); // lower default cpu_pll freq to 400M
+        REGI2C_WRITE_MASK(I2C_SYSPLL, I2C_SYSPLL_OC_DIV_7_0, 8); // lower default sys_pll freq to 480M
+        esp_rom_delay_us(100);
+    }
+#if defined(__NuttX__)
+    ets_printf("H3\\n");
+#endif
+    REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1, 10);
+    REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1_PVT, 10);
+#if defined(__NuttX__)
+    ets_printf("H4\\n");
+#endif
+
+#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP && !defined(__NuttX__)
+    // IDF-10019 TODO: This is temporarily for ESP32P4-ECO0, please remove it when eco0 is not widly used.
+    if (likely(ESP_CHIP_REV_ABOVE(chip_version, 1))) {
+        bootloader_init_mspi_clock();
+    }
+#endif
+#if defined(__NuttX__)
+    // The ROM already configured MSPI to read this Simple Boot image.  Do
+    // not switch its source while the application image is being entered.
+    ets_printf("H5\\n");
+#endif
+}
+"""
+    if old_hw_body in bltext:
+        bltext = bltext.replace(old_hw_body, new_hw_body, 1)
+        print("patched NuttX P4 hardware init to preserve ROM MSPI clock", BL)
+    elif new_hw_body not in bltext:
+        raise SystemExit("could not patch P4 bootloader_hardware_init body")
+
+    BL.write_text(bltext, encoding="utf-8")
+    print("conditioned legacy Simple Boot bypasses on chip revision", BL)
+
     text = CONTEST_START.read_text(encoding="utf-8").replace("\r\n", "\n")
     DEST_START.write_text(text, encoding="utf-8")
     print("synced", DEST_START, "N1w", "N1w" in text)
