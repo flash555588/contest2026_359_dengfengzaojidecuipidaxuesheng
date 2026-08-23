@@ -22,6 +22,7 @@
 #define DESKTOP_H  600
 
 static lv_obj_t *g_clock_label;
+static lv_obj_t *g_touch_label;
 
 static void clock_timer_cb(lv_timer_t *timer)
 {
@@ -37,6 +38,22 @@ static void btn_event_cb(lv_event_t *e)
   lv_obj_t *label = lv_event_get_user_data(e);
   static int presses;
   lv_label_set_text_fmt(label, "tapped x%d", ++presses);
+}
+
+static void touch_event_cb(lv_event_t *e)
+{
+  lv_indev_t *indev = lv_indev_active();
+  lv_point_t point;
+
+  if (indev == NULL || g_touch_label == NULL)
+    {
+      return;
+    }
+
+  lv_indev_get_point(indev, &point);
+  lv_label_set_text_fmt(g_touch_label, "touch x=%ld y=%ld",
+                        (long)point.x, (long)point.y);
+  printf("TOUCH: pressed x=%ld y=%ld\n", (long)point.x, (long)point.y);
 }
 
 static int desktop_ui(void)
@@ -56,7 +73,20 @@ static int desktop_ui(void)
       return -1;
     }
 
-  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x102030), 0);
+  if (res.indev == NULL)
+    {
+      printf("DESKTOP: touch init failed\n");
+    }
+  else
+    {
+      printf("DESKTOP: touch ready\n");
+    }
+
+  /* Keep the desktop deliberately bright during panel bring-up.  A dark
+   * background is indistinguishable from a stopped pixel stream when only
+   * the LCD backlight remains on. */
+
+  lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0xDDE8F0), 0);
 
   /* title bar */
   lv_obj_t *bar = lv_obj_create(lv_screen_active());
@@ -74,7 +104,7 @@ static int desktop_ui(void)
   /* clock */
   g_clock_label = lv_label_create(lv_screen_active());
   lv_obj_set_style_text_font(g_clock_label, &lv_font_montserrat_14, 0);
-  lv_obj_set_style_text_color(g_clock_label, lv_color_white(), 0);
+  lv_obj_set_style_text_color(g_clock_label, lv_color_hex(0x102030), 0);
   lv_obj_align(g_clock_label, LV_ALIGN_CENTER, 0, -40);
   clock_timer_cb(NULL);
 
@@ -92,6 +122,17 @@ static int desktop_ui(void)
 
   lv_obj_add_event_cb(b1, btn_event_cb, LV_EVENT_CLICKED, l2);
 
+  g_touch_label = lv_label_create(lv_screen_active());
+  lv_label_set_text(g_touch_label, "touch: tap any point");
+  lv_obj_set_style_text_color(g_touch_label, lv_color_hex(0x102030), 0);
+  lv_obj_align(g_touch_label, LV_ALIGN_CENTER, 160, 120);
+
+  if (res.indev != NULL)
+    {
+      lv_indev_add_event_cb(res.indev, touch_event_cb, LV_EVENT_PRESSED,
+                            NULL);
+    }
+
   lv_timer_create(clock_timer_cb, 1000, NULL);
   printf("DESKTOP: ui ready\n");
   return 0;
@@ -99,6 +140,13 @@ static int desktop_ui(void)
 
 static int desktop_task(int argc, FAR char *argv[])
 {
+  /* Leave the driver's full-screen color bars visible briefly.  This makes
+   * it possible to distinguish the continuous scanout path from the first
+   * LVGL framebuffer update on physical hardware. */
+
+  printf("DESKTOP: color bars hold for 3s\n");
+  nxsig_usleep(3 * 1000 * 1000);
+
   if (desktop_ui() != 0)
     {
       return EXIT_FAILURE;

@@ -197,6 +197,21 @@ def patch(path: Path, old: str, new: str, label: str) -> None:
 
 
 def main() -> None:
+    # ESP-IDF component sources include their generated sdkconfig.h, which
+    # does not expose NuttX-only Kconfig symbols.  Pull in NuttX config first
+    # so the v1.x/v3.x boot paths below are selected by the board defconfig
+    # on every clean build, not by stale object files.
+    bltext = BL.read_text(encoding="utf-8")
+    config_include = "#if defined(__NuttX__)\n#include <nuttx/config.h>\n#endif\n"
+    if config_include not in bltext:
+        bltext = bltext.replace(
+            "#include <stdint.h>\n",
+            "#include <stdint.h>\n" + config_include,
+            1,
+        )
+        BL.write_text(bltext, encoding="utf-8")
+        print("included NuttX config in ESP32-P4 bootloader", BL)
+
     patch(BL, OLD_EARLY, NEW_EARLY, "bootloader-early")
     patch(BL, OLD_FLASH, NEW_FLASH, "bootloader-flash")
     patch(BL, OLD_TRACE, NEW_TRACE, "bootloader-trace")
@@ -204,21 +219,26 @@ def main() -> None:
     patch(BL, OLD_HW, NEW_HW, "bootloader-skip-hw")
     patch(BL, OLD_SKIPCLK, NEW_SKIPCLK, "bootloader-skip-clk")
 
-    # The legacy Simple Boot bypasses are required only by P4 v1.x.  On
-    # v3.x, run the complete IDF hardware/clock/flash initialization path.
+    # A NuttX Simple-Boot image is entered after the ROM has already set up
+    # the executable mapping and clocks.  Re-running the IDF second-stage
+    # bootloader path is unsafe on every revision: v1.x loses the live MSPI
+    # mapping, while v3.2 stalls in the analog BIAS REGI2C write.  Keep the
+    # ROM state for both paths; revision-specific linker scripts and later
+    # NuttX PSRAM initialization remain selected by the board defconfig.
     bltext = BL.read_text(encoding="utf-8")
     bltext = bltext.replace(
-        "#if !defined(__NuttX__)\n",
         "#if !defined(__NuttX__) || !CONFIG_ESP32P4_SELECTS_REV_LESS_V3\n",
+        "#if !defined(__NuttX__)\n",
     )
     bltext = bltext.replace(
-        "#if !CONFIG_APP_BUILD_TYPE_RAM && !defined(__NuttX__)\n",
         "#if !CONFIG_APP_BUILD_TYPE_RAM && "
         "(!defined(__NuttX__) || !CONFIG_ESP32P4_SELECTS_REV_LESS_V3)\n",
+        "#if !CONFIG_APP_BUILD_TYPE_RAM && !defined(__NuttX__)\n",
     )
     bltext = bltext.replace(
-        '#if defined(__NuttX__)\n    ets_printf("B3\\n");\n    return ESP_OK;\n#endif',
         '#if defined(__NuttX__) && CONFIG_ESP32P4_SELECTS_REV_LESS_V3\n'
+        '    ets_printf("B3\\n");\n    return ESP_OK;\n#endif',
+        '#if defined(__NuttX__)\n'
         '    ets_printf("B3\\n");\n    return ESP_OK;\n#endif',
     )
 
@@ -297,7 +317,7 @@ def main() -> None:
         raise SystemExit("could not patch P4 bootloader_hardware_init body")
 
     BL.write_text(bltext, encoding="utf-8")
-    print("conditioned legacy Simple Boot bypasses on chip revision", BL)
+    print("preserved ROM Simple Boot state on all chip revisions", BL)
 
     text = CONTEST_START.read_text(encoding="utf-8").replace("\r\n", "\n")
     DEST_START.write_text(text, encoding="utf-8")

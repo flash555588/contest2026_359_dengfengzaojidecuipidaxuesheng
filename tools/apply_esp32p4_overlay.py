@@ -64,6 +64,18 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
+def copy_overlay_file(source: str, destination: str) -> str:
+    """Copy a file unless the destination already resolves to that file."""
+
+    try:
+        if os.path.exists(destination) and os.path.samefile(source, destination):
+            return destination
+    except OSError:
+        pass
+
+    return shutil.copy2(source, destination)
+
+
 def contest_src() -> Path:
     if CONTEST_WIN.is_dir() and (CONTEST_WIN / "board" / "esp32p4-function-ev-board").is_dir():
         return CONTEST_WIN
@@ -275,6 +287,19 @@ def main() -> int:
     if not common_dest.exists():
         links.append((src / "chip/esp32p4/common-espressif", common_dest))
     else:
+        # A bootstrap tree already contains the upstream common/espressif
+        # directory, so a repo <linkfile> cannot replace it with a symlink.
+        # Overlay the contest copy in place to keep local WSL builds identical
+        # to manifest-based builds while preserving any unrelated upstream
+        # files that the reduced contest snapshot does not carry.
+        shutil.copytree(
+            src / "chip/esp32p4/common-espressif",
+            common_dest,
+            dirs_exist_ok=True,
+            symlinks=True,
+            copy_function=copy_overlay_file,
+        )
+        log(f"overlay {src / 'chip/esp32p4/common-espressif'} -> {common_dest}")
         maybe_patch_common_espressif(common_dest)
     if not tools_dest.exists():
         links.append((src / "chip/esp32p4/tools-espressif", tools_dest))

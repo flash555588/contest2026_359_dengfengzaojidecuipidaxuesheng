@@ -4,7 +4,7 @@
  * Simple Boot display bring-up for the 7" 1024x600 MIPI-DSI panel
  * (EK79007-class driver IC on the LCD adapter board).
  *
- * Sequence: power DPHY LDO -> DSI host init (2 lanes @900Mbps) -> panel
+ * Sequence: power DPHY LDO -> DSI host init (2 lanes @1Gbps) -> panel
  * hard reset (GPIO27) -> vendor init cmds over LP DCS -> DPI timing ->
  * framebuffer (PSRAM) bind -> video start -> backlight (GPIO26).
  ****************************************************************************/
@@ -30,21 +30,20 @@
 #define FB_W               1024
 #define FB_H               600
 #define FB_BPP             16
+#define FB_BYTES_PER_PIXEL (FB_BPP / 8)
 #define FB_SIZE            (FB_W * FB_H * FB_BPP / 8)
 
-/* Diagnostic A/B: the DSI Host pattern generator bypasses PSRAM and
- * DW-GDMA.  Keep this enabled until the 1/4-screen failure is classified. */
-
-#define LCD_HOST_PATTERN_TEST 1
-
-static FAR uint16_t *g_fb;
+static FAR uint8_t *g_fb;
 static volatile bool g_ready;
+static uint32_t g_update_count;
 
 /* EK79007 vendor registers */
 #define EK79007_PAD_CONTROL 0xB2
 #define EK79007_DSI_2_LANE  0x10
 #define EK79007_CMD_SLPOUT  0x11
 #define EK79007_CMD_DISPON  0x29
+#define EK79007_CMD_COLMOD  0x3a
+#define EK79007_COLMOD_16BPP 0x55
 
 static const uint8_t g_ek79007_init[][2] =
 {
@@ -78,10 +77,12 @@ int esp32p4_display_init(void)
   struct mipi_dsi_device *dev;
   struct esp_ldo_config_t phy_ldo;
   uint8_t lane_cmd;
+  uint8_t pixel_format;
   uint8_t lane_readback;
   uint8_t power_mode;
   ssize_t read_ret;
-  FAR uint16_t *fb = NULL;
+  FAR uint8_t *fb = NULL;
+  FAR uint16_t *fb16;
   unsigned int i;
   uint32_t dma_frames;
   uint32_t dma_status;
@@ -95,12 +96,22 @@ int esp32p4_display_init(void)
   uint32_t host_phy_status;
   uint32_t host_color_coding;
   struct esp_mipi_dsi_timing_diagnostics_s timing_diag;
+  struct esp_mipi_dsi_dma_diagnostics_s dma_diag;
   int ret;
 
   if (g_ready)
     {
       return OK;
     }
+
+  /* A cold-powered panel needs its control pins in a deterministic state
+   * before the DPHY and DSI host are enabled.  Keep both the backlight and
+   * the active-low reset asserted throughout host initialization. */
+
+  esp_configgpio(LCD_BL_GPIO, OUTPUT);
+  esp_gpiowrite(LCD_BL_GPIO, false);
+  esp_configgpio(LCD_RST_GPIO, OUTPUT);
+  esp_gpiowrite(LCD_RST_GPIO, false);
 
   /* 1. VDD_MIPI_DPHY from on-chip LDO channel 3 @ 2.5V */
 
@@ -115,12 +126,16 @@ int esp32p4_display_init(void)
       return ret;
     }
 
-  /* 2. DSI host: use the EK79007 vendor driver's 900 Mbps default.  The
-   * early ESP32-P4 rev v1.0 has less HS margin than production silicon. */
+  nxsig_usleep(20 * 1000);
+
+  /* 2. DSI host: match Espressif's EK79007 reference profile exactly.
+   * Keeping the lane rate, pixel format, and blanking timings as one
+   * coherent profile is important: mixing the old 52 MHz profile with the
+   * current 48 MHz profile compresses the generated image horizontally. */
 
   memset(&bus, 0, sizeof(bus));
   bus.num_data_lanes     = 2;
-  bus.lane_bit_rate_mbps = 900;
+  bus.lane_bit_rate_mbps = 1000;
 
   ret = esp_mipi_dsi_initialize(&bus);
   printf("DISP: dsi host init -> %d\n", ret);
@@ -149,11 +164,9 @@ int esp32p4_display_init(void)
 
   /* 3. Panel hardware reset, active low */
 
-  esp_configgpio(LCD_RST_GPIO, OUTPUT);
-  esp_gpiowrite(LCD_RST_GPIO, false);
-  nxsig_usleep(10 * 1000);
-  esp_gpiowrite(LCD_RST_GPIO, true);
   nxsig_usleep(20 * 1000);
+  esp_gpiowrite(LCD_RST_GPIO, true);
+  nxsig_usleep(120 * 1000);
 
   /* 4. Vendor init sequence over LP DCS */
 
@@ -172,6 +185,16 @@ int esp32p4_display_init(void)
         {
           return ret;
         }
+    }
+
+  /* Revision 1.x has one shared bridge raw pixel type, so use RGB565 from
+   * PSRAM through the DSI Host and tell the panel to decode 16 bpp too. */
+
+  pixel_format = EK79007_COLMOD_16BPP;
+  ret = ek79007_dcs_write(dev, EK79007_CMD_COLMOD, &pixel_format, 1);
+  if (ret != OK)
+    {
+      return ret;
     }
 
   ret = ek79007_dcs_write(dev, EK79007_CMD_SLPOUT, NULL, 0);
@@ -206,12 +229,21 @@ int esp32p4_display_init(void)
   dpi.h_res              = FB_W;
   dpi.v_res              = FB_H;
   dpi.hsync_pulse_width  = 10;
-  dpi.hsync_back_porch   = 160;
-  dpi.hsync_front_porch  = 160;
+  dpi.hsync_back_porch   = 120;
+  dpi.hsync_front_porch  = 120;
   dpi.vsync_pulse_width  = 1;
-  dpi.vsync_back_porch   = 23;
-  dpi.vsync_front_porch  = 12;
-  dpi.dpi_clock_freq_mhz = 52;
+  dpi.vsync_back_porch   = 20;
+  dpi.vsync_front_porch  = 10;
+  /* Revision 1.x cannot run this board's 32 MiB PSRAM reliably at 200 MHz.
+   * Its 80 MHz memory setting is paired with a 24 MHz pixel clock to halve
+   * scanout bandwidth while preserving the complete 1024x600 active area.
+   * This 30 Hz mode has been verified physically to fill the panel. */
+
+#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+  dpi.dpi_clock_freq_mhz = 24;
+#else
+  dpi.dpi_clock_freq_mhz = 48;
+#endif
   dpi.virtual_channel    = 0;
   dpi.format             = MIPI_DSI_FMT_RGB565;
 
@@ -225,7 +257,7 @@ int esp32p4_display_init(void)
   /* 6. Select the pixel source.  The host pattern is the same isolation
    * test provided by the ESP-IDF DPI panel driver. */
 
-#if LCD_HOST_PATTERN_TEST
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI_TEST_PATTERN
   ret = esp_mipi_dsi_set_test_pattern(true);
   printf("DISP: host pattern (no PSRAM/DMA) -> %d\n", ret);
   if (ret != OK)
@@ -235,19 +267,19 @@ int esp32p4_display_init(void)
 #else
   /* Framebuffer from PSRAM-backed heap */
 
-  fb = kmm_malloc(FB_SIZE);
+  fb = kmm_memalign(64, FB_SIZE);
   if (fb == NULL)
     {
-      /* Heap fallback: carve straight from the mapped PSRAM window.
-       * The kernel heap currently does not hand out PSRAM, so the
-       * beginning of the window is guaranteed untouched. */
-      extern uintptr_t esp_psram_extram_vaddr_start(void);
-      uintptr_t p = esp_psram_extram_vaddr_start();
-      printf("DISP: heap short, carve fb @%08lx\n", (unsigned long)p);
-      fb = (FAR uint16_t *)p;
+      printf("DISP: cannot allocate %u-byte RGB565 framebuffer\n",
+             (unsigned int)FB_SIZE);
+      return -ENOMEM;
     }
 
-  /* Eight full-height RGB565 bars make line width, color order, and the
+  fb16 = (FAR uint16_t *)fb;
+  printf("DISP: RGB565 framebuffer @%p size=%u\n", fb,
+         (unsigned int)FB_SIZE);
+
+  /* Eight full-height RGB565 bars make line width, channel order, and the
    * amount of active image immediately identifiable on the physical LCD. */
 
   static const uint16_t bars[8] =
@@ -258,9 +290,20 @@ int esp32p4_display_init(void)
 
   for (i = 0; i < FB_W * FB_H; i++)
     {
-      uint16_t x = i % FB_W;
-      fb[i] = bars[x / (FB_W / 8)];
+      unsigned int bar = (i % FB_W) / (FB_W / 8);
+      fb16[i] = bars[bar];
     }
+
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI_FIXED_SOURCE_TEST
+  /* A fixed-source DMA repeats these four RGB565 red pixels for the entire
+   * transfer.  A full red panel proves bridge/Host framing independently of
+   * sequential PSRAM access. */
+
+  fb16[0] = 0xf800;
+  fb16[1] = 0xf800;
+  fb16[2] = 0xf800;
+  fb16[3] = 0xf800;
+#endif
 
   ret = esp_mipi_dsi_bind_framebuffer(fb, FB_SIZE, FB_W, FB_H, FB_BPP);
   printf("DISP: fb bind -> %d\n", ret);
@@ -349,12 +392,31 @@ int esp32p4_display_init(void)
          (unsigned long)host_vid_pkt_status,
          (unsigned long)host_phy_status, ret);
 
+  memset(&dma_diag, 0, sizeof(dma_diag));
+  ret = esp_mipi_dsi_get_dma_diagnostics(&dma_diag);
+  printf("DISP: dma amount=%lu live=%lu fifo=%lu/%lu common=%08lx "
+         "lli=%08lx src=%08lx block=%lu ctl=%08lx/%08lx -> %d\n",
+         (unsigned long)dma_diag.last_transfer_items,
+         (unsigned long)dma_diag.live_transfer_items,
+         (unsigned long)dma_diag.last_fifo_items,
+         (unsigned long)dma_diag.live_fifo_items,
+         (unsigned long)dma_diag.last_common_status,
+         (unsigned long)dma_diag.current_lli,
+         (unsigned long)dma_diag.lli_source,
+         (unsigned long)dma_diag.lli_block_items,
+         (unsigned long)dma_diag.lli_control_low,
+         (unsigned long)dma_diag.lli_control_high, ret);
+
   g_fb     = fb;
   g_ready  = true;
 
-#if !LCD_HOST_PATTERN_TEST
+#ifndef CONFIG_ESPRESSIF_MIPI_DSI_TEST_PATTERN
   ret = fb_register(0, 0);
   printf("DISP: /dev/fb0 register -> %d\n", ret);
+  if (ret != OK)
+    {
+      return ret;
+    }
 #endif
 
   esp_configgpio(LCD_BL_GPIO, OUTPUT);
@@ -390,7 +452,7 @@ static int disp_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
 
   pinfo->fbmem   = (FAR void *)g_fb;
   pinfo->fblen   = FB_SIZE;
-  pinfo->stride   = FB_W * 2;
+  pinfo->stride   = FB_W * FB_BYTES_PER_PIXEL;
   pinfo->display  = 0;
   pinfo->bpp      = FB_BPP;
   return OK;
@@ -400,8 +462,33 @@ static int disp_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
 static int disp_updatearea(FAR struct fb_vtable_s *vtable,
                            FAR const struct fb_area_s *area)
 {
-  esp_mipi_dsi_flush_framebuffer(g_fb, FB_SIZE);
-  return OK;
+  FAR uint8_t *start;
+  size_t len;
+
+  if (g_fb == NULL || area == NULL || area->h == 0 ||
+      area->y >= FB_H || area->h > FB_H - area->y)
+    {
+      return -EINVAL;
+    }
+
+  /* The DMA always scans a complete frame, but only rows touched by LVGL
+   * need CPU-to-memory cache writeback.  Flush complete scanlines so the
+   * range remains simple and cache-line safe even for a narrow dirty area.
+   * This follows ESP-IDF's DPI framebuffer update strategy and avoids a
+   * 1.2 MiB writeback for every small clock or touch-label update. */
+
+  start = g_fb + (size_t)area->y * FB_W * FB_BYTES_PER_PIXEL;
+  len = (size_t)area->h * FB_W * FB_BYTES_PER_PIXEL;
+
+  g_update_count++;
+  if (g_update_count <= 4)
+    {
+      printf("DISP: update #%lu x=%u y=%u w=%u h=%u flush=%p+%u\n",
+             (unsigned long)g_update_count, area->x, area->y,
+             area->w, area->h, start, (unsigned int)len);
+    }
+
+  return esp_mipi_dsi_flush_framebuffer(start, len);
 }
 #endif
 

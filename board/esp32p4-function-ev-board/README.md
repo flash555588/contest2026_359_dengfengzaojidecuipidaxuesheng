@@ -1,6 +1,6 @@
 # ESP32-P4 Function-EV-Board NSH L0 移植指南
 
-本文记录 ESP32-P4 Function-EV-Board 上 NuttShell（NSH）L0 移植的现状：硬件约束、构建烧录流程、当前配置与已知限制。所有结论均来自实板验证，事实依据见 `logs/flash555588/2026-08-21/work-record-esp32p4-nsh.md`。
+本文记录 ESP32-P4 Function-EV-Board 上 NuttShell、PSRAM、MIPI-DSI LCD、GT911 与 LVGL 的移植现状，包括硬件约束、双 revision 构建烧录流程和已知限制。实板记录位于 `logs/flash555588/`。
 
 ## 硬件与限制说明
 
@@ -8,7 +8,7 @@
 |------|------|
 | 开发板 | 乐鑫 ESP32-P4 Function-EV-Board **v1.4** |
 | 芯片 revision | **v1.0**（不是官方文档里的 P4X v3.1） |
-| Kconfig 前提 | 必须 `CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y` |
+| Kconfig | v1.x 使用 `configs/nsh`；v3.2 使用 `configs/nsh-v3` |
 | 烧录对象 | **只烧 P4**，不烧 C6（板上 C6 保持原样未启用） |
 | 串口 | COM7（CP2102N），UART0 TX=GPIO37 / RX=GPIO38，115200 |
 | Flash | 16MB，DIO 模式 |
@@ -30,31 +30,31 @@ contest2026_359_dengfengzaojidecuipidaxuesheng/
 
 ## 构建流程
 
-编译在 WSL 树内完成：
+编译在 WSL `/home/flash/vela-p4` 工作树内完成。`wsl_build_p4_nsh.py` 会应用仓内 overlay、安装 Simple Boot 兼容补丁、选择配置并生成可烧录镜像：
 
-- 编译树位置：WSL `/home/flash/vela-p4/nuttx`
-- 构建脚本：`tools/wsl_make_p4_nsh.sh`（内部 `make -j2`）。注意：构建末尾 WSL 侧的 esptool 版本报错**可忽略**——真正的 elf2image 在 Windows 侧做（见下一节）
-- 产物拷贝：`tools/wsl_copy_firmware.py`，把 ELF / map / hex 从 WSL 树拷回仓内 `firmware/esp32p4-nsh/`
+```bash
+python tools/wsl_build_p4_nsh.py nsh
+python tools/wsl_copy_firmware.py --variant v1.x
 
-对 WSL 树打 Simple Boot 补丁用 `tools/wsl_patch_p4_simple_boot.py`（改树内 `bootloader_esp32p4.c`）。
+python tools/wsl_build_p4_nsh.py nsh-v3
+python tools/wsl_copy_firmware.py --variant v3.2
+```
+
+产物分别位于 `firmware/esp32p4-nsh/v1.x/` 和 `firmware/esp32p4-nsh/v3.2/`，每套包含 bin、ELF、hex、map 与最终 `.config`。不要混用两个 revision 的镜像。
 
 ## 生成镜像与烧录
 
-**生成镜像**（Windows 侧，esptool 5.3.1，在仓根目录执行）：
-
-```
-python -m esptool --chip esp32p4 elf2image --ram-only-header --flash_mode dio --flash_freq 80m --flash_size 16MB -o firmware\esp32p4-nsh\nuttx.bin firmware\esp32p4-nsh\nuttx
-```
-
-关键点：必须用 `--ram-only-header`。**不要烧 objcopy 出来的 bin**——那里面带着 64MB 的空洞。
+构建末尾由工作树固定的 esptool 生成 `--ram-only-header` Simple Boot 镜像。归档脚本直接复制该文件；不要用另一个 esptool 版本重新转换 ELF，也不要烧 objcopy 产生的带 64 MiB 空洞文件。
 
 **烧录**：
 
-```
-powershell -File tools\flash_p4_nsh.ps1
+```powershell
+powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7
+# 仅在确认芯片为 v3.2 后使用：
+powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7
 ```
 
-脚本行为（见 `tools/flash_p4_nsh.ps1`）：把 `firmware\esp32p4-nsh\nuttx.bin` 写到 COM7 @ 460800，偏移 **0x2000**（Apache NuttX Config.mk 规定的 ESP32-P4 simple-boot app offset，ROM 从这里加载），`--before default_reset --after hard_reset`，flash 参数与 elf2image 一致（dio / 80m / 16MB）。
+脚本把所选镜像写到偏移 **0x2000**（ESP32-P4 Simple Boot app offset），默认 460800 baud，flash 参数为 DIO / 80 MHz / 16 MiB。`0x0` 是错误地址，不能使用。
 
 **进下载模式**：按住 BOOT 键，点一下 RST，再跑烧录脚本。连接失败时重复此动作重试。
 
@@ -72,7 +72,9 @@ nsh> uname -a
 NuttX 0.0.0 dd92bcf4-dirty Aug 21 2026 19:38:54 risc-v esp32p4-function-ev-board
 ```
 
-看到 `nsh>` 且 `uname -a` 显示 `risc-v esp32p4-function-ev-board` 即 L0 通过。完整串口日志：`logs/flash555588/2026-08-21/bootlog-esp32p4-nsh.txt`。
+看到 `nsh>` 且 `uname -a` 显示 `risc-v esp32p4-function-ev-board` 即启动通过。继续执行 `ps`、`free`；当前配置为 init/NSH 分配 16 KiB 栈并为 IRQ 分配 8 KiB 栈，避免显示初始化后的 `ps` 覆盖栈底 TLS。
+
+显示默认走 PSRAM RGB565 framebuffer。v1.x 使用 80 MHz PSRAM 与已实测全屏的 24 MHz DPI，v3.2 使用 200 MHz PSRAM 与原厂 48 MHz DPI；共同参数为 1024×600、2 Lane、1000 Mbps、水平 `10/120/120`、垂直 `1/20/10`。冷启动时背光与 RESET 先保持关闭/拉低，DPHY 和 DSI Host 就绪后再释放 RESET 并等待 120 ms。启动后先显示 3 秒全屏色条，再进入浅色 LVGL 桌面。`DESKTOP: touch ready` 证明 GT911 已被 LVGL 打开；实际点击应输出 `TOUCH: pressed x=... y=...`。
 
 ## 当前时钟与外设配置
 
@@ -92,7 +94,7 @@ NuttX 0.0.0 dd92bcf4-dirty Aug 21 2026 19:38:54 risc-v esp32p4-function-ev-board
 ## 已知限制
 
 1. **360MHz 不可用**：Phase-2-1b 实验证实，在 Simple Boot 的 ROM 时钟阶段对 MSPI/SPLL 做重配（含先强制 SPLL=480M）会立即挂死 XIP；正确路径需完整时钟树重建（rtc_clk_init 级别），列为后续专项。当前 CPLL 90MHz 为实测稳定档位。
-2. **procfs 未自动挂载**：`free` / `ps` 前需手动执行 `mount -t procfs /proc /proc`，否则报 procfs 未挂载属预期行为。
+2. **LCD/触摸仍需继续验收**：v1.x 已实测 24 MHz 全屏画面且颜色正常；冷上电重复性与 GT911 实际点击坐标/方向仍以当前实板观察为最终判据。
 3. **面包屑已部分收编**：esp_start.c 的 N 系列已收进 CONFIG_DEBUG_FEATURES（默认静默）；bootloader 阶段的 B0-B3 四个字符因 HAL 编译单元看不到 NuttX 调试配置而保留常开。
 4. **ESP32-C6 保持原样未启用**：本移植只针对 P4 核。
 
