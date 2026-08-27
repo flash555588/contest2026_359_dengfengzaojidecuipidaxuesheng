@@ -1,8 +1,6 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/platform_include/sys/lock.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,7 +24,11 @@
  * Included Files
  ****************************************************************************/
 
-#include_next <sys/lock.h>
+#if defined(__has_include_next) && __has_include_next(<sys/lock.h>)
+#  include_next <sys/lock.h>
+#else
+typedef struct __lock *_LOCK_T;
+#endif
 
 #ifdef _RETARGETABLE_LOCKING
 
