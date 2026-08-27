@@ -27,7 +27,7 @@
 #include <nuttx/config.h>
 
 #include <string.h>
-#include <nuttx/debug.h>
+#include <debug.h>
 
 #include "soc/soc_caps.h"
 #include "esp_ldo.h"
