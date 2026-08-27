@@ -8,7 +8,10 @@
   -->
   <include name="openvela.xml"/>
 
-  <project path="contest2026_359_dengfengzaojidecuipidaxuesheng" name="contest2026_359_dengfengzaojidecuipidaxuesheng">
+  <project path="contest2026_359_dengfengzaojidecuipidaxuesheng"
+           name="contest2026_359_dengfengzaojidecuipidaxuesheng"
+           remote="esp32p4-team"
+           revision="fee968b524a59c4b4a5b8bb4abb6e30d679a2c7a">
     <linkfile src="app/hello_app" dest="packages/demos/contest2026_359_hello_app"/>
     <linkfile src="quickapp/hello_quickapp" dest="packages/apps/contest2026_359_hello_quickapp"/>
     <linkfile src="board/contest_board" dest="vendor/openvela/boards/contest2026_359_board"/>
