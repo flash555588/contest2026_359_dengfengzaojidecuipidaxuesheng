@@ -360,8 +360,7 @@ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv)
     {
       ret = esp_setup_irq(DW_GDMA_INTR_SOURCE,
                           ESP_IRQ_PRIORITY_DEFAULT,
-                          ESP_IRQ_TRIGGER_LEVEL,
-                          esp_mipi_dsi_dma_isr, priv);
+                          ESP_IRQ_TRIGGER_LEVEL);
       if (ret < 0)
         {
           verr("esp_mipi_dsi: DW-GDMA IRQ setup failed: %d\n",
@@ -370,6 +369,7 @@ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv)
         }
 
       priv->dma_cpuint = ret;
+      irq_attach(ESP_IRQ_DW_GDMA, esp_mipi_dsi_dma_isr, priv);
       up_enable_irq(ESP_IRQ_DW_GDMA);
     }
 

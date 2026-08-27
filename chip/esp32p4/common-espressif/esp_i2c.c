@@ -56,7 +56,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
-#include <nuttx/debug.h>
+#include <debug.h>
 #include <time.h>
 #include <sys/time.h>
 
@@ -1813,9 +1813,7 @@ struct i2c_master_s *esp_i2cbus_initialize(int port)
 
   priv->cpuint = esp_setup_irq(i2c_periph_signal[priv->id].irq,
                                ESP_IRQ_PRIORITY_DEFAULT,
-                               ESP_IRQ_TRIGGER_LEVEL,
-                               esp_i2c_irq,
-                               priv);
+                               ESP_IRQ_TRIGGER_LEVEL);
   if (priv->cpuint < 0)
     {
       /* Failed to allocate a CPU interrupt of this type. */
@@ -1825,6 +1823,9 @@ struct i2c_master_s *esp_i2cbus_initialize(int port)
 
       return NULL;
     }
+
+  irq_attach(ESP_SOURCE2IRQ(i2c_periph_signal[priv->id].irq),
+             esp_i2c_irq, priv);
 
   /* Enable the CPU interrupt that is linked to the I2C device. */
 

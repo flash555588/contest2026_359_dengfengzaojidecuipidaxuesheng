@@ -165,6 +165,7 @@ int esp_setup_irq_with_flags_intrstatus(int source, int flags,
                                         uint32_t intrstatusmask,
                                         xcpt_t handler, void *arg);
 int esp_get_cpuint(int cpu, int irq);
+void *esp_get_handle(int cpu, int irq);
 #endif
 
 /****************************************************************************

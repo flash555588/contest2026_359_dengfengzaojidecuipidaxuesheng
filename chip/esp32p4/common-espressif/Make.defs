@@ -60,6 +60,11 @@ ifeq ($(CONFIG_ONESHOT),y)
 	CHIP_CSRCS += esp_oneshot.c
 endif
 
+ifeq ($(CONFIG_ESPRESSIF_MIPI_DSI),y)
+	CHIP_CSRCS += esp_mipi_dsi.c
+	CHIP_CSRCS += esp_ldo.c
+endif
+
 ifeq ($(CONFIG_RTC),y)
 	CHIP_CSRCS += esp_rtc.c
 endif
