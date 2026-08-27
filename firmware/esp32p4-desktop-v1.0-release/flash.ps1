@@ -7,7 +7,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $image = Join-Path $PSScriptRoot "nuttx.bin"
-$expected = "FDD73E4CEB43BFC7F3CBA030A3A0CA3A0A99784B78A6BDD1121BA59A9D75F62B"
+$expected = "74420C66BE6A0298DBBEB21326600D47010612C27A097030DF4E47CC90E2C058"
 
 if (-not (Test-Path -LiteralPath $image -PathType Leaf)) {
     throw "Firmware not found: $image"

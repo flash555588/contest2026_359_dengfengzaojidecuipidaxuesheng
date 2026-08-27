@@ -47,14 +47,20 @@ compiler_version="$($toolchain/riscv32-esp-elf-gcc --version | head -n 1)"
   exit 1
 }
 
+kconfig_tweak="$(command -v kconfig-tweak || true)"
+[[ -x "$kconfig_tweak" ]] || {
+  echo "kconfig-tweak is required by the OpenVela configure flow" >&2
+  exit 1
+}
+
 output="${2:-$workspace/out/esp32p4-desktop-$variant}"
 mkdir -p "$output"
 
-export PATH="$toolchain:/usr/local/bin:/usr/bin:/bin"
+export PATH="$toolchain:$(dirname "$kconfig_tweak"):/usr/local/bin:/usr/bin:/bin"
 export CROSSDEV=riscv32-esp-elf-
 
 cd "$workspace/nuttx"
-./tools/configure.sh -S -l -a ../apps "$config"
+./tools/configure.sh -E -S -l -a ../apps "$config"
 make -j"$jobs"
 
 cp nuttx.bin "$output/nuttx.bin"
@@ -64,12 +70,26 @@ cp .config "$output/resolved.config"
 cp "boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/${config##*:}/defconfig" \
   "$output/defconfig"
 
+git_head() {
+  git -C "$1" rev-parse HEAD 2>/dev/null || echo unavailable
+}
+
+quickjs_source="$(awk '/^QUICKJS_COMMIT_ID[[:space:]]*=/{print $3; exit}' \
+  "$workspace/apps/interpreters/quickjs/Makefile")"
+hal_root="${NXTMPDIR:-$workspace/nxtmpdir}/esp-hal-3rdparty"
+
 {
   echo "variant=$variant"
   echo "config=$config"
   echo "compiler=$compiler_version"
+  echo "compiler_sha256=$(sha256sum "$toolchain/riscv32-esp-elf-gcc" | cut -d' ' -f1)"
   echo "nuttx=$(git rev-parse HEAD)"
   echo "apps=$(git -C ../apps rev-parse HEAD)"
+  echo "lvgl=$(git_head "$workspace/apps/graphics/lvgl/lvgl")"
+  echo "quickjs_source=${quickjs_source:-unavailable}"
+  echo "vendor_espressif=$(git_head "$workspace/vendor/espressif")"
+  echo "esp_hal=$(git_head "$hal_root")"
+  echo "mbedtls=$(git_head "$hal_root/components/mbedtls/mbedtls")"
 } > "$output/BUILD-METADATA.txt"
 
 (
