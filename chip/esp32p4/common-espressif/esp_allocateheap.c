@@ -36,6 +36,7 @@
 #include "rom/rom_layout.h"
 #ifdef CONFIG_ARCH_CHIP_ESP32P4
 #  include "esp_rom_sys.h"
+extern int ets_printf(const char *fmt, ...) printf_like(1, 2);
 #endif
 
 /****************************************************************************
@@ -70,13 +71,6 @@
  *   None.
  *
  ****************************************************************************/
-
-#ifdef CONFIG_ARCH_CHIP_ESP32P4
-size_t esp_psram_get_heap_size_to_protect(void)
-{
-  return 0;
-}
-#endif
 
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
