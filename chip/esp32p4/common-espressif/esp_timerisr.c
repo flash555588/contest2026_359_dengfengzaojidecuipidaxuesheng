@@ -1,8 +1,6 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/esp_timerisr.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -119,16 +117,17 @@ static int systimer_irq_handler(int irq, void *context, void *arg)
 
 void up_timer_initialize(void)
 {
-  PERIPH_RCC_ACQUIRE_ATOMIC(PERIPH_SYSTIMER_MODULE, ref_count)
-    {
-      if (ref_count == 0)
-        {
-          systimer_ll_enable_bus_clock(true);
-          systimer_ll_reset_register();
-        }
-    }
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+  /* P4 dropped PERIPH_SYSTIMER_MODULE; ungated APB clock directly. */
 
+  HP_SYS_CLKRST.soc_clk_ctrl2.reg_systimer_apb_clk_en = 1;
+#else
+  periph_module_enable(PERIPH_SYSTIMER_MODULE);
+#endif
   systimer_hal_init(&systimer_hal);
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+  systimer_ll_enable_clock(systimer_hal.dev, true);
+#endif
   systimer_hal_tick_rate_ops_t ops =
     {
       .ticks_to_us = systimer_ticks_to_us,
@@ -163,9 +162,13 @@ void up_timer_initialize(void)
 
   esp_setup_irq(CHIP_SYSTIMER_SOURCE,
                 ESP_IRQ_PRIORITY_DEFAULT,
-                SYSTIMER_TRIGGER_TYPE,
-                systimer_irq_handler,
-                NULL);
+                SYSTIMER_TRIGGER_TYPE);
+
+  /* Attach the timer interrupt. */
+
+  irq_attach(ESP_SOURCE2IRQ(CHIP_SYSTIMER_SOURCE),
+             (xcpt_t)systimer_irq_handler,
+             NULL);
 
   /* Enable the allocated CPU interrupt. */
 

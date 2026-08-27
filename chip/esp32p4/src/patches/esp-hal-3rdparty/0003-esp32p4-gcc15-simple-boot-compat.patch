@@ -1,0 +1,241 @@
+diff --git a/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c b/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c
+index 4aff280..ccc9f14 100644
+--- a/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c
++++ b/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c
+@@ -4,6 +4,9 @@
+  * SPDX-License-Identifier: Apache-2.0
+  */
+ #include <stdint.h>
++#if defined(__NuttX__)
++#include <nuttx/config.h>
++#endif
+ #include "sdkconfig.h"
+ #include "esp_attr.h"
+ #include "esp_log.h"
+@@ -93,10 +96,19 @@ static void bootloader_super_wdt_auto_feed(void)
+
+ static inline void bootloader_hardware_init(void)
+ {
++#if defined(__NuttX__)
++    ets_printf("H0\n");
++#endif
+     _regi2c_ctrl_ll_master_enable_clock(true); // keep ana i2c mst clock always enabled in bootloader
+     regi2c_ctrl_ll_master_configure_clock();
++#if defined(__NuttX__)
++    ets_printf("H1\n");
++#endif
+
+     unsigned chip_version = efuse_hal_chip_revision();
++#if defined(__NuttX__)
++    ets_printf("H2 rev=%u\n", chip_version);
++#endif
+     if (!ESP_CHIP_REV_ABOVE(chip_version, 1)) {
+         // On ESP32P4 ECO0, the default (power on reset) CPLL and SPLL frequencies are very high, lower them to avoid bias may not be enough in bootloader
+         // And we are fixing SPLL to be 480MHz after app is up
+@@ -104,15 +116,26 @@ static inline void bootloader_hardware_init(void)
+         REGI2C_WRITE_MASK(I2C_SYSPLL, I2C_SYSPLL_OC_DIV_7_0, 8); // lower default sys_pll freq to 480M
+         esp_rom_delay_us(100);
+     }
++#if defined(__NuttX__)
++    ets_printf("H3\n");
++#endif
+     REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1, 10);
+     REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1_PVT, 10);
++#if defined(__NuttX__)
++    ets_printf("H4\n");
++#endif
+
+-#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
++#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP && !defined(__NuttX__)
+     // IDF-10019 TODO: This is temporarily for ESP32P4-ECO0, please remove it when eco0 is not widly used.
+     if (likely(ESP_CHIP_REV_ABOVE(chip_version, 1))) {
+         bootloader_init_mspi_clock();
+     }
+ #endif
++#if defined(__NuttX__)
++    // The ROM already configured MSPI to read this Simple Boot image.  Do
++    // not switch its source while the application image is being entered.
++    ets_printf("H5\n");
++#endif
+ }
+
+ static inline void bootloader_ana_reset_config(void)
+@@ -127,12 +150,25 @@ esp_err_t bootloader_init(void)
+ {
+     esp_err_t ret = ESP_OK;
+
++#if defined(__NuttX__)
++    ets_printf("B0\n");
++#endif
++#if !defined(__NuttX__)
+     bootloader_hardware_init();
++#endif
++#if defined(__NuttX__)
++    ets_printf("B1\n");
++#endif
++#if !defined(__NuttX__)
+     bootloader_ana_reset_config();
++#endif
+     bootloader_super_wdt_auto_feed();
++#if defined(__NuttX__)
++    ets_printf("B2\n");
++#endif
+
+ // In RAM_APP, memory will be initialized in `call_start_cpu0`
+-#if !CONFIG_APP_BUILD_TYPE_RAM
++#if !CONFIG_APP_BUILD_TYPE_RAM && !defined(__NuttX__)
+     // protect memory region
+     bootloader_init_mem();
+     /* check that static RAM is after the stack */
+@@ -140,7 +176,7 @@ esp_err_t bootloader_init(void)
+     assert(&_data_start <= &_data_end);
+     // clear bss section
+     bootloader_clear_bss_section();
+-#endif // !CONFIG_APP_BUILD_TYPE_RAM
++#endif // !CONFIG_APP_BUILD_TYPE_RAM && !__NuttX__
+
+     // init eFuse virtual mode (read eFuses to RAM)
+ #ifdef CONFIG_EFUSE_VIRTUAL
+@@ -151,15 +187,32 @@ esp_err_t bootloader_init(void)
+ #endif
+
+     // config clock
++#if defined(__NuttX__)
++    ets_printf("B3\n");
++    return ESP_OK;
++#endif
+     bootloader_clock_configure();
++#if defined(__NuttX__)
++    ets_printf("B3\n");
++#endif
+     // initialize console, from now on, we can use esp_log
+     bootloader_console_init();
++#if defined(__NuttX__)
++    ets_printf("B4\n");
++#endif
+     /* print 2nd bootloader banner */
+     bootloader_print_banner();
++#if defined(__NuttX__)
++    ets_printf("B5\n");
++#endif
+
+ #if !CONFIG_APP_BUILD_TYPE_RAM
+     // init cache and mmu
+     bootloader_init_ext_mem();
++#if defined(__NuttX__)
++    ets_printf("B6\n");
++#endif
++#if !defined(__NuttX__)
+     // update flash ID
+     bootloader_flash_update_id();
+     // Check and run XMC startup flow
+@@ -179,12 +232,15 @@ esp_err_t bootloader_init(void)
+     if ((ret = bootloader_init_spi_flash()) != ESP_OK) {
+         return ret;
+     }
++#endif /* !__NuttX__ */
+ #endif // !CONFIG_APP_BUILD_TYPE_RAM
+
+     // check whether a WDT reset happened
+     bootloader_check_wdt_reset();
++#if !defined(__NuttX__)
+     // config WDT
+     bootloader_config_wdt();
++#endif
+     // enable RNG early entropy source
+     bootloader_enable_random();
+
+diff --git a/components/esp_adc/adc_filter.c b/components/esp_adc/adc_filter.c
+index da8ead9..3b4bbe2 100644
+--- a/components/esp_adc/adc_filter.c
++++ b/components/esp_adc/adc_filter.c
+@@ -21,9 +21,9 @@ static const char *TAG = "adc_filter";
+ static portMUX_TYPE s_filter_spinlock = portMUX_INITIALIZER_UNLOCKED;
+
+ #if SOC_ADC_DIG_IIR_FILTER_UNIT_BINDED
+-static atomic_bool s_adc_filter_claimed[SOC_ADC_DIGI_IIR_FILTER_NUM] = {ATOMIC_VAR_INIT(false),
++static atomic_bool s_adc_filter_claimed[SOC_ADC_DIGI_IIR_FILTER_NUM] = {(false),
+ #if (SOC_ADC_DIGI_IIR_FILTER_NUM >= 2)
+-                                                                        ATOMIC_VAR_INIT(false)
++                                                                        (false)
+ #endif
+                                                                        };
+
+diff --git a/components/esp_adc/adc_oneshot.c b/components/esp_adc/adc_oneshot.c
+index 5f2fce8..5ce78e1 100644
+--- a/components/esp_adc/adc_oneshot.c
++++ b/components/esp_adc/adc_oneshot.c
+@@ -55,9 +55,9 @@ typedef struct adc_oneshot_ctx_t {
+ } adc_oneshot_ctx_t;
+
+ static adc_oneshot_ctx_t s_ctx;    //ADC oneshot mode context
+-static atomic_bool s_adc_unit_claimed[SOC_ADC_PERIPH_NUM] = {ATOMIC_VAR_INIT(false),
++static atomic_bool s_adc_unit_claimed[SOC_ADC_PERIPH_NUM] = {(false),
+ #if (SOC_ADC_PERIPH_NUM >= 2)
+-                                                             ATOMIC_VAR_INIT(false)
++                                                             (false)
+ #endif
+                                                             };
+
+diff --git a/components/esp_hw_support/esp_gpio_reserve.c b/components/esp_hw_support/esp_gpio_reserve.c
+index c2e5ec7..872fe45 100644
+--- a/components/esp_hw_support/esp_gpio_reserve.c
++++ b/components/esp_hw_support/esp_gpio_reserve.c
+@@ -10,7 +10,7 @@
+ #include "esp_bit_defs.h"
+ #include "esp_private/esp_gpio_reserve.h"
+
+-static _Atomic uint64_t s_reserved_pin_mask = ATOMIC_VAR_INIT(~(SOC_GPIO_VALID_GPIO_MASK));
++static _Atomic uint64_t s_reserved_pin_mask = (~(SOC_GPIO_VALID_GPIO_MASK));
+
+ uint64_t esp_gpio_reserve(uint64_t gpio_mask)
+ {
+diff --git a/components/esp_hw_support/spi_bus_lock.c b/components/esp_hw_support/spi_bus_lock.c
+index d128205..d4971d9 100644
+--- a/components/esp_hw_support/spi_bus_lock.c
++++ b/components/esp_hw_support/spi_bus_lock.c
+@@ -860,9 +860,9 @@ static spi_bus_lock_t main_spi_bus_lock = {
+      * the main bus cache is permanently required, this flag is set here and never clear so that the
+      * cache will always be enabled if acquiring devices yield.
+      */
+-    .status = ATOMIC_VAR_INIT(WEAK_BG_FLAG),
++    .status = (WEAK_BG_FLAG),
+     .acquiring_dev = NULL,
+-    .dev = {ATOMIC_VAR_INIT((intptr_t)&lock_main_flash_dev)},
++    .dev = {((intptr_t)&lock_main_flash_dev)},
+     .new_req = 0,
+     .periph_cs_num = SOC_SPI_PERIPH_CS_NUM(0),
+ };
+diff --git a/components/esp_hw_support/spi_share_hw_ctrl.c b/components/esp_hw_support/spi_share_hw_ctrl.c
+index 2f317f1..b7e960d 100644
+--- a/components/esp_hw_support/spi_share_hw_ctrl.c
++++ b/components/esp_hw_support/spi_share_hw_ctrl.c
+@@ -15,12 +15,12 @@
+ ESP_LOG_ATTR_TAG(SPI_TAG, "spi_share_hw_ctrl");
+
+ //Periph 1 is 'claimed' by SPI flash code.
+-static atomic_bool spi_periph_claimed[SOC_SPI_PERIPH_NUM] = { ATOMIC_VAR_INIT(true), ATOMIC_VAR_INIT(false),
++static atomic_bool spi_periph_claimed[SOC_SPI_PERIPH_NUM] = { (true), ATOMIC_VAR_INIT(false),
+ #if (SOC_SPI_PERIPH_NUM >= 3)
+-                                                              ATOMIC_VAR_INIT(false),
++                                                              (false),
+ #endif
+ #if (SOC_SPI_PERIPH_NUM >= 4)
+-                                                              ATOMIC_VAR_INIT(false),
++                                                              (false),
+ #endif
+                                                             };
+
+diff --git a/components/upper_hal_i2s/lp_i2s_vad.c b/components/upper_hal_i2s/lp_i2s_vad.c
+index 4d33972..648c8d7 100644
+--- a/components/upper_hal_i2s/lp_i2s_vad.c
++++ b/components/upper_hal_i2s/lp_i2s_vad.c
+@@ -31,7 +31,7 @@ typedef struct vad_unit_ctx_t {
+     vad_fsm_t fsm;
+ } vad_unit_ctx_t;
+
+-static atomic_bool s_vad_id_claimed[SOC_ADC_PERIPH_NUM] = {ATOMIC_VAR_INIT(false)};
++static atomic_bool s_vad_id_claimed[SOC_ADC_PERIPH_NUM] = {(false)};
+
+ static bool s_vad_claim(lp_vad_t vad_id)
+ {
