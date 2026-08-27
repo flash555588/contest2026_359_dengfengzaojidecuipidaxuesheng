@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<manifest>
+  <remote fetch="https://github.com/flash555588/" name="esp32p4-team"/>
+  <remote fetch="https://github.com/" name="github"/>
+
+  <!-- Internal reproducible-build manifest. Team repositories intentionally
+       remain private until the competition publication gate is opened. -->
+  <project path="apps" name="esp32p4_nuttx_apps" remote="esp32p4-team"
+           revision="93fb5ac72249ae766cbeea9f0e3d484bdd6807f7"/>
+  <project path="apps/graphics/lvgl/lvgl" name="lvgl/lvgl" remote="github"
+           revision="59a6b61c9580b65089010c5273f2fcdd6c4d2aae"/>
+  <project path="nuttx" name="esp32p4_nuttx" remote="esp32p4-team"
+           revision="cd61ccdd11498e22c058c3b2540828f88e23172e"/>
+  <project path="vendor/espressif" name="open-vela/vendor_espressif" remote="github"
+           revision="afe1b8c5ec67ff76eda48ee84d9dd116df2814ba"/>
+</manifest>

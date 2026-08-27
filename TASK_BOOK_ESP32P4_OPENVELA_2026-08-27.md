@@ -4,67 +4,84 @@
 
 ## 一、任务目标
 
-基于 OpenVela 大赛指定上游和团队已经跑通的 ESP32-P4 NuttX/apps 仓库，形成可由大赛仓 manifest 获取、可重复编译、可按芯片版本选择、可烧录并带有实机证据的 OpenVela 发行包。最终交付必须包含源码固定点、双版本 defconfig、构建入口、固件及哈希、烧录说明、测试矩阵和 AI Coding 日志，不能依赖构建时覆盖源码的临时脚本。
+基于 OpenVela 大赛指定上游和团队已经跑通的 ESP32-P4 NuttX/apps 仓，形成源码固定、双芯片版本隔离、可重复编译、可烧录、带实机证据的 OpenVela 桌面发行包。最终交付必须包含固定源码入口、v1.0/v3.2 defconfig、统一构建脚本、固件与哈希、烧录说明、测试矩阵、复现报告和 AI Coding 日志，不能依赖构建时覆盖源码的临时脚本。
 
-## 二、当前固定基线
+## 二、当前状态摘要
+
+截至 2026-08-27，NuttX/apps 固定提交已推送；v1.0 与 v3.2 已在第二个干净工作区全量构建成功；v1.0 的干净固件已烧录到 COM7 上的 revision v1.0 / ECO2 实板，并连续两次硬复位进入 NSH。设备当前运行 `cd61ccdd` 干净版本，`desktop_main`、`/dev/fb0`、`/dev/input0` 和 32 MiB PSRAM 已由串口确认。
+
+v3.2 已完成无残留配置切换和全量编译，但本机没有 revision v3.2 板，因此仍是“构建候选”，不能写成实机移植完成。v1.0 的 LCD 实际画面与触摸坐标仍需操作者目视验收，串口设备节点不能替代这一项。
+
+成员仓当前按团队决定保持私有，以保留领先进度。内部复现使用固定 SHA 和只读本地镜像；没有修改任何 GitHub 仓库可见性。比赛正式交付前必须再执行公开/评委可访问 gate。
+
+## 三、固定基线
 
 | 组件 | 固定版本 | 状态 |
 | --- | --- | --- |
-| 团队 NuttX | `cd61ccdd11498e22c058c3b2540828f88e23172e` | 已推送，含 v1 启动兼容、v1/v3.2 配置和 HAL 补丁 |
-| 团队 apps | `93fb5ac72249ae766cbeea9f0e3d484bdd6807f7` | 已推送，LVGL 版本与 v9.2.1 固定点一致 |
-| LVGL | `59a6b61c9580b65089010c5273f2fcdd6c4d2aae` | 官方 v9.2.1 提交，manifest 已固定 |
-| ESP HAL | `8d0a898910084206721a0892ab093021bca1496a` | 构建时固定并应用仓内补丁 |
+| 团队 NuttX | `cd61ccdd11498e22c058c3b2540828f88e23172e` | 已推送；含 v1 早期 WDT、时钟/PSRAM兼容路径及双版本配置 |
+| 团队 apps | `93fb5ac72249ae766cbeea9f0e3d484bdd6807f7` | 已推送；含桌面、QuickJS/LVGL 适配 |
+| LVGL | `59a6b61c9580b65089010c5273f2fcdd6c4d2aae` | v9.2.1 固定提交 |
+| QuickJS 源码 | `6e2e68fd0896957f92eb6c242a2e048c1ef3cae0` | apps 构建定义固定下载提交 |
+| vendor/espressif | `afe1b8c5ec67ff76eda48ee84d9dd116df2814ba` | 固定提交 |
+| ESP HAL | `8d0a898910084206721a0892ab093021bca1496a` | 固定提交并应用 NuttX 仓内芯片补丁 |
 | mbedTLS | `582ff482038db6e4010dbf6f943d97b05ad06ea5` | HAL 子模块固定点 |
-| vendor/espressif | `afe1b8c5ec67ff76eda48ee84d9dd116df2814ba` | manifest 已固定 |
-| 工具链 | Espressif `riscv32-esp-elf` GCC `15.2.0_20251204` | v1/v3.2 均完成编译，v1 已实机通过 |
+| 工具链 | `riscv32-esp-elf` GCC `15.2.0_20251204` | 编译器 SHA-256 `921cbcc…4dca` |
 
-## 三、已完成工作
+内部最小同步入口为 `esp32p4-internal-release.xml`。大赛完整 manifest 仍保留在 `openvela.xml`，但日常保密复现优先使用最小固定入口，减少无关浮动项目和网络失败面。
 
-### 1. 源码与构建集成
+## 四、已经完成的工作
 
-大赛 manifest 已改为直接引用团队 NuttX/apps 完整仓库，不再通过 linkfile 或 Python 脚本覆盖 NuttX 已跟踪路径。LVGL 从官方仓固定到 v9.2.1 的实际提交。NuttX 增加 `desktop-v1`，原 `desktop` 明确为 v3.2；apps 的 LVGL Kconfig patch 版本改为 1，与所用 LVGL 源码一致。
+### 1. 源码和芯片版本隔离
 
-已增加 `tools/build_esp32p4_desktop.sh`。脚本要求显式提供 GCC 15.2.0 工具链路径，支持 `v1.0` 和 `v3.2`，使用 NuttX `configure.sh -S`、输出 ELF/BIN/HEX、解析配置、构建元数据和 SHA256SUMS，不在构建过程中改写源码。
+ESP32-P4 板级、芯片和桌面源代码已进入完整 NuttX/apps 成员仓，不再依靠大赛仓 linkfile 覆盖 NuttX 已跟踪路径。`desktop-v1` 固定 revision v1.0 兼容路径；`desktop` 固定 `CONFIG_ESP32P4_REV_MIN_301=y`，对应 v3.x。两套解析配置分别保存到固件包，防止烧错芯片。
 
-### 2. v1.0 启动问题修复
+### 2. 黑屏启动根因修复
 
-首次清洁候选镜像能够被 ROM 加载，但在 HAL `B3` 后循环触发 `CHIP_LP_WDT_RESET`，实体屏黑屏，已经明确标记为失败候选，不能发布。
+早期清洁候选在 ROM `B3` 后循环 `CHIP_LP_WDT_RESET`，只有黑屏。修复已进入 NuttX 固定提交：Simple Boot 入口关闭 timer-group 与 LP flashboot watchdog；低于 v3 的配置使用实机验证的 v1.0 bias、90 MHz CPLL 和 PSRAM 初始化顺序；v3.x 保持上游式 400 MHz 路径。修复后不再依赖临时补丁脚本。
 
-根因修复已进入团队 NuttX：在 Simple Boot 早期关闭 timer-group 与 LP flashboot watchdog；对 `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` 使用已经实机验证的 v1.0 bias、90 MHz CPLL 与 PSRAM 初始化顺序；避免 v3.x 通用内存和外设时钟清理破坏 v1.0 MSPI 状态。该路径由 Kconfig 隔离，不改变 v3.2 初始化流程。
+### 3. 构建脚本可靠性
 
-### 3. v1.0 构建和实机验收
+`tools/build_esp32p4_desktop.sh` 支持 `v1.0`、`v3.2` 两个参数，强制 GCC 15.2.0，自动定位 `kconfig-tweak`，用 `configure.sh -E -S` 清理并切换配置，输出 BIN/ELF/HEX、defconfig、解析配置、完整依赖元数据和 SHA256SUMS。脚本已经实际执行 `v1.0 → v3.2` 顺序并通过。
 
-通过镜像位于 `firmware/esp32p4-desktop-v1.0-release`：
+### 4. 干净目录复现
+
+匿名同步私有团队仓会因权限失败，已留作保密期权限证据。随后使用本地只读镜像装入相同固定提交，在新的 `.repo` 工作区同步公共依赖并完成两次全量构建。第一次试验还发现并修复了 `kconfig-tweak` 路径和配置残留问题；最终成功过程见 `REPRODUCIBILITY_REPORT_2026-08-27.md`。
+
+### 5. v1.0 实机验收
 
 | 文件 | 大小 | SHA-256 |
 | --- | ---: | --- |
-| `nuttx.bin` | 2947548 | `FDD73E4CEB43BFC7F3CBA030A3A0CA3A0A99784B78A6BDD1121BA59A9D75F62B` |
+| `firmware/esp32p4-desktop-v1.0-release/nuttx.bin` | 2908784 | `74420C66BE6A0298DBBEB21326600D47010612C27A097030DF4E47CC90E2C058` |
 
-本机识别芯片为 ESP32-P4 revision v1.0，固件写入 `0x2000` 后 esptool 写后校验通过。连续两次硬复位均进入 NSH；`desktop_main` 运行，`/dev/fb0`、GT911 `/dev/input0` 注册，32 MiB PSRAM 用户堆可用。证据位于 `logs/v1-startup-fix-smoke-20260827.log` 和 `logs/v1-startup-fix-reset-cycle2-20260827.log`。
+esptool 5.3.1 识别芯片为 revision v1.0 / ECO2，MAC `60:55:f9:fa:f4:8b`，镜像写入 `0x2000` 并校验通过。连续两次硬复位均进入 NSH，版本为 `NuttX 0.0.0 cd61ccdd`，无 dirty 标记。证据位于 `logs/v1-repro2-smoke-20260827.log` 和 `logs/v1-repro2-reset-cycle2-20260827.log`。
 
-### 4. v3.2 构建状态
+### 6. v3.2 构建候选
 
-`esp32p4-function-ev-board:desktop` 已固定 `CONFIG_ESP32P4_REV_MIN_301=y`，清洁构建通过，LVGL 版本警告为零。候选产物位于 `firmware/esp32p4-desktop-v3.2-candidate`。当前连接的板卡是 v1.0，不能用它替代 v3.2 实机验收，因此 v3.2 只能标记为“构建通过、待对应硬件”。
+| 文件 | 大小 | SHA-256 |
+| --- | ---: | --- |
+| `firmware/esp32p4-desktop-v3.2-candidate/nuttx.bin` | 2954848 | `886A9FB5793F6EE17285C8BBE373FEFAE5450DD5BD95FF19A4E2A634B07FE80E` |
 
-## 四、剩余工作和验收标准
+v3.2 解析配置为 revision ≥3.1、400 MHz，低于 v3 的兼容选项关闭。构建日志为 `logs/build-repro-v3.2-20260827.log`。由于没有对应实板，本包不能升级为 release。
 
-| 优先级 | 工作包 | 具体动作 | 完成证据/验收标准 |
+## 五、剩余工作和验收标准
+
+| 优先级 | 工作包 | 详细动作 | 完成证据/验收标准 |
 | --- | --- | --- | --- |
-| P0 | 全新目录可复现构建 | 从空目录用大赛 manifest 执行 repo init/sync；分别运行构建脚本生成 v1.0、v3.2 | 无本机 overlay；两个构建均返回 0；记录 repo manifest、工具链哈希、BUILD-METADATA 和 SHA256SUMS |
-| P0 | 仓库公开可读性 | 在未登录环境测试大赛仓、团队 NuttX/apps 及所有固定 SHA | 三个仓库和指定提交均可匿名 clone/fetch；否则评委无法复现，必须在截止前改为公开或把源码纳入可访问仓 |
-| P0 | v1.0 人工显示/触摸验收 | 检查桌面不黑屏、颜色和方向正确；点击四角、拖动、释放；验证坐标范围 | 保存屏幕照片/视频或测试记录；四角不越界、不镜像，按下/移动/释放事件完整 |
-| P0 | v1.0 稳定性 | 断电冷启动不少于 5 次；持续刷新 30 分钟；执行 PSRAM 分配/释放压力 | 5/5 进入桌面和 NSH；无 WDT/panic；framebuffer 持续刷新；PSRAM 无错误和明显泄漏 |
-| P0 | v3.2 实机验收 | 在真正 revision v3.2 板上烧录 v3.2 候选，检查 UART/USB、LCD、GT911、PSRAM、桌面 | 芯片 ID 为 v3.2；连续 5 次启动；`desktop_main`、`fb0`、`input0` 和 PSRAM 全部通过；生成独立日志和固件哈希 |
-| P1 | v3.2 USB 变体 | 验证 USB console 枚举、断开重连、长输出和复位恢复 | 无永久卡死；重连后可进入 NSH；压力日志可追溯。未通过时只发布 UART 版 |
-| P1 | 发布包收敛 | 删除或隔离失败候选；为每个可发布版本提供 README、flash 脚本、TEST_REPORT、SHA256SUMS | 发布目录中不存在状态不明固件；每个 bin 都能反查源码、配置、工具链和实机日志 |
-| P1 | 文档一致性 | 统一主 README、任务书、manifest、配置名称、烧录偏移、flash size 和芯片版本说明 | 文档与解析 `.config`、固件哈希完全一致；v1/v3 不混用 |
-| P1 | AI Coding 日志闭环 | 使用 contest log collector 校验 `logs/flash555588` 清单，补入本次会话 | manifest 中每条会话文件存在且哈希匹配；日志随大赛仓提交，不包含密钥和隐私数据 |
-| P1 | 大赛 gatekeeper | 检查 git 状态、文件大小、许可证、敏感信息、构建/烧录命令和链接有效性 | 自动检查全部通过；失败项有明确豁免依据；最终提交号写入提交说明 |
+| P0 | v1.0 实际画面 | 操作者检查桌面是否点亮；确认无全黑/全白、花屏、偏色、撕裂；记录屏幕照片 | 照片能识别桌面；颜色、方向、分辨率与设计一致；若仍黑屏，采集背光、电源、DSI 初始化和 framebuffer 首帧证据 |
+| P0 | v1.0 触摸 | 依次点击四角与中心，执行按下、拖动、释放；核对旋转/镜像和坐标边界 | 五点可达；不越界、不镜像；按下/移动/释放事件完整；保存串口或视频记录 |
+| P0 | v1.0 冷启动 | 完全断电后启动 5 次，每次记录 NSH、桌面任务、fb0/input0 和复位原因 | 5/5 成功；无 WDT、panic、异常或偶发黑屏 |
+| P0 | v1.0 稳定性 | 桌面持续刷新 30 分钟；周期记录 `ps`、`free`；执行 PSRAM 分配/释放压力 | 无死机、WDT、明显泄漏、触摸失效或 framebuffer 停止刷新 |
+| P0 | v3.2 实机 | 获取真正 revision v3.2 板；先读芯片 ID，再烧 v3.2 候选；完成 5 次冷启动和全外设矩阵 | 芯片 ID 正确；UART/USB、LCD、GT911、PSRAM、桌面全部通过；形成独立日志、照片和测试报告 |
+| P0 | 最终访问策略 | 保密期结束后选择公开成员仓固定提交，或把完整源码快照纳入评委可访问交付 | 未登录环境可 clone/fetch 所有 manifest 固定提交；不能只依赖本机镜像 |
+| P1 | v3.2 USB 变体 | 验证 USB console 枚举、断开重连、长输出和复位恢复 | 重连后可进入 NSH；无永久卡死；失败时仅发布 UART 版 |
+| P1 | 发布目录收敛 | 隔离历史失败候选；校验每个 README、flash 脚本、TEST_REPORT、元数据和 SHA256SUMS | 正式目录无状态不明固件；BIN 可反查源码、配置、工具链和实机日志 |
+| P1 | AI Coding 日志 | 在 `.repo` 工作区结束本次会话后运行大赛日志清单校验，补齐 contest collector 产物 | `logs/flash555588/manifest.json` 中每个会话存在且哈希匹配；无密钥和隐私数据 |
+| P1 | 最终 gatekeeper | 检查 git 状态、文件大小、许可证、敏感信息、manifest XML、构建/烧录命令和链接 | 全部检查通过或有书面豁免；记录最终提交号和 release/tag |
 
-## 五、执行顺序
+## 六、下一执行顺序
 
-先完成匿名可读性检查和全新目录双版本构建，这是评委复现的前提。随后保持当前 v1.0 通过固件不被覆盖，完成屏幕/触摸人工测试与 5 次冷启动、30 分钟稳定性测试。拿到 v3.2 板后独立完成同样的硬件矩阵；没有 v3.2 实物时必须保留“未实机验证”标记。最后收敛发布目录、校验 AI 日志并运行 gatekeeper，再打最终 release/tag。
+第一步由操作者立即确认当前 v1.0 板的 LCD 是否已点亮；若仍黑屏，保持当前可进入 NSH 的固件不回退，从背光使能、DSI 数据输出和 framebuffer 内容三层定位。第二步完成五点触摸、5 次断电冷启动和 30 分钟稳定性。第三步在拿到 v3.2 实板后完成独立硬件矩阵。最后才开启评委访问、收敛 AI 日志并打最终 release/tag。
 
-## 六、当前明确风险
+## 七、当前风险边界
 
-团队 NuttX/apps 仓库若仍为私有，manifest 即使固定 SHA 也无法供评委匿名复现，这是当前最高发布风险。v1.0 已经进入系统，但实体屏幕显示质量和触摸四角仍需要操作者目视确认。v3.2 尚无对应实机证据，不能把编译成功写成移植完成。大赛仓仍存在历史未提交修改和诊断文件，本次提交必须按文件范围选择，避免把状态不明的二进制或回退代码混入正式发行。
+当前最高技术风险已经从“无法启动”降为“LCD/触摸缺少操作者目视证据”。当前最高交付风险是成员仓仍为私有；这是主动保密选择，不是被忽略的问题，但必须在比赛交付门前解决。v3.2 没有实板，任何文档都必须继续使用“构建候选”措辞。大赛仓存在用户历史修改和诊断文件，提交时必须继续按精确文件清单暂存，不能把无关二进制或回退代码带入正式提交。
