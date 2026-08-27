@@ -1,6 +1,11 @@
 tools/build_esp32p4_desktop.sh text eol=lf
+tools/fb_dump.py text eol=lf
+tools/fb_render_map.py text eol=lf
 esp32p4-internal-release.xml text eol=lf
+DEVELOPMENT_RESERVE_2026-08-27.md text eol=lf
 firmware/esp32p4-desktop-v1.0-release/* text eol=lf
 firmware/esp32p4-desktop-v1.0-release/*.bin binary
 firmware/esp32p4-desktop-v3.2-candidate/* text eol=lf
 firmware/esp32p4-desktop-v3.2-candidate/*.bin binary
+logs/*.log -text -whitespace
+logs/flash555588/**/*.jsonl text eol=lf
