@@ -38,6 +38,9 @@
 #include "hal/systimer_ll.h"
 #include "periph_ctrl.h"
 #include "systimer.h"
+#include "esp_rom_sys.h"
+
+extern int ets_printf(const char *fmt, ...);
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -86,8 +89,16 @@ static systimer_hal_context_t systimer_hal;
 
 static int systimer_irq_handler(int irq, void *context, void *arg)
 {
+  static int s_ticks;
+
   systimer_ll_clear_alarm_int(systimer_hal.dev,
                               SYSTIMER_ALARM_OS_TICK_CORE0);
+
+  if (s_ticks < 3)
+    {
+      ets_printf("TK %d\n", s_ticks);
+      s_ticks++;
+    }
 
   /* Process timer interrupt */
 
@@ -117,17 +128,26 @@ static int systimer_irq_handler(int irq, void *context, void *arg)
 
 void up_timer_initialize(void)
 {
+  ets_printf("T0\n");
 #ifdef CONFIG_ARCH_CHIP_ESP32P4
-  /* P4 dropped PERIPH_SYSTIMER_MODULE; ungated APB clock directly. */
-
-  HP_SYS_CLKRST.soc_clk_ctrl2.reg_systimer_apb_clk_en = 1;
+  PERIPH_RCC_ACQUIRE_ATOMIC(PERIPH_SYSTIMER_MODULE, ref_count)
+    {
+      if (ref_count == 0)
+        {
+          systimer_ll_enable_bus_clock(true);
+          systimer_ll_reset_register();
+        }
+    }
 #else
   periph_module_enable(PERIPH_SYSTIMER_MODULE);
 #endif
+  ets_printf("T0a\n");
   systimer_hal_init(&systimer_hal);
+  ets_printf("T0b\n");
 #ifdef CONFIG_ARCH_CHIP_ESP32P4
   systimer_ll_enable_clock(systimer_hal.dev, true);
 #endif
+  ets_printf("T0c\n");
   systimer_hal_tick_rate_ops_t ops =
     {
       .ticks_to_us = systimer_ticks_to_us,
@@ -135,11 +155,14 @@ void up_timer_initialize(void)
     };
 
   systimer_hal_set_tick_rate_ops(&systimer_hal, &ops);
+  ets_printf("T0d\n");
   systimer_ll_set_counter_value(systimer_hal.dev,
                                 SYSTIMER_COUNTER_OS_TICK,
                                 0);
+  ets_printf("T0e\n");
   systimer_ll_apply_counter_value(systimer_hal.dev,
                                   SYSTIMER_COUNTER_OS_TICK);
+  ets_printf("T0f\n");
   systimer_hal_counter_can_stall_by_cpu(&systimer_hal,
                                         SYSTIMER_COUNTER_OS_TICK, 0,
                                         false);
@@ -147,9 +170,11 @@ void up_timer_initialize(void)
   systimer_hal_connect_alarm_counter(&systimer_hal,
                                      SYSTIMER_ALARM_OS_TICK_CORE0,
                                      SYSTIMER_COUNTER_OS_TICK);
+  ets_printf("T0g\n");
   systimer_hal_set_alarm_period(&systimer_hal,
                                 SYSTIMER_ALARM_OS_TICK_CORE0,
                                 CONFIG_USEC_PER_TICK);
+  ets_printf("T0h\n");
   systimer_hal_select_alarm_mode(&systimer_hal,
                                  SYSTIMER_ALARM_OS_TICK_CORE0,
                                  SYSTIMER_ALARM_MODE_PERIOD);
@@ -173,4 +198,5 @@ void up_timer_initialize(void)
   /* Enable the allocated CPU interrupt. */
 
   up_enable_irq(ESP_SOURCE2IRQ(CHIP_SYSTIMER_SOURCE));
+  ets_printf("T1 irq=%d\n", ESP_SOURCE2IRQ(CHIP_SYSTIMER_SOURCE));
 }
