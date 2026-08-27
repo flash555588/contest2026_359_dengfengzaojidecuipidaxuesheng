@@ -30,6 +30,7 @@
 #include <arch/board/board.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/mm/mm.h>
 
 #include "riscv_internal.h"
@@ -142,10 +143,15 @@ void riscv_addregion(void)
 
   if (region_size > 0)
     {
+      ets_printf("sram_high %p size %u\n",
+                 _sram_high_heap_start, (unsigned)region_size);
 #ifdef CONFIG_MM_KERNEL_HEAP
       kmm_addregion(_sram_high_heap_start, region_size);
 #else
-      kumm_addregion(_sram_high_heap_start, region_size);
+      /* Skip sram_high on L0: adding this region during nx_start caused a
+       * Store/AMO fault in group_postinitialize (tg_info). Primary sram_low
+       * heap is enough for NSH.
+       */
 #endif
     }
 #endif
