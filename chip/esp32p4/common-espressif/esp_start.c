@@ -472,6 +472,12 @@ void __esp_start(void)
       ets_printf("Hardware init failed, aborting\n");
       while (true);
     }
+
+  /* Simple Boot on P4 skips the 2nd-stage loader BSS wipe. NuttX globals
+   * such as g_kthread_group.tg_info must be zeroed before nx_start.
+   */
+
+  bootloader_clear_bss_section();
 #else
   bootloader_clear_bss_section();
 #endif
