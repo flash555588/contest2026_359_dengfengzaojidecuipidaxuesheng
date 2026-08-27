@@ -1,8 +1,6 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/esp_gpio.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,7 +29,7 @@
 /* Libc */
 
 #include <assert.h>
-#include <nuttx/debug.h>
+#include <debug.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -40,28 +38,21 @@
 #include <arch/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/kmalloc.h>
 
 /* Arch */
 
 #include "riscv_internal.h"
 
 #include "esp_gpio.h"
-#include "esp_irq.h"
+#ifdef CONFIG_ESPRESSIF_GPIO_IRQ
+#  include "esp_irq.h"
+#endif
 
 /* HAL */
 
-#include "esp_err.h"
-#include "soc/interrupts.h"
 #include "esp_rom_gpio.h"
 #include "hal/gpio_hal.h"
-#include "driver/gpio.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define ESP_INTR_FLAG_DEFAULT 0
+#include "soc/gpio_periph.h"
 
 /****************************************************************************
  * Private Data
@@ -72,25 +63,24 @@ static gpio_hal_context_t g_gpio_hal =
   .dev = GPIO_HAL_GET_HW(GPIO_PORT_0)
 };
 
+#ifdef CONFIG_ESPRESSIF_GPIO_IRQ
+static int g_gpio_cpuint;
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: esp_intr_handler_adapter
+ * Name: gpio_dispatch
  *
  * Description:
- *   This function acts as an adapter to bridge interrupt service routines
- *   between NuttX and the Espressif's interrupt service routine. It is
- *   called when a GPIO interrupt occurs, retrieves the function pointer and
- *   associated data from the 'intr_adapter_from_nuttx' structure passed as
- *   an argument, and invokes the original user-provided interrupt handler
- *   with the IRQ number and user argument.
+ *   Second level dispatch for GPIO interrupt handling.
  *
  * Input Parameters:
- *   arg - Pointer to a structure of type 'intr_adapter_from_nuttx' that
- *         holds the handler function, the associated IRQ, the context, and
- *         the user argument.
+ *   irq           - GPIO IRQ number.
+ *   status        - Value from the GPIO interrupt status clear register.
+ *   regs          - Saved CPU context.
  *
  * Returned Value:
  *   None.
@@ -98,13 +88,61 @@ static gpio_hal_context_t g_gpio_hal =
  ****************************************************************************/
 
 #ifdef CONFIG_ESPRESSIF_GPIO_IRQ
-static void esp_intr_handler_adapter(void *arg)
+static void gpio_dispatch(int irq, uint32_t status, uint32_t *regs)
 {
-  struct intr_adapter_from_nuttx *adapter;
+  int i;
 
-  adapter = (struct intr_adapter_from_nuttx *)arg;
+  /* Check set bits in the status register */
 
-  adapter->func(adapter->irq, adapter->context, adapter->arg);
+  while ((i = __builtin_ffs(status)) > 0)
+    {
+      irq_dispatch(irq + i - 1, regs);
+      status >>= i;
+    }
+}
+#endif
+
+/****************************************************************************
+ * Name: gpio_interrupt
+ *
+ * Description:
+ *   GPIO interrupt handler.
+ *
+ * Input Parameters:
+ *   irq           - Identifier of the interrupt request.
+ *   context       - Context data from the ISR.
+ *   arg           - Opaque pointer to the internal driver state structure.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned
+ *   on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ESPRESSIF_GPIO_IRQ
+static int gpio_interrupt(int irq, void *context, void *arg)
+{
+  int i;
+  uint32_t status;
+  uint32_t intr_bitmask;
+  int cpu = this_cpu();
+
+  /* Read the lower GPIO interrupt status */
+
+  gpio_hal_get_intr_status(&g_gpio_hal, cpu, &status);
+  intr_bitmask = status;
+
+  while ((i = __builtin_ffs(intr_bitmask)) > 0)
+    {
+      gpio_hal_clear_intr_status_bit(&g_gpio_hal, (i - 1));
+      intr_bitmask >>= i;
+    }
+
+  /* Dispatch pending interrupts in the lower GPIO status register */
+
+  gpio_dispatch(ESP_FIRST_GPIOIRQ, status, (uint32_t *)context);
+
+  return OK;
 }
 #endif
 
@@ -185,9 +223,6 @@ int esp_configgpio(int pin, gpio_pinattr_t attr)
       gpio_hal_pulldown_dis(&g_gpio_hal, pin);
     }
 
-  gpio_hal_set_intr_type(&g_gpio_hal, pin,
-                         (attr & INTR_TYPE_MASK) >> INTR_TYPE_SHIFT);
-
   if ((attr & DRIVE_MASK) != 0)
     {
       uint32_t val = ((attr & DRIVE_MASK) >> DRIVE_SHIFT) - 1;
@@ -202,11 +237,19 @@ int esp_configgpio(int pin, gpio_pinattr_t attr)
   if ((attr & FUNCTION_MASK) != 0)
     {
       uint32_t val = ((attr & FUNCTION_MASK) >> FUNCTION_SHIFT) - 1;
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
       gpio_hal_func_sel(&g_gpio_hal, pin, val);
+#else
+      gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[pin], val);
+#endif
     }
   else
     {
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
       gpio_hal_func_sel(&g_gpio_hal, pin, PIN_FUNC_GPIO);
+#else
+      gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[pin], PIN_FUNC_GPIO);
+#endif
     }
 
   return OK;
@@ -328,7 +371,15 @@ void esp_gpioirqinitialize(void)
 {
   /* Setup the GPIO interrupt. */
 
-  gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+  g_gpio_cpuint = esp_setup_irq(GPIO_INTR_SOURCE,
+                                ESP_IRQ_PRIORITY_DEFAULT,
+                                ESP_IRQ_TRIGGER_LEVEL);
+  DEBUGASSERT(g_gpio_cpuint >= 0);
+
+  /* Attach and enable the interrupt handler */
+
+  DEBUGVERIFY(irq_attach(ESP_IRQ_GPIO, gpio_interrupt, NULL));
+  up_enable_irq(ESP_IRQ_GPIO);
 }
 #endif
 
@@ -336,29 +387,44 @@ void esp_gpioirqinitialize(void)
  * Name: esp_gpioirqenable
  *
  * Description:
- *   Enable the interrupt for specified GPIO
+ *   Enable the interrupt for specified GPIO IRQ
  *
  * Input Parameters:
- *   id           - GPIO to be enabled.
+ *   irq           - GPIO IRQ number to be enabled.
+ *   intrtype      - Interrupt type to be enabled.
  *
  * Returned Value:
- *   Zero (OK) on success, or -1 (ERROR) in case of failure.
+ *   None.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_ESPRESSIF_GPIO_IRQ
-int esp_gpioirqenable(int id)
+void esp_gpioirqenable(int irq, gpio_intrtype_t intrtype)
 {
-  esp_err_t esp_ret;
+  uintptr_t regaddr;
+  uint32_t regval;
+  int pin;
+  int cpu;
 
-  esp_ret = gpio_intr_enable(id);
-  if (esp_ret != ESP_OK)
-    {
-      gpioerr("gpio_intr_enable() failed: %d\n", esp_ret);
-      return -ERROR;
-    }
+  DEBUGASSERT(irq >= ESP_FIRST_GPIOIRQ && irq <= ESP_LAST_GPIOIRQ);
 
-  return OK;
+  /* Convert the IRQ number to a pin number */
+
+  pin = ESP_IRQ2PIN(irq);
+
+  /* Disable the GPIO interrupt during the configuration. */
+
+  up_disable_irq(ESP_IRQ_GPIO);
+
+  /* Enable interrupt for this pin on the current core */
+
+  cpu = this_cpu();
+  gpio_hal_set_intr_type(&g_gpio_hal, pin, intrtype);
+  gpio_hal_intr_enable_on_core(&g_gpio_hal, pin, cpu);
+
+  /* Configuration done. Re-enable the GPIO interrupt. */
+
+  up_enable_irq(ESP_IRQ_GPIO);
 }
 #endif
 
@@ -366,92 +432,39 @@ int esp_gpioirqenable(int id)
  * Name: esp_gpioirqdisable
  *
  * Description:
- *   Disable the interrupt for specified GPIO
+ *   Disable the interrupt for specified GPIO IRQ
  *
  * Input Parameters:
- *   id           - GPIO to be disabled.
+ *   irq           - GPIO IRQ number to be disabled.
  *
  * Returned Value:
- *   Zero (OK) on success, or -1 (ERROR) in case of failure.
+ *   None.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_ESPRESSIF_GPIO_IRQ
-int esp_gpioirqdisable(int id)
+void esp_gpioirqdisable(int irq)
 {
-  esp_err_t esp_ret;
+  uintptr_t regaddr;
+  uint32_t regval;
+  int pin;
 
-  esp_ret = gpio_intr_disable(id);
-  if (esp_ret != ESP_OK)
-    {
-      gpioerr("gpio_intr_disable() failed: %d\n", esp_ret);
-      return -ERROR;
-    }
+  DEBUGASSERT(irq >= ESP_FIRST_GPIOIRQ && irq <= ESP_LAST_GPIOIRQ);
 
-  return OK;
-}
-#endif
+  /* Convert the IRQ number to a pin number */
 
-/****************************************************************************
- * Name: esp_gpio_irq
- *
- * Description:
- *   Register or unregister a button interrupt handler for the specified
- *   button ID. Passing a non-NULL handler attaches and enables the ISR for
- *   the button; passing NULL disables the interrupt and removes any
- *   previously registered handler.
- *
- * Input Parameters:
- *   id           - Identifies the button to be monitored.
- *   irqhandler   - The handler to be called when the interrupt occurs.
- *                  Set to NULL to disable the interrupt.
- *   arg          - Pointer to the argument that will be provided to the
- *                  interrupt handler.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- ****************************************************************************/
+  pin = ESP_IRQ2PIN(irq);
 
-#ifdef CONFIG_ESPRESSIF_GPIO_IRQ
-int esp_gpio_irq(int id, xcpt_t irqhandler, void *arg)
-{
-  int ret;
-  int irq = ESP_PIN2IRQ(id);
+  /* Disable the GPIO interrupt during the configuration. */
 
-  if (NULL != irqhandler)
-    {
-      esp_err_t esp_ret;
-      struct intr_adapter_from_nuttx *adapter;
+  up_disable_irq(ESP_IRQ_GPIO);
 
-      gpioinfo("Attach %p\n", irqhandler);
+  /* Disable the interrupt for this pin */
 
-      adapter = kmm_calloc(1, sizeof(struct intr_adapter_from_nuttx));
-      if (adapter == NULL)
-        {
-          gpioerr("kmm_calloc() failed\n");
-          return -ERROR;
-        }
+  gpio_hal_intr_disable(&g_gpio_hal, pin);
 
-      adapter->func = irqhandler;
-      adapter->irq = irq;
-      adapter->context = NULL;
-      adapter->arg = arg;
+  /* Configuration done. Re-enable the GPIO interrupt. */
 
-      esp_ret = gpio_isr_handler_add(id, esp_intr_handler_adapter,
-                                     (void *)adapter);
-      if (esp_ret != ESP_OK)
-        {
-          gpioerr("gpio_isr_handler_add() failed: %d\n", ret);
-          return -ERROR;
-        }
-    }
-  else
-    {
-      gpioinfo("Disable the interrupt\n");
-      gpio_isr_handler_remove(id);
-    }
-
-  return OK;
+  up_enable_irq(ESP_IRQ_GPIO);
 }
 #endif

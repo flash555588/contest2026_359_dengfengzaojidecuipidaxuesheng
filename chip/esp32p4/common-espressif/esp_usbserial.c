@@ -38,9 +38,11 @@
 #endif
 
 #include <nuttx/arch.h>
+#include <nuttx/clock.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/wdog.h>
 #include <arch/irq.h>
 
 #include "riscv_internal.h"
@@ -65,6 +67,29 @@
 /* The hardware buffer has a fixed size of 64 bytes */
 
 #define ESP_USBCDC_BUFFERSIZE 64
+
+/* How long TX may stay blocked before the link is declared stalled.
+ *
+ * The USB-Serial-JTAG TX FIFO is drained by the USB host.  With no host
+ * attached - or with one attached but not reading - the FIFO stays full,
+ * the SERIAL_IN_EMPTY interrupt never fires, and uart_xmitchars() is never
+ * called.  The upper half then blocks forever in uart_putxmitchar() waiting
+ * on xmitsem, which is what makes the board appear to require an open
+ * serial terminal in order to finish booting.
+ */
+
+#ifndef CONFIG_ESPRESSIF_USBSERIAL_TXTIMEOUT
+#  define CONFIG_ESPRESSIF_USBSERIAL_TXTIMEOUT 100
+#endif
+
+#define ESP_USJ_TX_DETECT_TICKS \
+  MSEC2TICK(CONFIG_ESPRESSIF_USBSERIAL_TXTIMEOUT)
+
+/* Once stalled, re-check every tick so discarded output does not throttle
+ * the writer to one FIFO per detection timeout.
+ */
+
+#define ESP_USJ_TX_DRAIN_TICKS 1
 
 /****************************************************************************
  * Private Types
@@ -96,6 +121,7 @@ static bool esp_txready(struct uart_dev_s *dev);
 static void esp_send(struct uart_dev_s *dev, int ch);
 static int  esp_receive(struct uart_dev_s *dev, unsigned int *status);
 static int  esp_ioctl(struct file *filep, int cmd, unsigned long arg);
+static void esp_txtimeout(wdparm_t arg);
 
 /****************************************************************************
  * Private Data
@@ -103,6 +129,13 @@ static int  esp_ioctl(struct file *filep, int cmd, unsigned long arg);
 
 static char g_rxbuffer[ESP_USBCDC_BUFFERSIZE];
 static char g_txbuffer[ESP_USBCDC_BUFFERSIZE];
+
+/* Stall detector for a TX FIFO that no USB host is draining.  Touched from
+ * task context, the TX interrupt and the watchdog, on both CPUs.
+ */
+
+static struct wdog_s g_txwdog;
+static volatile bool g_txstalled;
 
 static struct esp_priv_s g_usbserial_priv =
 {
@@ -175,6 +208,15 @@ static int esp_interrupt(int irq, void *context, void *arg)
     {
       usb_serial_jtag_ll_clr_intsts_mask(
         USB_SERIAL_JTAG_INTR_SERIAL_IN_EMPTY);
+
+      /* The host drained the FIFO, so the link is alive again.  Drop the
+       * stall state and the detector; esp_txint() re-arms it if more data
+       * is queued.
+       */
+
+      g_txstalled = false;
+      wd_cancel(&g_txwdog);
+
       uart_xmitchars(dev);
     }
 
@@ -231,11 +273,53 @@ static void esp_txint(struct uart_dev_s *dev, bool enable)
     {
       usb_serial_jtag_ll_ena_intr_mask(
         USB_SERIAL_JTAG_INTR_SERIAL_IN_EMPTY);
+
+      /* Arm the stall detector.  Without it, a TX interrupt that never
+       * arrives leaves the writer blocked forever.
+       */
+
+      wd_start(&g_txwdog,
+               g_txstalled ? ESP_USJ_TX_DRAIN_TICKS :
+                             ESP_USJ_TX_DETECT_TICKS,
+               esp_txtimeout, (wdparm_t)dev);
     }
   else
     {
       usb_serial_jtag_ll_disable_intr_mask(
         USB_SERIAL_JTAG_INTR_SERIAL_IN_EMPTY);
+
+      wd_cancel(&g_txwdog);
+    }
+}
+
+/****************************************************************************
+ * Name: esp_txtimeout
+ *
+ * Description:
+ *   Stall detector.  Runs when the SERIAL_IN_EMPTY interrupt has not fired
+ *   within the timeout, which means nothing is draining the TX FIFO.  Mark
+ *   the link stalled and pump uart_xmitchars(): with esp_txready() now
+ *   reporting ready and esp_send() discarding, that empties the xmit ring
+ *   and releases writers blocked on xmitsem.
+ *
+ *   Runs in interrupt context, like the TX interrupt whose job it stands
+ *   in for.
+ *
+ ****************************************************************************/
+
+static void esp_txtimeout(wdparm_t arg)
+{
+  struct uart_dev_s *dev = (struct uart_dev_s *)arg;
+
+  g_txstalled = true;
+
+  uart_xmitchars(dev);
+
+  /* Keep pumping while the upper half still has data queued. */
+
+  if (dev->xmit.head != dev->xmit.tail)
+    {
+      wd_start(&g_txwdog, ESP_USJ_TX_DRAIN_TICKS, esp_txtimeout, arg);
     }
 }
 
@@ -364,7 +448,22 @@ static bool esp_rxavailable(struct uart_dev_s *dev)
 
 static bool esp_txready(struct uart_dev_s *dev)
 {
-  return (bool)usb_serial_jtag_ll_txfifo_writable();
+  if (usb_serial_jtag_ll_txfifo_writable())
+    {
+      /* Room in the FIFO: a host is consuming it, so leave the stalled
+       * state if we were in it.
+       */
+
+      g_txstalled = false;
+      return true;
+    }
+
+  /* No room.  While stalled, still report ready so uart_xmitchars() drains
+   * the ring - esp_send() discards the bytes - instead of leaving the
+   * writer blocked on a FIFO that will never empty.
+   */
+
+  return g_txstalled;
 }
 
 /****************************************************************************
@@ -382,6 +481,15 @@ static void esp_send(struct uart_dev_s *dev, int ch)
   uint8_t buf[1] = {
     (uint8_t)ch
   };
+
+  if (!usb_serial_jtag_ll_txfifo_writable())
+    {
+      /* Stalled with a full FIFO: drop the character.  Console output is
+       * best effort and must never stall the system.
+       */
+
+      return;
+    }
 
   usb_serial_jtag_ll_write_txfifo(buf, sizeof(buf));
 
@@ -477,7 +585,16 @@ static int esp_ioctl(struct file *filep, int cmd, unsigned long arg)
 
 void esp_usbserial_write(char ch)
 {
-  while (!esp_txready(&g_uart_usbserial));
+  /* Do NOT busy-wait on txfifo_writable(): with no host attached the
+   * USB-Serial-JTAG TX FIFO never drains, so esp_txready() stays false
+   * forever and the previous "while (!esp_txready())" loop never exits,
+   * freezing CPU0 in early console output.  Write only when there is room;
+   * otherwise drop the character.  Console output is best-effort and must
+   * never stall the system.
+   */
 
-  esp_send(&g_uart_usbserial, ch);
+  if (esp_txready(&g_uart_usbserial))
+    {
+      esp_send(&g_uart_usbserial, ch);
+    }
 }
