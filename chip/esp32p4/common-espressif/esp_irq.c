@@ -644,6 +644,12 @@ int esp_setup_irq_with_flags_intrstatus(int source, int flags,
   return cpuint;
 }
 
+void *esp_get_handle(int cpu, int irq)
+{
+  UNUSED(cpu);
+  return (void *)(uintptr_t)(irq + 1);
+}
+
 int IRAM_ATTR esp_get_cpuint(int cpu, int irq)
 {
   int i;
