@@ -1,0 +1,1199 @@
+diff --git a/arch/risc-v/src/common/espressif/Kconfig b/arch/risc-v/src/common/espressif/Kconfig
+index af4dd818711caf068398dee890e9196015a68f13..1f7ed0ff6b0e0945f67c7b26a42ab76d347f6c34 100644
+--- a/arch/risc-v/src/common/espressif/Kconfig
++++ b/arch/risc-v/src/common/espressif/Kconfig
+@@ -189,6 +189,12 @@ config ESPRESSIF_CPU_FREQ_80
+ 	---help---
+ 		Set the CPU frequency to 80 MHz.
+ 
++config ESPRESSIF_CPU_FREQ_90
++	bool "90 MHz"
++	depends on ARCH_CHIP_ESP32P4 && ESP32P4_SELECTS_REV_LESS_V3
++	---help---
++		Set the CPU frequency to 90 MHz.
++
+ config ESPRESSIF_CPU_FREQ_96
+ 	bool "96 MHz"
+ 	depends on ARCH_CHIP_ESP32H2
+@@ -201,6 +207,12 @@ config ESPRESSIF_CPU_FREQ_160
+ 	---help---
+ 		Set the CPU frequency to 160 MHz.
+ 
++config ESPRESSIF_CPU_FREQ_180
++	bool "180 MHz"
++	depends on ARCH_CHIP_ESP32P4 && ESP32P4_SELECTS_REV_LESS_V3
++	---help---
++		Set the CPU frequency to 180 MHz.
++
+ config ESPRESSIF_CPU_FREQ_360
+ 	bool "360 MHz"
+ 	depends on ARCH_CHIP_ESP32P4 && ESP32P4_SELECTS_REV_LESS_V3
+@@ -221,8 +233,10 @@ config ESPRESSIF_CPU_FREQ_MHZ
+ 	default 48 if ESPRESSIF_CPU_FREQ_48
+ 	default 64 if ESPRESSIF_CPU_FREQ_64
+ 	default 80 if ESPRESSIF_CPU_FREQ_80
++	default 90 if ESPRESSIF_CPU_FREQ_90
+ 	default 96 if ESPRESSIF_CPU_FREQ_96
+ 	default 160 if ESPRESSIF_CPU_FREQ_160
++	default 180 if ESPRESSIF_CPU_FREQ_180
+ 	default 360 if ESPRESSIF_CPU_FREQ_360
+ 	default 400 if ESPRESSIF_CPU_FREQ_400
+ 
+diff --git a/arch/risc-v/src/common/espressif/esp_allocateheap.c b/arch/risc-v/src/common/espressif/esp_allocateheap.c
+index 5e562aedf49e760eaafc481b1bda3dec51fe3bf6..49f146cf522bbaeb0f9a8c0e4fb88dd2e5824f59 100644
+--- a/arch/risc-v/src/common/espressif/esp_allocateheap.c
++++ b/arch/risc-v/src/common/espressif/esp_allocateheap.c
+@@ -94,9 +94,14 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
+   uintptr_t rstart;
+   uintptr_t rend;
+ #endif
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  uintptr_t heap_end;
++  uintptr_t rom_end;
++#endif
+ #if defined(CONFIG_MM_KERNEL_HEAP) && \
+     defined(CONFIG_ESPRESSIF_SPIRAM) && \
+-    defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
++    defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP) && \
++    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+   uintptr_t ubase;
+   uintptr_t utop;
+ #endif
+@@ -105,7 +110,8 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
+ 
+ #if defined(CONFIG_MM_KERNEL_HEAP) && \
+     defined(CONFIG_ESPRESSIF_SPIRAM) && \
+-    defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
++    defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP) && \
++    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+   DEBUGASSERT(esp_psram_is_initialized());
+   ubase = esp_psram_extram_vaddr_start();
+   utop  = esp_psram_extram_vaddr_end();
+@@ -114,7 +120,30 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
+   *heap_size  = utop - ubase;
+ #else
+   *heap_start = (void *)g_idle_topstack;
+-#ifdef CONFIG_ESPRESSIF_RETENTION_HEAP
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  /* The pre-v3 SRAM map has a hole between sram_low and sram_high.  Some
++   * v1.0 ROM tables report a reserved address outside the mapped low-SRAM
++   * window, so cap the primary heap at the verified low-SRAM boundary.
++   */
++
++  heap_end = 0x4ff2cbd0;
++  if (ets_rom_layout_p != NULL)
++    {
++      rom_end = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
++      if (rom_end > g_idle_topstack && rom_end < heap_end)
++        {
++          heap_end = rom_end;
++        }
++    }
++
++#  if defined(CONFIG_MM_KERNEL_HEAP) && \
++      defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
++  *heap_start = (void *)(g_idle_topstack + CONFIG_MM_KERNEL_HEAPSIZE);
++#  endif
++
++  DEBUGASSERT(heap_end > (uintptr_t)*heap_start);
++  *heap_size = heap_end - (uintptr_t)*heap_start;
++#elif defined(CONFIG_ESPRESSIF_RETENTION_HEAP)
+   esp_retentionheap_find_region(&rstart, &rend);
+   *heap_size  = (uintptr_t) rstart - g_idle_topstack;
+ #else
+@@ -144,8 +173,31 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
+ {
+   uintptr_t kbase = g_idle_topstack;
+   uintptr_t ktop;
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  uintptr_t rom_end;
++#endif
+ 
+-#ifdef CONFIG_ESPRESSIF_RETENTION_HEAP
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  /* Keep the kernel heap inside the verified low-SRAM window on pre-v3
++   * silicon.  The ROM reservation table on v1.0 can point beyond this
++   * mapped range, just as it can for the non-split heap path above.
++   */
++
++  ktop = 0x4ff2cbd0;
++  if (ets_rom_layout_p != NULL)
++    {
++      rom_end = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
++      if (rom_end > kbase && rom_end < ktop)
++        {
++          ktop = rom_end;
++        }
++    }
++
++#  ifdef CONFIG_ESPRESSIF_SPIRAM_USER_HEAP
++  DEBUGASSERT(ktop > kbase + CONFIG_MM_KERNEL_HEAPSIZE);
++  ktop = kbase + CONFIG_MM_KERNEL_HEAPSIZE;
++#  endif
++#elif defined(CONFIG_ESPRESSIF_RETENTION_HEAP)
+   uintptr_t rstart;
+   uintptr_t rend;
+ 
+@@ -194,7 +246,8 @@ void riscv_addregion(void)
+ 
+   if (region_size > 0)
+     {
+-#ifdef CONFIG_MM_KERNEL_HEAP
++#if defined(CONFIG_MM_KERNEL_HEAP) && \
++    !defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
+       kmm_addregion(_sram_high_heap_start, region_size);
+ #else
+       kumm_addregion(_sram_high_heap_start, region_size);
+@@ -202,8 +255,9 @@ void riscv_addregion(void)
+     }
+ #endif
+ 
+-#if !defined(CONFIG_MM_KERNEL_HEAP)
+-#  if defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
++#if defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP) && \
++    (!defined(CONFIG_MM_KERNEL_HEAP) || \
++     defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3))
+   if (esp_psram_is_initialized())
+     {
+       uintptr_t start = esp_psram_extram_vaddr_start();
+@@ -214,7 +268,6 @@ void riscv_addregion(void)
+           kumm_addregion((void *)start, end - start);
+         }
+     }
+-#  endif
+ #endif
+ }
+ #endif
+diff --git a/arch/risc-v/src/common/espressif/esp_mipi_dsi.c b/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+index 8d3910bb5876608c808edd766d06205e0bd4c2c9..253b33f5cd443008cfc8a6049f375e4e066aa322 100644
+--- a/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
++++ b/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+@@ -111,6 +111,8 @@ struct esp_mipi_dsi_priv_s
+   FAR void *fb;                         /* Bound framebuffer base, or NULL */
+   FAR dw_gdma_link_list_item_t *lli;    /* Cached LLI (CPU view) */
+   FAR dw_gdma_link_list_item_t *lli_nc; /* Non-cacheable LLI alias */
++  esp_mipi_dsi_framebuffer_callback_t fb_callback;
++  FAR void *fb_callback_arg;
+ 
+   size_t fb_size;                    /* Bound framebuffer size in bytes */
+   uint16_t dpi_h_res;                /* Active width from DPI config */
+@@ -247,8 +249,12 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv =
+     (FAR struct esp_mipi_dsi_priv_s *)arg;
++  esp_mipi_dsi_framebuffer_callback_t callback = NULL;
+   FAR dw_gdma_dev_t *dev;
++  FAR void *callback_arg = NULL;
++  FAR void *next_fb = NULL;
+   irqstate_t flags;
++  bool transfer_done;
+   uint32_t status;
+ 
+   UNUSED(irq);
+@@ -263,10 +269,40 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+   flags = spin_lock_irqsave(&priv->dmalock);
+   status = dw_gdma_ll_channel_get_intr_status(dev, ESP_MIPI_DSI_DMA_CHAN);
+   dw_gdma_ll_channel_clear_intr(dev, ESP_MIPI_DSI_DMA_CHAN, status);
++  transfer_done =
++    (status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) != 0 &&
++    priv->dma_enabled;
+ 
+-  if ((status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) != 0 &&
+-      priv->dma_enabled)
++  if (transfer_done)
+     {
++      callback = priv->fb_callback;
++      callback_arg = priv->fb_callback_arg;
++    }
++
++  spin_unlock_irqrestore(&priv->dmalock, flags);
++
++  if (!transfer_done)
++    {
++      return OK;
++    }
++
++  if (callback != NULL)
++    {
++      next_fb = callback(callback_arg);
++    }
++
++  flags = spin_lock_irqsave(&priv->dmalock);
++  if (priv->dma_enabled)
++    {
++      if (next_fb != NULL && next_fb != priv->fb)
++        {
++          dw_gdma_ll_lli_set_src_addr(priv->lli_nc,
++                                      (uint32_t)(uintptr_t)next_fb);
++          dw_gdma_ll_lli_set_src_master_port(priv->lli_nc,
++                                             (intptr_t)next_fb);
++          priv->fb = next_fb;
++        }
++
+       esp_mipi_dsi_dma_restart(priv);
+     }
+ 
+@@ -1567,6 +1603,34 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+   return OK;
+ }
+ 
++/****************************************************************************
++ * Name: esp_mipi_dsi_set_framebuffer_callback
++ *
++ * Description:
++ *   Register the interrupt-safe framebuffer selector used between completed
++ *   video frames.
++ *
++ ****************************************************************************/
++
++int esp_mipi_dsi_set_framebuffer_callback(
++      esp_mipi_dsi_framebuffer_callback_t callback, FAR void *arg)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
++  irqstate_t flags;
++
++  flags = spin_lock_irqsave(&priv->dmalock);
++  if (!priv->fb_bound)
++    {
++      spin_unlock_irqrestore(&priv->dmalock, flags);
++      return -EAGAIN;
++    }
++
++  priv->fb_callback = callback;
++  priv->fb_callback_arg = arg;
++  spin_unlock_irqrestore(&priv->dmalock, flags);
++  return OK;
++}
++
+ /****************************************************************************
+  * Name: esp_mipi_dsi_flush_framebuffer
+  *
+@@ -1583,8 +1647,15 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+  *
+  ****************************************************************************/
+ 
++FAR void *esp_mipi_dsi_noncache_addr(FAR void *addr)
++{
++  return (FAR void *)ESP_MIPI_DSI_NC_ADDR(addr);
++}
++
+ int esp_mipi_dsi_flush_framebuffer(FAR void *addr, size_t len)
+ {
++  FAR uint8_t *current;
++  size_t remaining;
+   esp_err_t err;
+ 
+   if (addr == NULL || len == 0)
+@@ -1592,10 +1663,31 @@ int esp_mipi_dsi_flush_framebuffer(FAR void *addr, size_t len)
+       return -EINVAL;
+     }
+ 
+-  err = esp_cache_msync(addr, len,
+-                        ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+-                        ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+-  return (err == ESP_OK) ? OK : -EIO;
++  /* esp_cache_msync() disables interrupts while writing cache lines back.
++   * A full RGB565 frame is large enough to starve the display and touch
++   * interrupt paths on pre-v3 ESP32-P4 silicon.  Keep each critical section
++   * bounded while preserving the same cache-to-memory operation.
++   */
++
++  current = addr;
++  remaining = len;
++  while (remaining > 0)
++    {
++      size_t chunk = remaining > 0x20000 ? 0x20000 : remaining;
++
++      err = esp_cache_msync(current, chunk,
++                            ESP_CACHE_MSYNC_FLAG_DIR_C2M |
++                            ESP_CACHE_MSYNC_FLAG_UNALIGNED);
++      if (err != ESP_OK)
++        {
++          return -EIO;
++        }
++
++      current += chunk;
++      remaining -= chunk;
++    }
++
++  return OK;
+ }
+ 
+ /****************************************************************************
+diff --git a/arch/risc-v/src/common/espressif/esp_mipi_dsi.h b/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
+index 0d61aad0dd39cc1e0161d6694fcefb4feb491c2a..42decafcae7127c6b35dbe633ce5d030bb088f96 100644
+--- a/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
++++ b/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
+@@ -68,6 +68,12 @@ struct esp_mipi_dsi_dpi_config_s
+   uint8_t  format;              /* MIPI_DSI_FMT_RGB565 / RGB888 / ... */
+ };
+ 
++/* Called at a completed video frame to select the next DMA framebuffer.
++ * The callback runs in interrupt context and must not block.
++ */
++
++typedef FAR void *(*esp_mipi_dsi_framebuffer_callback_t)(FAR void *arg);
++
+ /****************************************************************************
+  * Public Function Prototypes
+  ****************************************************************************/
+@@ -169,6 +175,26 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+                                   uint16_t h_res, uint16_t v_res,
+                                   uint8_t bpp);
+ 
++/****************************************************************************
++ * Name: esp_mipi_dsi_set_framebuffer_callback
++ *
++ * Description:
++ *   Register an interrupt-safe callback that selects the framebuffer for
++ *   the next video frame.  A non-NULL returned address replaces the DW-GDMA
++ *   source at the completed-frame boundary.
++ *
++ * Input Parameters:
++ *   callback - Non-blocking framebuffer selection callback, or NULL
++ *   arg      - Opaque callback argument
++ *
++ * Returned Value:
++ *   Zero (OK) on success; a negated errno value on failure.
++ *
++ ****************************************************************************/
++
++int esp_mipi_dsi_set_framebuffer_callback(
++      esp_mipi_dsi_framebuffer_callback_t callback, FAR void *arg);
++
+ /****************************************************************************
+  * Name: esp_mipi_dsi_flush_framebuffer
+  *
+@@ -187,6 +213,17 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ 
+ int esp_mipi_dsi_flush_framebuffer(FAR void *addr, size_t len);
+ 
++/****************************************************************************
++ * Name: esp_mipi_dsi_noncache_addr
++ *
++ * Description:
++ *   Return the non-cacheable CPU alias for DSI framebuffer memory on chips
++ *   that provide one.  On chips without an alias, return addr unchanged.
++ *
++ ****************************************************************************/
++
++FAR void *esp_mipi_dsi_noncache_addr(FAR void *addr);
++
+ /****************************************************************************
+  * Name: esp_mipi_dsi_video_start
+  *
+diff --git a/arch/risc-v/src/common/espressif/esp_start.c b/arch/risc-v/src/common/espressif/esp_start.c
+index bd4b83676894b0f9fa7f2e70df762ee4b9850638..60463b0b5bd8f5c96b724cdff0fa249c7c3fc323 100644
+--- a/arch/risc-v/src/common/espressif/esp_start.c
++++ b/arch/risc-v/src/common/espressif/esp_start.c
+@@ -64,6 +64,12 @@
+ #ifdef CONFIG_ARCH_CHIP_ESP32P4
+ #  include "soc/hp_peri_pms_reg.h"
+ #  include "soc/lp_peri_pms_reg.h"
++#  include "soc/timer_group_reg.h"
++#  include "soc/lp_wdt_reg.h"
++#  include "esp_private/regi2c_ctrl.h"
++#  include "soc/regi2c_bias.h"
++#  include "hal/regi2c_ctrl_ll.h"
++#  include "esp_ldo.h"
+ #endif
+ #include "soc/rtc.h"
+ 
+@@ -98,6 +104,34 @@
+ #  define showprogress(c)
+ #endif
+ 
++#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
++    defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
++#  define v1_progress(s) ets_printf(s)
++#else
++#  define v1_progress(s)
++#endif
++
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++#  define ESP32P4_WDT_WKEY  0x50d83aa1
++
++static inline void esp32p4_disable_flashboot_wdts(void)
++{
++  REG_WRITE(TIMG_WDTWPROTECT_REG(0), ESP32P4_WDT_WKEY);
++  REG_CLR_BIT(TIMG_WDTCONFIG0_REG(0), TIMG_WDT_FLASHBOOT_MOD_EN);
++  REG_CLR_BIT(TIMG_WDTCONFIG0_REG(0), TIMG_WDT_EN);
++  REG_WRITE(TIMG_WDTWPROTECT_REG(0), 0);
++
++  REG_WRITE(LP_WDT_WPROTECT_REG, ESP32P4_WDT_WKEY);
++  REG_CLR_BIT(LP_WDT_CONFIG0_REG, LP_WDT_WDT_FLASHBOOT_MOD_EN);
++  REG_CLR_BIT(LP_WDT_CONFIG0_REG, LP_WDT_WDT_EN);
++  REG_WRITE(LP_WDT_WPROTECT_REG, 0);
++
++  REG_WRITE(LP_WDT_SWD_WPROTECT_REG, ESP32P4_WDT_WKEY);
++  REG_SET_BIT(LP_WDT_SWD_CONFIG_REG, LP_WDT_SWD_AUTO_FEED_EN);
++  REG_WRITE(LP_WDT_SWD_WPROTECT_REG, 0);
++}
++#endif
++
+ #if defined(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT) || \
+     defined (CONFIG_ESPRESSIF_SIMPLE_BOOT)
+ #  ifdef CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT
+@@ -484,6 +518,26 @@ void sys_startup_fn(void)
+ void __esp_start(void)
+ {
+   esp_err_t ret;
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  rtc_cpu_freq_config_t old_cpu_config;
++  rtc_cpu_freq_config_t new_cpu_config;
++  uint32_t old_freq_mhz;
++#  ifdef CONFIG_ESPRESSIF_SPIRAM
++  struct esp_ldo_config_t psram_ldo;
++#  endif
++#endif
++
++#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
++    defined(CONFIG_ESPRESSIF_SIMPLE_BOOT)
++  /* The ROM arms the timer-group and LP flashboot watchdogs independently.
++   * Disable both before entering the comparatively long Simple Boot path.
++   * Waiting for the generic RWDT shutdown near nx_start() is too late on
++   * pre-v3 silicon.
++   */
++
++  esp32p4_disable_flashboot_wdts();
++  v1_progress("V1: watchdogs disabled\n");
++#endif
+ 
+ #if defined(CONFIG_ARCH_CHIP_ESP32P4) && defined(CONFIG_SMP)
+   /* Discard level-sensitive FROM_CPU latches left by an earlier reset.
+@@ -576,9 +630,12 @@ void __esp_start(void)
+ 
+   spi_flash_init_chip_state();
+ 
++  v1_progress("V1: MMU map init\n");
+   esp_mmu_map_init();
++  v1_progress("V1: MMU map ready\n");
+ 
+-#ifdef CONFIG_ESPRESSIF_SPIRAM
++#if defined(CONFIG_ESPRESSIF_SPIRAM) && \
++    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+   ret = esp_psram_chip_init();
+   if (ret != ESP_OK)
+     {
+@@ -605,17 +662,88 @@ void __esp_start(void)
+    * RTC slow clock calibration.
+    */
+ 
+-#ifdef CONFIG_ARCH_CHIP_ESP32P4
++#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
++    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+   extern void rtc_clk_calibration_init(void);
+ 
+   rtc_clk_calibration_init();
+ #endif
+ 
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  /* Pre-v3 Simple Boot enters from a ROM-established clock tree. Re-running
++   * the complete v3.x clock sequence is unstable on v1.0. Apply the verified
++   * bias trims, keep the CPU on the lowest supported CPLL setting while the
++   * board's 1.8 V PSRAM is brought up, then select the configured CPU clock
++   * before the NuttX heaps are created.
++   */
++
++  _regi2c_ctrl_ll_master_enable_clock(true);
++  regi2c_ctrl_ll_master_configure_clock();
++  REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1, 10);
++  REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1_PVT, 10);
++  rtc_clk_xtal_freq_update(SOC_XTAL_FREQ_40M);
++
++  if (rtc_clk_cpu_freq_mhz_to_config(90, &new_cpu_config))
++    {
++      rtc_clk_cpu_freq_set_config(&new_cpu_config);
++    }
++
++#  ifdef CONFIG_ESPRESSIF_SPIRAM
++  memset(&psram_ldo, 0, sizeof(psram_ldo));
++  psram_ldo.chan_id = 2;
++  psram_ldo.voltage_mv = 1800;
++
++  v1_progress("V1: PSRAM LDO\n");
++  ret = esp_ldo_channel_acquire(&psram_ldo);
++  if (ret == ESP_OK)
++    {
++      v1_progress("V1: PSRAM chip init\n");
++      ret = esp_psram_chip_init();
++      if (ret == ESP_OK)
++        {
++          v1_progress("V1: PSRAM map init\n");
++          ret = esp_psram_init();
++        }
++    }
++
++  if (ret != ESP_OK)
++    {
++#    ifndef CONFIG_ESPRESSIF_SPIRAM_IGNORE_NOTFOUND
++      PANIC();
++#    endif
++    }
++
++  v1_progress("V1: PSRAM ready\n");
++#  endif
++
++  rtc_clk_cpu_freq_get_config(&old_cpu_config);
++  old_freq_mhz = old_cpu_config.freq_mhz;
++
++  if (!rtc_clk_cpu_freq_mhz_to_config(CONFIG_ESPRESSIF_CPU_FREQ_MHZ,
++                                      &new_cpu_config))
++    {
++      PANIC();
++    }
++
++  rtc_clk_cpu_freq_set_config(&new_cpu_config);
++
++  if (old_freq_mhz != 0)
++    {
++      esp_cpu_set_cycle_count((uint64_t)esp_cpu_get_cycle_count() *
++                              CONFIG_ESPRESSIF_CPU_FREQ_MHZ /
++                              old_freq_mhz);
++    }
++
++  v1_progress("V1: configured CPU clock ready\n");
++#else
+   esp_clk_init();
++#endif
+ 
+   esp_mspi_pin_reserve();
+ 
++#ifndef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+   bootloader_init_mem();
++#endif
+ 
+ #ifdef CONFIG_ESPRESSIF_SPIRAM_MEMTEST
+   if (esp_psram_is_initialized() && !esp_psram_extram_test())
+@@ -630,7 +758,9 @@ void __esp_start(void)
+ 
+   /* Disable clock of unused peripherals */
+ 
++#ifndef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+   esp_perip_clk_init();
++#endif
+ 
+ #ifdef CONFIG_ESPRESSIF_BROWNOUT_DET
+   /* Initialize hardware brownout check and reset */
+diff --git a/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig b/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+new file mode 100644
+index 0000000000000000000000000000000000000000..4fa3951ccbe6fb2eeff8ecaaac6d0a873786e98c
+--- /dev/null
++++ b/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+@@ -0,0 +1,95 @@
++#
++# ESP32-P4 Function EV Board v1.0 autonomous LVGL touch desktop
++#
++# v1.0 uses the pre-v3 memory/linker layout and keeps UART0 available for
++# diagnostics while desktop_main owns the LCD UI.
++#
++# CONFIG_ESPRESSIF_USBSERIAL is not set
++# CONFIG_LV_BUILD_EXAMPLES is not set
++# CONFIG_NSH_ARGCAT is not set
++# CONFIG_NSH_CMDOPT_HEXDUMP is not set
++CONFIG_ARCH="risc-v"
++CONFIG_ARCH_BOARD="esp32p4-function-ev-board"
++CONFIG_ARCH_BOARD_COMMON=y
++CONFIG_ARCH_BOARD_ESP32P4_FUNCTION_EV_BOARD=y
++CONFIG_ARCH_CHIP="esp32p4"
++CONFIG_ARCH_CHIP_ESP32P4=y
++CONFIG_ARCH_INTERRUPTSTACK=2048
++CONFIG_ARCH_IRQ_TO_NDX=y
++CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC=y
++CONFIG_ARCH_NUSER_INTERRUPTS=17
++CONFIG_ARCH_RISCV=y
++CONFIG_BOARDCTL_RESET=y
++CONFIG_BOARD_LOOPSPERMSEC=15000
++CONFIG_BUILTIN=y
++CONFIG_DEBUG_FEATURES=y
++CONFIG_DEV_CONSOLE=y
++CONFIG_DEBUG_MM=y
++CONFIG_ESP32P4_FUNCTION_EV_BOARD_LCD=y
++CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN=y
++CONFIG_ESP32P4_REV_MIN_100=y
++CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
++CONFIG_ESPRESSIF_CPU_FREQ_90=y
++CONFIG_ESPRESSIF_I2C0_SCLPIN=8
++CONFIG_ESPRESSIF_I2C0_SDAPIN=7
++CONFIG_ESPRESSIF_SPIRAM=y
++CONFIG_ESPRESSIF_SPIRAM_BOOT_INIT=y
++# CONFIG_ESPRESSIF_SPIRAM_MEMTEST is not set
++CONFIG_ESPRESSIF_SPIRAM_SPEED_80M=y
++CONFIG_ESPRESSIF_SPIRAM_USER_HEAP=y
++CONFIG_EXPERIMENTAL=y
++CONFIG_FS_PROCFS=y
++CONFIG_GRAPHICS_LVGL=y
++CONFIG_IDLETHREAD_STACKSIZE=2048
++CONFIG_INIT_ENTRYPOINT="desktop_main"
++CONFIG_INIT_STACKSIZE=32768
++CONFIG_INPUT=y
++CONFIG_INPUT_GT9XX_X_INVERT_MAX=1024
++CONFIG_INPUT_GT9XX_Y_INVERT_MAX=600
++CONFIG_INTELHEX_BINARY=y
++CONFIG_INTERPRETERS_QUICKJS=y
++CONFIG_INTERPRETERS_QUICKJS_NONE=y
++CONFIG_LIBC_PERROR_STDOUT=y
++CONFIG_LIBC_STRERROR=y
++CONFIG_LIBM=y
++CONFIG_LV_ATTRIBUTE_LARGE_CONST="const"
++CONFIG_LV_FONT_MONTSERRAT_24=y
++CONFIG_LV_FONT_MONTSERRAT_48=y
++CONFIG_LV_USE_CLIB_MALLOC=y
++CONFIG_LV_USE_CLIB_SPRINTF=y
++CONFIG_LV_USE_CLIB_STRING=y
++CONFIG_LV_USE_NUTTX=y
++# CONFIG_LV_NUTTX_FBDEV_PARTIAL is not set
++# CONFIG_LV_NUTTX_FBDEV_BUFFER_SIZE is not set
++CONFIG_LV_USE_NUTTX_TOUCHSCREEN=y
++CONFIG_LV_USE_TINY_TTF=y
++CONFIG_MM_KERNEL_HEAP=y
++CONFIG_MM_BACKTRACE=0
++CONFIG_MM_DUMP_ON_FAILURE=y
++CONFIG_MM_REGIONS=3
++CONFIG_NFILE_DESCRIPTORS_PER_BLOCK=8
++CONFIG_NSH_ARCHINIT=y
++CONFIG_NSH_BUILTIN_APPS=y
++CONFIG_NSH_FILEIOSIZE=512
++CONFIG_NSH_READLINE=y
++CONFIG_NSH_STRERROR=y
++CONFIG_PREALLOC_TIMERS=0
++CONFIG_RR_INTERVAL=200
++CONFIG_SCHED_BACKTRACE=y
++CONFIG_SCHED_WAITPID=y
++CONFIG_START_DAY=29
++CONFIG_START_MONTH=11
++CONFIG_START_YEAR=2019
++CONFIG_SYSTEM_DESKTOP=y
++CONFIG_SYSTEM_DESKTOP_STACKSIZE=32768
++CONFIG_SYSTEM_DUMPSTACK=y
++CONFIG_SYSTEM_NSH=y
++CONFIG_UART0_SERIAL_CONSOLE=y
++
++CONFIG_MM_KERNEL_HEAPSIZE=32768
++
++# CONFIG_ESPRESSIF_FLASH_4M is not set
++
++CONFIG_ESPRESSIF_FLASH_16M=y
++
++CONFIG_FS_TMPFS=y
+diff --git a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c
+index 44322a8222ec4d68d1ae0f98cf2896528ab3e070..1f83b84738847b4d8f7d27a126cfb85acbe82623 100644
+--- a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c
++++ b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c
+@@ -163,6 +163,7 @@
+ int esp_bringup(void)
+ {
+   int ret = OK;
++  int first_error = OK;
+ 
+ #ifdef CONFIG_FS_PROCFS
+   /* Mount the procfs file system */
+@@ -171,6 +172,7 @@ int esp_bringup(void)
+   if (ret < 0)
+     {
+       _err("Failed to mount procfs at /proc: %d\n", ret);
++      first_error = ret;
+     }
+ #endif
+ 
+@@ -181,6 +183,21 @@ int esp_bringup(void)
+   if (ret < 0)
+     {
+       _err("Failed to mount tmpfs at %s: %d\n", CONFIG_LIBC_TMPDIR, ret);
++      if (first_error == OK)
++        {
++          first_error = ret;
++        }
++    }
++
++  /* Keep Quick-App state isolated from the general temporary directory. */
++  ret = nx_mount(NULL, "/data", "tmpfs", 0, NULL);
++  if (ret < 0 && ret != -EEXIST)
++    {
++      _err("Failed to mount tmpfs at /data: %d\n", ret);
++      if (first_error == OK)
++        {
++          first_error = ret;
++        }
+     }
+ #endif
+ 
+@@ -541,5 +558,5 @@ int esp_bringup(void)
+    * capabilities.
+    */
+ 
+-  return ret;
++  return first_error;
+ }
+diff --git a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+index 6d99e04a5e8261cd63471e16b20bb9e1ba2772b6..5f55a713e83d791026cf66e69f59d74ed30b30dd 100644
+--- a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
++++ b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+@@ -32,8 +32,10 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <syslog.h>
++#include <time.h>
+ 
+ #include <nuttx/arch.h>
++#include <nuttx/spinlock.h>
+ #include <nuttx/video/fb.h>
+ #include <nuttx/video/mipi_dsi.h>
+ 
+@@ -45,6 +47,12 @@
+ 
+ #ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_LCD
+ 
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++extern bool esp_psram_is_initialized(void);
++extern uintptr_t esp_psram_extram_vaddr_start(void);
++extern uintptr_t esp_psram_extram_vaddr_end(void);
++#endif
++
+ /****************************************************************************
+  * Pre-processor Definitions
+  ****************************************************************************/
+@@ -64,6 +72,12 @@
+ #define LCD_DSI_RATE_MBPS          1000
+ #define LCD_DPHY_LDO_CHAN          3
+ #define LCD_DPHY_LDO_MV            2500
++#define LCD_IRAM_ATTR              __attribute__((section(".iram1")))
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++#  define LCD_DPI_CLOCK_MHZ         48
++#else
++#  define LCD_DPI_CLOCK_MHZ         52
++#endif
+ 
+ /****************************************************************************
+  * Private Types
+@@ -83,6 +97,12 @@ static int lcd_getvideoinfo(FAR struct fb_vtable_s *vtable,
+                             FAR struct fb_videoinfo_s *vinfo);
+ static int lcd_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
+                             FAR struct fb_planeinfo_s *pinfo);
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++static int lcd_pandisplay(FAR struct fb_vtable_s *vtable,
++                          FAR struct fb_planeinfo_s *pinfo);
++static FAR void *LCD_IRAM_ATTR lcd_next_framebuffer(FAR void *arg);
++#endif
+ #ifdef CONFIG_FB_UPDATE
+ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+                           FAR const struct fb_area_s *area);
+@@ -123,6 +143,10 @@ static struct fb_vtable_s g_lcd_vtable =
+ {
+   .getvideoinfo = lcd_getvideoinfo,
+   .getplaneinfo = lcd_getplaneinfo,
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++  .pandisplay   = lcd_pandisplay,
++#endif
+ #ifdef CONFIG_FB_UPDATE
+   .updatearea   = lcd_updatearea,
+ #endif
+@@ -157,7 +181,15 @@ static struct esp_ldo_config_t g_mipi_ldo =
+ };
+ 
+ static FAR uint16_t *g_lcd_fb;
++static bool g_lcd_fb_heap;
+ static bool g_lcd_ready;
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++static uintptr_t g_lcd_pending_fb;
++static spinlock_t g_lcd_pending_lock = SP_UNLOCKED;
++static bool g_lcd_previous_dirty;
++static uint16_t g_lcd_previous_y1;
++static uint16_t g_lcd_previous_y2;
++#endif
+ 
+ /****************************************************************************
+  * Private Functions
+@@ -188,12 +220,71 @@ static int lcd_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
+   return OK;
+ }
+ 
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++static int lcd_pandisplay(FAR struct fb_vtable_s *vtable,
++                          FAR struct fb_planeinfo_s *pinfo)
++{
++  uintptr_t next_fb;
++  irqstate_t flags;
++  int count;
++
++  if (vtable != &g_lcd_vtable || pinfo == NULL)
++    {
++      return -EINVAL;
++    }
++
++  if (pinfo->xoffset != 0 || pinfo->yoffset > LCD_YRES ||
++      pinfo->yoffset % LCD_YRES != 0)
++    {
++      return -EINVAL;
++    }
++
++  /* Consume superseded pan requests in task context.  The DMA ISR only
++   * exchanges a pending address and never calls framebuffer upper-half
++   * helpers, which are not guaranteed to be IRAM or ISR safe.
++   */
++
++  count = fb_paninfo_count(&g_lcd_vtable, FB_NO_OVERLAY);
++  while (count-- > 0)
++    {
++      fb_remove_paninfo(&g_lcd_vtable, FB_NO_OVERLAY);
++    }
++
++  next_fb = (uintptr_t)g_lcd_fb +
++            (size_t)pinfo->yoffset * LCD_STRIDE;
++  flags = spin_lock_irqsave(&g_lcd_pending_lock);
++  g_lcd_pending_fb = next_fb;
++  spin_unlock_irqrestore(&g_lcd_pending_lock, flags);
++  return OK;
++}
++
++static FAR void *LCD_IRAM_ATTR lcd_next_framebuffer(FAR void *arg)
++{
++  uintptr_t next_fb;
++  irqstate_t flags;
++
++  UNUSED(arg);
++
++  flags = spin_lock_irqsave(&g_lcd_pending_lock);
++  next_fb = g_lcd_pending_fb;
++  g_lcd_pending_fb = 0;
++  spin_unlock_irqrestore(&g_lcd_pending_lock, flags);
++  return (FAR void *)next_fb;
++}
++#endif
++
+ #ifdef CONFIG_FB_UPDATE
+ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+                           FAR const struct fb_area_s *area)
+ {
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  size_t offset;
++  size_t rows;
++#else
+   size_t offset;
+-  size_t len;
++  size_t rows;
++#endif
+ 
+   if (vtable != &g_lcd_vtable || g_lcd_fb == NULL)
+     {
+@@ -202,24 +293,131 @@ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+ 
+   if (area == NULL)
+     {
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++      return OK;
++#else
+       return esp_mipi_dsi_flush_framebuffer(g_lcd_fb, LCD_FB_SIZE);
++#endif
++    }
++
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  if (area->x >= LCD_XRES || area->y >= g_lcd_plane.yres_virtual)
++    {
++      return OK;
++    }
++
++  if (g_lcd_plane.yres_virtual == LCD_YRES * 2)
++    {
++      uint16_t current_y1;
++      uint16_t current_y2;
++      uint16_t flush_y1;
++      uint16_t flush_y2;
++      int ret;
++
++      /* DIRECT double buffering copies the previous frame's dirty area into
++       * the next page before drawing the current invalid area.  Flush their
++       * row union so DMA observes both writes without a full-frame sync.
++       */
++
++      current_y1 = area->y % LCD_YRES;
++      current_y2 = current_y1 + area->h;
++      if (current_y2 > LCD_YRES)
++        {
++          current_y2 = LCD_YRES;
++        }
++
++      flush_y1 = current_y1;
++      flush_y2 = current_y2;
++      if (g_lcd_previous_dirty)
++        {
++          if (g_lcd_previous_y1 < flush_y1)
++            {
++              flush_y1 = g_lcd_previous_y1;
++            }
++
++          if (g_lcd_previous_y2 > flush_y2)
++            {
++              flush_y2 = g_lcd_previous_y2;
++            }
++        }
++
++      g_lcd_previous_dirty = true;
++      g_lcd_previous_y1 = current_y1;
++      g_lcd_previous_y2 = current_y2;
++      offset = (size_t)flush_y1 * LCD_STRIDE;
++      ret = esp_mipi_dsi_flush_framebuffer(
++        (FAR uint8_t *)g_lcd_fb + offset,
++        (size_t)(flush_y2 - flush_y1) * LCD_STRIDE);
++      if (ret == OK)
++        {
++          ret = esp_mipi_dsi_flush_framebuffer(
++            (FAR uint8_t *)g_lcd_fb + LCD_FB_SIZE + offset,
++            (size_t)(flush_y2 - flush_y1) * LCD_STRIDE);
++        }
++      return ret;
++    }
++
++  rows = area->h;
++  if (rows > g_lcd_plane.yres_virtual - area->y)
++    {
++      rows = g_lcd_plane.yres_virtual - area->y;
++    }
++
++  if (rows == 0 || area->w == 0)
++    {
++      return OK;
+     }
+ 
++  /* LVGL renders through the cacheable PSRAM mapping.  Write back complete
++   * dirty rows before FBIOPAN_DISPLAY queues the page for the next VSync.
++   * This keeps CPU rendering fast without exposing a partially rendered
++   * frame to the DSI scanout engine.
++   */
++
++  offset = (size_t)area->y * LCD_STRIDE;
++  return esp_mipi_dsi_flush_framebuffer((FAR uint8_t *)g_lcd_fb + offset,
++                                        rows * LCD_STRIDE);
++#else
+   if (area->x >= LCD_XRES || area->y >= LCD_YRES)
+     {
+       return OK;
+     }
+ 
+-  offset = (size_t)area->y * LCD_STRIDE +
+-           (size_t)area->x * (LCD_BPP / 8);
+-  len = (size_t)area->h * LCD_STRIDE;
+-  if (offset + len > LCD_FB_SIZE)
++  rows = area->h;
++  if (rows > LCD_YRES - area->y)
++    {
++      rows = LCD_YRES - area->y;
++    }
++
++  if (rows == 0 || area->w == 0)
++    {
++      return OK;
++    }
++
++  /* Cache synchronization requires contiguous memory.  Keep the complete
++   * scanline update used by supported silicon for a partial-width area.
++   */
++
++  offset = (size_t)area->y * LCD_STRIDE;
++  return esp_mipi_dsi_flush_framebuffer((FAR uint8_t *)g_lcd_fb + offset,
++                                        rows * LCD_STRIDE);
++#endif
++}
++#endif
++
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++int esp32p4_lcd_prime_pageflip(void)
++{
++  int ret;
++
++  ret = esp_mipi_dsi_flush_framebuffer(g_lcd_fb, g_lcd_plane.fblen);
++  if (ret == OK)
+     {
+-      len = LCD_FB_SIZE - offset;
++      g_lcd_previous_dirty = false;
+     }
+ 
+-  return esp_mipi_dsi_flush_framebuffer(
+-      (FAR uint8_t *)g_lcd_fb + offset, len);
++  return ret;
+ }
+ #endif
+ 
+@@ -271,6 +469,7 @@ static int lcd_panel_initialize(FAR struct mipi_dsi_host *host,
+ 
+ int esp32p4_lcd_show_rainbow(void)
+ {
++  FAR uint16_t *fb;
+   size_t colors = sizeof(g_rainbow) / sizeof(g_rainbow[0]);
+   size_t x;
+   size_t y;
+@@ -280,16 +479,34 @@ int esp32p4_lcd_show_rainbow(void)
+       return -EAGAIN;
+     }
+ 
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++#  if defined(CONFIG_SYSTEM_DESKTOP)
++  memset(g_lcd_fb, 0, g_lcd_plane.fblen);
++  return esp_mipi_dsi_flush_framebuffer(g_lcd_fb, g_lcd_plane.fblen);
++#  elif defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++  fb = (FAR uint16_t *)esp_mipi_dsi_noncache_addr(g_lcd_fb);
++#  else
++  fb = (FAR uint16_t *)esp_mipi_dsi_noncache_addr(g_lcd_fb) +
++       LCD_XRES * LCD_YRES;
++#  endif
++#else
++  fb = g_lcd_fb;
++#endif
++
+   for (y = 0; y < LCD_YRES; y++)
+     {
+       for (x = 0; x < LCD_XRES; x++)
+         {
+-          g_lcd_fb[y * LCD_XRES + x] =
++          fb[y * LCD_XRES + x] =
+               g_rainbow[(x * colors) / LCD_XRES];
+         }
+     }
+ 
+-  return esp_mipi_dsi_flush_framebuffer(g_lcd_fb, LCD_FB_SIZE);
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  return OK;
++#else
++  return esp_mipi_dsi_flush_framebuffer(fb, LCD_FB_SIZE);
++#endif
+ }
+ 
+ int up_fbinitialize(int display)
+@@ -301,6 +518,7 @@ int up_fbinitialize(int display)
+     .num_data_lanes     = LCD_DSI_LANES,
+     .lane_bit_rate_mbps = LCD_DSI_RATE_MBPS,
+   };
++
+   struct esp_mipi_dsi_dpi_config_s dpi =
+   {
+     .h_res                 = LCD_XRES,
+@@ -311,11 +529,17 @@ int up_fbinitialize(int display)
+     .vsync_pulse_width     = 1,
+     .vsync_back_porch      = 23,
+     .vsync_front_porch     = 12,
+-    .dpi_clock_freq_mhz    = 52,
++    .dpi_clock_freq_mhz    = LCD_DPI_CLOCK_MHZ,
+     .virtual_channel       = 0,
+     .format                = MIPI_DSI_FMT_RGB565,
+   };
++
+   int ret;
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  uintptr_t fb_start;
++  uintptr_t psram_start;
++  uintptr_t psram_end;
++#endif
+ 
+   if (display != 0)
+     {
+@@ -379,28 +603,86 @@ int up_fbinitialize(int display)
+       return ret;
+     }
+ 
+-  /* The PSRAM-backed user heap is large enough for the 1.2 MiB scanout FB.
+-   * Keep the internal kernel heap available for NuttX objects and stacks.
++  /* Allocate scanout from the PSRAM-backed user heap.  Partial mode keeps
++   * one DMA scanout frame; legacy direct mode keeps two contiguous pages for
++   * VSync page flipping.
+    */
+ 
+-  g_lcd_fb = memalign(64, LCD_FB_SIZE);
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++  if (!esp_psram_is_initialized())
++    {
++      syslog(LOG_ERR, "ERROR: PSRAM user heap is unavailable\n");
++      return -ENOMEM;
++    }
++
++  g_lcd_plane.fblen = LCD_FB_SIZE * 2;
++  g_lcd_plane.yres_virtual = LCD_YRES * 2;
++#elif defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
++  if (!esp_psram_is_initialized())
++    {
++      syslog(LOG_ERR, "ERROR: PSRAM user heap is unavailable\n");
++      return -ENOMEM;
++    }
++#endif
++
++  g_lcd_fb = memalign(64, g_lcd_plane.fblen);
+   if (g_lcd_fb == NULL)
+     {
+       syslog(LOG_ERR, "ERROR: LCD FB alloc failed (%u bytes)\n",
+-             (unsigned int)LCD_FB_SIZE);
++             (unsigned int)g_lcd_plane.fblen);
+       return -ENOMEM;
+     }
+ 
+-  g_lcd_plane.fbmem = g_lcd_fb;
++  g_lcd_fb_heap = true;
++
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  fb_start = (uintptr_t)g_lcd_fb;
++  psram_start = esp_psram_extram_vaddr_start();
++  psram_end = esp_psram_extram_vaddr_end();
++
++  if (fb_start < psram_start || fb_start >= psram_end ||
++      g_lcd_plane.fblen > psram_end - fb_start)
++    {
++      syslog(LOG_ERR, "ERROR: LCD FB was not allocated from PSRAM\n");
++      free(g_lcd_fb);
++      g_lcd_fb = NULL;
++      g_lcd_fb_heap = false;
++      return -ENOMEM;
++    }
++#endif
+ 
++#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
++  g_lcd_plane.fbmem = g_lcd_fb;
++#  if defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++  ret = esp_mipi_dsi_bind_framebuffer(g_lcd_fb, LCD_FB_SIZE,
++                                      LCD_XRES, LCD_YRES, LCD_BPP);
++#  else
++  ret = esp_mipi_dsi_bind_framebuffer(
++      (FAR uint8_t *)g_lcd_fb + LCD_FB_SIZE, LCD_FB_SIZE,
++      LCD_XRES, LCD_YRES, LCD_BPP);
++#  endif
++#else
++  g_lcd_plane.fbmem = g_lcd_fb;
+   ret = esp_mipi_dsi_bind_framebuffer(g_lcd_fb, LCD_FB_SIZE,
+                                       LCD_XRES, LCD_YRES, LCD_BPP);
++#endif
+   if (ret < 0)
+     {
+       syslog(LOG_ERR, "ERROR: LCD FB bind failed: %d\n", ret);
+       goto errout_fb;
+     }
+ 
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++  ret = esp_mipi_dsi_set_framebuffer_callback(lcd_next_framebuffer, NULL);
++  if (ret < 0)
++    {
++      syslog(LOG_ERR, "ERROR: LCD page-flip callback failed: %d\n", ret);
++      goto errout_fb;
++    }
++#endif
++
+   g_lcd_ready = true;
+   ret = esp32p4_lcd_show_rainbow();
+   if (ret < 0)
+@@ -439,8 +721,13 @@ int up_fbinitialize(int display)
+ errout_fb:
+   g_lcd_ready = false;
+   g_lcd_plane.fbmem = NULL;
+-  free(g_lcd_fb);
++  if (g_lcd_fb_heap)
++    {
++      free(g_lcd_fb);
++    }
++
+   g_lcd_fb = NULL;
++  g_lcd_fb_heap = false;
+   return ret;
+ }
+ 
