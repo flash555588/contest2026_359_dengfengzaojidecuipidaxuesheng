@@ -2,7 +2,7 @@
 
 本项目面向 2026 首届 openvela AI 硬件开发者大赛“新硬件适配”赛道，目标是在乐鑫 ESP32-P4 Function-EV-Board 上完成 openvela/NuttX 启动、外部 PSRAM、MIPI-DSI LCD、GT911 触摸和 LVGL 图形桌面的板级适配。仓库同时维护早期 revision v1.x 与量产 revision v3.2 两套可复现配置。
 
-当前已在 ESP32-P4 revision v1.0 实板上完成 Simple Boot、稳定 NuttShell、32 MiB PSRAM 系统堆、MIPI-DSI/DW-GDMA framebuffer、`/dev/fb0`、GT911 `/dev/input0` 与 LVGL 桌面 bring-up。串口与实物已验证完整 1024×600 首帧更新、连续 DMA 帧计数、全屏 LVGL 桌面、触摸设备打开及 **GT911 实际点击/拖动坐标**（LVGL 输出 `TOUCH: pressed x=... y=...`，坐标方向正确）；同一修复固件已通过连续复位回归，每次均进入 NSH 并完成 PSRAM、GT911 和显示初始化。剩余验收项是真实断电冷启动和 v3.2 芯片实板回归。v3.2 配置已完成构建，但不得烧入 v1.0 芯片。
+当前已在 ESP32-P4 revision v1.0 实板上完成 Simple Boot、稳定 NuttShell、32 MiB PSRAM 系统堆、MIPI-DSI/DW-GDMA framebuffer、`/dev/fb0`、GT911 `/dev/input0`、LVGL 桌面与 QuickJS 快应用运行时 bring-up。串口与实物已验证完整 1024×600 首帧更新、连续 DMA 帧计数、全屏 LVGL 桌面、触摸设备打开及 **GT911 实际点击/拖动坐标**（LVGL 输出 `TOUCH: pressed x=... y=...`，坐标方向正确）。2026-08-30 的最终 v1.0 固件还通过了重新烧录、镜像 SHA-256 校验和真实断电冷启动，OuO/QuickJS 自动启动并进入 NSH。剩余验收项为 v3.2 芯片实板回归；v3.2 配置已完成构建，但不得烧入 v1.0 芯片。
 
 ## 适配亮点
 
@@ -12,7 +12,10 @@
 - 接入 Espressif MIPI-DSI Host、DPI Bridge、DPHY LDO 和 EK79007 类面板初始化流程。
 - 按 Espressif EK79007 参考配置校正双 Lane 900 Mbps 与完整消隐参数；v1.x 使用已实测全屏的 24 MHz 低带宽档，v3.2 使用 52 MHz 原厂档。
 - 接入 `/dev/fb0`、LVGL 9 NuttX framebuffer 后端与 GT911 轮询触摸，并按脏行执行 PSRAM cache writeback。
+- 为双缓冲 page-flip 的生产者与 ISR 回调增加 SMP 自旋锁，避免待提交 framebuffer 指针竞争；同时把不适合在 ISR 中执行的 framebuffer upper-half 访问移到任务上下文。
 - GT911 使用官方 BSP 的 HP I2C1（SCL=GPIO8 / SDA=GPIO7，0x5D 或 0x14 地址探测）；触摸初始化必须放在 MIPI-DSI 显示初始化之后，否则首个面板 DCS 写会以 `-110` 超时、整屏无法点亮。
+- 扩展 QuickJS QPK 运行时，提供 OuO、2048、持久化 `system.storage` 与手势交互；补齐路径校验、存储命名隔离、LVGL 分配失败清理和回调生命周期管理。
+- 为 LVGL NuttX framebuffer 增加可配置渲染缓冲模式，并为 tiny-ttf 字形缓存补充 OOM 防护。
 - 增加 DSI/DPI 寄存器、时钟、帧计数和中断状态诊断接口，支持测试图案与帧缓冲路径 A/B 定位。
 - 保存可烧录固件、实板启动日志以及 AI Coding 会话日志，便于复现和审阅。
 
@@ -36,7 +39,10 @@ board/esp32p4-function-ev-board/  板级配置、启动、LCD、触摸与桌面�
 board/esp32p4-common/             ESP32-P4 公共板级支持 overlay
 chip/esp32p4/                     ESP32-P4 架构和 Espressif 驱动 overlay
 firmware/esp32p4-nsh/             可烧录固件与启动日志
+firmware/esp32p4-desktop-v1/      2026-08-30 最终 v1.0 桌面固件与测试报告
+ouo/                              OuO QuickJS 应用源码、清单与设计说明
 logs/flash555588/                 AI Coding 日志和实板工作记录
+tools/patches/                     最终 nuttx/apps 可复现补丁
 tools/                             WSL 构建、同步、检查与 Windows 烧录工具
 contest2026_*.xml                 repo manifest 与 linkfile 映射
 ```
@@ -67,6 +73,19 @@ python tools/wsl_copy_firmware.py --variant v3.2
 ```
 
 底层构建入口为 `tools/wsl_make_p4_nsh.sh`。详细的启动、镜像生成和调试说明见 `board/esp32p4-function-ev-board/README.md` 与 `DISPLAY_PLAN.md`。
+
+最终 v1.0 桌面/OuO 版本还需要在 `repo sync` 后应用两份可复现补丁：
+
+```bash
+cd contest2026_359_dengfengzaojidecuipidaxuesheng
+bash tools/apply_final_overlays.sh
+
+cd ../nuttx
+tools/configure.sh esp32p4-function-ev-board:desktop-v1
+make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
+```
+
+补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `88827afd368d4bbb4802b96ed44d9582f85b2f92`。应用脚本可重复执行：已应用时会跳过，基线不匹配时会停止并报告错误。
 
 ## 生成镜像与烧录
 
@@ -107,7 +126,7 @@ python tools\p4_serial_smoke.py --port COM7 --seconds 16 `
 `NuttShell (NSH)` 和 `DESKTOP: ui ready`。2026-08-23 已在同一镜像上连续执行
 3 轮并通过；日志保存在 `logs/v1-stability-*.log`。
 
-实板启动记录见 `firmware/esp32p4-nsh/bootlog.txt` 和 `logs/flash555588/`。
+最终固件、哈希和 2026-08-30 烧录/冷启动记录见 `firmware/esp32p4-desktop-v1/`；早期实板启动记录见 `firmware/esp32p4-nsh/bootlog.txt` 和 `logs/flash555588/`。
 
 ## AI Coding 使用说明
 
@@ -115,4 +134,4 @@ python tools\p4_serial_smoke.py --port COM7 --seconds 16 `
 
 ## 当前状态与后续工作
 
-当前提交是可复现的阶段性基线：双 revision 构建通过；v1.0 实板已验证稳定 NSH、32 MiB PSRAM、DW-GDMA 连续整帧、24 MHz 全屏 LVGL framebuffer 更新、GT911 设备打开及实际点击/拖动坐标，并通过连续复位回归。剩余验收项是真实断电冷启动与 v3.2 芯片上的对应实板回归。
+当前提交是可复现的阶段性基线：双 revision 构建通过；v1.0 实板已验证稳定 NSH、32 MiB PSRAM、DW-GDMA 连续整帧、24 MHz 全屏 LVGL framebuffer 更新、GT911 实际点击/拖动坐标、OuO/QuickJS 自动启动，并通过连续复位与真实断电冷启动回归。剩余验收项为 v3.2 芯片上的对应实板回归。
