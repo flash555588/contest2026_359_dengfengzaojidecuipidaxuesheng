@@ -1,0 +1,5 @@
+ifconfig
+eth0	Link encap:Ethernet HWaddr 60:55:f9:fa:f4:8b at UP mtu 576
+	inet addr:0.0.0.0 DRaddr:10.0.0.1 Mask:255.255.255.0
+
+nsh> [K
