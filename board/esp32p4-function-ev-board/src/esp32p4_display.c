@@ -4,7 +4,7 @@
  * Simple Boot display bring-up for the 7" 1024x600 MIPI-DSI panel
  * (EK79007-class driver IC on the LCD adapter board).
  *
- * Sequence: power DPHY LDO -> DSI host init (2 lanes @1Gbps) -> panel
+ * Sequence: power DPHY LDO -> DSI host init (2 lanes @900Mbps) -> panel
  * hard reset (GPIO27) -> vendor init cmds over LP DCS -> DPI timing ->
  * framebuffer (PSRAM) bind -> video start -> backlight (GPIO26).
  ****************************************************************************/
@@ -32,6 +32,14 @@
 #define FB_BPP             16
 #define FB_BYTES_PER_PIXEL (FB_BPP / 8)
 #define FB_SIZE            (FB_W * FB_H * FB_BPP / 8)
+
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define lcd_progress(s) ets_printf(s)
+#else
+#  define lcd_progress(s)
+#endif
 
 static FAR uint8_t *g_fb;
 static volatile bool g_ready;
@@ -104,6 +112,8 @@ int esp32p4_display_init(void)
       return OK;
     }
 
+  lcd_progress("L0\n");
+
   /* A cold-powered panel needs its control pins in a deterministic state
    * before the DPHY and DSI host are enabled.  Keep both the backlight and
    * the active-low reset asserted throughout host initialization. */
@@ -128,14 +138,14 @@ int esp32p4_display_init(void)
 
   nxsig_usleep(20 * 1000);
 
-  /* 2. DSI host: match Espressif's EK79007 reference profile exactly.
-   * Keeping the lane rate, pixel format, and blanking timings as one
-   * coherent profile is important: mixing the old 52 MHz profile with the
-   * current 48 MHz profile compresses the generated image horizontally. */
+  /* 2. DSI host: match Espressif's EK79007 component reference profile
+   * exactly.  Keeping the lane rate, pixel clock, and blanking timings as
+   * one coherent profile is essential: mixing profiles makes a cold-started
+   * panel lock onto an incomplete active window. */
 
   memset(&bus, 0, sizeof(bus));
   bus.num_data_lanes     = 2;
-  bus.lane_bit_rate_mbps = 1000;
+  bus.lane_bit_rate_mbps = 900;
 
   ret = esp_mipi_dsi_initialize(&bus);
   printf("DISP: dsi host init -> %d\n", ret);
@@ -161,6 +171,8 @@ int esp32p4_display_init(void)
     {
       return ret;
     }
+
+  lcd_progress("L1\n");
 
   /* 3. Panel hardware reset, active low */
 
@@ -229,20 +241,25 @@ int esp32p4_display_init(void)
   dpi.h_res              = FB_W;
   dpi.v_res              = FB_H;
   dpi.hsync_pulse_width  = 10;
-  dpi.hsync_back_porch   = 120;
-  dpi.hsync_front_porch  = 120;
+  dpi.hsync_back_porch   = 160;
+  dpi.hsync_front_porch  = 160;
   dpi.vsync_pulse_width  = 1;
-  dpi.vsync_back_porch   = 20;
-  dpi.vsync_front_porch  = 10;
+  dpi.vsync_back_porch   = 23;
+  dpi.vsync_front_porch  = 12;
   /* Revision 1.x cannot run this board's 32 MiB PSRAM reliably at 200 MHz.
    * Its 80 MHz memory setting is paired with a 24 MHz pixel clock to halve
    * scanout bandwidth while preserving the complete 1024x600 active area.
    * This 30 Hz mode has been verified physically to fill the panel. */
 
 #ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+  /* Revision 1.x boards pair the same official blanking windows with a
+   * lower pixel clock because their 80 MHz PSRAM setup cannot sustain the
+   * full scanout bandwidth.  This verified 30 Hz mode still addresses the
+   * complete 1024x600 active area. */
   dpi.dpi_clock_freq_mhz = 24;
 #else
-  dpi.dpi_clock_freq_mhz = 48;
+  /* Official ESP32-P4 EK79007 1024x600@60Hz pixel clock. */
+  dpi.dpi_clock_freq_mhz = 52;
 #endif
   dpi.virtual_channel    = 0;
   dpi.format             = MIPI_DSI_FMT_RGB565;
@@ -319,6 +336,8 @@ int esp32p4_display_init(void)
     {
       return ret;
     }
+
+  lcd_progress("L2\n");
 #endif
 
   /* 7. Go live, then backlight on */
@@ -329,6 +348,12 @@ int esp32p4_display_init(void)
     {
       return ret;
     }
+
+  lcd_progress("L3\n");
+
+  esp_configgpio(LCD_BL_GPIO, OUTPUT);
+  esp_gpiowrite(LCD_BL_GPIO, true);
+  printf("DISP: backlight on after video start\n");
 
   nxsig_usleep(250 * 1000);
   ret = esp_mipi_dsi_get_diagnostics(&dma_frames, &dma_status,
@@ -351,6 +376,7 @@ int esp32p4_display_init(void)
          (unsigned long)host_int_st0, (unsigned long)host_int_st1,
          (unsigned long)host_vid_pkt_status, (unsigned long)host_phy_status,
          (unsigned long)host_color_coding);
+  lcd_progress("L4\n");
 
   ret = esp_mipi_dsi_get_timing_diagnostics(&timing_diag);
   printf("DISP: brg words=%lu fifo=%08lx pix=%08lx "
@@ -406,6 +432,7 @@ int esp32p4_display_init(void)
          (unsigned long)dma_diag.lli_block_items,
          (unsigned long)dma_diag.lli_control_low,
          (unsigned long)dma_diag.lli_control_high, ret);
+  lcd_progress("L5\n");
 
   g_fb     = fb;
   g_ready  = true;
@@ -421,7 +448,8 @@ int esp32p4_display_init(void)
 
   esp_configgpio(LCD_BL_GPIO, OUTPUT);
   esp_gpiowrite(LCD_BL_GPIO, true);
-  printf("DISP: backlight on\n");
+  printf("DISP: backlight already on\n");
+  lcd_progress("L6\n");
 
   return OK;
 }

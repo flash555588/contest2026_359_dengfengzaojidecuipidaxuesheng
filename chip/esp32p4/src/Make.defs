@@ -23,7 +23,11 @@
 include common/Make.defs
 include common/espressif/Make.defs
 
-CHIP_CSRCS += esp_chip_rev.c esp_atomic64.c
+CHIP_CSRCS += esp_chip_rev.c
+
+ifeq ($(CONFIG_SMP),y)
+CHIP_CSRCS += esp32p4_smp.c
+endif
 
 CFLAGS += ${DEFINE_PREFIX}_RETARGETABLE_LOCKING
 

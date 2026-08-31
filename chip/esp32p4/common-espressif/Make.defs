@@ -25,9 +25,10 @@ STORAGETMP = $(if $(wildcard $(NXTMPDIR)/.*),y,)
 HEAD_ASRC   = esp_head.S
 
 # Skip common RISC-V vector table in favor of Espressif's custom vector
-# table.
+# table. Espressif chips use systimer, not CLINT mtimer.
 
 CMN_ASRCS  := $(filter-out riscv_vectors.S,$(CMN_ASRCS))
+CMN_CSRCS  := $(filter-out riscv_mtimer.c,$(CMN_CSRCS))
 CHIP_ASRCS  = esp_vectors.S
 
 # Required Espressif chip's files (arch/risc-v/src/common/espressif)
@@ -57,6 +58,11 @@ endif
 
 ifeq ($(CONFIG_ONESHOT),y)
 	CHIP_CSRCS += esp_oneshot.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_MIPI_DSI),y)
+	CHIP_CSRCS += esp_mipi_dsi.c
+	CHIP_CSRCS += esp_ldo.c
 endif
 
 ifeq ($(CONFIG_RTC),y)
@@ -119,14 +125,6 @@ ifeq ($(CONFIG_ESPRESSIF_SPI),y)
 	endif
 endif
 
-ifeq ($(CONFIG_ESPRESSIF_LDO),y)
-	CHIP_CSRCS += esp_ldo.c
-endif
-
-ifeq ($(CONFIG_ESPRESSIF_MIPI_DSI),y)
-	CHIP_CSRCS += esp_mipi_dsi.c
-endif
-
 ifeq ($(CONFIG_ESPRESSIF_SPIFLASH),y)
 	CHIP_CSRCS += esp_spiflash.c
 	ifeq ($(CONFIG_ESPRESSIF_MTD),y)
@@ -153,11 +151,8 @@ endif
 # Fetch source files and add them to build
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
-ifeq ($(CONFIG_ARCH_CHIP_ESP32P4),y)
-	ESP_HAL_3RDPARTY_VERSION = 8d0a898910084206721a0892ab093021bca1496a
-endif
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = 9fc713a95b1ff150dd0b0647e465d3c624056bb1
+	ESP_HAL_3RDPARTY_VERSION = 8d0a898910084206721a0892ab093021bca1496a
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL

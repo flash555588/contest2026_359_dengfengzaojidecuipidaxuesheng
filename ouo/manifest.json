@@ -1,0 +1,11 @@
+{
+  "package": "com.openvela.ouo.original",
+  "name": "Vela Mood Console",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minPlatformVersion": 1,
+  "features": [],
+  "router": {
+    "entry": "app.js"
+  }
+}

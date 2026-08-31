@@ -1,9 +1,17 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <manifest>
-  <remote fetch="../open-vela/" name="openvela"/>
-  <remote fetch="../" name="git"/>
+  <remote fetch="https://github.com/open-vela/" name="openvela"/>
+  <remote fetch="https://github.com/" name="git"/>
+  <remote fetch="https://github.com/flash555588/" name="esp32p4-team"/>
   <default remote="openvela" revision="dev-ai-contest-2026"/>
 
+  <!--
+    ESP32-P4 L0 uses official open-vela nuttx/apps on dev-ai-contest-2026
+    plus this contest repo's chip/board overlay. Packaged desktop binaries
+    remain under firmware/. The previous Apache snapshot pins
+    (flash555588/esp32p4_nuttx @ cd61ccdd, esp32p4_nuttx_apps @ 93fb5ac7)
+    are not the contest L0 source.
+  -->
   <project path="apps" name="nuttx-apps"/>
   <project path="apps/benchmarks/coremark/coremark" name="apps_benchmarks_coremark"/>
   <project path="apps/benchmarks/test-tlb/test-tlb" name="apps_benchmarks_test-tlb"/>
@@ -13,7 +21,8 @@
   <project path="apps/crypto/tinycrypt/tinycrypt" name="apps_crypto_tinycrypt"/>
   <project path="apps/examples/unpv13e/unpv13e" name="apps_examples_unpv13e"/>
   <project path="apps/graphics/libyuv/libyuv" name="apps_graphics_libyuv"/>
-  <project path="apps/graphics/lvgl/lvgl" name="apps_graphics_lvgl"/>
+  <project path="apps/graphics/lvgl/lvgl" name="lvgl/lvgl" remote="git"
+           revision="59a6b61c9580b65089010c5273f2fcdd6c4d2aae"/>
   <project path="apps/interpreters/lua/lua" name="apps_interpreters_lua"/>
   <project path="apps/interpreters/quickjs/quickjs" name="apps_interpreters_quickjs"/>
   <project path="apps/interpreters/wamr/wamr" name="apps_interpreters_wamr"/>
@@ -215,7 +224,8 @@
   <project path="vendor/artinchip" name="vendor_artinchip"/>
   <project path="vendor/beken" name="vendor_beken"/>
   <project path="vendor/bes" name="vendor_bes"/>
-  <project path="vendor/espressif" name="vendor_espressif"/>
+  <project path="vendor/espressif" name="vendor_espressif"
+           revision="afe1b8c5ec67ff76eda48ee84d9dd116df2814ba"/>
   <project path="vendor/flagchip" name="vendor_flagchip"/>
   <project path="vendor/gigadevice" name="vendor_gigadevice"/>
   <project path="vendor/infineon" name="vendor_infineon"/>

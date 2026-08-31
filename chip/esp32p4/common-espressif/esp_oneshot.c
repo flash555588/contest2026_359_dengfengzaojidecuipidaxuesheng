@@ -27,7 +27,7 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
-#include <nuttx/debug.h>
+#include <debug.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -514,11 +514,11 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int chan, uint16_t resolution)
 
   esp_setup_irq(irq,
                 ESP_IRQ_PRIORITY_DEFAULT,
-                ESP_IRQ_TRIGGER_LEVEL,
-                esp_oneshot_isr,
-                lower);
+                ESP_IRQ_TRIGGER_LEVEL);
 
   oneshot_count_init(&lower->lh, USEC_PER_SEC / resolution);
+
+  irq_attach(ESP_SOURCE2IRQ(irq), (xcpt_t)esp_oneshot_isr, lower);
 
   /* Enable the allocated CPU interrupt */
 

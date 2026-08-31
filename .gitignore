@@ -23,5 +23,8 @@ Make.dep
 # Log template placeholder
 logs/your-github-login/
 
+# Python bytecode
+__pycache__/
+
 # Configure-generated board link; its target is local-workspace specific
 board/esp32p4-common/board
