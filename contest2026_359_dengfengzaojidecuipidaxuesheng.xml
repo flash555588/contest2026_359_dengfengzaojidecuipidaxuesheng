@@ -11,7 +11,7 @@
   <project path="contest2026_359_dengfengzaojidecuipidaxuesheng"
            name="contest2026_359_dengfengzaojidecuipidaxuesheng"
            remote="esp32p4-team"
-           revision="codex/esp32p4-lcd-bringup">
+           revision="codex/espclaw-final">
     <linkfile src="app/hello_app" dest="packages/demos/contest2026_359_hello_app"/>
     <linkfile src="quickapp/hello_quickapp" dest="packages/apps/contest2026_359_hello_quickapp"/>
     <linkfile src="board/contest_board" dest="vendor/openvela/boards/contest2026_359_board"/>
