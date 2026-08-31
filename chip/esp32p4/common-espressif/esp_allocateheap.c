@@ -1,8 +1,6 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/esp_allocateheap.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,7 +24,7 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/debug.h>
+#include <debug.h>
 #include <sys/types.h>
 
 #include <arch/board/board.h>
@@ -37,23 +35,14 @@
 
 #include "riscv_internal.h"
 #include "rom/rom_layout.h"
-#ifdef CONFIG_ESPRESSIF_RETENTION_HEAP
-#  include "esp_retentionheap.h"
-#endif
-#if defined(CONFIG_ESPRESSIF_SPIRAM)
-#  include "esp_psram.h"
-#  include "esp_private/esp_psram_extram.h"
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+#  include "esp_rom_sys.h"
+extern int ets_printf(const char *fmt, ...) printf_like(1, 2);
 #endif
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-uintptr_t _heap_start;
 
 /****************************************************************************
  * Public Functions
@@ -91,79 +80,38 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
    * Check boards/risc-v/espressif.
    */
 
-#ifdef CONFIG_ESPRESSIF_RETENTION_HEAP
-  uintptr_t rstart;
-  uintptr_t rend;
-#endif
-#if defined(CONFIG_MM_KERNEL_HEAP) && \
-    defined(CONFIG_ESPRESSIF_SPIRAM) && \
-    defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
-  uintptr_t ubase;
-  uintptr_t utop;
-#endif
-
   board_autoled_on(LED_HEAPALLOCATE);
 
-#if defined(CONFIG_MM_KERNEL_HEAP) && \
-    defined(CONFIG_ESPRESSIF_SPIRAM) && \
-    defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
-  DEBUGASSERT(esp_psram_is_initialized());
-  ubase = esp_psram_extram_vaddr_start();
-  utop  = esp_psram_extram_vaddr_end();
-
-  *heap_start = (void *)ubase;
-  *heap_size  = utop - ubase;
-#else
   *heap_start = (void *)g_idle_topstack;
-#ifdef CONFIG_ESPRESSIF_RETENTION_HEAP
-  esp_retentionheap_find_region(&rstart, &rend);
-  *heap_size  = (uintptr_t) rstart - g_idle_topstack;
+#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+  /* v0/v1 SRAM is split. ROM reserved_start can be unmapped or past the
+   * sram_low hole; clamp to the bootloader-reserved top of sram_low.
+   */
+
+  {
+    uintptr_t heap_end = 0x4ff2cbd0;
+
+    if (ets_rom_layout_p != NULL)
+      {
+        uintptr_t rom_end =
+          (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
+
+        if (rom_end > g_idle_topstack && rom_end < heap_end)
+          {
+            heap_end = rom_end;
+          }
+      }
+
+    *heap_size = heap_end - g_idle_topstack;
+  }
 #else
   *heap_size  = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start -
                            g_idle_topstack;
 #endif
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+  ets_printf("heap %p size %u\n", *heap_start, (unsigned)*heap_size);
 #endif
-  _heap_start = (uintptr_t)*heap_start;
 }
-
-/****************************************************************************
- * Name: up_allocate_kheap
- *
- * Description:
- *   For the kernel builds (CONFIG_BUILD_PROTECTED=y or
- *   CONFIG_BUILD_KERNEL=y) there may be both kernel- and user-space heaps
- *   as determined by CONFIG_MM_KERNEL_HEAP=y.  This function allocates (and
- *   protects) the kernel-space heap.
- *
- *   For Flat build (CONFIG_BUILD_FLAT=y), this function enables a separate
- *   (although unprotected) heap for the kernel.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-void up_allocate_kheap(void **heap_start, size_t *heap_size)
-{
-  uintptr_t kbase = g_idle_topstack;
-  uintptr_t ktop;
-
-#ifdef CONFIG_ESPRESSIF_RETENTION_HEAP
-  uintptr_t rstart;
-  uintptr_t rend;
-
-  esp_retentionheap_find_region(&rstart, &rend);
-  ktop = rstart;
-#else
-  ktop = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
-#endif
-
-  DEBUGASSERT(ktop > kbase);
-
-  board_autoled_on(LED_HEAPALLOCATE);
-
-  *heap_start = (void *)kbase;
-  *heap_size  = ktop - kbase;
-}
-#endif
 
 /****************************************************************************
  * Name: riscv_addregion
@@ -195,27 +143,18 @@ void riscv_addregion(void)
 
   if (region_size > 0)
     {
+      ets_printf("sram_high %p size %u\n",
+                 _sram_high_heap_start, (unsigned)region_size);
 #ifdef CONFIG_MM_KERNEL_HEAP
       kmm_addregion(_sram_high_heap_start, region_size);
 #else
-      kumm_addregion(_sram_high_heap_start, region_size);
+      /* Skip sram_high on L0: adding this region during nx_start caused a
+       * Store/AMO fault in group_postinitialize (tg_info). Primary sram_low
+       * heap is enough for NSH.
+       */
 #endif
     }
-#endif
-
-#if !defined(CONFIG_MM_KERNEL_HEAP)
-#  if defined(CONFIG_ESPRESSIF_SPIRAM_USER_HEAP)
-  if (esp_psram_is_initialized())
-    {
-      uintptr_t start = esp_psram_extram_vaddr_start();
-      uintptr_t end = esp_psram_extram_vaddr_end();
-
-      if (end > start)
-        {
-          kumm_addregion((void *)start, end - start);
-        }
-    }
-#  endif
 #endif
 }
 #endif
+

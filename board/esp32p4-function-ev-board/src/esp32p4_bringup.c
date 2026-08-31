@@ -26,6 +26,11 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
+#include <errno.h>
+#include <ctype.h>
+#include <string.h>
+#include <nuttx/i2c/i2c_master.h>
+#include "esp_i2c.h"
 #include <nuttx/input/gt9xx.h>
 #include "esp_ldo.h"
 
@@ -145,6 +150,14 @@
 
 #include "esp32p4-function-ev-board.h"
 
+#if defined(CONFIG_ESPRESSIF_SIMPLE_BOOT) && \
+    !defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+extern int ets_printf(const char *fmt, ...);
+#  define bringup_progress(s) ets_printf(s)
+#else
+#  define bringup_progress(s)
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -186,8 +199,38 @@ static int  gt911_set_power(const struct gt9xx_board_s *state, bool on)
 static const struct gt9xx_board_s g_touch =
   { gt911_irq_attach, gt911_irq_enable, gt911_set_power };
 
+/* The generic gt9xx driver registers a character device without probing the
+ * bus.  Probe explicitly here so "registered" means that the panel actually
+ * acknowledged its product-ID register. */
+
+static int gt911_probe(FAR struct i2c_master_s *i2c, uint8_t addr,
+                       FAR uint8_t *id)
+{
+  uint8_t reg[2] = { 0x81, 0x40 };
+  struct i2c_msg_s msgv[2] =
+    {
+      {
+        .frequency = CONFIG_INPUT_GT9XX_I2C_FREQUENCY,
+        .addr = addr,
+        .flags = 0,
+        .buffer = reg,
+        .length = sizeof(reg),
+      },
+      {
+        .frequency = CONFIG_INPUT_GT9XX_I2C_FREQUENCY,
+        .addr = addr,
+        .flags = I2C_M_READ,
+        .buffer = id,
+        .length = 4,
+      },
+    };
+
+  return I2C_TRANSFER(i2c, msgv, 2);
+}
+
 int esp_bringup(void)
 {
+  bringup_progress("A2\n");
 #ifdef PSRAM_SIMPLE_BOOT
   /* Simple Boot PSRAM bring-up. Runs here (console alive) so every step
    * is visible; the early-start attempt in esp_start.c was removed because
@@ -225,33 +268,63 @@ int esp_bringup(void)
   printf("PSRAM: size=%u initialized=%d\n",
          (unsigned)esp_psram_get_size(),
          esp_psram_is_initialized() ? 1 : 0);
-
-#ifdef GT911_SIMPLE_BOOT
-  {
-    extern struct i2c_master_s *esp_i2cbus_initialize(int port);
-
-    FAR struct i2c_master_s *i2c = esp_i2cbus_initialize(0);
-    int tret = -1;
-
-    if (i2c != NULL)
-      {
-        tret = gt9xx_register("/dev/input0", i2c, 0x5d, &g_touch);
-        if (tret < 0)
-          {
-            tret = gt9xx_register("/dev/input0", i2c, 0x14, &g_touch);
-          }
-      }
-
-    printf("TOUCH: gt911 /dev/input0 -> %d\n", tret);
-  }
-#endif
+  bringup_progress("A3\n");
 
 #ifdef CONFIG_ESPRESSIF_MIPI_DSI
   int dret;
   {
     extern int esp32p4_display_init(void);
+    bringup_progress("A5\n");
     dret = esp32p4_display_init();
     printf("DISP: display_init -> %d\n", dret);
+    bringup_progress("A6\n");
+  }
+#endif
+
+#ifdef GT911_SIMPLE_BOOT
+  {
+    extern struct i2c_master_s *esp_i2cbus_initialize(int port);
+
+    /* The official ESP32-P4 Function EV Board BSP routes touch to HP I2C1;
+     * GPIO7/GPIO8 are shared module pins, not an I2C0-only mapping.
+     * Initialize touch only after the MIPI-DSI host is up: the I2C1 poll
+     * timer and DSI host share boot-time clock resources, and touching the
+     * bus before display init makes the first panel DCS write time out. */
+
+    FAR struct i2c_master_s *i2c = esp_i2cbus_initialize(ESPRESSIF_I2C1);
+    int tret = -1;
+
+    if (i2c != NULL)
+      {
+        uint8_t id[4];
+        uint8_t addr = 0x5d;
+
+        memset(id, 0, sizeof(id));
+        tret = gt911_probe(i2c, addr, id);
+        if (tret < 0)
+          {
+            addr = 0x14;
+            tret = gt911_probe(i2c, addr, id);
+          }
+
+        printf("TOUCH: probe addr=0x%02x -> %d id=%c%c%c%c\n",
+               addr, tret, isprint(id[0]) ? id[0] : '?',
+               isprint(id[1]) ? id[1] : '?',
+               isprint(id[2]) ? id[2] : '?',
+               isprint(id[3]) ? id[3] : '?');
+
+        if (tret == 0)
+          {
+            tret = gt9xx_register("/dev/input0", i2c, addr, &g_touch);
+          }
+        if (tret < 0)
+          {
+            printf("TOUCH: gt911 not registered: %d\n", tret);
+          }
+      }
+
+    printf("TOUCH: gt911 /dev/input0 -> %d\n", tret);
+    bringup_progress("A4\n");
   }
 #endif
 
@@ -260,6 +333,7 @@ int esp_bringup(void)
     {
       extern int esp32p4_desktop_start(void);
       esp32p4_desktop_start();
+      bringup_progress("A7\n");
     }
 #endif /* CONFIG_ESPRESSIF_MIPI_DSI && CONFIG_GRAPHICS_LVGL */
 #endif
@@ -643,5 +717,6 @@ int esp_bringup(void)
    * capabilities.
    */
 
+  bringup_progress("A8\n");
   return ret;
 }

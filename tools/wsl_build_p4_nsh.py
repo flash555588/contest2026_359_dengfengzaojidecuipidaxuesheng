@@ -9,7 +9,7 @@ ROOT = Path("/home/flash/vela-p4")
 GCC = ROOT / "riscv32-esp-elf/bin/riscv32-esp-elf-gcc"
 NUTTX = ROOT / "nuttx"
 CONFIG_NAME = sys.argv[1] if len(sys.argv) > 1 else "nsh"
-if CONFIG_NAME not in {"nsh", "nsh-v3"}:
+if CONFIG_NAME not in {"nsh", "nsh-v3", "nsh-v3-usb"}:
     raise SystemExit(f"unsupported config: {CONFIG_NAME}")
 
 LOG = ROOT / f"{CONFIG_NAME}_build.log"

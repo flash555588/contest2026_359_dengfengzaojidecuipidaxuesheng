@@ -8,16 +8,22 @@
   -->
   <include name="openvela.xml"/>
 
-  <project path="contest2026_359_dengfengzaojidecuipidaxuesheng" name="contest2026_359_dengfengzaojidecuipidaxuesheng">
+  <project path="contest2026_359_dengfengzaojidecuipidaxuesheng"
+           name="contest2026_359_dengfengzaojidecuipidaxuesheng"
+           remote="esp32p4-team"
+           revision="codex/esp32p4-lcd-bringup">
     <linkfile src="app/hello_app" dest="packages/demos/contest2026_359_hello_app"/>
     <linkfile src="quickapp/hello_quickapp" dest="packages/apps/contest2026_359_hello_quickapp"/>
     <linkfile src="board/contest_board" dest="vendor/openvela/boards/contest2026_359_board"/>
-    <!-- ESP32-P4 Function EV Board (实测芯片 rev v1.0 / CP2102N UART0) -->
+    <!--
+      ESP32-P4 L0 overlay. These destinations do not exist in official
+      open-vela nuttx on dev-ai-contest-2026, so repo <linkfile> can create
+      them. common/espressif and tools/espressif already exist upstream;
+      tools/apply_esp32p4_overlay.py copies those in place after sync.
+    -->
     <linkfile src="board/esp32p4-function-ev-board" dest="vendor/espressif/boards/esp32p4/esp32p4-function-ev-board"/>
     <linkfile src="board/esp32p4-common" dest="nuttx/boards/risc-v/esp32p4/common"/>
     <linkfile src="chip/esp32p4/src" dest="nuttx/arch/risc-v/src/esp32p4"/>
     <linkfile src="chip/esp32p4/include" dest="nuttx/arch/risc-v/include/esp32p4"/>
-    <linkfile src="chip/esp32p4/common-espressif" dest="nuttx/arch/risc-v/src/common/espressif"/>
-    <linkfile src="chip/esp32p4/tools-espressif" dest="nuttx/tools/espressif"/>
   </project>
 </manifest>

@@ -174,6 +174,26 @@ def patch_arch_kconfig(kconfig: Path) -> None:
     kconfig.write_text(text, encoding="utf-8")
 
 
+def patch_usrsock_include(path: Path) -> None:
+    """Contest nuttx includes usrsock headers even when CONFIG_NET is off."""
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    old = "#include <nuttx/usrsock/usrsock_rpmsg.h>\n"
+    new = (
+        "#ifdef CONFIG_NET\n"
+        "#  include <nuttx/usrsock/usrsock_rpmsg.h>\n"
+        "#endif\n"
+    )
+    if old in text:
+        path.write_text(text.replace(old, new, 1), encoding="utf-8")
+        log(f"patched usrsock include in {path}")
+    elif "usrsock_rpmsg.h" in text:
+        log("usrsock include already guarded")
+    else:
+        log(f"SKIP usrsock include in {path}")
+
+
 def maybe_patch_common_espressif(common: Path) -> None:
     k = common / "Kconfig"
     if not k.is_file():
@@ -312,6 +332,7 @@ def main() -> int:
         ensure_symlink(s, d)
 
     patch_arch_kconfig(OPENVELA / "nuttx/arch/risc-v/Kconfig")
+    patch_usrsock_include(OPENVELA / "nuttx/drivers/drivers_initialize.c")
     log("OVERLAY_OK")
     return 0
 

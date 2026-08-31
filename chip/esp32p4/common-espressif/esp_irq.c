@@ -1,8 +1,6 @@
 /****************************************************************************
  * arch/risc-v/src/common/espressif/esp_irq.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,19 +25,17 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
-#include <nuttx/debug.h>
+#include <debug.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/kmalloc.h>
-
-#include "irq/irq.h"
+#include <nuttx/spinlock.h>
 
 #include "riscv_internal.h"
 
+#include "chip.h"
 #include "esp_gpio.h"
 #include "esp_irq.h"
 #include "esp_rtc_gpio.h"
@@ -51,72 +47,249 @@
 #include "riscv/interrupt.h"
 #include "soc/soc.h"
 
-#if SOC_INT_CLIC_SUPPORTED
-#  include "hal/interrupt_clic_ll.h"
-#  include "esp_private/interrupt_clic.h"
-#endif // SOC_INT_CLIC_SUPPORTED
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+/* P4 HAL uses esprv_int_*; v0/v1 ROM ld still PROVIDEs those from
+ * esprv_intc_int_*. Keep both names as real symbols.
+ */
 
-#include "esp_private/vectors_const.h"
+void esprv_intc_int_set_threshold(int priority_threshold)
+{
+  esprv_int_set_threshold(priority_threshold);
+}
 
-#ifndef CONFIG_ARCH_CHIP_ESP32C3
-#  include "soc/hp_system_reg.h"
+void esprv_intc_int_enable(uint32_t unmask)
+{
+  esprv_int_enable(unmask);
+}
+
+void esprv_intc_int_disable(uint32_t mask)
+{
+  esprv_int_disable(mask);
+}
+
+void esprv_intc_int_set_priority(int rv_int_num, int priority)
+{
+  esprv_int_set_priority(rv_int_num, priority);
+}
+
+void esprv_intc_int_set_type(int intr_num, enum intr_type type)
+{
+  esprv_int_set_type(intr_num, type);
+}
+
+enum intr_type esprv_intc_int_get_type(int intr_num)
+{
+  return esprv_int_get_type(intr_num);
+}
 #endif
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_SMP_NCPUS
-#  define ESP_NCPUS                     CONFIG_SMP_NCPUS
-#else
-#  define ESP_NCPUS                     1
-#endif
+#define ESP_DEFAULT_INT_THRESHOLD     1
 
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
-#  ifndef CONFIG_ARCH_IRQ_TO_NDX
-#    error "CONFIG_ARCH_IRQ_TO_NDX must be enabled for RISC-V-based \
-            Espressif SoCs. Run 'make menuconfig' to select it."
-#  endif
-#  if CONFIG_ARCH_NUSER_INTERRUPTS != 17
-#    error "CONFIG_ARCH_NUSER_INTERRUPTS must be 17 for RISC-V-based \
-            Espressif SoCs. Run 'make menuconfig' to set it."
-#  endif
-#else
-#  error "CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC must be enabled for \
-          RISC-V-based Espressif SoCs. Additionally, enable \
-          CONFIG_ARCH_IRQ_TO_NDX and set CONFIG_ARCH_NUSER_INTERRUPTS to 17.\
-          Run 'make menuconfig' to select and set these options."
-#endif
+#define IRQ_UNMAPPED                  0xff
+
+/* Helper macros for working with cpuint_mapentry_t fields */
+
+#define CPUINT_DISABLE(cpuint)        ((cpuint).cpuint_en = 0)
+#define CPUINT_ENABLE(cpuint)         ((cpuint).cpuint_en = 1)
+#define CPUINT_ASSIGN(cpuint,in_irq)  do                            \
+                                        {                           \
+                                          (cpuint).assigned = 1;    \
+                                          (cpuint).cpuint_en = 1;   \
+                                          (cpuint).irq = (in_irq);  \
+                                        }                           \
+                                      while(0)
+#define CPUINT_GETIRQ(cpuint)         ((cpuint).irq)
+#define CPUINT_FREE(cpuint)           ((cpuint).val = 0)
+#define CPUINT_ISENABLED(cpuint)      ((cpuint).cpuint_en == 1)
+#define CPUINT_ISASSIGNED(cpuint)     ((cpuint).assigned == 1)
+#define CPUINT_ISRESERVED(cpuint)     ((cpuint).reserved0 == 1)
+#define CPUINT_ISFREE(cpuint)         (!CPUINT_ISASSIGNED(cpuint))
+
+/* CPU interrupts can be detached from any interrupt source by setting the
+ * map register to ETS_INVALID_INUM, which is an invalid CPU interrupt index.
+ */
+
+#define NO_CPUINT                     ETS_INVALID_INUM
+
+/* Masks for interrupt type used on esp_setup_irq */
+
+#define ESP_CPUINT_IRAM_MASK       (1 << 1)
+#define ESP_CPUINT_TRIGGER_MASK    (1 << 0)
 
 /****************************************************************************
- * Private Function Prototypes
+ * Private Types
  ****************************************************************************/
 
-static void esp_clear_handle(int cpu, int irq);
+/* CPU interrupts to IRQ index mapping */
+
+typedef union cpuint_mapentry_u
+{
+  struct
+    {
+      uint16_t assigned:1;
+      uint16_t cpuint_en:1;
+      uint16_t irq:10;
+      uint16_t reserved0:4;
+    };
+
+  uint16_t val;
+} cpuint_mapentry_t;
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* Map an IRQ to a handle to which the interrupt source is attached to. */
+/* Map a CPU interrupt to the IRQ of the attached interrupt source */
 
-static volatile intr_handle_t g_handle_map[CONFIG_SMP_NCPUS][NR_IRQS];
+static cpuint_mapentry_t g_cpuint_map[ESP_NCPUINTS];
+
+/* Map an IRQ to a CPU interrupt to which the interrupt source is
+ * attached to.
+ */
+
+static volatile uint8_t g_irq_map[NR_IRQS];
+
+/* Bitsets for free, unallocated CPU interrupts available to peripheral
+ * devices.
+ */
+
+static uint32_t g_cpuint_freelist = ESP_CPUINT_PERIPHSET;
+
+/* This bitmask has an 1 if the int should be disabled
+ * when the flash is disabled.
+ */
+
+static uint32_t non_iram_int_mask[CONFIG_ESPRESSIF_NUM_CPUS];
+
+/* This bitmask has 1 in it if the int was disabled
+ * using esp_intr_noniram_disable.
+ */
+
+static uint32_t non_iram_int_disabled[CONFIG_ESPRESSIF_NUM_CPUS];
+static bool non_iram_int_disabled_flag[CONFIG_ESPRESSIF_NUM_CPUS];
 
 #ifdef CONFIG_ESPRESSIF_IRAM_ISR_DEBUG
 /* The g_iram_count keeps track of how many times such an IRQ ran when the
  * non-IRAM interrupts were disabled.
  */
 
-static uint64_t g_iram_count[CONFIG_SMP_NCPUS][NR_IRQS];
+static uint64_t g_iram_count[NR_IRQS];
 #endif
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: esp_cpuint_alloc
+ *
+ * Description:
+ *   Allocate a free CPU interrupt for a peripheral device. This function
+ *   will not ignore all of the pre-allocated CPU interrupts for internal
+ *   devices.
+ *
+ * Input Parameters:
+ *   irq           - IRQ number.
+ *
+ * Returned Value:
+ *   On success, a CPU interrupt number is returned.
+ *   A negated errno is returned on failure.
+ *
+ ****************************************************************************/
+
+static int esp_cpuint_alloc(int irq)
+{
+  uint32_t bitmask;
+  uint32_t intset;
+  int cpuint = ESP_NCPUINTS;
+
+  /* Check if there are CPU interrupts with the requested properties
+   * available.
+   */
+
+  intset = g_cpuint_freelist;
+  if (intset != 0)
+    {
+      /* Skip over initial unavailable CPU interrupts quickly in groups
+       * of 8 interrupt.
+       */
+
+      for (cpuint = 0, bitmask = 0xff;
+           cpuint < ESP_NCPUINTS && (intset & bitmask) == 0;
+           cpuint += 8, bitmask <<= 8);
+
+      /* Search for an unallocated CPU interrupt number in the remaining
+       * intset.
+       */
+
+      for (; cpuint < ESP_NCPUINTS; cpuint++)
+        {
+          /* If the bit corresponding to the CPU interrupt is '1', then
+           * that CPU interrupt is available.
+           */
+
+          bitmask = BIT(cpuint);
+          if ((intset & bitmask) != 0)
+            {
+              /* Got it! */
+
+              g_cpuint_freelist &= ~bitmask;
+              break;
+            }
+        }
+    }
+
+  if (cpuint == ESP_NCPUINTS)
+    {
+      /* No unallocated CPU interrupt found */
+
+      return -ENOMEM;
+    }
+
+  DEBUGASSERT(CPUINT_ISFREE(g_cpuint_map[cpuint]));
+
+  esp_set_irq(irq, cpuint);
+
+  return cpuint;
+}
+
+/****************************************************************************
+ * Name: esp_cpuint_free
+ *
+ * Description:
+ *   Free a previously allocated CPU interrupt.
+ *
+ * Input Parameters:
+ *   cpuint        - CPU interrupt to be freed.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static void esp_cpuint_free(int cpuint)
+{
+  uint32_t bitmask;
+
+  DEBUGASSERT(cpuint >= 0 && cpuint < ESP_NCPUINTS);
+  DEBUGASSERT(CPUINT_ISASSIGNED(g_cpuint_map[cpuint]));
+
+  int irq = CPUINT_GETIRQ(g_cpuint_map[cpuint]);
+  g_irq_map[irq] = IRQ_UNMAPPED;
+  CPUINT_FREE(g_cpuint_map[cpuint]);
+
+  /* Mark the CPU interrupt as available */
+
+  bitmask = BIT(cpuint);
+
+  DEBUGASSERT((g_cpuint_freelist & bitmask) == 0);
+
+  g_cpuint_freelist |= bitmask;
+}
 
 /****************************************************************************
  * Name: esp_cpuint_initialize
@@ -134,10 +307,20 @@ static uint64_t g_iram_count[CONFIG_SMP_NCPUS][NR_IRQS];
 
 static void esp_cpuint_initialize(void)
 {
+  /* Unmap CPU interrupts from every interrupt source */
+
+  for (int source = 0; source < ESP_NSOURCES; source++)
+    {
+      esp_rom_route_intr_matrix(PRO_CPU_NUM, source, NO_CPUINT);
+    }
+
   /* Set CPU interrupt threshold level */
 
-  esprv_int_set_threshold(RVHAL_INTR_ENABLE_THRESH);
-  rv_utils_intr_global_enable();
+  esprv_intc_int_set_threshold(ESP_DEFAULT_INT_THRESHOLD);
+
+  /* Indicate that no interrupt sources are assigned to CPU interrupts */
+
+  memset(g_cpuint_map, 0, sizeof(g_cpuint_map));
 }
 
 #ifdef CONFIG_ESPRESSIF_IRAM_ISR_DEBUG
@@ -151,112 +334,34 @@ static void esp_cpuint_initialize(void)
  *
  * Input Parameters:
  *   irq - The IRQ associated with a CPU interrupt
- *   cpu - The CPU associated with the CPU interrupt
  *
  * Returned Value:
  *   None.
  *
  ****************************************************************************/
 
-IRAM_ATTR static void esp_irq_iram_interrupt_record(int irq, int cpu)
+IRAM_ATTR void esp_irq_iram_interrupt_record(int irq)
 {
   irqstate_t flags = enter_critical_section();
 
-  g_iram_count[cpu][irq]++;
+  g_iram_count[irq]++;
 
   leave_critical_section(flags);
 }
 #endif
 
-IRAM_ATTR static void isr_adapter_func(void *arg)
-{
-  struct intr_adapter_from_nuttx *isr_adapter_args;
-
-  isr_adapter_args = (struct intr_adapter_from_nuttx *)arg;
-
-  isr_adapter_args->func(isr_adapter_args->irq,
-                         isr_adapter_args->context,
-                         isr_adapter_args->arg);
-}
-
-/****************************************************************************
- * Name: esp_isr_demultiplexing
- *
- * Description:
- *   Demultiplexing interrupt handler. All peripheral interrupts are
- *   dispatched through this single handler, which then calls the
- *   appropriate peripheral handler registered via esp_setup_irq.
- *
- * Input Parameters:
- *   irq     - The IRQ number (XTENSA_IRQ_DEMUX)
- *   context - Saved processor state
- *   arg     - Unused
- *
- * Returned Value:
- *   Always returns OK.
- *
- ****************************************************************************/
-
-IRAM_ATTR static int esp_isr_demultiplexing(int irq, void *context,
-                                            void *arg)
-{
-  int cpuint = esp_get_cpuint(this_cpu(), irq);
-  intr_handler_t handler;
-  struct intr_adapter_from_nuttx *handler_arg;
-
-  /* Validate cpuint - if invalid, the interrupt was not properly
-   * registered via esp_setup_irq. This is a bug that needs to be fixed.
-   */
-
-  if (cpuint < 0 || cpuint >= SOC_CPU_INTR_NUM)
-    {
-      irqwarn("IRQ %d has invalid cpuint=%d (not registered)", irq, cpuint);
-      return OK;
-    }
-
-  handler = (intr_handler_t)esp_cpu_intr_get_handler(cpuint);
-  handler_arg = (struct intr_adapter_from_nuttx *)
-                  esp_cpu_intr_get_handler_arg(cpuint);
-
-  /* If the handler is the isr_adapter_func, then we need to set the irq
-   * and context to the handler_arg. This is true for all interrupts set via
-   * esp_setup_irq. Exceptions are the interrupts set directly by the
-   * underlying hardware, like Wi-Fi.
-   */
-
-  if (handler == &isr_adapter_func)
-    {
-      handler_arg->irq = irq;
-      handler_arg->context = context;
-    }
-
-  if (handler)
-    {
-      (*handler)(handler_arg);
-    }
-  else
-    {
-      /* Handler not found in _xt_interrupt_table.
-       * This happens when irq_attach was used instead of esp_setup_irq
-       * with a non-NULL handler. Peripheral handlers must be set via
-       * esp_setup_irq() when using ARCH_MINIMAL_VECTORTABLE.
-       */
-
-      irqwarn("No handler for irq=%d cpuint=%d\n", irq, cpuint);
-    }
-
-  return OK;
-}
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_IRQ_TO_NDX
 /****************************************************************************
  * Name: up_irq_to_ndx
  *
  * Description:
- *   Irq to ndx
+ *   Map a NuttX IRQ number onto the compact vectortable index used when
+ *   CONFIG_ARCH_MINIMAL_VECTORTABLE is enabled. Peripheral IRQs share the
+ *   demux slot; exceptions keep their native numbers.
  *
  ****************************************************************************/
 
@@ -264,6 +369,7 @@ int IRAM_ATTR up_irq_to_ndx(int irq)
 {
   return irq < ESP_IRQ_FIRSTPERIPH ? irq : ESP_IRQ_DEMUX;
 }
+#endif
 
 /****************************************************************************
  * Name: up_irqinitialize
@@ -282,17 +388,20 @@ int IRAM_ATTR up_irq_to_ndx(int irq)
 
 void up_irqinitialize(void)
 {
-  int i;
-  int j;
+  /* All CPU ints are non-IRAM interrupts at the beginning and should be
+   * disabled during a SPI flash operation
+   */
+
+  for (int i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      non_iram_int_mask[i] = UINT32_MAX;
+    }
 
   /* Indicate that no interrupt sources are assigned to CPU interrupts */
 
-  for (i = 0; i < NR_IRQS; i++)
+  for (int i = 0; i < NR_IRQS; i++)
     {
-      for (j = 0; j < CONFIG_SMP_NCPUS; j++)
-        {
-          g_handle_map[j][i] = IRQ_UNMAPPED;
-        }
+      g_irq_map[i] = IRQ_UNMAPPED;
     }
 
   /* Initialize CPU interrupts */
@@ -313,9 +422,13 @@ void up_irqinitialize(void)
 
   riscv_exception_attach();
 
-#ifndef CONFIG_SUPPRESS_INTERRUPTS
+#if defined(CONFIG_ARCH_CHIP_ESP32P4) && defined(CONFIG_SMP)
+  /* Route CPU0's FROM_CPU interrupt before global interrupts are enabled. */
 
-  irq_attach(ESP_IRQ_DEMUX, esp_isr_demultiplexing, NULL);
+  esp_ipi_initialize(0);
+#endif
+
+#ifndef CONFIG_SUPPRESS_INTERRUPTS
 
   /* And finally, enable interrupts */
 
@@ -340,20 +453,20 @@ void up_irqinitialize(void)
 
 void up_enable_irq(int irq)
 {
-  esp_err_t ret;
-  intr_handle_t intr_handle = esp_get_handle(this_cpu(), irq);
+  int cpuint = g_irq_map[irq];
 
-  if (intr_handle == IRQ_UNMAPPED)
-    {
-      irqwarn("IRQ %d not mapped to handle\n", irq);
-      return;
-    }
+  irqinfo("irq=%d | cpuint=%d \n", irq, cpuint);
 
-  ret = esp_intr_enable(intr_handle);
-  if (ret != ESP_OK)
-    {
-      irqerr("Failed to enable interrupt %d\n", irq);
-    }
+  /* Check if IRQ is initialized */
+
+  DEBUGASSERT(cpuint >= 0 && cpuint < ESP_NCPUINTS);
+
+  irqstate_t irqstate = enter_critical_section();
+
+  CPUINT_ENABLE(g_cpuint_map[cpuint]);
+  esprv_intc_int_enable(BIT(cpuint));
+
+  leave_critical_section(irqstate);
 }
 
 /****************************************************************************
@@ -372,14 +485,66 @@ void up_enable_irq(int irq)
 
 void up_disable_irq(int irq)
 {
-  esp_err_t ret;
-  intr_handle_t intr_handle = esp_get_handle(this_cpu(), irq);
+  int cpuint = g_irq_map[irq];
 
-  ret = esp_intr_disable(intr_handle);
-  if (ret != ESP_OK)
+  irqinfo("irq=%d | cpuint=%d \n", irq, cpuint);
+
+  /* Check if IRQ is initialized */
+
+  DEBUGASSERT(cpuint >= 0 && cpuint < ESP_NCPUINTS);
+
+  irqstate_t irqstate = enter_critical_section();
+
+  CPUINT_DISABLE(g_cpuint_map[cpuint]);
+  esprv_intc_int_disable(BIT(cpuint));
+
+  leave_critical_section(irqstate);
+}
+
+/****************************************************************************
+ * Name: esp_route_intr
+ *
+ * Description:
+ *   Assign an interrupt source to a pre-allocated CPU interrupt.
+ *
+ * Input Parameters:
+ *   source        - Interrupt source (see irq.h) to be assigned to a CPU
+ *                   interrupt.
+ *   cpuint        - Pre-allocated CPU interrupt to which the interrupt
+ *                   source will be assigned.
+ *   priority      - Interrupt priority.
+ *   type          - Interrupt trigger type.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_route_intr(int source, int cpuint, irq_priority_t priority,
+                    irq_trigger_t type)
+{
+  /* Ensure the CPU interrupt is disabled */
+
+  esprv_intc_int_disable(BIT(cpuint));
+
+  /* Set the interrupt priority */
+
+  esprv_intc_int_set_priority(cpuint, priority);
+
+  /* Set the interrupt trigger type (Edge or Level) */
+
+  if (type == ESP_IRQ_TRIGGER_EDGE)
     {
-      irqerr("Failed to disable interrupt %d\n", irq);
+      esprv_intc_int_set_type(cpuint, INTR_TYPE_EDGE);
     }
+  else
+    {
+      esprv_intc_int_set_type(cpuint, INTR_TYPE_LEVEL);
+    }
+
+  /* Route the interrupt source to the provided CPU interrupt */
+
+  esp_rom_route_intr_matrix(PRO_CPU_NUM, source, cpuint);
 }
 
 /****************************************************************************
@@ -396,109 +561,113 @@ void up_disable_irq(int irq)
  *   type          - Interrupt trigger type.
  *
  * Returned Value:
- *   Allocated CPU interrupt or a negated errno value on failure.
+ *   Allocated CPU interrupt.
  *
  ****************************************************************************/
 
-int esp_setup_irq(int source,
-                  irq_priority_t priority,
-                  int type,
-                  xcpt_t handler,
-                  void *arg)
+int esp_setup_irq(int source, irq_priority_t priority, int type)
 {
-  return esp_setup_irq_intrstatus(source, priority, type, 0, 0,
-                                  handler, arg);
-}
-
-int esp_setup_irq_with_flags(int source,
-                             int flags,
-                             xcpt_t handler,
-                             void *arg)
-{
-  return esp_setup_irq_with_flags_intrstatus(source, flags, 0, 0,
-                                             handler, arg);
-}
-
-int esp_setup_irq_intrstatus(int source,
-                             irq_priority_t priority,
-                             int type,
-                             uint32_t intrstatusreg,
-                             uint32_t intrstatusmask,
-                             xcpt_t handler,
-                             void *arg)
-{
-  int flags;
-
-  flags = (1 << priority);
-  flags |= type == ESP_IRQ_TRIGGER_EDGE ? ESP_INTR_FLAG_EDGE : 0;
-  flags |= ESP_INTR_FLAG_INTRDISABLED;
-
-  return esp_setup_irq_with_flags_intrstatus(source,
-                                             flags,
-                                             intrstatusreg,
-                                             intrstatusmask,
-                                             handler,
-                                             arg);
-}
-
-int esp_setup_irq_with_flags_intrstatus(int source,
-                                        int flags,
-                                        uint32_t intrstatusreg,
-                                        uint32_t intrstatusmask,
-                                        xcpt_t handler,
-                                        void *arg)
-{
-  struct intr_adapter_from_nuttx *isr_adapter_args;
-  esp_err_t ret;
-  intr_handle_t ret_handle;
-  int cpuint;
+  irqstate_t irqstate;
   int irq;
+  int cpuint;
 
   irqinfo("source = %d\n", source);
 
-  isr_adapter_args = kmm_calloc(1, sizeof(struct intr_adapter_from_nuttx));
-  if (isr_adapter_args == NULL)
+  DEBUGASSERT(source >= 0 && source < ESP_NSOURCES);
+
+  irqstate = enter_critical_section();
+
+  /* Setting up an IRQ includes the following steps:
+   *    1. Allocate a CPU interrupt.
+   *    2. Map the CPU interrupt to the IRQ to ease searching later.
+   *    3. Attach the interrupt source to the newly allocated CPU interrupt.
+   */
+
+  irq = ESP_SOURCE2IRQ(source);
+  cpuint = esp_cpuint_alloc(irq);
+  if (cpuint < 0)
     {
-      irqerr("Failed to kmm_calloc\n");
-      return -EINVAL;
+      _alert("Unable to allocate CPU interrupt for source=%d\n",
+             source);
+
+      PANIC();
     }
 
-  isr_adapter_args->func = handler;
-  isr_adapter_args->arg = arg;
+  esp_route_intr(source, cpuint, priority, (type & ESP_CPUINT_TRIGGER_MASK));
 
-  ret = esp_intr_alloc_intrstatus(source,
-                                  flags,
-                                  intrstatusreg,
-                                  intrstatusmask,
-                                  isr_adapter_func,
-                                  isr_adapter_args,
-                                  &ret_handle);
-  if (ret != ESP_OK)
+  if ((type & ESP_CPUINT_IRAM_MASK) == ESP_IRQ_IRAM)
     {
-      irqerr("Failed to allocate interrupt for source %d\n", source);
-      kmm_free(isr_adapter_args);
-      return -EINVAL;
-    }
-
-  cpuint = esp_intr_get_intno(ret_handle);
-
-  if (source < 0)
-    {
-      irq = source + ETS_INTERNAL_INTR_SOURCE_OFF;
+      esp_irq_set_iram_isr(irq);
+      irqinfo("source %d marked IRAM (irq=%d)\n", source, irq);
     }
   else
     {
-      irq = ESP_SOURCE2IRQ(source);
+      esp_irq_unset_iram_isr(irq);
     }
 
-  /* Store the handle. The handle already contains the CPU interrupt and
-   * CPU information, so no additional mapping is needed.
-   */
-
-  esp_set_handle(this_cpu(), irq, ret_handle);
+  leave_critical_section(irqstate);
 
   return cpuint;
 }
+
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+int esp_setup_irq_with_flags_intrstatus(int source, int flags,
+                                        uint32_t intrstatusreg,
+                                        uint32_t intrstatusmask,
+                                        xcpt_t handler, void *arg)
+{
+  irq_priority_t priority = ESP_IRQ_PRIORITY_DEFAULT;
+  int type = (flags & (1 << 9)) ? ESP_IRQ_TRIGGER_EDGE :
+             ESP_IRQ_TRIGGER_LEVEL;
+  int cpuint;
+  int irq;
+
+  UNUSED(intrstatusreg);
+  UNUSED(intrstatusmask);
+
+  cpuint = esp_setup_irq(source, priority, type);
+  if (cpuint < 0)
+    {
+      return cpuint;
+    }
+
+  irq = ESP_SOURCE2IRQ(source);
+  if (handler != NULL)
+    {
+      irq_attach(irq, handler, arg);
+      if ((flags & (1 << 11)) == 0)
+        {
+          up_enable_irq(irq);
+        }
+    }
+
+  return cpuint;
+}
+
+void *esp_get_handle(int cpu, int irq)
+{
+  UNUSED(cpu);
+  return (void *)(uintptr_t)(irq + 1);
+}
+
+int IRAM_ATTR esp_get_cpuint(int cpu, int irq)
+{
+  int i;
+
+  UNUSED(cpu);
+
+  for (i = 0; i < ESP_NCPUINTS; i++)
+    {
+      if (CPUINT_ISASSIGNED(g_cpuint_map[i]) &&
+          CPUINT_GETIRQ(g_cpuint_map[i]) == irq)
+        {
+          return i;
+        }
+    }
+
+  return -EINVAL;
+}
+#endif
 
 /****************************************************************************
  * Name: esp_teardown_irq
@@ -521,26 +690,21 @@ int esp_setup_irq_with_flags_intrstatus(int source,
 
 void esp_teardown_irq(int source, int cpuint)
 {
-  esp_err_t ret;
-  int cpu = this_cpu();
-  int irq = ESP_SOURCE2IRQ(source);
-  intr_handle_t intr_handle = esp_get_handle(cpu, irq);
+  irqstate_t irqstate = enter_critical_section();
 
-  UNUSED(cpuint);
+  /* Tearing down an IRQ includes the following steps:
+   *   1. Free the previously allocated CPU interrupt.
+   *   2. Unmap the IRQ from the IRQ-to-cpuint map.
+   *   3. Detach the interrupt source from the CPU interrupt.
+   */
 
-  if (intr_handle == IRQ_UNMAPPED)
-    {
-      irqwarn("No handle found for source %d\n", source);
-      return;
-    }
+  esp_cpuint_free(cpuint);
 
-  ret = esp_intr_free(intr_handle);
-  if (ret != ESP_OK)
-    {
-      irqerr("Failed to free interrupt %d\n", source);
-    }
+  DEBUGASSERT(source >= 0 && source < ESP_NSOURCES);
 
-  esp_clear_handle(cpu, irq);
+  esp_rom_route_intr_matrix(PRO_CPU_NUM, source, NO_CPUINT);
+
+  leave_critical_section(irqstate);
 }
 
 /****************************************************************************
@@ -563,39 +727,30 @@ IRAM_ATTR void *riscv_dispatch_irq(uintreg_t mcause, uintreg_t *regs)
   int irq;
   bool is_irq = (RISCV_IRQ_BIT & mcause) != 0;
   bool is_edge = false;
-  int cpu = this_cpu();
+  uint32_t cpu = esp_cpu_get_core_id();
 
   if (is_irq)
     {
-      uint8_t cpuint = (mcause & VECTORS_MCAUSE_REASON_MASK) -
-                       RV_EXTERNAL_INT_OFFSET;
+      uint8_t cpuint = mcause & RISCV_IRQ_MASK;
 
       DEBUGASSERT(cpuint >= 0 && cpuint < ESP_NCPUINTS);
+      DEBUGASSERT(CPUINT_ISENABLED(g_cpuint_map[cpuint]));
+      DEBUGASSERT(CPUINT_ISASSIGNED(g_cpuint_map[cpuint]));
 
-      irq = esp_cpuint_to_irq(cpuint, cpu);
-
-      if (irq < 0)
-        {
-          /* No handle found for this CPU interrupt. This can happen
-           * if the interrupt was triggered but not properly registered.
-           */
-
-          irqwarn("No IRQ found for cpuint=%d cpu=%d\n", cpuint, cpu);
-          return regs;
-        }
+      irq = g_cpuint_map[cpuint].irq;
 
 #ifdef CONFIG_ESPRESSIF_IRAM_ISR_DEBUG
       /* Check if non-IRAM interrupts are disabled */
 
-      if (esp_intr_noniram_is_disabled(cpu))
+      if (esp_irq_noniram_status(cpu) == 0)
         {
           /* Sum-up the IRAM-enabled counter associated with the IRQ */
 
-          esp_irq_iram_interrupt_record(irq, this_cpu());
+          esp_irq_iram_interrupt_record(irq);
         }
 #endif
 
-      is_edge = esprv_int_get_type(cpuint) == INTR_TYPE_LEVEL;
+      is_edge = esprv_intc_int_get_type(cpuint) == INTR_TYPE_LEVEL;
       if (is_edge)
         {
           /* Clear edge interrupts. */
@@ -607,8 +762,7 @@ IRAM_ATTR void *riscv_dispatch_irq(uintreg_t mcause, uintreg_t *regs)
     {
       /* It's exception */
 
-      irq = mcause &
-            (VECTORS_MCAUSE_INTBIT_MASK | VECTORS_MCAUSE_REASON_MASK);
+      irq = mcause;
     }
 
   regs = riscv_doirq(irq, regs);
@@ -641,103 +795,204 @@ irqstate_t up_irq_enable(void)
 }
 
 /****************************************************************************
- * Name:  esp_set_handle
+ * Name: esp_intr_noniram_disable
  *
  * Description:
- *   This function sets the handle associated with an IRQ
+ *   Disable interrupts that aren't specifically marked as running from IRAM.
  *
  * Input Parameters:
- *   cpu - The CPU associated with the IRQ
- *   irq - The IRQ associated with a CPU interrupt
- *   handle - The handle to be associated with the IRQ
+ *   None.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_ARCH_CHIP_ESP32P4
+void esp_intr_noniram_disable(void)
+{
+  uint32_t oldint;
+  irqstate_t irqstate;
+  uint32_t cpu;
+  uint32_t non_iram_ints;
+
+  irqstate = enter_critical_section();
+  cpu = esp_cpu_get_core_id();
+  non_iram_ints = non_iram_int_mask[cpu];
+
+  if (non_iram_int_disabled_flag[cpu])
+    {
+      abort();
+    }
+
+  non_iram_int_disabled_flag[cpu] = true;
+  oldint = esp_cpu_intr_get_enabled_mask();
+  esp_cpu_intr_disable(non_iram_ints);
+
+  /* Save disabled ints */
+
+  non_iram_int_disabled[cpu] = oldint & non_iram_ints;
+  leave_critical_section(irqstate);
+}
+
+/****************************************************************************
+ * Name: esp_intr_noniram_enable
+ *
+ * Description:
+ *   Enable interrupts that aren't specifically marked as running from IRAM.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_intr_noniram_enable(void)
+{
+  irqstate_t irqstate;
+  uint32_t cpu;
+  int non_iram_ints;
+
+  irqstate = enter_critical_section();
+  cpu = esp_cpu_get_core_id();
+  non_iram_ints = non_iram_int_disabled[cpu];
+
+  if (!non_iram_int_disabled_flag[cpu])
+    {
+      abort();
+    }
+
+  non_iram_int_disabled_flag[cpu] = false;
+  esp_cpu_intr_enable(non_iram_ints);
+  leave_critical_section(irqstate);
+}
+#endif /* !CONFIG_ARCH_CHIP_ESP32P4 */
+
+/****************************************************************************
+ * Name:  esp_irq_noniram_status
+ *
+ * Description:
+ *   Get the current status of non-IRAM interrupts on a specific CPU core
+ *
+ * Input Parameters:
+ *   cpu - The CPU to check the non-IRAM interrupts state
+ *
+ * Returned Value:
+ *   true if non-IRAM interrupts are enabled, false otherwise.
+ *
+ ****************************************************************************/
+
+bool esp_irq_noniram_status(int cpu)
+{
+  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+
+  return !non_iram_int_disabled_flag[cpu];
+}
+
+/****************************************************************************
+ * Name:  esp_get_irq
+ *
+ * Description:
+ *   This function returns the IRQ associated with a CPU interrupt
+ *
+ * Input Parameters:
+ *   cpuint - The CPU interrupt associated to the IRQ
+ *
+ * Returned Value:
+ *   The IRQ associated with such CPU interrupt or CPUINT_UNASSIGNED if
+ *   IRQ is not yet assigned to a CPU interrupt.
+ *
+ ****************************************************************************/
+
+int esp_get_irq(int cpuint)
+{
+  return CPUINT_GETIRQ(g_cpuint_map[cpuint]);
+}
+
+/****************************************************************************
+ * Name:  esp_set_irq
+ *
+ * Description:
+ *   This function assigns a CPU interrupt to a specific IRQ number. It
+ *   updates the mapping between IRQ numbers and CPU interrupts, allowing
+ *   the system to correctly route hardware interrupts to the appropriate
+ *   handlers. Please note that this function is intended to be used only
+ *   when a CPU interrupt is already assigned to an IRQ number. Otherwise,
+ *   please check esp_setup_irq.
+ *
+ * Input Parameters:
+ *   irq    - The IRQ number to be associated with the CPU interrupt.
+ *   cpuint - The CPU interrupt to be associated with the IRQ number.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void esp_set_irq(int irq, int cpuint)
+{
+  CPUINT_ASSIGN(g_cpuint_map[cpuint], irq);
+  g_irq_map[irq] = cpuint;
+}
+
+/****************************************************************************
+ * Name:  esp_irq_set_iram_isr
+ *
+ * Description:
+ *   Set the ISR associated to an IRQ as a IRAM-enabled ISR.
+ *
+ * Input Parameters:
+ *   irq - The associated IRQ to set
  *
  * Returned Value:
  *   OK on success; A negated errno value on failure.
  *
  ****************************************************************************/
 
-int esp_set_handle(int cpu, int irq, intr_handle_t handle)
+int esp_irq_set_iram_isr(int irq)
 {
-  intr_handle_t current_handle = g_handle_map[cpu][irq];
+  uint32_t cpu = esp_cpu_get_core_id();
+  int cpuint = g_irq_map[irq];
 
-  if (current_handle != IRQ_UNMAPPED)
+  if (cpuint == IRQ_UNMAPPED)
     {
-      irqinfo("IRQ %d already has a handle\n", irq);
       return -EINVAL;
     }
 
-  g_handle_map[cpu][irq] = handle;
+  non_iram_int_mask[cpu] &= ~(1 << cpuint);
 
   return OK;
 }
 
 /****************************************************************************
- * Name:  esp_get_handle
+ * Name:  esp_irq_unset_iram_isr
  *
  * Description:
- *   This function gets the handle associated with an IRQ
+ *   Set the ISR associated to an IRQ as a non-IRAM ISR.
  *
  * Input Parameters:
- *   cpu - The CPU associated with the IRQ
- *   irq - The IRQ associated with a CPU interrupt
+ *   irq - The associated IRQ to set
  *
  * Returned Value:
- *   The handle associated with the IRQ or IRQ_UNMAPPED if no handle is
- *   associated with the IRQ.
+ *   OK on success; A negated errno value on failure.
  *
  ****************************************************************************/
 
-intr_handle_t esp_get_handle(int cpu, int irq)
+int esp_irq_unset_iram_isr(int irq)
 {
-  return g_handle_map[cpu][irq];
-}
+  uint32_t cpu = esp_cpu_get_core_id();
+  int cpuint = g_irq_map[irq];
 
-/****************************************************************************
- * Name:  esp_clear_handle
- *
- * Description:
- *   This function clears the handle associated with an IRQ
- *
- * Input Parameters:
- *   irq - The IRQ associated with a CPU interrupt
- *
- * Returned Value:
- *   The handle associated with the IRQ or IRQ_UNMAPPED if no handle is
- *   associated with the IRQ.
- *
- ****************************************************************************/
-
-static void esp_clear_handle(int cpu, int irq)
-{
-  g_handle_map[cpu][irq] = IRQ_UNMAPPED;
-}
-
-/****************************************************************************
- * Name:  esp_get_cpuint
- *
- * Description:
- *   This function returns the CPU interrupt associated with an IRQ
- *
- * Input Parameters:
- *   cpu - The CPU associated with the IRQ
- *   irq - The IRQ associated with a CPU interrupt
- *
- * Returned Value:
- *   The CPU interrupt associated with such IRQ or a negated errno value on
- *   failure.
- *
- ****************************************************************************/
-
-IRAM_ATTR int esp_get_cpuint(int cpu, int irq)
-{
-  intr_handle_t intr_handle = esp_get_handle(cpu, irq);
-
-  if (intr_handle != IRQ_UNMAPPED && intr_handle != NULL)
+  if (cpuint == IRQ_UNMAPPED)
     {
-      return esp_intr_get_intno(intr_handle);
+      return -EINVAL;
     }
 
-  return -EINVAL;
+  non_iram_int_mask[cpu] |= (1 << cpuint);
+
+  return OK;
 }
 
 /****************************************************************************
@@ -751,7 +1006,6 @@ IRAM_ATTR int esp_get_cpuint(int cpu, int irq)
  *
  *   irq_count - A previously allocated pointer to store the counter of the
  *               interrupts that ran when non-IRAM interrupts were disabled.
- *   cpu -       The CPU to retrieve the interrupt records for
  *
  * Returned Value:
  *   None
@@ -759,50 +1013,12 @@ IRAM_ATTR int esp_get_cpuint(int cpu, int irq)
  ****************************************************************************/
 
 #ifdef CONFIG_ESPRESSIF_IRAM_ISR_DEBUG
-void esp_get_iram_interrupt_records(uint64_t *irq_count, int cpu)
+void esp_get_iram_interrupt_records(uint64_t *irq_count)
 {
   irqstate_t flags = enter_critical_section();
 
-  memcpy(irq_count, &g_iram_count[cpu], sizeof(uint64_t) * NR_IRQS);
+  memcpy(irq_count, &g_iram_count, sizeof(uint64_t) * NR_IRQS);
 
   leave_critical_section(flags);
 }
 #endif
-
-/****************************************************************************
- * Name: esp_cpuint_to_irq
- *
- * Description:
- *   Find an IRQ associated with a given CPU interrupt by searching through
- *   g_handle_map. For shared interrupts, multiple IRQs may map to the same
- *   CPU interrupt - this function returns the first one found.
- *
- * Input Parameters:
- *   cpuint - The CPU interrupt number
- *   cpu    - The CPU core
- *
- * Returned Value:
- *   The IRQ number, or -1 if not found.
- *
- ****************************************************************************/
-
-IRAM_ATTR int esp_cpuint_to_irq(int cpuint, int cpu)
-{
-  int irq;
-  intr_handle_t handle;
-
-  for (irq = 0; irq < NR_IRQS; irq++)
-    {
-      handle = g_handle_map[cpu][irq];
-      if (handle != IRQ_UNMAPPED && handle != NULL)
-        {
-          if (esp_intr_get_intno(handle) == cpuint &&
-              esp_intr_get_cpu(handle) == cpu)
-            {
-              return irq;
-            }
-        }
-    }
-
-  return -1;
-}
