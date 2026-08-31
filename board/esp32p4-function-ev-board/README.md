@@ -88,7 +88,7 @@ NuttX 0.0.0 dd92bcf4-dirty Aug 21 2026 19:38:54 risc-v esp32p4-function-ev-board
 
 | 配置项 | 当前值 | 说明 |
 |--------|--------|------|
-| CPU 时钟 | **CPLL 90MHz** | v1.0 实测稳定档（SELECTS_REV_LESS_V3 分频表最低档），比 ROM 复位时钟 ~40MHz 快一倍多；不调用 `esp_clk_init()` 全量切换 |
+| CPU 时钟 | **CPLL 180MHz** | v1.0 默认稳定档；PSRAM 初始化阶段先使用 90 MHz，加入堆前切换到 180 MHz。实测可进入 NSH、注册 SC2336，并稳定输出相机画面 |
 | regi2c / bias | 保活 + I2C_BIAS_DREG_1P1(_PVT)=10 | 提频前置条件 |
 | XTAL 频率寄存器 | `rtc_clk_xtal_freq_update(40MHz)` | 消掉启动假警告链 |
 | IRQ 栈 | 2048 → **8192** | `CONFIG_ARCH_INTERRUPTSTACK`，防御性加大（-O0 肥帧） |

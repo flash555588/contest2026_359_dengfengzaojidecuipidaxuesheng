@@ -6,8 +6,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$image = Join-Path $PSScriptRoot "nuttx.bin"
-$expected = "74420C66BE6A0298DBBEB21326600D47010612C27A097030DF4E47CC90E2C058"
+$image = Join-Path $PSScriptRoot "nuttx-lvgl-unified-ui.bin"
+$expected = "54B94CF0AACF95A0E0ADC41214274E3186CB40ED2A85BF30251F773540C92560"
 
 if (-not (Test-Path -LiteralPath $image -PathType Leaf)) {
     throw "Firmware not found: $image"
@@ -25,7 +25,7 @@ if ($actual -ne $expected) {
     --before default-reset `
     --after hard-reset `
     write-flash `
-    --flash-size 4MB `
+    --flash-size 16MB `
     --flash-mode dio `
     --flash-freq 80m `
     0x2000 $image

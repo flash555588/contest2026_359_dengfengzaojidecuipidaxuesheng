@@ -15,20 +15,22 @@ index af4dd818..ee7c506d 100644
  config ESPRESSIF_CPU_FREQ_96
  	bool "96 MHz"
  	depends on ARCH_CHIP_ESP32H2
-@@ -201,6 +207,12 @@ config ESPRESSIF_CPU_FREQ_160
+@@ -201,6 +207,14 @@ config ESPRESSIF_CPU_FREQ_160
  	---help---
  		Set the CPU frequency to 160 MHz.
  
 +config ESPRESSIF_CPU_FREQ_180
 +	bool "180 MHz"
-+	depends on ARCH_CHIP_ESP32P4 && ESP32P4_SELECTS_REV_LESS_V3
++	depends on ARCH_CHIP_ESP32P4 && ESP32P4_REV_MIN_100
 +	---help---
-+		Set the CPU frequency to 180 MHz.
++		Set the CPU frequency to 180 MHz on ESP32-P4 revision v1.0.
++		This clock has only been validated on ECO2/revision v1.0 and must
++		not be selected for earlier pre-v3 silicon.
 +
  config ESPRESSIF_CPU_FREQ_360
  	bool "360 MHz"
  	depends on ARCH_CHIP_ESP32P4 && ESP32P4_SELECTS_REV_LESS_V3
-@@ -221,8 +233,10 @@ config ESPRESSIF_CPU_FREQ_MHZ
+@@ -221,8 +235,10 @@ config ESPRESSIF_CPU_FREQ_MHZ
  	default 48 if ESPRESSIF_CPU_FREQ_48
  	default 64 if ESPRESSIF_CPU_FREQ_64
  	default 80 if ESPRESSIF_CPU_FREQ_80
@@ -39,7 +41,7 @@ index af4dd818..ee7c506d 100644
  	default 360 if ESPRESSIF_CPU_FREQ_360
  	default 400 if ESPRESSIF_CPU_FREQ_400
  
-@@ -2148,6 +2162,27 @@ config ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS
+@@ -2148,6 +2164,27 @@ config ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS
  
  endif # ESPRESSIF_MIPI_DSI
  
@@ -1340,7 +1342,7 @@ index 00000000..138bac87
 +CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN=y
 +CONFIG_ESP32P4_REV_MIN_100=y
 +CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
-+CONFIG_ESPRESSIF_CPU_FREQ_90=y
++CONFIG_ESPRESSIF_CPU_FREQ_180=y
 +CONFIG_ESPRESSIF_MIPI_CSI=y
 +# CONFIG_ESPRESSIF_MIPI_CSI_BOOT_TEST is not set
 +CONFIG_ESPRESSIF_I2C0_SCLPIN=8
