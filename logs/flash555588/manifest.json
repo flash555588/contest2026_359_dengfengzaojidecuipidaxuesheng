@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "team_id": "contest2026_359_dengfengzaojidecuipidaxuesheng",
   "github_login": "flash555588",
-  "generator": "opencode-collector@1.4.0",
-  "updated_at": "2026-08-24T12:14:12.130Z",
+  "generator": "claude-code-collector@1.3.0",
+  "updated_at": "2026-09-03T08:28:25.033Z",
   "sessions": [
     {
       "session_id": "c9148026-9f28-4399-bae9-b25ba504b854",
@@ -20,10 +20,10 @@
       "session_id": "ses_fdbc1d7dcffeKInvyAXn0xGr9K",
       "tool": "opencode",
       "started_at": "2026-08-21T12:14:08.419Z",
-      "last_event_at": "2026-08-24T12:14:11.505Z",
+      "last_event_at": "2026-08-24T12:14:11.504Z",
       "event_count": 1561,
       "raw_message_count": 861,
-      "file_path": "logs/flash555588/2026-08-24/opencode__ses_fdbc1d7dcffeKInvyAXn0xGr9K.jsonl",
+      "file_path": "logs/flash555588/2026-08-21/opencode__ses_fdbc1d7dcffeKInvyAXn0xGr9K.jsonl",
       "collection_mode": "cli",
       "health": "ok",
       "title": "阅读请求",
@@ -119,6 +119,18 @@
       "health": "ok",
       "title": "Round1 Pattern 全面审查 (@general subagent)",
       "model": "opencode/x-preview-f-free"
+    },
+    {
+      "session_id": "f42b9610-8a29-4a5b-b19a-c051c35d0779",
+      "tool": "claude-code",
+      "started_at": "2026-09-03T08:28:25.023Z",
+      "last_event_at": "2026-09-03T08:28:25.023Z",
+      "event_count": 549,
+      "raw_event_count": 877,
+      "file_path": "logs/flash555588/2026-09-03/claude-code__f42b9610-8a29-4a5b-b19a-c051c35d0779.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "claude-fable-5-1"
     }
   ]
 }
