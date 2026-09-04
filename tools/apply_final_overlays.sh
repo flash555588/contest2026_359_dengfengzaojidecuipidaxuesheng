@@ -26,5 +26,11 @@ apply_one "${workspace_dir}/nuttx" \
   "${script_dir}/patches/0001-esp32p4-nuttx-overlay.patch" "nuttx"
 apply_one "${workspace_dir}/nuttx" \
   "${script_dir}/patches/0003-esp32p4-sc2336-camera.patch" "camera"
+apply_one "${workspace_dir}/nuttx" \
+  "${script_dir}/patches/0004-esp32p4-camera-rgb565-preview.patch" \
+  "camera-preview"
 apply_one "${workspace_dir}/apps" \
   "${script_dir}/patches/0002-esp32p4-apps-overlay.patch" "apps"
+apply_one "${workspace_dir}/apps" \
+  "${script_dir}/patches/0005-esp32p4-desktop-camera-preview.patch" \
+  "apps-camera-preview"

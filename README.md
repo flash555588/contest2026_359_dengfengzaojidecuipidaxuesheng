@@ -40,6 +40,8 @@ board/esp32p4-common/             ESP32-P4 公共板级支持 overlay
 chip/esp32p4/                     ESP32-P4 架构和 Espressif 驱动 overlay
 firmware/esp32p4-nsh/             可烧录固件与启动日志
 firmware/esp32p4-desktop-v1/      2026-08-30 最终 v1.0 桌面固件与测试报告
+firmware/esp32p4-sc2336-camera-v1.0/  2026-08-30 SC2336 RAW8 取帧固件与测试报告
+firmware/esp32p4-camera-preview-v1.0/ 2026-09-03 SC2336 RGB565 零拷贝实时预览固件与测试报告
 ouo/                              OuO QuickJS 应用源码、清单与设计说明
 logs/flash555588/                 AI Coding 日志和实板工作记录
 tools/patches/                     最终 nuttx/apps 可复现补丁
@@ -74,7 +76,7 @@ python tools/wsl_copy_firmware.py --variant v3.2
 
 底层构建入口为 `tools/wsl_make_p4_nsh.sh`。详细的启动、镜像生成和调试说明见 `board/esp32p4-function-ev-board/README.md` 与 `DISPLAY_PLAN.md`。
 
-最终 v1.0 桌面/OuO 版本还需要在 `repo sync` 后应用两份可复现补丁：
+最终 v1.0 桌面/OuO/相机预览版本需要在 `repo sync` 后按顺序应用可复现补丁（nuttx：0001、0003、0004；apps：0002、0005）：
 
 ```bash
 cd contest2026_359_dengfengzaojidecuipidaxuesheng
@@ -85,7 +87,7 @@ tools/configure.sh esp32p4-function-ev-board:desktop-v1
 make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
 ```
 
-补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `88827afd368d4bbb4802b96ed44d9582f85b2f92`。应用脚本可重复执行：已应用时会跳过，基线不匹配时会停止并报告错误。
+补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `93fb5ac72249ae766cbeea9f0e3d484bdd6807f7`（`88827afd368d4bbb4802b96ed44d9582f85b2f92` 加一处 LVGL 9.2.1 版本钉死修正）。应用脚本可重复执行：已应用时会跳过，基线不匹配时会停止并报告错误。
 
 ## 生成镜像与烧录
 
