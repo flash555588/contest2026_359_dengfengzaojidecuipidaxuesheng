@@ -9,3 +9,7 @@ firmware/esp32p4-desktop-v3.2-candidate/* text eol=lf
 firmware/esp32p4-desktop-v3.2-candidate/*.bin binary
 logs/*.log -text -whitespace
 logs/flash555588/**/*.jsonl text eol=lf
+tools/patches/*.patch -text -whitespace
+firmware/esp32p4-camera-preview-v1.0/* text eol=lf
+firmware/esp32p4-camera-preview-v1.0/*.bin binary
+firmware/esp32p4-camera-preview-v1.0/*.log -text -whitespace
