@@ -37,6 +37,14 @@ if(CONFIG_ARCH_BUTTONS)
   list(APPEND SRCS esp32p4_buttons.c)
 endif()
 
+if(CONFIG_ESPRESSIF_MIPI_DSI)
+  list(APPEND SRCS esp32p4_display.c)
+endif()
+
+if(CONFIG_ESPRESSIF_MIPI_CSI)
+  list(APPEND SRCS esp32p4_camera.c)
+endif()
+
 if(CONFIG_ESPRESSIF_EMAC)
   list(APPEND SRCS esp32p4_ethernet.c)
 endif()

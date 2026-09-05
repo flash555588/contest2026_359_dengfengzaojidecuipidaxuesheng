@@ -1,0 +1,463 @@
+diff --git a/arch/risc-v/src/common/espressif/Make.defs b/arch/risc-v/src/common/espressif/Make.defs
+index de9e6da7..236d0dfd 100644
+--- a/arch/risc-v/src/common/espressif/Make.defs
++++ b/arch/risc-v/src/common/espressif/Make.defs
+@@ -247,7 +247,7 @@ endif
+ 
+ ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
+ ifndef ESP_HAL_3RDPARTY_VERSION
+-	ESP_HAL_3RDPARTY_VERSION = 8d0a898910084206721a0892ab093021bca1496a
++	ESP_HAL_3RDPARTY_VERSION = 78c092909fca38d1e2ccf767b5eff66bddc5c789
+ endif
+ 
+ ifndef ESP_HAL_3RDPARTY_URL
+diff --git a/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0002-openvela-esp32p4-smp-start.patch b/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0002-openvela-esp32p4-smp-start.patch
+deleted file mode 100644
+index fbde9a07..00000000
+--- a/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0002-openvela-esp32p4-smp-start.patch
++++ /dev/null
+@@ -1,114 +0,0 @@
+-diff --git a/nuttx/esp32p4/include/sdkconfig.h b/nuttx/esp32p4/include/sdkconfig.h
+-index 0e467acbb88..607b9c4a352 100644
+---- a/nuttx/esp32p4/include/sdkconfig.h
+-+++ b/nuttx/esp32p4/include/sdkconfig.h
+-@@ -12,12 +12,13 @@
+- #define CONFIG_ESP_TIMER_TASK_AFFINITY 0
+- #define CONFIG_ESP_TIMER_INTERRUPT_LEVEL 1
+-
+-+#define CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE 1
+-+
+- #ifdef CONFIG_SMP
+--#  define CONFIG_FREERTOS_NUMBER_OF_CORES 2
+- #  define CONFIG_ESP_IPC_ENABLE 1
+- #  define CONFIG_ESP_IPC_TASK_STACK_SIZE 1280
+-+#  define CONFIG_FREERTOS_NUMBER_OF_CORES 2
+- #else
+--#  define CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE 1
+- #  define CONFIG_FREERTOS_UNICORE 1
+- #  define CONFIG_FREERTOS_NUMBER_OF_CORES 1
+- #endif
+-@@ -530,7 +531,11 @@
+- #define CONFIG_APP_RETRIEVE_LEN_ELF_SHA 9
+-
+- #define CONFIG_PM_CPU_RETENTION_DYNAMIC 1
+--#define CONFIG_PM_ESP_SLEEP_POWER_DOWN_CPU 1
+-+#ifdef CONFIG_PM
+-+#  define CONFIG_PM_ESP_SLEEP_POWER_DOWN_CPU 1
+-+#else
+-+#  define CONFIG_PM_ESP_SLEEP_POWER_DOWN_CPU 0
+-+#endif
+- #define CONFIG_PM_POWER_DOWN_CPU_IN_LIGHT_SLEEP 1
+-
+- #define CONFIG_ESP_ENABLE_PVT 1
+-diff --git a/nuttx/src/platform/os.c b/nuttx/src/platform/os.c
+-index f2e3cea8332..15b186ec428 100644
+---- a/nuttx/src/platform/os.c
+-+++ b/nuttx/src/platform/os.c
+-@@ -1115,7 +1115,11 @@ void nuttx_enter_critical(void)
+-
+-   flags = up_irq_save();
+-
+-+#ifdef CONFIG_IDF_TARGET_ARCH_RISCV
+-+  __asm__ __volatile__("csrr %0, mhartid" : "=r"(cpu));
+-+#else
+-   cpu = this_cpu();
+-+#endif
+-
+-   if (g_int_flags_count[cpu] == 0)
+-     {
+-@@ -1133,7 +1137,10 @@ void nuttx_enter_critical(void)
+-
+- #if OS_SPINLOCK == 1
+- #  ifdef CONFIG_SPINLOCK
+--  rspin_lock(lock);
+-+  if (OSINIT_OS_READY())
+-+    {
+-+      rspin_lock(lock);
+-+    }
+- #  endif
+- #endif
+-
+-@@ -1161,13 +1168,22 @@ void nuttx_exit_critical(FAR rspinlock_t *lock)
+- void nuttx_exit_critical(void)
+- #endif
+- {
+--  int cpu = this_cpu();
+-+  int cpu;
+-+
+-+#ifdef CONFIG_IDF_TARGET_ARCH_RISCV
+-+  __asm__ __volatile__("csrr %0, mhartid" : "=r"(cpu));
+-+#else
+-+  cpu = this_cpu();
+-+#endif
+-
+-   g_int_flags_count[cpu]--;
+-
+- #if OS_SPINLOCK == 1
+- #  ifdef CONFIG_SPINLOCK
+--  rspin_unlock(lock);
+-+  if (OSINIT_OS_READY())
+-+    {
+-+      rspin_unlock(lock);
+-+    }
+- #  endif
+- #endif
+-
+-diff --git a/components/esp_hw_support/port/esp32p4/rtc_time.c b/components/esp_hw_support/port/esp32p4/rtc_time.c
+-index fec13d07a3a..6d7ca4e8115 100644
+---- a/components/esp_hw_support/port/esp32p4/rtc_time.c
+-+++ b/components/esp_hw_support/port/esp32p4/rtc_time.c
+-@@ -227,9 +227,15 @@ uint32_t rtc_clk_freq_cal(uint32_t cal_val)
+- uint32_t rtc_clk_freq_to_period(uint32_t) __attribute__((alias("rtc_clk_freq_cal")));
+-
+- /// @brief if the calibration is used, we need to enable the timer group0 first
+-+static bool s_timer_group0_calibration_initialized;
+-+
+- __attribute__((constructor))
+--static void enable_timer_group0_for_calibration(void)
+-+void rtc_clk_calibration_init(void)
+- {
+-+    if (s_timer_group0_calibration_initialized) {
+-+        return;
+-+    }
+-+
+- #ifndef BOOTLOADER_BUILD
+-     PERIPH_RCC_ACQUIRE_ATOMIC(PERIPH_TIMG0_MODULE, ref_count) {
+-         if (ref_count == 0) {
+-@@ -241,4 +247,6 @@ static void enable_timer_group0_for_calibration(void)
+-     _timg_ll_enable_bus_clock(0, true);
+-     _timg_ll_reset_register(0);
+- #endif
+-+
+-+    s_timer_group0_calibration_initialized = true;
+- }
+diff --git a/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0003-esp32p4-gcc15-simple-boot-compat.patch b/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0003-esp32p4-gcc15-simple-boot-compat.patch
+new file mode 100755
+index 00000000..b84d6d9e
+--- /dev/null
++++ b/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0003-esp32p4-gcc15-simple-boot-compat.patch
+@@ -0,0 +1,241 @@
++diff --git a/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c b/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c
++index 4aff280..ccc9f14 100644
++--- a/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c
+++++ b/components/bootloader_support/src/esp32p4/bootloader_esp32p4.c
++@@ -4,6 +4,9 @@
++  * SPDX-License-Identifier: Apache-2.0
++  */
++ #include <stdint.h>
+++#if defined(__NuttX__)
+++#include <nuttx/config.h>
+++#endif
++ #include "sdkconfig.h"
++ #include "esp_attr.h"
++ #include "esp_log.h"
++@@ -93,10 +96,19 @@ static void bootloader_super_wdt_auto_feed(void)
++
++ static inline void bootloader_hardware_init(void)
++ {
+++#if defined(__NuttX__)
+++    ets_printf("H0\n");
+++#endif
++     _regi2c_ctrl_ll_master_enable_clock(true); // keep ana i2c mst clock always enabled in bootloader
++     regi2c_ctrl_ll_master_configure_clock();
+++#if defined(__NuttX__)
+++    ets_printf("H1\n");
+++#endif
++
++     unsigned chip_version = efuse_hal_chip_revision();
+++#if defined(__NuttX__)
+++    ets_printf("H2 rev=%u\n", chip_version);
+++#endif
++     if (!ESP_CHIP_REV_ABOVE(chip_version, 1)) {
++         // On ESP32P4 ECO0, the default (power on reset) CPLL and SPLL frequencies are very high, lower them to avoid bias may not be enough in bootloader
++         // And we are fixing SPLL to be 480MHz after app is up
++@@ -104,15 +116,26 @@ static inline void bootloader_hardware_init(void)
++         REGI2C_WRITE_MASK(I2C_SYSPLL, I2C_SYSPLL_OC_DIV_7_0, 8); // lower default sys_pll freq to 480M
++         esp_rom_delay_us(100);
++     }
+++#if defined(__NuttX__)
+++    ets_printf("H3\n");
+++#endif
++     REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1, 10);
++     REGI2C_WRITE_MASK(I2C_BIAS, I2C_BIAS_DREG_1P1_PVT, 10);
+++#if defined(__NuttX__)
+++    ets_printf("H4\n");
+++#endif
++
++-#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
+++#if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP && !defined(__NuttX__)
++     // IDF-10019 TODO: This is temporarily for ESP32P4-ECO0, please remove it when eco0 is not widly used.
++     if (likely(ESP_CHIP_REV_ABOVE(chip_version, 1))) {
++         bootloader_init_mspi_clock();
++     }
++ #endif
+++#if defined(__NuttX__)
+++    // The ROM already configured MSPI to read this Simple Boot image.  Do
+++    // not switch its source while the application image is being entered.
+++    ets_printf("H5\n");
+++#endif
++ }
++
++ static inline void bootloader_ana_reset_config(void)
++@@ -127,12 +150,25 @@ esp_err_t bootloader_init(void)
++ {
++     esp_err_t ret = ESP_OK;
++
+++#if defined(__NuttX__)
+++    ets_printf("B0\n");
+++#endif
+++#if !defined(__NuttX__)
++     bootloader_hardware_init();
+++#endif
+++#if defined(__NuttX__)
+++    ets_printf("B1\n");
+++#endif
+++#if !defined(__NuttX__)
++     bootloader_ana_reset_config();
+++#endif
++     bootloader_super_wdt_auto_feed();
+++#if defined(__NuttX__)
+++    ets_printf("B2\n");
+++#endif
++
++ // In RAM_APP, memory will be initialized in `call_start_cpu0`
++-#if !CONFIG_APP_BUILD_TYPE_RAM
+++#if !CONFIG_APP_BUILD_TYPE_RAM && !defined(__NuttX__)
++     // protect memory region
++     bootloader_init_mem();
++     /* check that static RAM is after the stack */
++@@ -140,7 +176,7 @@ esp_err_t bootloader_init(void)
++     assert(&_data_start <= &_data_end);
++     // clear bss section
++     bootloader_clear_bss_section();
++-#endif // !CONFIG_APP_BUILD_TYPE_RAM
+++#endif // !CONFIG_APP_BUILD_TYPE_RAM && !__NuttX__
++
++     // init eFuse virtual mode (read eFuses to RAM)
++ #ifdef CONFIG_EFUSE_VIRTUAL
++@@ -151,15 +187,32 @@ esp_err_t bootloader_init(void)
++ #endif
++
++     // config clock
+++#if defined(__NuttX__)
+++    ets_printf("B3\n");
+++    return ESP_OK;
+++#endif
++     bootloader_clock_configure();
+++#if defined(__NuttX__)
+++    ets_printf("B3\n");
+++#endif
++     // initialize console, from now on, we can use esp_log
++     bootloader_console_init();
+++#if defined(__NuttX__)
+++    ets_printf("B4\n");
+++#endif
++     /* print 2nd bootloader banner */
++     bootloader_print_banner();
+++#if defined(__NuttX__)
+++    ets_printf("B5\n");
+++#endif
++
++ #if !CONFIG_APP_BUILD_TYPE_RAM
++     // init cache and mmu
++     bootloader_init_ext_mem();
+++#if defined(__NuttX__)
+++    ets_printf("B6\n");
+++#endif
+++#if !defined(__NuttX__)
++     // update flash ID
++     bootloader_flash_update_id();
++     // Check and run XMC startup flow
++@@ -179,12 +232,15 @@ esp_err_t bootloader_init(void)
++     if ((ret = bootloader_init_spi_flash()) != ESP_OK) {
++         return ret;
++     }
+++#endif /* !__NuttX__ */
++ #endif // !CONFIG_APP_BUILD_TYPE_RAM
++
++     // check whether a WDT reset happened
++     bootloader_check_wdt_reset();
+++#if !defined(__NuttX__)
++     // config WDT
++     bootloader_config_wdt();
+++#endif
++     // enable RNG early entropy source
++     bootloader_enable_random();
++
++diff --git a/components/esp_adc/adc_filter.c b/components/esp_adc/adc_filter.c
++index da8ead9..3b4bbe2 100644
++--- a/components/esp_adc/adc_filter.c
+++++ b/components/esp_adc/adc_filter.c
++@@ -21,9 +21,9 @@ static const char *TAG = "adc_filter";
++ static portMUX_TYPE s_filter_spinlock = portMUX_INITIALIZER_UNLOCKED;
++
++ #if SOC_ADC_DIG_IIR_FILTER_UNIT_BINDED
++-static atomic_bool s_adc_filter_claimed[SOC_ADC_DIGI_IIR_FILTER_NUM] = {ATOMIC_VAR_INIT(false),
+++static atomic_bool s_adc_filter_claimed[SOC_ADC_DIGI_IIR_FILTER_NUM] = {(false),
++ #if (SOC_ADC_DIGI_IIR_FILTER_NUM >= 2)
++-                                                                        ATOMIC_VAR_INIT(false)
+++                                                                        (false)
++ #endif
++                                                                        };
++
++diff --git a/components/esp_adc/adc_oneshot.c b/components/esp_adc/adc_oneshot.c
++index 5f2fce8..5ce78e1 100644
++--- a/components/esp_adc/adc_oneshot.c
+++++ b/components/esp_adc/adc_oneshot.c
++@@ -55,9 +55,9 @@ typedef struct adc_oneshot_ctx_t {
++ } adc_oneshot_ctx_t;
++
++ static adc_oneshot_ctx_t s_ctx;    //ADC oneshot mode context
++-static atomic_bool s_adc_unit_claimed[SOC_ADC_PERIPH_NUM] = {ATOMIC_VAR_INIT(false),
+++static atomic_bool s_adc_unit_claimed[SOC_ADC_PERIPH_NUM] = {(false),
++ #if (SOC_ADC_PERIPH_NUM >= 2)
++-                                                             ATOMIC_VAR_INIT(false)
+++                                                             (false)
++ #endif
++                                                             };
++
++diff --git a/components/esp_hw_support/esp_gpio_reserve.c b/components/esp_hw_support/esp_gpio_reserve.c
++index c2e5ec7..872fe45 100644
++--- a/components/esp_hw_support/esp_gpio_reserve.c
+++++ b/components/esp_hw_support/esp_gpio_reserve.c
++@@ -10,7 +10,7 @@
++ #include "esp_bit_defs.h"
++ #include "esp_private/esp_gpio_reserve.h"
++
++-static _Atomic uint64_t s_reserved_pin_mask = ATOMIC_VAR_INIT(~(SOC_GPIO_VALID_GPIO_MASK));
+++static _Atomic uint64_t s_reserved_pin_mask = (~(SOC_GPIO_VALID_GPIO_MASK));
++
++ uint64_t esp_gpio_reserve(uint64_t gpio_mask)
++ {
++diff --git a/components/esp_hw_support/spi_bus_lock.c b/components/esp_hw_support/spi_bus_lock.c
++index d128205..d4971d9 100644
++--- a/components/esp_hw_support/spi_bus_lock.c
+++++ b/components/esp_hw_support/spi_bus_lock.c
++@@ -860,9 +860,9 @@ static spi_bus_lock_t main_spi_bus_lock = {
++      * the main bus cache is permanently required, this flag is set here and never clear so that the
++      * cache will always be enabled if acquiring devices yield.
++      */
++-    .status = ATOMIC_VAR_INIT(WEAK_BG_FLAG),
+++    .status = (WEAK_BG_FLAG),
++     .acquiring_dev = NULL,
++-    .dev = {ATOMIC_VAR_INIT((intptr_t)&lock_main_flash_dev)},
+++    .dev = {((intptr_t)&lock_main_flash_dev)},
++     .new_req = 0,
++     .periph_cs_num = SOC_SPI_PERIPH_CS_NUM(0),
++ };
++diff --git a/components/esp_hw_support/spi_share_hw_ctrl.c b/components/esp_hw_support/spi_share_hw_ctrl.c
++index 2f317f1..b7e960d 100644
++--- a/components/esp_hw_support/spi_share_hw_ctrl.c
+++++ b/components/esp_hw_support/spi_share_hw_ctrl.c
++@@ -15,12 +15,12 @@
++ ESP_LOG_ATTR_TAG(SPI_TAG, "spi_share_hw_ctrl");
++
++ //Periph 1 is 'claimed' by SPI flash code.
++-static atomic_bool spi_periph_claimed[SOC_SPI_PERIPH_NUM] = { ATOMIC_VAR_INIT(true), ATOMIC_VAR_INIT(false),
+++static atomic_bool spi_periph_claimed[SOC_SPI_PERIPH_NUM] = { (true), ATOMIC_VAR_INIT(false),
++ #if (SOC_SPI_PERIPH_NUM >= 3)
++-                                                              ATOMIC_VAR_INIT(false),
+++                                                              (false),
++ #endif
++ #if (SOC_SPI_PERIPH_NUM >= 4)
++-                                                              ATOMIC_VAR_INIT(false),
+++                                                              (false),
++ #endif
++                                                             };
++
++diff --git a/components/upper_hal_i2s/lp_i2s_vad.c b/components/upper_hal_i2s/lp_i2s_vad.c
++index 4d33972..648c8d7 100644
++--- a/components/upper_hal_i2s/lp_i2s_vad.c
+++++ b/components/upper_hal_i2s/lp_i2s_vad.c
++@@ -31,7 +31,7 @@ typedef struct vad_unit_ctx_t {
++     vad_fsm_t fsm;
++ } vad_unit_ctx_t;
++
++-static atomic_bool s_vad_id_claimed[SOC_ADC_PERIPH_NUM] = {ATOMIC_VAR_INIT(false)};
+++static atomic_bool s_vad_id_claimed[SOC_ADC_PERIPH_NUM] = {(false)};
++
++ static bool s_vad_claim(lp_vad_t vad_id)
++ {
+diff --git a/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0004-openvela-esp32p4-os-port.patch b/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0004-openvela-esp32p4-os-port.patch
+new file mode 100755
+index 00000000..b70b9661
+--- /dev/null
++++ b/arch/risc-v/src/esp32p4/patches/esp-hal-3rdparty/0004-openvela-esp32p4-os-port.patch
+@@ -0,0 +1,77 @@
++diff --git a/nuttx/src/platform/os.c b/nuttx/src/platform/os.c
++index 68acacf53..b5bec24ec 100644
++--- a/nuttx/src/platform/os.c
+++++ b/nuttx/src/platform/os.c
++@@ -27,6 +27,8 @@
++ #include <nuttx/kmalloc.h>
++ #include <semaphore.h>
++ #include <unistd.h>
+++#include <fcntl.h>
+++#include <nuttx/kthread.h>
++ #include <sys/types.h>
++ #include <nuttx/sched.h>
++ #include <nuttx/mm/mm.h>
++@@ -156,6 +158,12 @@ typedef struct intr_handle_data_t intr_handle_data_t;
++ 
++ typedef struct non_shared_isr_arg_t non_shared_isr_arg_t;
++ 
+++struct intr_adapter_to_nuttx
+++{
+++  esp_os_intr_handler_t handler;
+++  FAR void *arg;
+++};
+++
++ struct non_shared_isr_arg_t
++ {
++   intr_handler_t isr;
++@@ -1342,36 +1350,14 @@ int esp_os_create_task_pinned_to_core(esp_os_task_function_t task_func,
++   argv[0] = ptr_buf;
++   argv[1] = NULL;
++ 
++-  tcb = kmm_zalloc(sizeof(struct tcb_s));
++-  if (tcb == NULL)
++-    {
++-      kmm_free(wrapper_args);
++-      return -1;
++-    }
++-
++-  tcb->flags = TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_FREE_TCB;
++-
++-  ret = nxtask_init(tcb, name, priority,
++-                    NULL, stack_size,
++-                    task_wrapper_entry, argv, NULL, NULL);
+++  ret = kthread_create(name, priority, stack_size, task_wrapper_entry, argv);
++   if (ret < 0)
++     {
++       kmm_free(wrapper_args);
++-      kmm_free(tcb);
++       return -1;
++     }
++ 
++-#ifdef CONFIG_SMP
++-  if (core_id >= 0)
++-    {
++-      cpu_set_t cpuset;
++-      CPU_ZERO(&cpuset);
++-      CPU_SET(core_id, &cpuset);
++-      tcb->affinity = cpuset;
++-    }
++-#endif
++-
++-  if (task_notify_register(tcb->pid) == NULL)
+++  if (task_notify_register(ret) == NULL)
++     {
++       _warn("esp_os_create_task: out of memory for notify entry '%s'\n",
++             name);
++@@ -1379,10 +1365,9 @@ int esp_os_create_task_pinned_to_core(esp_os_task_function_t task_func,
++ 
++   if (task_handle != NULL)
++     {
++-      *task_handle = (esp_os_task_handle_t)tcb->pid;
+++      *task_handle = (esp_os_task_handle_t)ret;
++     }
++ 
++-  nxtask_activate(tcb);
++   return 0;
++ }
++ 

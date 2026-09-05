@@ -456,6 +456,13 @@ list(
   ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/heap_caps.c
   ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/platform/os.c)
 
+if(CONFIG_SMP)
+  list(
+    APPEND
+    HAL_SRCS
+    ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/components/esp_system/esp_ipc.c)
+endif()
+
 if(CONFIG_ESPRESSIF_WIFI OR CONFIG_ESPRESSIF_EMAC)
   list(APPEND HAL_SRCS ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/esp_event.c)
 endif()
@@ -537,8 +544,41 @@ if(CONFIG_ESPRESSIF_MIPI_DSI)
     APPEND
     HAL_SRCS
     ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_lcd/mipi_dsi_hal.c
-    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_lcd/${CHIP_SERIES}/mipi_dsi_periph.c
-    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_dma/dw_gdma_hal.c)
+    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_lcd/${CHIP_SERIES}/mipi_dsi_periph.c)
+endif()
+
+if(CONFIG_ESPRESSIF_MIPI_CSI)
+  list(APPEND HAL_SRCS
+    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_cam/mipi_csi_hal.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_cam/${CHIP_SERIES}/mipi_csi_periph.c)
+endif()
+
+if(CONFIG_ESPRESSIF_MIPI_DSI OR CONFIG_ESPRESSIF_MIPI_CSI)
+  list(APPEND HAL_SRCS ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_dma/dw_gdma_hal.c)
+endif()
+
+if(CONFIG_ESPRESSIF_MIPI_CSI)
+  list(
+    APPEND
+    HAL_SRCS
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_dma/src/dw_gdma.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/esp_cam_ctlr.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/csi/src/esp_cam_ctlr_csi.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_core.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_demosaic.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_ccm.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_color.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hw_support/mipi_csi_share_hw_ctrl.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/hal/color_hal.c
+    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_cam/isp_hal.c)
+
+  target_include_directories(
+    arch
+    PRIVATE ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/include
+            ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/interface
+            ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/csi/include
+            ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/csi/src
+            ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/include)
 endif()
 
 if(CONFIG_ESPRESSIF_IDF_ENV_FPGA)

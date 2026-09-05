@@ -1,0 +1,24 @@
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c
+index b29d520..ccda613 100644
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_bringup.c
+@@ -190,6 +190,7 @@ int esp32p4_bringup(void)
+     }
+ 
+   /* Keep Quick-App state isolated from the general temporary directory. */
++
+   ret = nx_mount(NULL, "/data", "tmpfs", 0, NULL);
+   if (ret < 0 && ret != -EEXIST)
+     {
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+index 2664f85..3c29809 100644
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+@@ -357,6 +357,7 @@ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+             (FAR uint8_t *)g_lcd_fb + LCD_FB_SIZE + offset,
+             (size_t)(flush_y2 - flush_y1) * LCD_STRIDE);
+         }
++
+       return ret;
+     }
+ 

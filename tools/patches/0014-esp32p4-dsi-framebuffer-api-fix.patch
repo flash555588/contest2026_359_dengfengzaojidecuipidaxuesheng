@@ -1,0 +1,168 @@
+diff --git a/old/arch/risc-v/src/common/espressif/esp_mipi_dsi.c b/new/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+index 02e82c1..c640910 100644
+--- a/old/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
++++ b/new/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+@@ -36,6 +36,7 @@
+ #include <nuttx/irq.h>
+ #include <nuttx/kmalloc.h>
+ #include <nuttx/mutex.h>
++#include <nuttx/semaphore.h>
+ #include <nuttx/spinlock.h>
+ #include <nuttx/wqueue.h>
+ #include <nuttx/video/esp_mipi_dsi.h>
+@@ -120,6 +121,7 @@ struct esp_mipi_dsi_priv_s
+   FAR void *fb_callback_arg;
+   struct work_s fb_work;
+   FAR void *pending_fb;
++  sem_t fb_done;
+ 
+ #ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
+   uint64_t frames;
+@@ -207,6 +209,7 @@ static struct esp_mipi_dsi_priv_s g_esp_mipi_dsi =
+     },
+   .lock = NXMUTEX_INITIALIZER,
+   .dmalock = SP_UNLOCKED,
++  .fb_done = SEM_INITIALIZER(0),
+   .phy_pllref_clk_src = SOC_MOD_CLK_INVALID,
+   .phy_cfg_clk_src = SOC_MOD_CLK_INVALID,
+   .dpi_clk_src = SOC_MOD_CLK_INVALID,
+@@ -416,6 +419,11 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+ 
+   spin_unlock_irqrestore(&priv->dmalock, flags);
+ 
++  if (next_fb != NULL)
++    {
++      nxsem_post(&priv->fb_done);
++    }
++
+ #ifdef CONFIG_ESPRESSIF_MIPI_CSI
+   /* Re-arm the display channel before servicing CSI.  CSI completion is
+    * deferred to LPWORK, so this call only performs short register work.
+@@ -1805,8 +1813,8 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+  * Name: esp_mipi_dsi_set_framebuffer_callback
+  *
+  * Description:
+- *   Register the interrupt-safe framebuffer selector used between completed
+- *   video frames.
++ *   Register a framebuffer selector that runs from LPWORK after a completed
++ *   video frame.  The callback may not block indefinitely.
+  *
+  ****************************************************************************/
+ 
+@@ -1817,17 +1825,71 @@ int esp_mipi_dsi_set_framebuffer_callback(
+   irqstate_t flags;
+ 
+   flags = spin_lock_irqsave(&priv->dmalock);
+-  if (!priv->fb_bound)
++  if (!priv->fb_bound ||
++      (callback != NULL && priv->pending_fb != NULL))
+     {
+       spin_unlock_irqrestore(&priv->dmalock, flags);
+-      return -EAGAIN;
++      return !priv->fb_bound ? -EAGAIN : -EBUSY;
+     }
+ 
+   priv->fb_callback = callback;
+   priv->fb_callback_arg = arg;
+   spin_unlock_irqrestore(&priv->dmalock, flags);
+   return OK;
+ }
++
++/****************************************************************************
++ * Name: esp_mipi_dsi_swap_framebuffer
++ *
++ * Description:
++ *   Queue one framebuffer for the next completed-frame boundary and wait
++ *   until DW-GDMA has switched away from the previous framebuffer.
++ *
++ ****************************************************************************/
++
++int esp_mipi_dsi_swap_framebuffer(FAR void *fb, uint32_t timeout_ms)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
++  irqstate_t flags;
++  int ret;
++
++  if (fb == NULL || timeout_ms == 0)
++    {
++      return -EINVAL;
++    }
++
++  nxsem_reset(&priv->fb_done, 0);
++  flags = spin_lock_irqsave(&priv->dmalock);
++  if (!priv->fb_bound || !priv->dma_enabled)
++    {
++      spin_unlock_irqrestore(&priv->dmalock, flags);
++      return -EAGAIN;
++    }
++
++  if (priv->fb_callback != NULL || priv->pending_fb != NULL)
++    {
++      spin_unlock_irqrestore(&priv->dmalock, flags);
++      return -EBUSY;
++    }
++
++  priv->pending_fb = fb;
++  spin_unlock_irqrestore(&priv->dmalock, flags);
++
++  ret = nxsem_tickwait_uninterruptible(&priv->fb_done,
++                                       MSEC2TICK(timeout_ms));
++  if (ret < 0)
++    {
++      flags = spin_lock_irqsave(&priv->dmalock);
++      if (priv->pending_fb == fb)
++        {
++          priv->pending_fb = NULL;
++        }
++
++      spin_unlock_irqrestore(&priv->dmalock, flags);
++    }
++
++  return ret;
++}
+ 
+ /****************************************************************************
+  * Name: esp_mipi_dsi_flush_framebuffer
+diff --git a/old/arch/risc-v/src/common/espressif/esp_mipi_dsi.h b/new/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
+index a45920e..e08d5fd 100644
+--- a/old/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
++++ b/new/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
+@@ -68,6 +68,12 @@ struct esp_mipi_dsi_dpi_config_s
+   uint8_t  format;              /* MIPI_DSI_FMT_RGB565 / RGB888 / ... */
+ };
+ 
++/* Invoked from LPWORK after a completed frame.  Return the next framebuffer
++ * address or NULL to keep scanning the current framebuffer.
++ */
++
++typedef FAR void *(*esp_mipi_dsi_framebuffer_callback_t)(FAR void *arg);
++
+ /****************************************************************************
+  * Public Function Prototypes
+  ****************************************************************************/
+@@ -187,6 +193,25 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ 
+ int esp_mipi_dsi_swap_framebuffer(FAR void *fb, uint32_t timeout_ms);
+ 
++/****************************************************************************
++ * Name: esp_mipi_dsi_set_framebuffer_callback
++ *
++ * Description:
++ *   Register a framebuffer selector that runs from LPWORK after a completed
++ *   video frame.  Passing NULL disables callback-driven page selection.
++ *
++ * Input Parameters:
++ *   callback - Framebuffer selector, or NULL
++ *   arg      - Opaque callback argument
++ *
++ * Returned Value:
++ *   Zero (OK) on success; a negated errno value on failure.
++ *
++ ****************************************************************************/
++
++int esp_mipi_dsi_set_framebuffer_callback(
++      esp_mipi_dsi_framebuffer_callback_t callback, FAR void *arg);
++
+ /****************************************************************************
+  * Name: esp_mipi_dsi_flush_framebuffer
+  *

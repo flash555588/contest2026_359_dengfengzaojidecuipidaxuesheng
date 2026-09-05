@@ -1,0 +1,568 @@
+diff --git a/old/arch/risc-v/src/common/espressif/Kconfig b/new/arch/risc-v/src/common/espressif/Kconfig
+index 8adb921..5193e57 100644
+--- a/old/arch/risc-v/src/common/espressif/Kconfig
++++ b/new/arch/risc-v/src/common/espressif/Kconfig
+@@ -2160,25 +2160,27 @@ config ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS
+ 		Default per-lane HS bit rate for initialize(NULL).  Override
+ 		per board/panel with esp_mipi_dsi_bus_config_s.
+ 
++config ESPRESSIF_MIPI_DSI_DIAG
++	bool "Expose MIPI-DSI runtime statistics"
++	default n
++	---help---
++		Register /dev/dsi-diag0.  Applications can atomically read or
++		reset the completed-frame, bridge-underrun and deferred-worker
++		failure counters through documented MIPI-DSI ioctl commands.
++
+ endif # ESPRESSIF_MIPI_DSI
+ 
+ config ESPRESSIF_MIPI_CSI
+ 	bool "MIPI CSI camera host"
+ 	depends on ARCH_CHIP_ESP32P4
+-	depends on ESPRESSIF_SPIRAM
+-	select ESPRESSIF_LDO
++	default n
+ 	select DRIVERS_VIDEO
+ 	select VIDEO
+ 	select VIDEO_STREAM
+-	select VIDEO_SC2336
+-	select SCHED_LPWORK
+ 	---help---
+-		Enable the ESP32-P4 two-lane MIPI-CSI path using the pinned
+-		esp-hal-3rdparty camera controller and ISP.  The ISP converts RAW8
+-		to RGB565 and CSI DMA writes each frame straight into the V4L2
+-		USERPTR buffer, so no intermediate PSRAM copy is needed.  When
+-		MIPI-DSI is enabled both peripherals share the DW-GDMA interrupt
+-		dispatcher.
++		Enable the ESP32-P4 two-lane MIPI-CSI RAW8 capture path.  When
++		MIPI-DSI is enabled, both peripherals share the DW-GDMA interrupt
++		dispatcher; otherwise CSI installs its own interrupt handler.
+ 
+ config ESPRESSIF_MIPI_CSI_BOOT_TEST
+ 	bool "Capture and verify one camera frame during bring-up"
+diff --git a/old/arch/risc-v/src/common/espressif/esp_mipi_dsi.c b/new/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+index 76f42b6..54dbbb3 100644
+--- a/old/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
++++ b/new/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+@@ -28,17 +28,18 @@
+ 
+ #include <errno.h>
+ #include <debug.h>
+-#include <semaphore.h>
+ #include <string.h>
+ #include <math.h>
+-#include <time.h>
+ 
+ #include <nuttx/arch.h>
++#include <nuttx/clock.h>
++#include <nuttx/fs/fs.h>
+ #include <nuttx/irq.h>
+ #include <nuttx/kmalloc.h>
+ #include <nuttx/mutex.h>
+-#include <nuttx/semaphore.h>
+ #include <nuttx/spinlock.h>
++#include <nuttx/wqueue.h>
++#include <nuttx/video/esp_mipi_dsi.h>
+ #include <nuttx/video/mipi_dsi.h>
+ #include <nuttx/video/mipi_display.h>
+ 
+@@ -115,8 +116,17 @@ struct esp_mipi_dsi_priv_s
+   FAR void *fb;                         /* Bound framebuffer base, or NULL */
+   FAR dw_gdma_link_list_item_t *lli;    /* Cached LLI (CPU view) */
+   FAR dw_gdma_link_list_item_t *lli_nc; /* Non-cacheable LLI alias */
++  esp_mipi_dsi_framebuffer_callback_t fb_callback;
++  FAR void *fb_callback_arg;
++  struct work_s fb_work;
+   FAR void *pending_fb;
+-  sem_t fb_done;
++
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++  uint64_t frames;
++  uint64_t underruns;
++  uint64_t worker_queue_errors;
++  bool diag_registered;
++#endif
+ 
+   size_t fb_size;                    /* Bound framebuffer size in bytes */
+   uint16_t dpi_h_res;                /* Active width from DPI config */
+@@ -164,6 +174,11 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+ static void IRAM_ATTR esp_mipi_dsi_dma_restart(
+     FAR struct esp_mipi_dsi_priv_s *priv);
+ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv);
++static void esp_mipi_dsi_framebuffer_worker(FAR void *arg);
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++static int esp_mipi_dsi_diag_ioctl(FAR struct file *filep, int cmd,
++                                   unsigned long arg);
++#endif
+ 
+ /****************************************************************************
+  * Private Data
+@@ -176,6 +191,13 @@ static const struct mipi_dsi_host_ops g_esp_mipi_dsi_ops =
+   .transfer = esp_mipi_dsi_transfer,
+ };
+ 
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++static const struct file_operations g_esp_mipi_dsi_diag_fops =
++{
++  .ioctl = esp_mipi_dsi_diag_ioctl,
++};
++#endif
++
+ static struct esp_mipi_dsi_priv_s g_esp_mipi_dsi =
+ {
+   .host =
+@@ -185,7 +207,6 @@ static struct esp_mipi_dsi_priv_s g_esp_mipi_dsi =
+     },
+   .lock = NXMUTEX_INITIALIZER,
+   .dmalock = SP_UNLOCKED,
+-  .fb_done = SEM_INITIALIZER(0),
+   .phy_pllref_clk_src = SOC_MOD_CLK_INVALID,
+   .phy_cfg_clk_src = SOC_MOD_CLK_INVALID,
+   .dpi_clk_src = SOC_MOD_CLK_INVALID,
+@@ -193,20 +214,67 @@ static struct esp_mipi_dsi_priv_s g_esp_mipi_dsi =
+ };
+ 
+ /****************************************************************************
+- * Public Data
++ * Private Functions
+  ****************************************************************************/
+ 
+-/* Bridge FIFO underrun events seen by the DMA ISR; readable from NSH with
+- * "xd <addr of g_esp_mipi_dsi_underruns> 8" for display glitch diagnosis.
+- */
+-
+-volatile uint32_t g_esp_mipi_dsi_underruns;
+-volatile uint32_t g_esp_mipi_dsi_frames;
+-
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
+ /****************************************************************************
+- * Private Functions
++ * Name: esp_mipi_dsi_diag_ioctl
++ *
++ * Description:
++ *   Return or reset an atomic snapshot of the DSI runtime counters.
++ *
+  ****************************************************************************/
+ 
++static int esp_mipi_dsi_diag_ioctl(FAR struct file *filep, int cmd,
++                                   unsigned long arg)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv;
++  FAR struct esp_mipi_dsi_stats_s *stats;
++  irqstate_t flags;
++
++  if (filep == NULL || filep->f_inode == NULL)
++    {
++      return -EINVAL;
++    }
++
++  priv = filep->f_inode->i_private;
++  if (priv == NULL || !priv->initialized)
++    {
++      return -EAGAIN;
++    }
++
++  switch (cmd)
++    {
++      case ESP_MIPI_DSIIOC_GET_STATS:
++        stats = (FAR struct esp_mipi_dsi_stats_s *)(uintptr_t)arg;
++        if (stats == NULL)
++          {
++            return -EINVAL;
++          }
++
++        flags = spin_lock_irqsave(&priv->dmalock);
++        stats->frames = priv->frames;
++        stats->underruns = priv->underruns;
++        stats->worker_queue_errors = priv->worker_queue_errors;
++        spin_unlock_irqrestore(&priv->dmalock, flags);
++        stats->sampled_at_ticks = (uint64_t)clock_systime_ticks();
++        return OK;
++
++      case ESP_MIPI_DSIIOC_RESET_STATS:
++        flags = spin_lock_irqsave(&priv->dmalock);
++        priv->frames = 0;
++        priv->underruns = 0;
++        priv->worker_queue_errors = 0;
++        spin_unlock_irqrestore(&priv->dmalock, flags);
++        return OK;
++
++      default:
++        return -ENOTTY;
++    }
++}
++#endif
++
+ /****************************************************************************
+  * Name: esp_mipi_dsi_dma_restart
+  *
+@@ -269,8 +337,10 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+   FAR void *next_fb = NULL;
+   irqstate_t flags;
+   bool transfer_done;
+-  bool frame_swapped;
++  bool have_callback;
++  uint32_t bridge_status;
+   uint32_t status;
++  int ret;
+ 
+   UNUSED(irq);
+   UNUSED(context);
+@@ -284,13 +354,20 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+   flags = spin_lock_irqsave(&priv->dmalock);
+   status = dw_gdma_ll_channel_get_intr_status(dev, ESP_MIPI_DSI_DMA_CHAN);
+   dw_gdma_ll_channel_clear_intr(dev, ESP_MIPI_DSI_DMA_CHAN, status);
+-  if (priv->hal.bridge != NULL &&
+-      (mipi_dsi_brg_ll_get_interrupt_status(priv->hal.bridge) &
+-       MIPI_DSI_BRG_LL_EVENT_UNDERRUN) != 0)
++  bridge_status = 0;
++  if (priv->hal.bridge != NULL)
+     {
+-      mipi_dsi_brg_ll_clear_interrupt_status(priv->hal.bridge,
+-                                             MIPI_DSI_BRG_LL_EVENT_UNDERRUN);
+-      g_esp_mipi_dsi_underruns++;
++      bridge_status =
++        mipi_dsi_brg_ll_get_interrupt_status(priv->hal.bridge);
++    }
++
++  if ((bridge_status & MIPI_DSI_BRG_LL_EVENT_UNDERRUN) != 0)
++    {
++      mipi_dsi_brg_ll_clear_interrupt_status(
++        priv->hal.bridge, MIPI_DSI_BRG_LL_EVENT_UNDERRUN);
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++      priv->underruns++;
++#endif
+     }
+ 
+   transfer_done =
+@@ -299,12 +376,14 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+ 
+   if (transfer_done)
+     {
+-      g_esp_mipi_dsi_frames++;
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++      priv->frames++;
++#endif
+       next_fb = priv->pending_fb;
+       priv->pending_fb = NULL;
+     }
+ 
+-  frame_swapped = next_fb != NULL;
++  have_callback = priv->fb_callback != NULL;
+ 
+   spin_unlock_irqrestore(&priv->dmalock, flags);
+ 
+@@ -312,7 +391,9 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+     {
+ #ifdef CONFIG_ESPRESSIF_MIPI_CSI
+       /* CSI has its own status/error path.  Keep this shared ISR focused on
+-       * the DSI channel and dispatch CSI only after DSI state is restored. */
++       * the DSI channel and dispatch CSI only after DSI state is restored.
++       */
++
+       dw_gdma_shared_isr();
+ #endif
+       return OK;
+@@ -335,20 +416,72 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+ 
+   spin_unlock_irqrestore(&priv->dmalock, flags);
+ 
+-  if (frame_swapped)
+-    {
+-      nxsem_post(&priv->fb_done);
+-    }
+-
+ #ifdef CONFIG_ESPRESSIF_MIPI_CSI
+   /* Re-arm the display channel before servicing CSI.  CSI completion is
+-   * deferred to LPWORK, so this call only performs short register work. */
++   * deferred to LPWORK, so this call only performs short register work.
++   */
++
+   dw_gdma_shared_isr();
+ #endif
+ 
++  /* Page selection may touch LVGL state.  Defer it after the display DMA has
++   * already been re-armed and keep the shared ISR bounded.
++   */
++
++  if (have_callback)
++    {
++      ret = work_queue(LPWORK, &priv->fb_work,
++                       esp_mipi_dsi_framebuffer_worker, priv, 0);
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++      if (ret < 0 && ret != -EBUSY)
++        {
++          flags = spin_lock_irqsave(&priv->dmalock);
++          priv->worker_queue_errors++;
++          spin_unlock_irqrestore(&priv->dmalock, flags);
++        }
++#else
++      UNUSED(ret);
++#endif
++    }
++
+   return OK;
+ }
+ 
++static void esp_mipi_dsi_framebuffer_worker(FAR void *arg)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv =
++    (FAR struct esp_mipi_dsi_priv_s *)arg;
++  esp_mipi_dsi_framebuffer_callback_t callback;
++  FAR void *callback_arg;
++  FAR void *next_fb;
++  irqstate_t flags;
++  bool active;
++
++  flags = spin_lock_irqsave(&priv->dmalock);
++  callback = priv->fb_callback;
++  callback_arg = priv->fb_callback_arg;
++  active = priv->dma_enabled;
++  priv->pending_fb = NULL;
++  spin_unlock_irqrestore(&priv->dmalock, flags);
++
++  if (!active || callback == NULL)
++    {
++      return;
++    }
++
++  next_fb = callback(callback_arg);
++  if (next_fb != NULL)
++    {
++      flags = spin_lock_irqsave(&priv->dmalock);
++      if (priv->dma_enabled)
++        {
++          priv->pending_fb = next_fb;
++        }
++
++      spin_unlock_irqrestore(&priv->dmalock, flags);
++    }
++}
++
+ /****************************************************************************
+  * Name: esp_mipi_dsi_dma_setup
+  *
+@@ -400,6 +533,7 @@ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv)
+                                                  DW_GDMA_HANDSHAKE_HW);
+   dw_gdma_ll_channel_set_dst_handshake_periph(dev, ESP_MIPI_DSI_DMA_CHAN,
+                                               DW_GDMA_ROLE_PERIPH_DSI);
++
+   /* Display scanout is the only hard real-time DW-GDMA consumer. */
+ 
+   dw_gdma_ll_channel_set_priority(dev, ESP_MIPI_DSI_DMA_CHAN, 7);
+@@ -1309,19 +1443,30 @@ int esp_mipi_dsi_initialize(
+         (float)CONFIG_ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS;
+     }
+ 
+-  ret = esp_mipi_dsi_hw_init(priv);
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++  ret = register_driver(ESP_MIPI_DSI_DIAG_PATH,
++                        &g_esp_mipi_dsi_diag_fops, 0440, priv);
+   if (ret < 0)
+     {
+       nxmutex_unlock(&priv->lock);
++      verr("esp_mipi_dsi: diag register failed: %d\n", ret);
+       return ret;
+     }
+ 
++  priv->diag_registered = true;
++#endif
++
++  ret = esp_mipi_dsi_hw_init(priv);
++  if (ret < 0)
++    {
++      goto errout_diag;
++    }
++
+   ret = mipi_dsi_host_register(&priv->host);
+   if (ret < 0)
+     {
+-      nxmutex_unlock(&priv->lock);
+       verr("esp_mipi_dsi: host register failed: %d\n", ret);
+-      return ret;
++      goto errout_diag;
+     }
+ 
+   /* Only mark ready after registration succeeds so host_get() / retries
+@@ -1336,6 +1481,18 @@ int esp_mipi_dsi_initialize(
+          priv->host.bus, priv->num_data_lanes,
+          (unsigned int)(priv->lane_bit_rate_mbps + 0.5f));
+   return OK;
++
++errout_diag:
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_DIAG
++  if (priv->diag_registered)
++    {
++      unregister_driver(ESP_MIPI_DSI_DIAG_PATH);
++      priv->diag_registered = false;
++    }
++
++#endif
++  nxmutex_unlock(&priv->lock);
++  return ret;
+ }
+ 
+ /****************************************************************************
+@@ -1522,7 +1679,6 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
+   FAR dw_gdma_link_list_item_t *lli_nc;
+-  lcd_color_format_t input_fmt;
+   size_t expect;
+   uint32_t block_items;
+   int ret;
+@@ -1618,20 +1774,9 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ 
+   dw_gdma_ll_lli_set_block_markers(lli_nc, false, true, true);
+ 
+-  ret = esp_mipi_dsi_flush_framebuffer(fb, fb_size);
+-  if (ret < 0)
+-    {
+-      nxmutex_unlock(&priv->lock);
+-      return ret;
+-    }
+-
+-  /* ESP32-P4 revision 1.x shares the bridge input/output pixel type.  Keep
+-   * the memory-side stream consistent with the bound framebuffer format.
+-   * This is retained from the v1.0 Git-tree release implementation.
+-   */
+-
+-  input_fmt = bpp == 16 ? LCD_COLOR_FMT_RGB565 : LCD_COLOR_FMT_RGB888;
+-  mipi_dsi_brg_ll_set_input_color_format(priv->hal.bridge, input_fmt);
++  esp_cache_msync(fb, fb_size,
++                  ESP_CACHE_MSYNC_FLAG_DIR_C2M |
++                  ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+ 
+   /* Bridge expects DW-GDMA as flow controller. */
+ 
+@@ -1657,50 +1802,31 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ }
+ 
+ /****************************************************************************
+- * Name: esp_mipi_dsi_swap_framebuffer
++ * Name: esp_mipi_dsi_set_framebuffer_callback
+  *
+  * Description:
+- *   Queue a framebuffer for the next completed-frame boundary and wait until
+- *   DW-GDMA has stopped reading the previous framebuffer.
++ *   Register the interrupt-safe framebuffer selector used between completed
++ *   video frames.
+  *
+  ****************************************************************************/
+ 
+-int esp_mipi_dsi_swap_framebuffer(FAR void *fb, uint32_t timeout_ms)
++int esp_mipi_dsi_set_framebuffer_callback(
++      esp_mipi_dsi_framebuffer_callback_t callback, FAR void *arg)
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
+   irqstate_t flags;
+-  int ret;
+-
+-  if (fb == NULL || timeout_ms == 0)
+-    {
+-      return -EINVAL;
+-    }
+ 
+-  nxsem_reset(&priv->fb_done, 0);
+   flags = spin_lock_irqsave(&priv->dmalock);
+-  if (!priv->fb_bound || !priv->dma_enabled)
++  if (!priv->fb_bound)
+     {
+       spin_unlock_irqrestore(&priv->dmalock, flags);
+       return -EAGAIN;
+     }
+ 
+-  priv->pending_fb = fb;
++  priv->fb_callback = callback;
++  priv->fb_callback_arg = arg;
+   spin_unlock_irqrestore(&priv->dmalock, flags);
+-
+-  ret = nxsem_tickwait_uninterruptible(&priv->fb_done,
+-                                       MSEC2TICK(timeout_ms));
+-  if (ret < 0)
+-    {
+-      flags = spin_lock_irqsave(&priv->dmalock);
+-      if (priv->pending_fb == fb)
+-        {
+-          priv->pending_fb = NULL;
+-        }
+-
+-      spin_unlock_irqrestore(&priv->dmalock, flags);
+-    }
+-
+-  return ret;
++  return OK;
+ }
+ 
+ /****************************************************************************
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+index 34c3330..2005f4a 100644
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+@@ -101,3 +101,5 @@ CONFIG_UART0_SERIAL_CONSOLE=y
+ CONFIG_INPUT_GT9XX_POLL_INTERVAL=50
+ 
+ CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS=500
++
++CONFIG_ESPRESSIF_MIPI_DSI_DIAG=y
+diff --git a/new/include/nuttx/video/esp_mipi_dsi.h b/new/include/nuttx/video/esp_mipi_dsi.h
+new file mode 100644
+index 0000000..8cc984f
+--- /dev/null
++++ b/new/include/nuttx/video/esp_mipi_dsi.h
+@@ -0,0 +1,55 @@
++/****************************************************************************
++ * include/nuttx/video/esp_mipi_dsi.h
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ *
++ * Licensed to the Apache Software Foundation (ASF) under one or more
++ * contributor license agreements.  See the NOTICE file distributed with
++ * this work for additional information regarding copyright ownership.  The
++ * ASF licenses this file to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance with the
++ * License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ ****************************************************************************/
++
++#ifndef __INCLUDE_NUTTX_VIDEO_ESP_MIPI_DSI_H
++#define __INCLUDE_NUTTX_VIDEO_ESP_MIPI_DSI_H
++
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
++#include <nuttx/config.h>
++#include <nuttx/fs/ioctl.h>
++
++#include <stdint.h>
++
++/****************************************************************************
++ * Pre-processor Definitions
++ ****************************************************************************/
++
++#define ESP_MIPI_DSI_DIAG_PATH          "/dev/dsi-diag0"
++#define ESP_MIPI_DSIIOC_GET_STATS       _MIPIDSIIOC(0x80)
++#define ESP_MIPI_DSIIOC_RESET_STATS     _MIPIDSIIOC(0x81)
++
++/****************************************************************************
++ * Public Types
++ ****************************************************************************/
++
++struct esp_mipi_dsi_stats_s
++{
++  uint64_t sampled_at_ticks;
++  uint64_t frames;
++  uint64_t underruns;
++  uint64_t worker_queue_errors;
++};
++
++#endif /* __INCLUDE_NUTTX_VIDEO_ESP_MIPI_DSI_H */
