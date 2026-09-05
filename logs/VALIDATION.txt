@@ -1,0 +1,6 @@
+=== contest-log-upload validation ===
+Logs dir:       C:\Users\flash\Desktop\新建文件夹 (2)\vlae\.codex-work\contest-push\logs
+Files checked:  10
+Events checked: 3532
+
+✅ ALL OK
