@@ -32,7 +32,7 @@ CSI: HAL ready, 1024x600 RAW8 to RGB565, direct USERPTR capture
 
 ## MIPI-DSI FIFO underrun（蓝屏闪烁的客观指标）
 
-DSI 驱动的 DMA 中断中读取 bridge 中断状态，统计到 `g_esp_mipi_dsi_frames`（地址 `0x4ff0884c`）和 `g_esp_mipi_dsi_underruns`（地址 `0x4ff08850`），用 NSH `xd 0x4ff0884c 8` 采样，前 4 字节为显示帧数、后 4 字节为 underrun 计数：
+下表是归档固件当时的原始验收结果：该二进制通过固定符号地址采样 32 位帧数和 underrun。固定地址仅用于解释历史证据，不再作为新构建的验收接口。0008/0009 之后的源码使用 `/dev/dsi-diag0` 和 `dsi_diag --reset` / `dsi_diag --json` 提供 64 位原子快照、复位及 worker 排队错误计数；新接口仍需在重建固件后补做实板回归。
 
 | 时刻 | 显示帧数 | underrun |
 |---|---|---|
@@ -60,8 +60,8 @@ DSI 驱动的 DMA 中断中读取 bridge 中断状态，统计到 `g_esp_mipi_ds
 
 - `make -j8 CROSSDEV=riscv32-esp-elf-` 完整构建通过，无编译警告涉及本次改动文件；
 - `boards/.../desktop-v1/defconfig` 由 `make savedefconfig` 重新生成，用 `make olddefconfig` 回放后与构建所用 `.config` 除 `CONFIG_BASE_DEFCONFIG` 外逐行一致；
-- 在干净基线（nuttx `2f1387d5` + 0001 + 0003，apps `93fb5ac` + 0002）上依次应用 0004、0005 后，其分别修改的 11 个 NuttX 文件和 37 个 apps 文件与构建工作树逐字节一致；
-- 0005 同样能在 README 声明的 apps 基线 `88827af` + 0002 上通过 `git apply --check`。
+- 2026-09-04 的 P1 修复链固定为 nuttx `2f1387d5`、apps `88827afd` 和 HAL `78c09290`；补丁文件由 `SHA256SUMS` 校验，应用脚本拒绝错误基线和脏工作树，并以应用后文件摘要验证安全的二次执行；
+- `desktop-v1-test` 静态构建已链接 SC2336、DSI 换页、ostest、SMP 和 timerjitter，产物 hash 及环境见 `P1_BUILD_VALIDATION.txt`。该结果来自 WSL2，不替代官方原生 Ubuntu 22.04 或实板验收。
 
 ## 已知限制
 
@@ -69,4 +69,4 @@ DSI 驱动的 DMA 中断中读取 bridge 中断状态，统计到 `g_esp_mipi_ds
 - ROM 对 simple-boot RAM-only header 打印 `SHA-256 comparison failed` 后继续启动，属已知现象，镜像本身已通过 esptool Hash 校验。
 - revision v1.0 会打印 NuttX 非量产警告。
 - 上一版曾在 1-2 分钟后出现 `rst:0x1 (POWERON)` 复位且无软件错误，判断为供电压降；本版 2 分钟连续测试和 10 次开关中未再出现，但未做长时间复测，建议使用独立 5 V 供电。
-- 开机时偶见未经操作的应用自动启动（`2048`、相机），疑为触摸面板上电抖动，未在本次范围内处理。
+- 历史固件开机时偶见未经操作的应用自动启动（`2048`、相机）。P1 修复已加入 GT911 RESET/INT 生命周期、可取消轮询和启动触摸丢弃窗口，但新代码尚未完成 100 次冷启动实板回归，不能将历史问题标记为已关闭。

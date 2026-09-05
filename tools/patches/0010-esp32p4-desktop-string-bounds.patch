@@ -1,0 +1,13 @@
+diff --git a/old/system/desktop/desktop_main.c b/new/system/desktop/desktop_main.c
+index fe5b404..3640d6a 100644
+--- a/old/system/desktop/desktop_main.c
++++ b/new/system/desktop/desktop_main.c
+@@ -1194,7 +1194,7 @@ static void qpk_clicked(lv_event_t *e)
+     {
+       char subtitle[96];
+ 
+-      snprintf(subtitle, sizeof(subtitle), "%s · %s",
++      snprintf(subtitle, sizeof(subtitle), "%.40s · %.40s",
+                g_desktop.qpk[i].package[0] ? g_desktop.qpk[i].package :
+                g_desktop.qpk[i].dir,
+                g_desktop.qpk[i].version[0] ? g_desktop.qpk[i].version :

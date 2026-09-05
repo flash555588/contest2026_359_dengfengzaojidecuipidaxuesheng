@@ -41,11 +41,6 @@ endif
 
 ifeq ($(CONFIG_ESPRESSIF_MIPI_DSI),y)
   CSRCS += esp32p4_display.c
-  ifneq ($(CONFIG_GRAPHICS_LVGL),)
-    CSRCS += esp32p4_desktop.c
-    CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)..$(DELIM)apps$(DELIM)graphics$(DELIM)lvgl
-    CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)..$(DELIM)apps$(DELIM)graphics$(DELIM)lvgl$(DELIM)lvgl$(DELIM)src
-  endif
 endif
 
 ifeq ($(CONFIG_ESPRESSIF_EMAC),y)
@@ -56,6 +51,3 @@ DEPPATH += --dep-path board
 VPATH += :board
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)board
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)common$(DELIM)espressif
-CFLAGS += -Wno-error=incompatible-pointer-types
-CFLAGS += -DCONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE=1
-CFLAGS += -DCONFIG_ESPRESSIF_I2C0_MASTER_MODE=1

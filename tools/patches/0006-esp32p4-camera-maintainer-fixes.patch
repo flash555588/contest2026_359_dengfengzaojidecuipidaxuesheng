@@ -1,0 +1,2193 @@
+diff --git a/old/arch/risc-v/src/common/espressif/CMakeLists.txt b/new/arch/risc-v/src/common/espressif/CMakeLists.txt
+index 350a7be..9894b01 100644
+--- a/old/arch/risc-v/src/common/espressif/CMakeLists.txt
++++ b/new/arch/risc-v/src/common/espressif/CMakeLists.txt
+@@ -112,6 +112,10 @@ if(CONFIG_ESPRESSIF_MIPI_DSI)
+   list(APPEND SRCS esp_mipi_dsi.c)
+ endif()
+ 
++if(CONFIG_ESPRESSIF_MIPI_CSI)
++  list(APPEND SRCS esp_mipi_csi.c)
++endif()
++
+ if(CONFIG_ESP_SDM)
+   list(APPEND SRCS esp_sdm.c)
+ endif()
+diff --git a/old/arch/risc-v/src/common/espressif/esp_mipi_csi.c b/new/arch/risc-v/src/common/espressif/esp_mipi_csi.c
+index bb51b39..c599bae 100644
+--- a/old/arch/risc-v/src/common/espressif/esp_mipi_csi.c
++++ b/new/arch/risc-v/src/common/espressif/esp_mipi_csi.c
+@@ -11,117 +11,117 @@
+ #include <nuttx/config.h>
+ 
+ #include <errno.h>
+-#include <stdbool.h>
+ #include <stdint.h>
+ #include <string.h>
++#include <sys/param.h>
+ #include <syslog.h>
+ #include <sys/time.h>
+ 
+ #include <nuttx/arch.h>
++#include <nuttx/cache.h>
++#include <nuttx/debug.h>
+ #include <nuttx/irq.h>
++#include <nuttx/kmalloc.h>
+ #include <nuttx/spinlock.h>
+ #include <nuttx/video/imgdata.h>
+ #include <nuttx/wqueue.h>
+ 
+-#include "driver/isp_ccm.h"
+-#include "driver/isp_color.h"
+-#include "driver/isp_core.h"
+-#include "driver/isp_demosaic.h"
+-#include "esp_attr.h"
+-#include "esp_cam_ctlr.h"
+-#include "esp_cam_ctlr_csi.h"
+-#include "esp_heap_caps.h"
+ #include "esp_mipi_csi.h"
++#include "esp_attr.h"
++#include "esp_memory_utils.h"
++#include "esp_private/esp_clk_tree_common.h"
++#include "esp_irq.h"
++#include "esp_private/periph_ctrl.h"
++#include "hal/dw_gdma_hal.h"
++#include "hal/dw_gdma_ll.h"
++#include "hal/hal_utils.h"
++#include "hal/isp_ll.h"
++#include "hal/isp_types.h"
++#include "hal/mipi_csi_hal.h"
++#include "hal/mipi_csi_ll.h"
++#include "soc/clk_tree_defs.h"
++#include "soc/mipi_csi_bridge_reg.h"
+ 
+ /****************************************************************************
+  * Pre-processor Definitions
+  ****************************************************************************/
+ 
+-#define CSI_WIDTH              1024
+-#define CSI_HEIGHT             600
+-#define CSI_FRAME_RATE         30
+-#define CSI_DATA_LANES         2
+-#define CSI_LANE_RATE_MBPS     288
+-#define CSI_ISP_CLOCK_HZ       80000000
+-#define CSI_DMA_ALIGNMENT      64
+-#define CSI_FRAME_SIZE         (CSI_WIDTH * CSI_HEIGHT * sizeof(uint16_t))
++#define ESP_MIPI_CSI_DMA_CHAN    1
++#define ESP_MIPI_CSI_DMA_ALIGN   64
+ 
+ /****************************************************************************
+  * Private Types
+  ****************************************************************************/
+ 
+-/* Zero-copy capture: CSI DMA writes straight into the V4L2 USERPTR page.
+- * V4L2 hands the driver exactly one page at a time and supplies the next
+- * one from inside the completion callback, so the callback is invoked
+- * synchronously from the CSI "need new buffer" ISR.  When no page is
+- * pending the HAL falls back to its own backup buffer (frame dropped).
+- */
+-
+ struct esp_mipi_csi_s
+ {
+   struct imgdata_s data;
+-  esp_cam_ctlr_handle_t controller;
+-  isp_proc_handle_t isp;
+-  FAR uint8_t *pending_buffer;     /* Page from set_buf, not yet in DMA */
+-  FAR uint8_t *active_buffer;      /* Page currently written by CSI DMA */
++  mipi_csi_hal_context_t hal;
++  FAR dw_gdma_dev_t *dma;
++  FAR isp_dev_t *isp;
++  spinlock_t lock;
++  struct esp_mipi_csi_config_s config;
++  FAR uint8_t *fb;
++  uint32_t fb_size;
++  uint32_t frame_size;
++  uint32_t raw_frame_size;
++  uint32_t rgb565_frame_size;
++  uint32_t pixelformat;
++  uint32_t worker_queue_errors;
+   imgdata_capture_t callback;
+   FAR void *callback_arg;
+-  struct work_s stop_work;
+-  spinlock_t lock;
+-  uint32_t frames_completed;
+-  uint32_t frames_delivered;
+-  uint32_t frames_dropped;
+-  uint32_t stop_deferred;
++  struct work_s capture_work;
+   bool initialized;
+-  bool controller_enabled;
+-  bool isp_enabled;
+   bool capturing;
+-  bool stop_pending;
++  bool isp_enabled;
+ };
+ 
+ /****************************************************************************
+  * Private Function Prototypes
+  ****************************************************************************/
+ 
+-static int csi_init(FAR struct imgdata_s *data);
+-static int csi_uninit(FAR struct imgdata_s *data);
+-static int csi_set_buf(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+-                       FAR imgdata_format_t *datafmts, FAR uint8_t *addr,
+-                       uint32_t size);
+-static int csi_validate(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+-                        FAR imgdata_format_t *datafmts,
+-                        FAR imgdata_interval_t *interval);
+-static int csi_start(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+-                     FAR imgdata_format_t *datafmts,
+-                     FAR imgdata_interval_t *interval,
+-                     imgdata_capture_t callback, FAR void *arg);
+-static int csi_stop(FAR struct imgdata_s *data);
+-static FAR void *csi_alloc(FAR struct imgdata_s *data, uint32_t align_size,
+-                           uint32_t size);
+-static void csi_free(FAR struct imgdata_s *data, FAR void *addr);
+-static void csi_stop_worker(FAR void *arg);
++static int esp_mipi_csi_init(FAR struct imgdata_s *data);
++static int esp_mipi_csi_uninit(FAR struct imgdata_s *data);
++static int esp_mipi_csi_set_buf(FAR struct imgdata_s *data,
++                                uint8_t nr_datafmts,
++                                FAR imgdata_format_t *datafmts,
++                                FAR uint8_t *addr, uint32_t size);
++static int esp_mipi_csi_validate(FAR struct imgdata_s *data,
++                                 uint8_t nr_datafmts,
++                                 FAR imgdata_format_t *datafmts,
++                                 FAR imgdata_interval_t *interval);
++static int esp_mipi_csi_start(FAR struct imgdata_s *data,
++                              uint8_t nr_datafmts,
++                              FAR imgdata_format_t *datafmts,
++                              FAR imgdata_interval_t *interval,
++                              imgdata_capture_t callback, FAR void *arg);
++static int esp_mipi_csi_stop(FAR struct imgdata_s *data);
++static FAR void *esp_mipi_csi_alloc(FAR struct imgdata_s *data,
++                                    uint32_t align_size, uint32_t size);
++static void esp_mipi_csi_free(FAR struct imgdata_s *data, FAR void *addr);
++static void esp_mipi_csi_capture_worker(FAR void *arg);
+ 
+ /****************************************************************************
+  * Private Data
+  ****************************************************************************/
+ 
+-static const struct imgdata_ops_s g_csi_ops =
++static const struct imgdata_ops_s g_esp_mipi_csi_ops =
+ {
+-  .init = csi_init,
+-  .uninit = csi_uninit,
+-  .set_buf = csi_set_buf,
+-  .validate_frame_setting = csi_validate,
+-  .start_capture = csi_start,
+-  .stop_capture = csi_stop,
+-  .alloc = csi_alloc,
+-  .free = csi_free,
++  .init = esp_mipi_csi_init,
++  .uninit = esp_mipi_csi_uninit,
++  .set_buf = esp_mipi_csi_set_buf,
++  .validate_frame_setting = esp_mipi_csi_validate,
++  .start_capture = esp_mipi_csi_start,
++  .stop_capture = esp_mipi_csi_stop,
++  .alloc = esp_mipi_csi_alloc,
++  .free = esp_mipi_csi_free,
+ };
+ 
+-static struct esp_mipi_csi_s g_csi =
++static struct esp_mipi_csi_s g_esp_mipi_csi =
+ {
+   .data =
+   {
+-    .ops = &g_csi_ops,
++    .ops = &g_esp_mipi_csi_ops
+   },
+   .lock = SP_UNLOCKED,
+ };
+@@ -130,205 +130,285 @@ static struct esp_mipi_csi_s g_csi =
+  * Private Functions
+  ****************************************************************************/
+ 
+-static int csi_error(esp_err_t err)
++#ifndef CONFIG_ESPRESSIF_MIPI_DSI
++static int IRAM_ATTR esp_mipi_csi_dma_irq(int irq, FAR void *context,
++                                          FAR void *arg)
+ {
+-  if (err == ESP_ERR_NO_MEM)
+-    {
+-      return -ENOMEM;
+-    }
+-
+-  if (err == ESP_ERR_INVALID_ARG)
+-    {
+-      return -EINVAL;
+-    }
++  UNUSED(irq);
++  UNUSED(context);
++  UNUSED(arg);
++  return esp_mipi_csi_dma_isr();
++}
++#endif
+ 
+-  if (err == ESP_ERR_INVALID_STATE)
+-    {
+-      return -EBUSY;
+-    }
++static bool
++esp_mipi_csi_config_valid(FAR const struct esp_mipi_csi_config_s *config)
++{
++  uint64_t pixels;
+ 
+-  if (err == ESP_ERR_TIMEOUT)
++  if (config == NULL || config->width == 0 || config->height == 0 ||
++      config->input_bpp != 8 || config->lanes == 0 || config->lanes > 2 ||
++      config->lane_bit_rate_mbps == 0 ||
++      (unsigned int)config->bayer_order > ESP_MIPI_CSI_BAYER_RGGB)
+     {
+-      return -ETIMEDOUT;
++      return false;
+     }
+ 
+-  return -EIO;
++  pixels = (uint64_t)config->width * config->height;
++  return pixels <= UINT32_MAX / sizeof(uint16_t) &&
++         (config->width & 3) == 0;
+ }
+ 
+-/* ESP32-P4 v1.0 has no ISP white-balance gain block, so red/blue gains go
+- * through the CCM diagonal instead; without them RAW output looks green.
+- */
+-
+-static esp_err_t csi_isp_pipeline_enable(FAR struct esp_mipi_csi_s *priv)
++static bool
++esp_mipi_csi_config_equal(FAR const struct esp_mipi_csi_config_s *lhs,
++                          FAR const struct esp_mipi_csi_config_s *rhs)
+ {
+-  esp_isp_demosaic_config_t demosaic;
+-  esp_isp_ccm_config_t ccm;
+-  esp_isp_color_config_t color;
+-  esp_err_t err;
++  return lhs->width == rhs->width && lhs->height == rhs->height &&
++         lhs->input_bpp == rhs->input_bpp && lhs->lanes == rhs->lanes &&
++         lhs->lane_bit_rate_mbps == rhs->lane_bit_rate_mbps &&
++         lhs->bayer_order == rhs->bayer_order;
++}
+ 
+-  memset(&demosaic, 0, sizeof(demosaic));
+-  demosaic.grad_ratio.integer = 1;
+-  err = esp_isp_demosaic_configure(priv->isp, &demosaic);
+-  if (err == ESP_OK)
++static color_raw_element_order_t
++esp_mipi_csi_bayer_order(FAR const struct esp_mipi_csi_s *priv)
++{
++  switch (priv->config.bayer_order)
+     {
+-      err = esp_isp_demosaic_enable(priv->isp);
+-    }
++      case ESP_MIPI_CSI_BAYER_GBRG:
++        return COLOR_RAW_ELEMENT_ORDER_GBRG;
+ 
+-  if (err != ESP_OK)
+-    {
+-      syslog(LOG_ERR, "CSI: ISP demosaic failed: %d\n", err);
+-      return err;
+-    }
++      case ESP_MIPI_CSI_BAYER_GRBG:
++        return COLOR_RAW_ELEMENT_ORDER_GRBG;
+ 
+-  memset(&ccm, 0, sizeof(ccm));
+-  ccm.saturation = true;
+-  ccm.matrix[0][0] = 1.70f;
+-  ccm.matrix[1][1] = 0.95f;
+-  ccm.matrix[2][2] = 1.55f;
+-  err = esp_isp_ccm_configure(priv->isp, &ccm);
+-  if (err == ESP_OK)
+-    {
+-      err = esp_isp_ccm_enable(priv->isp);
+-    }
++      case ESP_MIPI_CSI_BAYER_RGGB:
++        return COLOR_RAW_ELEMENT_ORDER_RGGB;
+ 
+-  if (err != ESP_OK)
+-    {
+-      syslog(LOG_ERR, "CSI: ISP ccm failed: %d\n", err);
+-      return err;
++      case ESP_MIPI_CSI_BAYER_BGGR:
++      default:
++        return COLOR_RAW_ELEMENT_ORDER_BGGR;
+     }
+-
+-  memset(&color, 0, sizeof(color));
+-  color.color_contrast.val = 128;
+-  color.color_saturation.val = 128;
+-  color.color_hue = 0;
+-  color.color_brightness = 0;
+-  err = esp_isp_color_configure(priv->isp, &color);
+-  if (err == ESP_OK)
+-    {
+-      err = esp_isp_color_enable(priv->isp);
+-    }
+-
+-  if (err != ESP_OK)
+-    {
+-      syslog(LOG_ERR, "CSI: ISP color failed: %d\n", err);
+-    }
+-
+-  return err;
+ }
+ 
+-static void csi_isp_pipeline_disable(FAR struct esp_mipi_csi_s *priv)
++static bool esp_mipi_csi_dma_buffer_capable(FAR const void *addr,
++                                             uint32_t size)
+ {
+-  if (priv->isp == NULL)
++  uintptr_t start = (uintptr_t)addr;
++  uintptr_t last;
++
++  if (addr == NULL || size == 0 ||
++      (start & (ESP_MIPI_CSI_DMA_ALIGN - 1)) != 0 ||
++      start > UINTPTR_MAX - (size - 1))
+     {
+-      return;
++      return false;
+     }
+ 
+-  esp_isp_color_disable(priv->isp);
+-  esp_isp_ccm_disable(priv->isp);
+-  esp_isp_demosaic_disable(priv->isp);
++  last = start + size - 1;
++  return (esp_ptr_dma_capable((FAR const void *)start) &&
++          esp_ptr_dma_capable((FAR const void *)last)) ||
++         (esp_ptr_dma_ext_capable((FAR const void *)start) &&
++          esp_ptr_dma_ext_capable((FAR const void *)last));
+ }
+ 
+-static void csi_hw_stop(FAR struct esp_mipi_csi_s *priv)
++static int esp_mipi_csi_isp_init(FAR struct esp_mipi_csi_s *priv)
+ {
+-  irqstate_t flags;
+-  bool do_stop;
++  hal_utils_clk_div_t clk_div;
++  esp_err_t err;
+ 
+-  flags = spin_lock_irqsave(&priv->lock);
+-  do_stop = priv->stop_pending;
+-  priv->stop_pending = false;
+-  spin_unlock_irqrestore(&priv->lock, flags);
++  priv->isp = ISP_LL_GET_HW(0);
++  memset(&clk_div, 0, sizeof(clk_div));
++  clk_div.integer = 2;
+ 
+-  if (do_stop)
++  err = esp_clk_tree_enable_src((soc_module_clk_t)ISP_CLK_SRC_DEFAULT,
++                                true);
++  if (err != ESP_OK)
+     {
+-      esp_cam_ctlr_stop(priv->controller);
++      verr("CSI: enable ISP clock source failed: %d\n", (int)err);
++      priv->isp = NULL;
++      return -EIO;
+     }
+-}
+ 
+-static void csi_stop_worker(FAR void *arg)
+-{
+-  csi_hw_stop((FAR struct esp_mipi_csi_s *)arg);
++  PERIPH_RCC_ATOMIC()
++    {
++      isp_ll_enable_module_clock(priv->isp, true);
++      isp_ll_reset_module_clock(priv->isp);
++      isp_ll_select_clk_source(priv->isp, ISP_CLK_SRC_DEFAULT);
++      isp_ll_set_clock_div(priv->isp, &clk_div);
++    }
++
++  isp_ll_init(priv->isp);
++  isp_ll_clk_enable(priv->isp, true);
++  isp_ll_set_input_data_source(priv->isp, ISP_INPUT_DATA_SOURCE_CSI);
++  isp_ll_enable_line_start_packet_exist(priv->isp, false);
++  isp_ll_enable_line_end_packet_exist(priv->isp, false);
++  isp_ll_set_bayer_mode(priv->isp, esp_mipi_csi_bayer_order(priv));
++  isp_ll_shadow_set_mode(priv->isp,
++                         ISP_SHADOW_MODE_UPDATE_ONLY_NEXT_VSYNC);
++  isp_ll_enable(priv->isp, false);
++  return OK;
+ }
+ 
+-static bool IRAM_ATTR csi_get_new_buffer(esp_cam_ctlr_handle_t handle,
+-                                         FAR esp_cam_ctlr_trans_t *trans,
+-                                         FAR void *arg)
++static int esp_mipi_csi_isp_configure(FAR struct esp_mipi_csi_s *priv,
++                                      uint32_t pixelformat)
+ {
+-  FAR struct esp_mipi_csi_s *priv = arg;
+-  FAR uint8_t *done;
+-  FAR void *callback_arg;
+-  imgdata_capture_t callback;
+-  struct timeval timestamp;
+-  irqstate_t flags;
++  bool valid;
+ 
+-  UNUSED(handle);
++  isp_ll_enable(priv->isp, false);
++  valid = isp_ll_set_input_data_color_format(priv->isp, ISP_COLOR_RAW8);
++  if (!valid)
++    {
++      return -EINVAL;
++    }
+ 
+-  /* The previous transaction's DMA has completed when the HAL asks for a
+-   * new buffer, so deliver it now.  V4L2 calls set_buf() for the next page
+-   * from inside the callback, which is what lets the next frame start
+-   * without a gap.
+-   */
++  isp_ll_set_intput_data_v_row_num(priv->isp, priv->config.height);
++  isp_ll_set_bayer_mode(priv->isp, esp_mipi_csi_bayer_order(priv));
++  isp_ll_set_byte_swap(priv->isp, false);
+ 
+-  flags = spin_lock_irqsave(&priv->lock);
+-  done = priv->active_buffer;
+-  priv->active_buffer = NULL;
+-  callback = priv->capturing ? priv->callback : NULL;
+-  callback_arg = priv->callback_arg;
+-  if (done != NULL)
++  if (pixelformat == IMGDATA_PIX_FMT_RGB565)
+     {
+-      priv->frames_completed++;
+-      if (callback == NULL)
++      valid = isp_ll_set_output_data_color_format(priv->isp,
++                                                   ISP_COLOR_RGB565);
++      if (!valid)
+         {
+-          priv->frames_dropped++;
++          return -EINVAL;
+         }
+-    }
+ 
+-  spin_unlock_irqrestore(&priv->lock, flags);
++      /* Follow Espressif's RAW8 -> RGB565 ISP pipeline.  The RGB565 output
++       * path internally traverses RGB/YUV conversion stages, so configure
++       * their standard and range even though the external format is RGB.
++       */
+ 
+-  if (done != NULL && callback != NULL)
+-    {
+-      gettimeofday(&timestamp, NULL);
+-      callback(0, CSI_FRAME_SIZE, &timestamp, callback_arg);
+-      flags = spin_lock_irqsave(&priv->lock);
+-      priv->frames_delivered++;
+-      spin_unlock_irqrestore(&priv->lock, flags);
++      isp_ll_set_intput_data_h_pixel_num(priv->isp, priv->config.width);
++      isp_ll_yuv_set_std(priv->isp, ISP_YUV_CONV_STD_BT601);
++      isp_ll_yuv_set_range(priv->isp, ISP_COLOR_RANGE_FULL);
++      priv->frame_size = priv->rgb565_frame_size;
++      priv->isp_enabled = true;
+     }
+-
+-  flags = spin_lock_irqsave(&priv->lock);
+-  if (priv->capturing && priv->pending_buffer != NULL)
++  else if (pixelformat == IMGDATA_PIX_FMT_SBGGR8)
+     {
+-      priv->active_buffer = priv->pending_buffer;
+-      priv->pending_buffer = NULL;
+-      trans->buffer = priv->active_buffer;
+-      trans->buflen = CSI_FRAME_SIZE;
++      valid = isp_ll_set_output_data_color_format(priv->isp,
++                                                   ISP_COLOR_RAW8);
++      if (!valid)
++        {
++          return -EINVAL;
++        }
++
++      /* In bypass mode H size is the number of 32-bit RAW words per line. */
++
++      isp_ll_set_intput_data_h_pixel_num(priv->isp,
++                                         priv->config.width / 4);
++      priv->frame_size = priv->raw_frame_size;
++      priv->isp_enabled = false;
+     }
+-  else if (priv->capturing)
++  else
+     {
+-      priv->frames_dropped++;
++      return -EINVAL;
+     }
+ 
+-  spin_unlock_irqrestore(&priv->lock, flags);
+-  return false;
++  priv->pixelformat = pixelformat;
++  return OK;
+ }
+ 
+-static bool IRAM_ATTR csi_buffer_finished(esp_cam_ctlr_handle_t handle,
+-                                          FAR esp_cam_ctlr_trans_t *trans,
+-                                          FAR void *arg)
++static void esp_mipi_csi_dma_config(FAR struct esp_mipi_csi_s *priv)
++{
++  FAR dw_gdma_dev_t *dma = priv->dma;
++  uint32_t block_items = priv->frame_size / 8;
++
++  dw_gdma_ll_channel_enable(dma, ESP_MIPI_CSI_DMA_CHAN, false);
++  dw_gdma_ll_channel_set_src_addr(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                  MIPI_CSI_BRG_MEM_BASE);
++  dw_gdma_ll_channel_set_dst_addr(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                  (uint32_t)(uintptr_t)priv->fb);
++  dw_gdma_ll_channel_set_trans_block_size(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                          block_items);
++  dw_gdma_ll_channel_set_src_master_port(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                         MIPI_CSI_BRG_MEM_BASE);
++  dw_gdma_ll_channel_set_dst_master_port(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                         (intptr_t)priv->fb);
++  dw_gdma_ll_channel_set_src_trans_width(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                         DW_GDMA_TRANS_WIDTH_64);
++  dw_gdma_ll_channel_set_dst_trans_width(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                         DW_GDMA_TRANS_WIDTH_64);
++  dw_gdma_ll_channel_set_src_burst_items(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                         DW_GDMA_BURST_ITEMS_512);
++  dw_gdma_ll_channel_set_dst_burst_items(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                         DW_GDMA_BURST_ITEMS_512);
++  dw_gdma_ll_channel_set_src_burst_mode(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                        DW_GDMA_BURST_MODE_FIXED);
++  dw_gdma_ll_channel_set_dst_burst_mode(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                        DW_GDMA_BURST_MODE_INCREMENT);
++  dw_gdma_ll_channel_set_src_burst_len(dma, ESP_MIPI_CSI_DMA_CHAN, 16);
++  dw_gdma_ll_channel_set_dst_burst_len(dma, ESP_MIPI_CSI_DMA_CHAN, 16);
++  dw_gdma_ll_channel_set_block_markers(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                       true, true, true);
++}
++
++static int esp_mipi_csi_dma_setup(FAR struct esp_mipi_csi_s *priv)
+ {
+-  /* Frames are delivered from csi_get_new_buffer; nothing left to do. */
++  FAR dw_gdma_dev_t *dma = DW_GDMA_LL_GET_HW(0);
++  int ret;
+ 
+-  UNUSED(handle);
+-  UNUSED(trans);
+-  UNUSED(arg);
+-  return false;
++  PERIPH_RCC_ATOMIC()
++    {
++      dw_gdma_ll_enable_bus_clock(0, true);
++#ifndef CONFIG_ESPRESSIF_MIPI_DSI
++      dw_gdma_ll_reset_register(0);
++#endif
++    }
++
++  priv->dma = dma;
++  dw_gdma_ll_channel_set_trans_flow(dma, ESP_MIPI_CSI_DMA_CHAN,
++                                    DW_GDMA_ROLE_PERIPH_CSI,
++                                    DW_GDMA_ROLE_MEM,
++                                    DW_GDMA_FLOW_CTRL_SRC);
++  dw_gdma_ll_channel_set_src_multi_block_type(
++    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_BLOCK_TRANSFER_CONTIGUOUS);
++  dw_gdma_ll_channel_set_dst_multi_block_type(
++    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_BLOCK_TRANSFER_CONTIGUOUS);
++  dw_gdma_ll_channel_set_src_handshake_interface(
++    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_HANDSHAKE_HW);
++  dw_gdma_ll_channel_set_dst_handshake_interface(
++    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_HANDSHAKE_HW);
++  dw_gdma_ll_channel_set_src_handshake_periph(
++    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_ROLE_PERIPH_CSI);
++
++  /* Yield shared bus bandwidth to the continuous DSI scanout channel. */
++
++  dw_gdma_ll_channel_set_priority(dma, ESP_MIPI_CSI_DMA_CHAN, 0);
++  dw_gdma_ll_channel_set_src_outstanding_limit(
++    dma, ESP_MIPI_CSI_DMA_CHAN, 5);
++  dw_gdma_ll_channel_set_dst_outstanding_limit(
++    dma, ESP_MIPI_CSI_DMA_CHAN, 5);
++  dw_gdma_ll_channel_set_src_periph_status_addr(
++    dma, ESP_MIPI_CSI_DMA_CHAN, MIPI_CSI_BRG_MEM_BASE);
++  dw_gdma_ll_channel_enable_intr_generation(
++    dma, ESP_MIPI_CSI_DMA_CHAN, UINT32_MAX, true);
++  dw_gdma_ll_channel_enable_intr_propagation(
++    dma, ESP_MIPI_CSI_DMA_CHAN,
++    DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE, true);
++  dw_gdma_ll_channel_clear_intr(dma, ESP_MIPI_CSI_DMA_CHAN, UINT32_MAX);
++
++#ifndef CONFIG_ESPRESSIF_MIPI_DSI
++  ret = esp_setup_irq(DW_GDMA_INTR_SOURCE,
++                      ESP_IRQ_PRIORITY_DEFAULT,
++                      ESP_IRQ_TRIGGER_LEVEL,
++                      esp_mipi_csi_dma_irq, priv);
++  if (ret < 0)
++    {
++      verr("CSI: DW-GDMA IRQ setup failed: %d\n", ret);
++      priv->dma = NULL;
++      return ret;
++    }
++
++  up_enable_irq(ESP_IRQ_DW_GDMA);
++#endif
++
++  return OK;
+ }
+ 
+-static int csi_init(FAR struct imgdata_s *data)
++static int esp_mipi_csi_init(FAR struct imgdata_s *data)
+ {
+-  FAR struct esp_mipi_csi_s *priv =
+-    (FAR struct esp_mipi_csi_s *)data;
+-  esp_cam_ctlr_csi_config_t csi_config;
+-  esp_cam_ctlr_evt_cbs_t callbacks;
+-  esp_isp_processor_cfg_t isp_config;
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
++  mipi_csi_hal_config_t config;
+   esp_err_t err;
+ 
+   if (priv->initialized)
+@@ -336,209 +416,138 @@ static int csi_init(FAR struct imgdata_s *data)
+       return OK;
+     }
+ 
+-  memset(&csi_config, 0, sizeof(csi_config));
+-  csi_config.ctlr_id = 0;
+-  csi_config.h_res = CSI_WIDTH;
+-  csi_config.v_res = CSI_HEIGHT;
+-  csi_config.lane_bit_rate_mbps = CSI_LANE_RATE_MBPS;
+-  csi_config.input_data_color_type = CAM_CTLR_COLOR_RAW8;
+-  csi_config.output_data_color_type = CAM_CTLR_COLOR_RAW8;
+-  csi_config.data_lane_num = CSI_DATA_LANES;
+-  csi_config.queue_items = 1;
+-  err = esp_cam_new_csi_ctlr(&csi_config, &priv->controller);
+-  if (err != ESP_OK)
++  if (!esp_mipi_csi_config_valid(&priv->config))
+     {
+-      syslog(LOG_ERR, "CSI: controller create failed: %d\n", err);
+-      return csi_error(err);
++      return -EINVAL;
+     }
+ 
+-  memset(&callbacks, 0, sizeof(callbacks));
+-  callbacks.on_get_new_trans = csi_get_new_buffer;
+-  callbacks.on_trans_finished = csi_buffer_finished;
+-  err = esp_cam_ctlr_register_event_callbacks(priv->controller, &callbacks,
+-                                               priv);
++  err = esp_clk_tree_enable_src(
++          (soc_module_clk_t)MIPI_CSI_PHY_CLK_SRC_DEFAULT, true);
+   if (err != ESP_OK)
+     {
+-      syslog(LOG_ERR, "CSI: callback registration failed: %d\n", err);
+-      goto fail;
++      verr("CSI: enable PHY clock source failed: %d\n", (int)err);
++      return -EIO;
+     }
+ 
+-  err = esp_cam_ctlr_enable(priv->controller);
+-  if (err != ESP_OK)
++  PERIPH_RCC_ATOMIC()
+     {
+-      syslog(LOG_ERR, "CSI: controller enable failed: %d\n", err);
+-      goto fail;
++      mipi_csi_ll_enable_host_bus_clock(0, true);
++      mipi_csi_ll_reset_host_clock(0);
++      mipi_csi_ll_enable_brg_module_clock(0, true);
++      mipi_csi_ll_reset_brg_module_clock(0);
++      mipi_csi_brg_ll_enable_clock(MIPI_CSI_BRG_LL_GET_HW(0), true);
++      mipi_csi_ll_set_phy_clock_source(0,
++                                       MIPI_CSI_PHY_CLK_SRC_DEFAULT);
++      mipi_csi_ll_enable_phy_config_clock(0, false);
++      mipi_csi_ll_enable_phy_config_clock(0, true);
+     }
+ 
+-  priv->controller_enabled = true;
+-
+-  memset(&isp_config, 0, sizeof(isp_config));
+-  isp_config.clk_hz = CSI_ISP_CLOCK_HZ;
+-  isp_config.input_data_source = ISP_INPUT_DATA_SOURCE_CSI;
+-  isp_config.input_data_color_type = ISP_COLOR_RAW8;
+-  isp_config.output_data_color_type = ISP_COLOR_RGB565;
+-  isp_config.h_res = CSI_WIDTH;
+-  isp_config.v_res = CSI_HEIGHT;
+-  isp_config.bayer_order = COLOR_RAW_ELEMENT_ORDER_BGGR;
+-  err = esp_isp_new_processor(&isp_config, &priv->isp);
+-  if (err != ESP_OK)
++  memset(&config, 0, sizeof(config));
++  config.lanes_num = priv->config.lanes;
++  config.frame_height = priv->config.width;
++  config.frame_width = priv->config.height;
++  config.in_bpp = priv->config.input_bpp;
++  config.out_bpp = priv->config.input_bpp;
++  config.lane_bit_rate_mbps = priv->config.lane_bit_rate_mbps;
++  mipi_csi_hal_init(&priv->hal, &config);
++  mipi_csi_brg_ll_set_burst_len(priv->hal.bridge_dev, 512);
++  mipi_csi_brg_ll_enable_color_conversion(priv->hal.bridge_dev, true);
++  mipi_csi_brg_ll_set_color_mode_bypass(priv->hal.bridge_dev, true);
++  if (esp_mipi_csi_isp_init(priv) < 0)
+     {
+-      syslog(LOG_ERR, "CSI: ISP create failed: %d\n", err);
+-      goto fail;
++      return -EIO;
+     }
+ 
+-  err = csi_isp_pipeline_enable(priv);
+-  if (err != ESP_OK)
++  if (esp_mipi_csi_isp_configure(priv, IMGDATA_PIX_FMT_RGB565) < 0)
+     {
+-      goto fail;
++      return -EIO;
+     }
+ 
+-  err = esp_isp_enable(priv->isp);
+-  if (err != ESP_OK)
++  if (esp_mipi_csi_dma_setup(priv) < 0)
+     {
+-      syslog(LOG_ERR, "CSI: ISP enable failed: %d\n", err);
+-      goto fail;
++      return -EIO;
+     }
+ 
+-  priv->isp_enabled = true;
+   priv->initialized = true;
+-  syslog(LOG_INFO,
+-         "CSI: HAL ready, 1024x600 RAW8 to RGB565, direct USERPTR capture\n");
+   return OK;
+-
+-fail:
+-  if (priv->isp != NULL)
+-    {
+-      if (priv->isp_enabled)
+-        {
+-          esp_isp_disable(priv->isp);
+-          priv->isp_enabled = false;
+-        }
+-
+-      csi_isp_pipeline_disable(priv);
+-      esp_isp_del_processor(priv->isp);
+-      priv->isp = NULL;
+-    }
+-
+-  if (priv->controller != NULL)
+-    {
+-      if (priv->controller_enabled)
+-        {
+-          esp_cam_ctlr_disable(priv->controller);
+-          priv->controller_enabled = false;
+-        }
+-
+-      esp_cam_ctlr_del(priv->controller);
+-      priv->controller = NULL;
+-    }
+-
+-  return csi_error(err);
+ }
+ 
+-static int csi_uninit(FAR struct imgdata_s *data)
++static int esp_mipi_csi_uninit(FAR struct imgdata_s *data)
+ {
+-  FAR struct esp_mipi_csi_s *priv =
+-    (FAR struct esp_mipi_csi_s *)data;
+-  esp_err_t err;
+-  int ret = OK;
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
+ 
+-  if (!priv->initialized)
+-    {
+-      return OK;
+-    }
++  esp_mipi_csi_stop(data);
++  priv->initialized = false;
++  return OK;
++}
+ 
+-  csi_stop(data);
+-  work_cancel_sync(LPWORK, &priv->stop_work);
+-  csi_hw_stop(priv);
++static int esp_mipi_csi_set_buf(FAR struct imgdata_s *data,
++                                uint8_t nr_datafmts,
++                                FAR imgdata_format_t *datafmts,
++                                FAR uint8_t *addr, uint32_t size)
++{
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
++  uint32_t frame_size;
++  irqstate_t flags;
+ 
+-  if (priv->isp_enabled)
++  if (nr_datafmts != 1 || datafmts == NULL ||
++      datafmts[0].width != priv->config.width ||
++      datafmts[0].height != priv->config.height ||
++      (datafmts[0].pixelformat != IMGDATA_PIX_FMT_SBGGR8 &&
++       datafmts[0].pixelformat != IMGDATA_PIX_FMT_RGB565) ||
++      addr == NULL)
+     {
+-      err = esp_isp_disable(priv->isp);
+-      if (err != ESP_OK && ret == OK)
+-        {
+-          ret = csi_error(err);
+-        }
+-
+-      priv->isp_enabled = false;
++      return -EINVAL;
+     }
+ 
+-  if (priv->isp != NULL)
++  frame_size = datafmts[0].pixelformat == IMGDATA_PIX_FMT_RGB565 ?
++               priv->rgb565_frame_size : priv->raw_frame_size;
++  if (size < frame_size ||
++      !esp_mipi_csi_dma_buffer_capable(addr, frame_size))
+     {
+-      csi_isp_pipeline_disable(priv);
+-      err = esp_isp_del_processor(priv->isp);
+-      if (err != ESP_OK && ret == OK)
+-        {
+-          ret = csi_error(err);
+-        }
+-
+-      priv->isp = NULL;
++      return -EINVAL;
+     }
+ 
+-  if (priv->controller_enabled)
+-    {
+-      err = esp_cam_ctlr_disable(priv->controller);
+-      if (err != ESP_OK && ret == OK)
+-        {
+-          ret = csi_error(err);
+-        }
+-
+-      priv->controller_enabled = false;
+-    }
++  /* V4L2 calls set_buf again while rotating capture buffers.  Reprogramming
++   * the ISP there would disable the active pipeline after every frame.
++   */
+ 
+-  if (priv->controller != NULL)
++  flags = spin_lock_irqsave(&priv->lock);
++  if (priv->capturing &&
++      priv->pixelformat != datafmts[0].pixelformat)
+     {
+-      err = esp_cam_ctlr_del(priv->controller);
+-      if (err != ESP_OK && ret == OK)
+-        {
+-          ret = csi_error(err);
+-        }
+-
+-      priv->controller = NULL;
++      spin_unlock_irqrestore(&priv->lock, flags);
++      return -EBUSY;
+     }
+ 
+-  priv->initialized = false;
+-  return ret;
+-}
+-
+-static int csi_set_buf(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+-                       FAR imgdata_format_t *datafmts, FAR uint8_t *addr,
+-                       uint32_t size)
+-{
+-  FAR struct esp_mipi_csi_s *priv =
+-    (FAR struct esp_mipi_csi_s *)data;
+-  irqstate_t flags;
+-  int ret;
+-
+-  ret = csi_validate(data, nr_datafmts, datafmts, NULL);
+-  if (ret < 0 || addr == NULL || size < CSI_FRAME_SIZE ||
+-      ((uintptr_t)addr & (CSI_DMA_ALIGNMENT - 1)) != 0)
++  if (priv->pixelformat != datafmts[0].pixelformat &&
++      esp_mipi_csi_isp_configure(priv, datafmts[0].pixelformat) < 0)
+     {
++      spin_unlock_irqrestore(&priv->lock, flags);
+       return -EINVAL;
+     }
+ 
+-  flags = spin_lock_irqsave(&priv->lock);
+-  priv->pending_buffer = addr;
++  priv->fb = addr;
++  priv->fb_size = size;
++  esp_mipi_csi_dma_config(priv);
+   spin_unlock_irqrestore(&priv->lock, flags);
+   return OK;
+ }
+ 
+-static int csi_validate(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+-                        FAR imgdata_format_t *datafmts,
+-                        FAR imgdata_interval_t *interval)
++static int esp_mipi_csi_validate(FAR struct imgdata_s *data,
++                                 uint8_t nr_datafmts,
++                                 FAR imgdata_format_t *datafmts,
++                                 FAR imgdata_interval_t *interval)
+ {
+-  UNUSED(data);
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
+ 
+   if (nr_datafmts != 1 || datafmts == NULL ||
+-      datafmts[0].width != CSI_WIDTH ||
+-      datafmts[0].height != CSI_HEIGHT ||
+-      datafmts[0].pixelformat != IMGDATA_PIX_FMT_RGB565)
+-    {
+-      return -EINVAL;
+-    }
+-
+-  if (interval != NULL &&
+-      (interval->numerator != 1 ||
+-       interval->denominator != CSI_FRAME_RATE))
++      interval == NULL ||
++      datafmts[0].width != priv->config.width ||
++      datafmts[0].height != priv->config.height ||
++      (datafmts[0].pixelformat != IMGDATA_PIX_FMT_SBGGR8 &&
++       datafmts[0].pixelformat != IMGDATA_PIX_FMT_RGB565) ||
++      interval->numerator == 0 || interval->denominator == 0)
+     {
+       return -EINVAL;
+     }
+@@ -546,145 +555,295 @@ static int csi_validate(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+   return OK;
+ }
+ 
+-static int csi_start(FAR struct imgdata_s *data, uint8_t nr_datafmts,
+-                     FAR imgdata_format_t *datafmts,
+-                     FAR imgdata_interval_t *interval,
+-                     imgdata_capture_t callback, FAR void *arg)
++static int esp_mipi_csi_start(FAR struct imgdata_s *data,
++                              uint8_t nr_datafmts,
++                              FAR imgdata_format_t *datafmts,
++                              FAR imgdata_interval_t *interval,
++                              imgdata_capture_t callback, FAR void *arg)
+ {
+-  FAR struct esp_mipi_csi_s *priv =
+-    (FAR struct esp_mipi_csi_s *)data;
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
+   irqstate_t flags;
+-  esp_err_t err;
+ 
+-  if (!priv->initialized || callback == NULL ||
+-      csi_validate(data, nr_datafmts, datafmts, interval) < 0)
++  if (!priv->initialized || priv->fb == NULL || callback == NULL ||
++      esp_mipi_csi_validate(data, nr_datafmts, datafmts, interval) < 0 ||
++      datafmts[0].pixelformat != priv->pixelformat)
+     {
+       return -EINVAL;
+     }
+ 
+-  /* A stop requested from ISR context may still be pending; finish it
+-   * here in task context before restarting the controller.
+-   */
+-
+-  csi_hw_stop(priv);
+-
+   flags = spin_lock_irqsave(&priv->lock);
+-  if (priv->capturing || priv->pending_buffer == NULL)
++  if (priv->capturing)
+     {
+       spin_unlock_irqrestore(&priv->lock, flags);
+       return -EBUSY;
+     }
+ 
+-  priv->active_buffer = NULL;
+   priv->callback = callback;
+   priv->callback_arg = arg;
+   priv->capturing = true;
++  isp_ll_enable(priv->isp, priv->isp_enabled);
++  esp_mipi_csi_dma_config(priv);
++  dw_gdma_ll_channel_clear_intr(priv->dma, ESP_MIPI_CSI_DMA_CHAN,
++                                UINT32_MAX);
++  dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, true);
++  mipi_csi_brg_ll_enable(priv->hal.bridge_dev, true);
+   spin_unlock_irqrestore(&priv->lock, flags);
++  return OK;
++}
+ 
+-  /* esp_cam_ctlr_start() pulls the first page through csi_get_new_buffer. */
++static int esp_mipi_csi_stop(FAR struct imgdata_s *data)
++{
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
++  irqstate_t flags;
+ 
+-  err = esp_cam_ctlr_start(priv->controller);
+-  if (err != ESP_OK)
++  flags = spin_lock_irqsave(&priv->lock);
++  priv->capturing = false;
++  if (priv->hal.bridge_dev != NULL)
+     {
+-      flags = spin_lock_irqsave(&priv->lock);
+-      priv->capturing = false;
+-      priv->callback = NULL;
+-      priv->callback_arg = NULL;
+-      priv->active_buffer = NULL;
+-      spin_unlock_irqrestore(&priv->lock, flags);
+-      return csi_error(err);
++      mipi_csi_brg_ll_enable(priv->hal.bridge_dev, false);
+     }
+ 
++  if (priv->isp != NULL)
++    {
++      isp_ll_enable(priv->isp, false);
++    }
++
++  if (priv->dma != NULL)
++    {
++      dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, false);
++      dw_gdma_ll_channel_clear_intr(priv->dma, ESP_MIPI_CSI_DMA_CHAN,
++                                    UINT32_MAX);
++    }
++
++  spin_unlock_irqrestore(&priv->lock, flags);
++  work_cancel_sync(LPWORK, &priv->capture_work);
++
++  flags = spin_lock_irqsave(&priv->lock);
++  priv->callback = NULL;
++  priv->callback_arg = NULL;
++  priv->fb = NULL;
++  priv->fb_size = 0;
++  spin_unlock_irqrestore(&priv->lock, flags);
+   return OK;
+ }
+ 
+-static int csi_stop(FAR struct imgdata_s *data)
++static void esp_mipi_csi_capture_worker(FAR void *arg)
+ {
+-  FAR struct esp_mipi_csi_s *priv =
+-    (FAR struct esp_mipi_csi_s *)data;
++  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)arg;
++  imgdata_capture_t callback;
++  FAR void *callback_arg;
++  FAR uint8_t *completed_fb;
++  uint32_t completed_size;
++  struct timeval ts;
+   irqstate_t flags;
+-  bool was_capturing;
++  bool active;
++  int ret = -EAGAIN;
+ 
+   flags = spin_lock_irqsave(&priv->lock);
+-  was_capturing = priv->capturing;
+-  priv->capturing = false;
+-  priv->callback = NULL;
+-  priv->callback_arg = NULL;
+-  priv->pending_buffer = NULL;
+-  priv->active_buffer = NULL;
+-  if (was_capturing)
++  callback = priv->callback;
++  callback_arg = priv->callback_arg;
++  completed_fb = priv->fb;
++  completed_size = priv->frame_size;
++  active = priv->capturing;
++  spin_unlock_irqrestore(&priv->lock, flags);
++
++  if (active && callback != NULL && completed_fb != NULL)
++    {
++      up_invalidate_dcache((uintptr_t)completed_fb,
++                           (uintptr_t)completed_fb + completed_size);
++      gettimeofday(&ts, NULL);
++      ret = callback(0, completed_size, &ts, callback_arg);
++    }
++
++  flags = spin_lock_irqsave(&priv->lock);
++  if (ret == OK && priv->capturing && priv->fb != NULL)
+     {
+-      priv->stop_pending = true;
++      esp_mipi_csi_dma_config(priv);
++      dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, true);
++      mipi_csi_brg_ll_enable(priv->hal.bridge_dev, true);
+     }
+ 
+   spin_unlock_irqrestore(&priv->lock, flags);
++}
++
++static FAR void *esp_mipi_csi_alloc(FAR struct imgdata_s *data,
++                                    uint32_t align_size, uint32_t size)
++{
++  return kumm_memalign(MAX(align_size, ESP_MIPI_CSI_DMA_ALIGN), size);
++}
++
++static void esp_mipi_csi_free(FAR struct imgdata_s *data, FAR void *addr)
++{
++  kumm_free(addr);
++}
+ 
+-  if (!was_capturing)
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++int esp_mipi_csi_dma_isr(void)
++{
++  FAR struct esp_mipi_csi_s *priv = &g_esp_mipi_csi;
++  irqstate_t flags;
++  uint32_t status;
++  int ret;
++
++  if (priv->dma == NULL)
++    {
++      return OK;
++    }
++
++  status = dw_gdma_ll_channel_get_intr_status(priv->dma,
++                                               ESP_MIPI_CSI_DMA_CHAN);
++  if (status == 0)
+     {
+       return OK;
+     }
+ 
+-  /* V4L2 calls stop_capture from the completion callback, which here runs
+-   * inside the CSI HAL ISR; the HAL re-arms DMA after our callback, so the
+-   * controller must be stopped later from task context.
++  dw_gdma_ll_channel_clear_intr(priv->dma, ESP_MIPI_CSI_DMA_CHAN, status);
++  if ((status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) == 0)
++    {
++      return OK;
++    }
++
++  flags = spin_lock_irqsave(&priv->lock);
++  if (!priv->capturing)
++    {
++      spin_unlock_irqrestore(&priv->lock, flags);
++      return OK;
++    }
++
++  dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, false);
++  mipi_csi_brg_ll_enable(priv->hal.bridge_dev, false);
++  spin_unlock_irqrestore(&priv->lock, flags);
++
++  /* The V4L2 callback may take locks, wake tasks, or stop the sensor.  Keep
++   * the shared GDMA ISR short and run that path from LPWORK instead.
+    */
+ 
+-  if (up_interrupt_context())
++  ret = work_queue(LPWORK, &priv->capture_work,
++                   esp_mipi_csi_capture_worker, priv, 0);
++  if (ret < 0)
+     {
+       flags = spin_lock_irqsave(&priv->lock);
+-      priv->stop_deferred++;
++      priv->capturing = false;
++      priv->worker_queue_errors++;
+       spin_unlock_irqrestore(&priv->lock, flags);
+-      work_queue(LPWORK, &priv->stop_work, csi_stop_worker, priv, 0);
+-      return OK;
+     }
+ 
+-  csi_hw_stop(priv);
+   return OK;
+ }
+ 
+-static FAR void *csi_alloc(FAR struct imgdata_s *data, uint32_t align_size,
+-                           uint32_t size)
++FAR struct imgdata_s *
++esp_mipi_csi_initialize(FAR const struct esp_mipi_csi_config_s *config)
+ {
+-  size_t alignment = align_size > CSI_DMA_ALIGNMENT ?
+-                     align_size : CSI_DMA_ALIGNMENT;
+-
+-  UNUSED(data);
+-  return heap_caps_aligned_calloc(alignment, 1, size,
+-                                  MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+-}
++  FAR struct esp_mipi_csi_s *priv = &g_esp_mipi_csi;
++  uint64_t pixels;
++  irqstate_t flags;
+ 
+-static void csi_free(FAR struct imgdata_s *data, FAR void *addr)
+-{
+-  UNUSED(data);
+-  heap_caps_free(addr);
+-}
++  if (!esp_mipi_csi_config_valid(config))
++    {
++      return NULL;
++    }
+ 
+-/****************************************************************************
+- * Public Functions
+- ****************************************************************************/
++  flags = spin_lock_irqsave(&priv->lock);
++  if (priv->initialized &&
++      !esp_mipi_csi_config_equal(&priv->config, config))
++    {
++      spin_unlock_irqrestore(&priv->lock, flags);
++      return NULL;
++    }
+ 
+-FAR struct imgdata_s *esp_mipi_csi_initialize(void)
+-{
+-  return &g_csi.data;
++  priv->config = *config;
++  pixels = (uint64_t)config->width * config->height;
++  priv->raw_frame_size = (uint32_t)pixels;
++  priv->rgb565_frame_size = (uint32_t)(pixels * sizeof(uint16_t));
++  spin_unlock_irqrestore(&priv->lock, flags);
++  return &priv->data;
+ }
+ 
+ void esp_mipi_csi_dump_status(void)
+ {
+-  irqstate_t flags;
+-  uint32_t completed;
+-  uint32_t delivered;
+-  uint32_t dropped;
+-  uint32_t deferred;
+-
+-  flags = spin_lock_irqsave(&g_csi.lock);
+-  completed = g_csi.frames_completed;
+-  delivered = g_csi.frames_delivered;
+-  dropped = g_csi.frames_dropped;
+-  deferred = g_csi.stop_deferred;
+-  spin_unlock_irqrestore(&g_csi.lock, flags);
++  FAR struct esp_mipi_csi_s *priv = &g_esp_mipi_csi;
++  uint32_t clock_hs_samples = 0;
++  uint32_t all_stop_samples = 0;
++  int i;
++
++  if (priv->dma == NULL)
++    {
++      syslog(LOG_INFO, "CSI: DMA is not initialized\n");
++      return;
++    }
++
++  syslog(LOG_INFO,
++         "CSI: intr=0x%08lx amount=%lu fifo=%lu src=0x%08lx "
++         "fb=%p active=%u queue_errors=%lu\n",
++         (unsigned long)dw_gdma_ll_channel_get_intr_status(
++           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
++         (unsigned long)dw_gdma_ll_channel_get_trans_amount(
++           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
++         (unsigned long)dw_gdma_ll_channel_get_fifo_remain(
++           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
++         (unsigned long)dw_gdma_ll_channel_get_src_periph_status(
++           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
++         priv->fb, priv->capturing,
++         (unsigned long)priv->worker_queue_errors);
++  syslog(LOG_INFO,
++         "CSI: host ver=0x%08lx lanes=0x%08lx reset=0x%08lx "
++         "shutdown=0x%08lx dphy_reset=0x%08lx\n",
++         (unsigned long)priv->hal.host_dev->version.val,
++         (unsigned long)priv->hal.host_dev->n_lanes.val,
++         (unsigned long)priv->hal.host_dev->csi2_resetn.val,
++         (unsigned long)priv->hal.host_dev->phy_shutdownz.val,
++         (unsigned long)priv->hal.host_dev->dphy_rstz.val);
++  syslog(LOG_INFO,
++         "CSI: phy_rx=0x%08lx stop=0x%08lx main=0x%08lx "
++         "phy_fatal=0x%08lx pkt_fatal=0x%08lx phy=0x%08lx\n",
++         (unsigned long)priv->hal.host_dev->phy_rx.val,
++         (unsigned long)priv->hal.host_dev->phy_stopstate.val,
++         (unsigned long)priv->hal.host_dev->int_st_main.val,
++         (unsigned long)priv->hal.host_dev->int_st_phy_fatal.val,
++         (unsigned long)priv->hal.host_dev->int_st_pkt_fatal.val,
++         (unsigned long)priv->hal.host_dev->int_st_phy.val);
++  syslog(LOG_INFO,
++         "CSI: bridge clk=0x%08lx en=0x%08lx frame=0x%08lx "
++         "dtype=0x%08lx int=0x%08lx\n",
++         (unsigned long)priv->hal.bridge_dev->host_ctrl.val,
++         (unsigned long)priv->hal.bridge_dev->csi_en.val,
++         (unsigned long)priv->hal.bridge_dev->frame_cfg.val,
++         (unsigned long)priv->hal.bridge_dev->data_type_cfg.val,
++         (unsigned long)priv->hal.bridge_dev->int_st.val);
++  if (priv->isp != NULL)
++    {
++      syslog(LOG_INFO,
++             "CSI: ISP cntl=0x%08lx clk=0x%08lx frame=0x%08lx "
++             "enabled=%u format=%lu bytes=%lu\n",
++             (unsigned long)priv->isp->cntl.val,
++             (unsigned long)priv->isp->clk_en.val,
++             (unsigned long)priv->isp->frame_cfg.val,
++             priv->isp_enabled,
++             (unsigned long)priv->pixelformat,
++             (unsigned long)priv->frame_size);
++    }
++
++  for (i = 0; i < 1000; i++)
++    {
++      if (priv->hal.host_dev->phy_rx.phy_rxclkactivehs != 0)
++        {
++          clock_hs_samples++;
++        }
++
++      if ((priv->hal.host_dev->phy_stopstate.val & 0x00010003) ==
++          0x00010003)
++        {
++          all_stop_samples++;
++        }
++
++      up_udelay(100);
++    }
+ 
+   syslog(LOG_INFO,
+-         "CSI: completed=%lu delivered=%lu dropped=%lu stop_deferred=%lu\n",
+-         (unsigned long)completed, (unsigned long)delivered,
+-         (unsigned long)dropped, (unsigned long)deferred);
++         "CSI: 100ms PHY samples clock_hs=%lu all_stop=%lu/1000\n",
++         (unsigned long)clock_hs_samples,
++         (unsigned long)all_stop_samples);
+ }
+diff --git a/old/arch/risc-v/src/common/espressif/esp_mipi_csi.h b/new/arch/risc-v/src/common/espressif/esp_mipi_csi.h
+index 59a13cb..aabdfa6 100644
+--- a/old/arch/risc-v/src/common/espressif/esp_mipi_csi.h
++++ b/new/arch/risc-v/src/common/espressif/esp_mipi_csi.h
+@@ -13,12 +13,32 @@
+ 
+ #include <nuttx/config.h>
+ 
++#include <stdint.h>
++
+ /****************************************************************************
+  * Public Types
+  ****************************************************************************/
+ 
+ struct imgdata_s;
+ 
++enum esp_mipi_csi_bayer_order_e
++{
++  ESP_MIPI_CSI_BAYER_BGGR = 0,
++  ESP_MIPI_CSI_BAYER_GBRG,
++  ESP_MIPI_CSI_BAYER_GRBG,
++  ESP_MIPI_CSI_BAYER_RGGB,
++};
++
++struct esp_mipi_csi_config_s
++{
++  uint16_t width;
++  uint16_t height;
++  uint8_t input_bpp;
++  uint8_t lanes;
++  uint32_t lane_bit_rate_mbps;
++  enum esp_mipi_csi_bayer_order_e bayer_order;
++};
++
+ #ifdef __cplusplus
+ extern "C"
+ {
+@@ -28,7 +48,9 @@ extern "C"
+  * Public Function Prototypes
+  ****************************************************************************/
+ 
+-FAR struct imgdata_s *esp_mipi_csi_initialize(void);
++FAR struct imgdata_s *
++esp_mipi_csi_initialize(FAR const struct esp_mipi_csi_config_s *config);
++int esp_mipi_csi_dma_isr(void);
+ void esp_mipi_csi_dump_status(void);
+ 
+ #ifdef __cplusplus
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c
+index ef3d735..787ac24 100644
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c
+@@ -15,6 +15,7 @@
+ #include <stdint.h>
+ #include <syslog.h>
+ 
++#include <nuttx/arch.h>
+ #include <nuttx/i2c/i2c_master.h>
+ #include <nuttx/kmalloc.h>
+ #include <nuttx/video/imgdata.h>
+@@ -30,11 +31,17 @@
+  * Pre-processor Definitions
+  ****************************************************************************/
+ 
+-#define CAMERA_I2C_PORT       0
+-#define CAMERA_DPHY_LDO_CHAN  3
+-#define CAMERA_DPHY_LDO_MV    2500
+-#define CAMERA_WIDTH          1024
+-#define CAMERA_HEIGHT         600
++#define CAMERA_I2C_PORT      0
++#define CAMERA_DPHY_LDO_CHAN 3
++#define CAMERA_DPHY_LDO_MV   2500
++#define CAMERA_WIDTH         1024
++#define CAMERA_HEIGHT        600
++#define CAMERA_INPUT_BPP     8
++#define CAMERA_CSI_LANES     2
++#define CAMERA_LANE_MBPS     288
++#define CAMERA_RAW_FRAME_SIZE (CAMERA_WIDTH * CAMERA_HEIGHT)
++#define CAMERA_RGB565_FRAME_SIZE \
++  (CAMERA_RAW_FRAME_SIZE * sizeof(uint16_t))
+ 
+ /****************************************************************************
+  * Private Data
+@@ -46,7 +53,168 @@ static struct esp_ldo_config_t g_camera_ldo =
+   .voltage_mv = CAMERA_DPHY_LDO_MV,
+ };
+ 
+-static bool g_camera_registered;
++static const struct esp_mipi_csi_config_s g_camera_csi_config =
++{
++  .width = CAMERA_WIDTH,
++  .height = CAMERA_HEIGHT,
++  .input_bpp = CAMERA_INPUT_BPP,
++  .lanes = CAMERA_CSI_LANES,
++  .lane_bit_rate_mbps = CAMERA_LANE_MBPS,
++  .bayer_order = ESP_MIPI_CSI_BAYER_BGGR,
++};
++
++#ifdef CONFIG_ESPRESSIF_MIPI_CSI_BOOT_TEST
++static volatile uint32_t g_camera_frame_size;
++
++/****************************************************************************
++ * Private Functions
++ ****************************************************************************/
++
++static int camera_frame_callback(uint8_t result, uint32_t size,
++                                 FAR const struct timeval *ts,
++                                 FAR void *arg)
++{
++  g_camera_frame_size = result == 0 ? size : 0;
++  return OK;
++}
++
++static int camera_boot_test(FAR struct imgsensor_s *sensor,
++                            FAR struct imgdata_s *data)
++{
++  imgdata_format_t datafmt;
++  imgsensor_format_t sensorfmt;
++  imgdata_interval_t datainterval;
++  imgsensor_interval_t sensorinterval;
++  FAR uint8_t *buffer;
++  uint32_t checksum = 2166136261u;
++  uint32_t frame_size;
++  uint8_t minimum = UINT8_MAX;
++  uint8_t maximum = 0;
++  int ret;
++  int i;
++
++  datafmt.width = CAMERA_WIDTH;
++  datafmt.height = CAMERA_HEIGHT;
++  datafmt.pixelformat = IMGDATA_PIX_FMT_RGB565;
++  sensorfmt.width = CAMERA_WIDTH;
++  sensorfmt.height = CAMERA_HEIGHT;
++  sensorfmt.pixelformat = IMGSENSOR_PIX_FMT_SBGGR8;
++  datainterval.numerator = 1;
++  datainterval.denominator = 30;
++  sensorinterval.numerator = 1;
++  sensorinterval.denominator = 30;
++
++  buffer = data->ops->alloc(data, 64, CAMERA_RGB565_FRAME_SIZE);
++  if (buffer == NULL)
++    {
++      return -ENOMEM;
++    }
++
++  ret = IMGSENSOR_INIT(sensor);
++  if (ret < 0)
++    {
++      goto free_buffer;
++    }
++
++  ret = IMGDATA_INIT(data);
++  if (ret < 0)
++    {
++      goto uninit_sensor;
++    }
++
++  ret = IMGDATA_VALIDATE_FRAME_SETTING(data, 1, &datafmt,
++                                       &datainterval);
++  if (ret < 0)
++    {
++      goto uninit_data;
++    }
++
++  ret = IMGSENSOR_VALIDATE_FRAME_SETTING(
++          sensor, IMGSENSOR_STREAM_TYPE_VIDEO, 1, &sensorfmt,
++          &sensorinterval);
++  if (ret < 0)
++    {
++      goto uninit_data;
++    }
++
++  ret = IMGDATA_SET_BUF(data, 1, &datafmt, buffer,
++                        CAMERA_RGB565_FRAME_SIZE);
++  if (ret < 0)
++    {
++      goto uninit_data;
++    }
++
++  g_camera_frame_size = 0;
++  ret = IMGDATA_START_CAPTURE(data, 1, &datafmt, &datainterval,
++                              camera_frame_callback, NULL);
++  if (ret < 0)
++    {
++      goto uninit_data;
++    }
++
++  ret = IMGSENSOR_START_CAPTURE(sensor, IMGSENSOR_STREAM_TYPE_VIDEO,
++                                1, &sensorfmt, &sensorinterval);
++  if (ret < 0)
++    {
++      IMGDATA_STOP_CAPTURE(data);
++      goto uninit_data;
++    }
++
++  for (i = 0; i < 200 && g_camera_frame_size == 0; i++)
++    {
++      up_mdelay(10);
++    }
++
++  if (g_camera_frame_size == 0)
++    {
++      esp_mipi_csi_dump_status();
++    }
++
++  IMGDATA_STOP_CAPTURE(data);
++  IMGSENSOR_STOP_CAPTURE(sensor, IMGSENSOR_STREAM_TYPE_VIDEO);
++  frame_size = g_camera_frame_size;
++  if (frame_size != CAMERA_RGB565_FRAME_SIZE)
++    {
++      syslog(LOG_ERR, "Camera: first frame timeout or short frame: %lu\n",
++             (unsigned long)frame_size);
++      ret = -ETIMEDOUT;
++      goto uninit_data;
++    }
++
++  for (i = 0; i < frame_size; i++)
++    {
++      uint8_t value = buffer[i];
++
++      minimum = value < minimum ? value : minimum;
++      maximum = value > maximum ? value : maximum;
++      checksum = (checksum ^ value) * 16777619u;
++    }
++
++  if (minimum == maximum)
++    {
++      syslog(LOG_ERR, "Camera: first frame is constant (0x%02x)\n",
++             minimum);
++      ret = -EIO;
++    }
++  else
++    {
++      syslog(LOG_INFO,
++             "Camera: first RGB565 frame OK, %lu bytes, range=%u..%u, "
++             "fnv1a=0x%08lx\n",
++             (unsigned long)frame_size, minimum, maximum,
++             (unsigned long)checksum);
++      ret = OK;
++    }
++
++uninit_data:
++  IMGDATA_UNINIT(data);
++uninit_sensor:
++  IMGSENSOR_UNINIT(sensor);
++free_buffer:
++  data->ops->free(data, buffer);
++  return ret;
++}
++#endif
+ 
+ /****************************************************************************
+  * Public Functions
+@@ -58,18 +226,19 @@ int board_camera_initialize(void)
+   FAR struct imgsensor_s *sensor;
+   FAR struct imgsensor_s *sensors[1];
+   FAR struct imgdata_s *data;
++  bool release_ldo = false;
+   int ret;
+ 
+-  if (g_camera_registered)
++  if (g_camera_ldo.handler == NULL)
+     {
+-      return OK;
+-    }
++      ret = esp_ldo_channel_acquire(&g_camera_ldo);
++      if (ret < 0)
++        {
++          syslog(LOG_ERR, "Camera: MIPI D-PHY LDO failed: %d\n", ret);
++          return ret;
++        }
+ 
+-  ret = esp_ldo_channel_acquire(&g_camera_ldo);
+-  if (ret < 0)
+-    {
+-      syslog(LOG_ERR, "Camera: MIPI D-PHY LDO failed: %d\n", ret);
+-      return ret;
++      release_ldo = true;
+     }
+ 
+   i2c = esp_i2cbus_initialize(CAMERA_I2C_PORT);
+@@ -86,43 +255,58 @@ int board_camera_initialize(void)
+     {
+       syslog(LOG_ERR, "Camera: failed to allocate SC2336 driver\n");
+       ret = -ENOMEM;
+-      goto release_i2c;
++      goto uninit_i2c;
+     }
+ 
+   if (!IMGSENSOR_IS_AVAILABLE(sensor))
+     {
+       syslog(LOG_ERR, "Camera: SC2336 not detected on SCCB 0x30\n");
++      kmm_free(sensor);
+       ret = -ENODEV;
+-      goto free_sensor;
++      goto uninit_i2c;
+     }
+ 
+-  data = esp_mipi_csi_initialize();
++  data = esp_mipi_csi_initialize(&g_camera_csi_config);
+   if (data == NULL)
+     {
+       syslog(LOG_ERR, "Camera: failed to create MIPI-CSI data path\n");
++      kmm_free(sensor);
+       ret = -ENODEV;
+-      goto free_sensor;
++      goto uninit_i2c;
+     }
+ 
++#ifdef CONFIG_ESPRESSIF_MIPI_CSI_BOOT_TEST
++  ret = camera_boot_test(sensor, data);
++  if (ret < 0)
++    {
++      syslog(LOG_ERR, "Camera: boot capture test failed: %d\n", ret);
++      kmm_free(sensor);
++      goto uninit_i2c;
++    }
++#endif
++
+   sensors[0] = sensor;
+   ret = capture_register("/dev/video0", data, sensors, 1);
+   if (ret < 0)
+     {
+       syslog(LOG_ERR, "Camera: /dev/video0 registration failed: %d\n",
+              ret);
+-      goto free_sensor;
++      kmm_free(sensor);
++      goto uninit_i2c;
+     }
+ 
+-  g_camera_registered = true;
+   syslog(LOG_INFO,
+-         "Camera: SC2336 1024x600 RGB565 registered at /dev/video0\n");
++         "Camera: SC2336 1024x600 RGB565 via ISP registered at "
++         "/dev/video0\n");
+   return OK;
+ 
+-free_sensor:
+-  kmm_free(sensor);
+-release_i2c:
++uninit_i2c:
+   esp_i2cbus_uninitialize(i2c);
+ release_ldo:
+-  esp_ldo_channel_release(&g_camera_ldo);
++  if (release_ldo)
++    {
++      esp_ldo_channel_release(&g_camera_ldo);
++    }
++
+   return ret;
+ }
+diff --git a/old/drivers/video/v4l2_cap.c b/new/drivers/video/v4l2_cap.c
+index e060c09..645c874 100644
+--- a/old/drivers/video/v4l2_cap.c
++++ b/new/drivers/video/v4l2_cap.c
+@@ -110,6 +110,7 @@ struct capture_type_inf_s
+   struct v4l2_rect       clip;
+   struct v4l2_fract      frame_interval;
+   video_framebuff_t      bufinf;
++  enum v4l2_memory       memory;
+   FAR uint8_t            *bufheap;   /* for V4L2_MEMORY_MMAP buffers */
+   FAR struct pollfd      *fds;
+   uint32_t               seqnum;
+@@ -200,10 +201,11 @@ get_capture_type_inf(FAR capture_mng_t *cmng, uint8_t type);
+ static enum capture_state_e
+ estimate_next_capture_state(FAR capture_mng_t *cmng,
+                             enum capture_state_cause_e cause);
+-static void change_capture_state(FAR capture_mng_t *cmng,
+-                                 enum capture_state_e next_state);
++static int change_capture_state(FAR capture_mng_t *cmng,
++                                enum capture_state_e next_state);
+ static bool is_taking_still_picture(FAR capture_mng_t *cmng);
+-static bool is_bufsize_sufficient(FAR capture_mng_t *cmng, uint32_t bufsize);
++static bool is_bufsize_sufficient(FAR capture_type_inf_t *type_inf,
++                                  uint32_t bufsize);
+ static void cleanup_resources(FAR capture_mng_t *cmng);
+ static bool is_sem_waited(FAR sem_t *sem);
+ static int save_scene_param(FAR capture_mng_t *cmng,
+@@ -818,6 +820,7 @@ static int start_capture(FAR struct capture_mng_s *cmng,
+ 
+   imgdata_interval_t di;
+   imgsensor_interval_t si;
++  int ret;
+ 
+   ASSERT(fmt && interval && cmng->imgsensor && cmng->imgdata);
+ 
+@@ -830,15 +833,30 @@ static int start_capture(FAR struct capture_mng_s *cmng,
+   convert_to_imgsensorfmt(&fmt[CAPTURE_FMT_SUB], &sf[IMGSENSOR_FMT_SUB]);
+   convert_to_imgsensorinterval(interval, &si);
+ 
+-  IMGDATA_SET_BUF(cmng->imgdata,
+-     nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
+-  IMGDATA_START_CAPTURE(cmng->imgdata,
+-     nr_fmt, df, &di, complete_capture, cmng);
+-  IMGSENSOR_START_CAPTURE(cmng->imgsensor,
+-     type == V4L2_BUF_TYPE_VIDEO_CAPTURE ?
+-     IMGSENSOR_STREAM_TYPE_VIDEO : IMGSENSOR_STREAM_TYPE_STILL,
+-     nr_fmt, sf, &si);
+-  return OK;
++  ret = IMGDATA_SET_BUF(cmng->imgdata, nr_fmt, df,
++                        (FAR uint8_t *)bufaddr, bufsize);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  ret = IMGDATA_START_CAPTURE(cmng->imgdata, nr_fmt, df, &di,
++                              complete_capture, cmng);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  ret = IMGSENSOR_START_CAPTURE(cmng->imgsensor,
++          type == V4L2_BUF_TYPE_VIDEO_CAPTURE ?
++          IMGSENSOR_STREAM_TYPE_VIDEO : IMGSENSOR_STREAM_TYPE_STILL,
++          nr_fmt, sf, &si);
++  if (ret < 0)
++    {
++      IMGDATA_STOP_CAPTURE(cmng->imgdata);
++    }
++
++  return ret;
+ }
+ 
+ static void stop_capture(FAR struct capture_mng_s *cmng,
+@@ -852,11 +870,12 @@ static void stop_capture(FAR struct capture_mng_s *cmng,
+     IMGSENSOR_STREAM_TYPE_VIDEO : IMGSENSOR_STREAM_TYPE_STILL);
+ }
+ 
+-static void change_capture_state(FAR capture_mng_t *cmng,
+-                                 enum capture_state_e next_state)
++static int change_capture_state(FAR capture_mng_t *cmng,
++                                enum capture_state_e next_state)
+ {
+   enum capture_state_e current_state = cmng->capture_inf.state;
+   enum capture_state_e updated_next_state = next_state;
++  int ret = OK;
+ 
+   if (current_state != CAPTURE_STATE_CAPTURE &&
+       next_state    == CAPTURE_STATE_CAPTURE)
+@@ -866,14 +885,18 @@ static void change_capture_state(FAR capture_mng_t *cmng,
+       if (container != NULL)
+         {
+           cmng->capture_inf.seqnum = 0;
+-          start_capture(cmng,
+-                        V4L2_BUF_TYPE_VIDEO_CAPTURE,
+-                        cmng->capture_inf.nr_fmt,
+-                        cmng->capture_inf.fmt,
+-                        &cmng->capture_inf.clip,
+-                        &cmng->capture_inf.frame_interval,
+-                        container->buf.m.userptr,
+-                        container->buf.length);
++          ret = start_capture(cmng,
++                              V4L2_BUF_TYPE_VIDEO_CAPTURE,
++                              cmng->capture_inf.nr_fmt,
++                              cmng->capture_inf.fmt,
++                              &cmng->capture_inf.clip,
++                              &cmng->capture_inf.frame_interval,
++                              container->buf.m.userptr,
++                              container->buf.length);
++          if (ret < 0)
++            {
++              updated_next_state = current_state;
++            }
+         }
+       else
+         {
+@@ -887,6 +910,7 @@ static void change_capture_state(FAR capture_mng_t *cmng,
+     }
+ 
+   cmng->capture_inf.state = updated_next_state;
++  return ret;
+ }
+ 
+ static bool is_taking_still_picture(FAR capture_mng_t *cmng)
+@@ -895,11 +919,10 @@ static bool is_taking_still_picture(FAR capture_mng_t *cmng)
+          cmng->still_inf.state == CAPTURE_STATE_CAPTURE;
+ }
+ 
+-static bool is_bufsize_sufficient(FAR capture_mng_t *cmng, uint32_t bufsize)
++static bool is_bufsize_sufficient(FAR capture_type_inf_t *type_inf,
++                                  uint32_t bufsize)
+ {
+-  /* Depend on format, frame size, and JPEG compression quality */
+-
+-  return true;
++  return bufsize >= get_bufsize(&type_inf->fmt[CAPTURE_FMT_MAIN]);
+ }
+ 
+ static void initialize_frame_setting(FAR struct imgsensor_s *imgsensor,
+@@ -1273,14 +1296,6 @@ static void cleanup_resources(FAR capture_mng_t *cmng)
+       stop_capture(cmng, V4L2_BUF_TYPE_STILL_CAPTURE);
+     }
+ 
+-  /* A lower-half completion callback may still be running after
+-   * stop_capture() returns.  Drain both lower halves before releasing the
+-   * V4L2 buffer heap so a deferred CSI copy cannot access freed memory.
+-   */
+-
+-  IMGDATA_UNINIT(cmng->imgdata);
+-  IMGSENSOR_UNINIT(cmng->imgsensor);
+-
+   /* Clean up resource */
+ 
+   cleanup_streamresources(&cmng->capture_inf, cmng);
+@@ -2011,6 +2026,8 @@ static int complete_capture(uint8_t err_code,
+       0
+     };
+ 
++  int ret;
++
+   flags = spin_lock_irqsave_nopreempt(&cmng->lock);
+ 
+   buf_type = cmng->still_inf.state == CAPTURE_STATE_CAPTURE ?
+@@ -2093,12 +2110,23 @@ static int complete_capture(uint8_t err_code,
+           convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_SUB],
+                                 &df[IMGDATA_FMT_SUB]);
+ 
+-          IMGDATA_SET_BUF(cmng->imgdata,
+-            type_inf->nr_fmt,
+-            df,
+-            (FAR uint8_t *)container->buf.m.userptr,
+-            container->buf.length);
+-          container->buf.sequence = type_inf->seqnum++;
++          ret = IMGDATA_SET_BUF(cmng->imgdata,
++                  type_inf->nr_fmt,
++                  df,
++                  (FAR uint8_t *)container->buf.m.userptr,
++                  container->buf.length);
++          if (ret < 0)
++            {
++              container->buf.flags = V4L2_BUF_FLAG_ERROR;
++              container->buf.bytesused = 0;
++              video_framebuff_capture_done(&type_inf->bufinf);
++              stop_capture(cmng, buf_type);
++              type_inf->state = CAPTURE_STATE_STREAMON;
++            }
++          else
++            {
++              container->buf.sequence = type_inf->seqnum++;
++            }
+         }
+     }
+ 
+@@ -2207,11 +2235,6 @@ static int capture_reqbufs(FAR struct file *filep,
+       return -EINVAL;
+     }
+ 
+-  if (reqbufs->count == 0)
+-    {
+-      return 0;
+-    }
+-
+   imgdata  = cmng->imgdata;
+   type_inf = get_capture_type_inf(cmng, reqbufs->type);
+   if (type_inf == NULL)
+@@ -2219,6 +2242,14 @@ static int capture_reqbufs(FAR struct file *filep,
+       return -EINVAL;
+     }
+ 
++  if (reqbufs->count > 0 &&
++      reqbufs->memory != V4L2_MEMORY_MMAP &&
++      reqbufs->memory != V4L2_MEMORY_USERPTR)
++    {
++      return -EINVAL;
++    }
++
++  nxmutex_lock(&type_inf->lock_state);
+   nxmutex_lock(&cmng->mutex);
+ 
+   if (type_inf->state == CAPTURE_STATE_CAPTURE)
+@@ -2229,6 +2260,29 @@ static int capture_reqbufs(FAR struct file *filep,
+     }
+   else
+     {
++      type_inf->memory = 0;
++
++      if (type_inf->bufheap != NULL)
++        {
++          if (imgdata->ops->free)
++            {
++              imgdata->ops->free(imgdata, type_inf->bufheap);
++            }
++          else
++            {
++              kumm_free(type_inf->bufheap);
++            }
++
++          type_inf->bufheap = NULL;
++        }
++
++      if (reqbufs->count == 0)
++        {
++          ret = video_framebuff_realloc_container(&type_inf->bufinf, 0);
++          type_inf->memory = 0;
++          goto reqbufs_out;
++        }
++
+       if (reqbufs->count > V4L2_REQBUFS_COUNT_MAX)
+         {
+           reqbufs->count = V4L2_REQBUFS_COUNT_MAX;
+@@ -2239,18 +2293,6 @@ static int capture_reqbufs(FAR struct file *filep,
+                                               reqbufs->count);
+       if (ret == OK && reqbufs->memory == V4L2_MEMORY_MMAP)
+         {
+-          if (type_inf->bufheap != NULL)
+-            {
+-              if (imgdata->ops->free)
+-                {
+-                    imgdata->ops->free(imgdata, type_inf->bufheap);
+-                }
+-              else
+-                {
+-                  kumm_free(type_inf->bufheap);
+-                }
+-            }
+-
+           if (imgdata->ops->alloc)
+             {
+               type_inf->bufheap = imgdata->ops->alloc(imgdata, 32,
+@@ -2266,11 +2308,19 @@ static int capture_reqbufs(FAR struct file *filep,
+           if (type_inf->bufheap == NULL)
+             {
+               ret = -ENOMEM;
++              video_framebuff_realloc_container(&type_inf->bufinf, 0);
+             }
+         }
++
++      if (ret == OK)
++        {
++          type_inf->memory = reqbufs->memory;
++        }
+     }
+ 
++reqbufs_out:
+   nxmutex_unlock(&cmng->mutex);
++  nxmutex_unlock(&type_inf->lock_state);
+   return ret;
+ }
+ 
+@@ -2292,7 +2342,9 @@ static int capture_querybuf(FAR struct file *filep,
+       return -EINVAL;
+     }
+ 
+-  if (buf->index >= type_inf->bufinf.container_size)
++  if (type_inf->memory != V4L2_MEMORY_MMAP ||
++      type_inf->bufheap == NULL ||
++      buf->index >= type_inf->bufinf.container_size)
+     {
+       return -EINVAL;
+     }
+@@ -2311,6 +2363,7 @@ static int capture_qbuf(FAR struct file *filep,
+   FAR capture_type_inf_t *type_inf;
+   FAR vbuf_container_t *container;
+   enum capture_state_e next_capture_state;
++  int ret = OK;
+ 
+   if (cmng == NULL || buf == NULL)
+     {
+@@ -2323,14 +2376,23 @@ static int capture_qbuf(FAR struct file *filep,
+       return -EINVAL;
+     }
+ 
+-  if (!is_bufsize_sufficient(cmng, buf->length))
++  nxmutex_lock(&type_inf->lock_state);
++
++  if (type_inf->memory == 0 || buf->memory != type_inf->memory ||
++      buf->index >= type_inf->bufinf.container_size ||
++      (buf->memory == V4L2_MEMORY_MMAP && type_inf->bufheap == NULL) ||
++      (buf->memory == V4L2_MEMORY_USERPTR &&
++       (buf->m.userptr == 0 ||
++        !is_bufsize_sufficient(type_inf, buf->length))))
+     {
++      nxmutex_unlock(&type_inf->lock_state);
+       return -EINVAL;
+     }
+ 
+   container = video_framebuff_get_container(&type_inf->bufinf);
+   if (container == NULL)
+     {
++      nxmutex_unlock(&type_inf->lock_state);
+       return -ENOMEM;
+     }
+ 
+@@ -2346,7 +2408,6 @@ static int capture_qbuf(FAR struct file *filep,
+ 
+   video_framebuff_queue_container(&type_inf->bufinf, container);
+ 
+-  nxmutex_lock(&type_inf->lock_state);
+   if (type_inf->state == CAPTURE_STATE_STREAMON)
+     {
+       if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE)
+@@ -2354,7 +2415,7 @@ static int capture_qbuf(FAR struct file *filep,
+           nxmutex_lock(&cmng->still_inf.lock_state);
+           next_capture_state =
+             estimate_next_capture_state(cmng, CAUSE_CAPTURE_START);
+-          change_capture_state(cmng, next_capture_state);
++          ret = change_capture_state(cmng, next_capture_state);
+           nxmutex_unlock(&cmng->still_inf.lock_state);
+         }
+       else
+@@ -2364,21 +2425,24 @@ static int capture_qbuf(FAR struct file *filep,
+           if (container != NULL)
+             {
+               type_inf->seqnum = 0;
+-              start_capture(cmng,
+-                            buf->type,
+-                            type_inf->nr_fmt,
+-                            type_inf->fmt,
+-                            &type_inf->clip,
+-                            &type_inf->frame_interval,
+-                            container->buf.m.userptr,
+-                            container->buf.length);
+-              type_inf->state = CAPTURE_STATE_CAPTURE;
++              ret = start_capture(cmng,
++                                  buf->type,
++                                  type_inf->nr_fmt,
++                                  type_inf->fmt,
++                                  &type_inf->clip,
++                                  &type_inf->frame_interval,
++                                  container->buf.m.userptr,
++                                  container->buf.length);
++              if (ret == OK)
++                {
++                  type_inf->state = CAPTURE_STATE_CAPTURE;
++                }
+             }
+         }
+     }
+ 
+   nxmutex_unlock(&type_inf->lock_state);
+-  return OK;
++  return ret;
+ }
+ 
+ static int capture_dqbuf(FAR struct file *filep,
+@@ -2390,6 +2454,7 @@ static int capture_dqbuf(FAR struct file *filep,
+   FAR vbuf_container_t *container;
+   FAR sem_t *dqbuf_wait_flg;
+   enum capture_state_e next_capture_state;
++  int ret;
+ 
+   if (cmng == NULL || buf == NULL)
+     {
+@@ -2425,8 +2490,12 @@ static int capture_dqbuf(FAR struct file *filep,
+               nxmutex_lock(&cmng->mutex);
+               next_capture_state =
+                 estimate_next_capture_state(cmng, CAUSE_CAPTURE_DQBUF);
+-              change_capture_state(cmng, next_capture_state);
++              ret = change_capture_state(cmng, next_capture_state);
+               nxmutex_unlock(&cmng->mutex);
++              if (ret < 0)
++                {
++                  return ret;
++                }
+             }
+ 
+           nxsem_wait_uninterruptible(dqbuf_wait_flg);
+@@ -2775,7 +2844,7 @@ static int capture_streamon(FAR struct file *filep,
+     {
+       next_capture_state =
+         estimate_next_capture_state(cmng, CAUSE_CAPTURE_START);
+-      change_capture_state(cmng, next_capture_state);
++      ret = change_capture_state(cmng, next_capture_state);
+     }
+ 
+   nxmutex_unlock(&type_inf->lock_state);
+@@ -2809,6 +2878,7 @@ static int capture_streamoff(FAR struct file *filep,
+       return OK;
+     }
+ 
++  nxmutex_lock(&type_inf->lock_state);
+   nxmutex_lock(&cmng->mutex);
+ 
+   if (type_inf->state == CAPTURE_STATE_STREAMOFF)
+@@ -2819,10 +2889,11 @@ static int capture_streamoff(FAR struct file *filep,
+     {
+       next_capture_state =
+         estimate_next_capture_state(cmng, CAUSE_CAPTURE_STOP);
+-      change_capture_state(cmng, next_capture_state);
++      ret = change_capture_state(cmng, next_capture_state);
+     }
+ 
+   nxmutex_unlock(&cmng->mutex);
++  nxmutex_unlock(&type_inf->lock_state);
+ 
+   return ret;
+ }
+@@ -2886,26 +2957,33 @@ static int capture_takepict_start(FAR struct file *filep,
+ 
+       next_capture_state = estimate_next_capture_state(cmng,
+                                                    CAUSE_STILL_START);
+-      change_capture_state(cmng, next_capture_state);
++      ret = change_capture_state(cmng, next_capture_state);
+ 
+       nxmutex_unlock(&cmng->mutex);
+ 
++      if (ret < 0)
++        {
++          goto takepict_start_out;
++        }
++
+       container =
+         video_framebuff_get_vacant_container(&cmng->still_inf.bufinf);
+       if (container != NULL)
+         {
+           /* Start still stream capture */
+ 
+-          start_capture(cmng,
+-                        V4L2_BUF_TYPE_STILL_CAPTURE,
+-                        cmng->still_inf.nr_fmt,
+-                        cmng->still_inf.fmt,
+-                        &cmng->still_inf.clip,
+-                        &cmng->still_inf.frame_interval,
+-                        container->buf.m.userptr,
+-                        container->buf.length);
+-
+-          cmng->still_inf.state = CAPTURE_STATE_CAPTURE;
++          ret = start_capture(cmng,
++                              V4L2_BUF_TYPE_STILL_CAPTURE,
++                              cmng->still_inf.nr_fmt,
++                              cmng->still_inf.fmt,
++                              &cmng->still_inf.clip,
++                              &cmng->still_inf.frame_interval,
++                              container->buf.m.userptr,
++                              container->buf.length);
++          if (ret == OK)
++            {
++              cmng->still_inf.state = CAPTURE_STATE_CAPTURE;
++            }
+         }
+       else
+         {
+@@ -2913,6 +2991,7 @@ static int capture_takepict_start(FAR struct file *filep,
+         }
+     }
+ 
++takepict_start_out:
+   nxmutex_unlock(&cmng->still_inf.lock_state);
+   return ret;
+ }
+@@ -2955,7 +3034,7 @@ static int capture_takepict_stop(FAR struct file *filep,
+       nxmutex_lock(&cmng->capture_inf.lock_state);
+       next_capture_state = estimate_next_capture_state(cmng,
+                                                    CAUSE_STILL_STOP);
+-      change_capture_state(cmng, next_capture_state);
++      ret = change_capture_state(cmng, next_capture_state);
+       nxmutex_unlock(&cmng->capture_inf.lock_state);
+     }
+ 
+@@ -3661,6 +3740,8 @@ static int capture_close(FAR struct file *filep)
+   if (--cmng->open_num == 0)
+     {
+       cleanup_resources(cmng);
++      IMGSENSOR_UNINIT(cmng->imgsensor);
++      IMGDATA_UNINIT(cmng->imgdata);
+ #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+       if (cmng->unlinked)
+         {
+@@ -3687,16 +3768,22 @@ static int capture_mmap(FAR struct file *filep,
+   size_t heapsize;
+   int ret = -EINVAL;
+ 
+-  if (cmng == NULL)
++  if (cmng == NULL || map == NULL)
+     {
+       return -EINVAL;
+     }
+ 
+   type_inf = &cmng->capture_inf;
++  if (type_inf->memory != V4L2_MEMORY_MMAP || type_inf->bufheap == NULL)
++    {
++      return -EINVAL;
++    }
++
+   heapsize = get_heapsize(type_inf);
+ 
+-  if (map->offset >= 0 && map->offset < heapsize &&
+-      map->length && map->offset + map->length <= heapsize)
++  if (map->offset >= 0 && (size_t)map->offset < heapsize &&
++      map->length > 0 &&
++      map->length <= heapsize - (size_t)map->offset)
+     {
+       map->vaddr = type_inf->bufheap + map->offset;
+       ret = OK;

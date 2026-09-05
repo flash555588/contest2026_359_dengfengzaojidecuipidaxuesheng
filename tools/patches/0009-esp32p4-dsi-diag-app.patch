@@ -1,0 +1,227 @@
+diff --git a/new/system/dsi_diag/Kconfig b/new/system/dsi_diag/Kconfig
+new file mode 100644
+index 0000000..301ad91
+--- /dev/null
++++ b/new/system/dsi_diag/Kconfig
+@@ -0,0 +1,12 @@
++#
++# For a description of the syntax of this configuration file,
++# see the file kconfig-language.txt in the NuttX tools repository.
++#
++
++config SYSTEM_DSI_DIAG
++	tristate "MIPI-DSI runtime diagnostics"
++	default n
++	depends on ESPRESSIF_MIPI_DSI_DIAG
++	---help---
++		Build dsi_diag, which reads and resets the atomic ESP32-P4
++		MIPI-DSI runtime counters exposed through /dev/dsi-diag0.
+diff --git a/new/system/dsi_diag/Make.defs b/new/system/dsi_diag/Make.defs
+new file mode 100644
+index 0000000..d43a23b
+--- /dev/null
++++ b/new/system/dsi_diag/Make.defs
+@@ -0,0 +1,25 @@
++############################################################################
++# apps/system/dsi_diag/Make.defs
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed to the Apache Software Foundation (ASF) under one or more
++# contributor license agreements.  See the NOTICE file distributed with
++# this work for additional information regarding copyright ownership.  The
++# ASF licenses this file to you under the Apache License, Version 2.0 (the
++# "License"); you may not use this file except in compliance with the
++# License.  You may obtain a copy of the License at
++#
++#   http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++# License for the specific language governing permissions and limitations
++# under the License.
++#
++############################################################################
++
++ifneq ($(CONFIG_SYSTEM_DSI_DIAG),)
++CONFIGURED_APPS += $(APPDIR)/system/dsi_diag
++endif
+diff --git a/new/system/dsi_diag/Makefile b/new/system/dsi_diag/Makefile
+new file mode 100644
+index 0000000..6ace435
+--- /dev/null
++++ b/new/system/dsi_diag/Makefile
+@@ -0,0 +1,32 @@
++############################################################################
++# apps/system/dsi_diag/Makefile
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed to the Apache Software Foundation (ASF) under one or more
++# contributor license agreements.  See the NOTICE file distributed with
++# this work for additional information regarding copyright ownership.  The
++# ASF licenses this file to you under the Apache License, Version 2.0 (the
++# "License"); you may not use this file except in compliance with the
++# License.  You may obtain a copy of the License at
++#
++#   http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++# License for the specific language governing permissions and limitations
++# under the License.
++#
++############################################################################
++
++include $(APPDIR)/Make.defs
++
++PROGNAME  = dsi_diag
++PRIORITY  = SCHED_PRIORITY_DEFAULT
++STACKSIZE = $(CONFIG_DEFAULT_TASK_STACKSIZE)
++MODULE    = $(CONFIG_SYSTEM_DSI_DIAG)
++
++MAINSRC = dsi_diag_main.c
++
++include $(APPDIR)/Application.mk
+diff --git a/new/system/dsi_diag/dsi_diag_main.c b/new/system/dsi_diag/dsi_diag_main.c
+new file mode 100644
+index 0000000..cbde033
+--- /dev/null
++++ b/new/system/dsi_diag/dsi_diag_main.c
+@@ -0,0 +1,134 @@
++/****************************************************************************
++ * apps/system/dsi_diag/dsi_diag_main.c
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ *
++ * Licensed to the Apache Software Foundation (ASF) under one or more
++ * contributor license agreements.  See the NOTICE file distributed with
++ * this work for additional information regarding copyright ownership.  The
++ * ASF licenses this file to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance with the
++ * License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ ****************************************************************************/
++
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
++#include <nuttx/config.h>
++
++#include <errno.h>
++#include <fcntl.h>
++#include <inttypes.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/ioctl.h>
++#include <unistd.h>
++
++#include <nuttx/video/esp_mipi_dsi.h>
++
++/****************************************************************************
++ * Private Functions
++ ****************************************************************************/
++
++static void dsi_diag_usage(FAR const char *progname)
++{
++  fprintf(stderr, "Usage: %s [--reset] [--json] [--device PATH]\n",
++          progname);
++}
++
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++int main(int argc, FAR char *argv[])
++{
++  struct esp_mipi_dsi_stats_s stats;
++  FAR const char *path = ESP_MIPI_DSI_DIAG_PATH;
++  bool reset = false;
++  bool json = false;
++  int fd;
++  int i;
++
++  for (i = 1; i < argc; i++)
++    {
++      if (strcmp(argv[i], "--reset") == 0)
++        {
++          reset = true;
++        }
++      else if (strcmp(argv[i], "--json") == 0)
++        {
++          json = true;
++        }
++      else if (strcmp(argv[i], "--device") == 0 && i + 1 < argc)
++        {
++          path = argv[++i];
++        }
++      else if (strcmp(argv[i], "--help") == 0)
++        {
++          dsi_diag_usage(argv[0]);
++          return EXIT_SUCCESS;
++        }
++      else
++        {
++          dsi_diag_usage(argv[0]);
++          return EXIT_FAILURE;
++        }
++    }
++
++  fd = open(path, O_RDONLY);
++  if (fd < 0)
++    {
++      fprintf(stderr, "dsi_diag: open %s failed: %s\n",
++              path, strerror(errno));
++      return EXIT_FAILURE;
++    }
++
++  if (reset && ioctl(fd, ESP_MIPI_DSIIOC_RESET_STATS, 0) < 0)
++    {
++      fprintf(stderr, "dsi_diag: reset failed: %s\n", strerror(errno));
++      close(fd);
++      return EXIT_FAILURE;
++    }
++
++  if (ioctl(fd, ESP_MIPI_DSIIOC_GET_STATS,
++            (unsigned long)(uintptr_t)&stats) < 0)
++    {
++      fprintf(stderr, "dsi_diag: get stats failed: %s\n", strerror(errno));
++      close(fd);
++      return EXIT_FAILURE;
++    }
++
++  close(fd);
++
++  if (json)
++    {
++      printf("{\"device\":\"%s\",\"sampled_at_ticks\":%" PRIu64
++             ",\"frames\":%" PRIu64 ",\"underruns\":%" PRIu64
++             ",\"worker_queue_errors\":%" PRIu64 "}\n",
++             path, stats.sampled_at_ticks, stats.frames, stats.underruns,
++             stats.worker_queue_errors);
++    }
++  else
++    {
++      printf("device=%s sampled_at_ticks=%" PRIu64 " frames=%" PRIu64
++             " underruns=%" PRIu64 " worker_queue_errors=%" PRIu64
++             "\n",
++             path, stats.sampled_at_ticks, stats.frames, stats.underruns,
++             stats.worker_queue_errors);
++    }
++
++  return EXIT_SUCCESS;
++}

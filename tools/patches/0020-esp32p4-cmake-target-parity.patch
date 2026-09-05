@@ -1,0 +1,54 @@
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/CMakeLists.txt b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/CMakeLists.txt
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/CMakeLists.txt
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/CMakeLists.txt
+@@ -41,6 +41,10 @@ if(CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN)
+   list(APPEND SRCS esp32p4_touch.c)
+ endif()
+ 
++if(CONFIG_ESPRESSIF_MIPI_CSI)
++  list(APPEND SRCS esp32p4_camera.c)
++endif()
++
+ target_sources(board PRIVATE ${SRCS})
+ 
+ # ##############################################################################
+diff --git a/old/arch/risc-v/src/esp32p4/hal_esp32p4.cmake b/new/arch/risc-v/src/esp32p4/hal_esp32p4.cmake
+--- a/old/arch/risc-v/src/esp32p4/hal_esp32p4.cmake
++++ b/new/arch/risc-v/src/esp32p4/hal_esp32p4.cmake
+@@ -456,6 +456,13 @@ list(
+   ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/heap_caps.c
+   ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/platform/os.c)
+ 
++if(CONFIG_SMP)
++  list(
++    APPEND
++    HAL_SRCS
++    ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/components/esp_system/esp_ipc.c)
++endif()
++
+ if(CONFIG_ESPRESSIF_WIFI OR CONFIG_ESPRESSIF_EMAC)
+   list(APPEND HAL_SRCS ${ESP_HAL_3RDPARTY_REPO}/nuttx/src/esp_event.c)
+ endif()
+@@ -541,6 +548,22 @@ if(CONFIG_ESPRESSIF_MIPI_DSI)
+     ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_dma/dw_gdma_hal.c)
+ endif()
+ 
++if(CONFIG_ESPRESSIF_MIPI_CSI)
++  list(
++    APPEND
++    HAL_SRCS
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_dma/src/dw_gdma.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/esp_cam_ctlr.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_cam/csi/src/esp_cam_ctlr_csi.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_core.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_demosaic.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_ccm.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/upper_hal_isp/src/isp_color.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hw_support/mipi_csi_share_hw_ctrl.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/hal/color_hal.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_cam/isp_hal.c)
++endif()
++
+ if(CONFIG_ESPRESSIF_IDF_ENV_FPGA)
+   list(APPEND HAL_SRCS
+        ${ESP_HAL_3RDPARTY_REPO}/components/esp_system/fpga_overrides_clk.c

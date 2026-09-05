@@ -76,7 +76,7 @@ python tools/wsl_copy_firmware.py --variant v3.2
 
 底层构建入口为 `tools/wsl_make_p4_nsh.sh`。详细的启动、镜像生成和调试说明见 `board/esp32p4-function-ev-board/README.md` 与 `DISPLAY_PLAN.md`。
 
-最终 v1.0 桌面/OuO/相机预览版本需要在 `repo sync` 后按顺序应用可复现补丁（nuttx：0001、0003、0004；apps：0002、0005）：
+最终 v1.0 桌面/OuO/相机预览版本需要在 `repo sync` 后按顺序应用可复现补丁（nuttx：0001、0003、0004、0006、0007、0008、0011、0013、0014、0015、0016、0018、0020、0022、0024、0026；apps：0002、0005、0009、0010、0012、0017、0019、0021、0023、0025、0027）：
 
 ```bash
 cd contest2026_359_dengfengzaojidecuipidaxuesheng
@@ -87,7 +87,7 @@ tools/configure.sh esp32p4-function-ev-board:desktop-v1
 make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
 ```
 
-补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `93fb5ac72249ae766cbeea9f0e3d484bdd6807f7`（`88827afd368d4bbb4802b96ed44d9582f85b2f92` 加一处 LVGL 9.2.1 版本钉死修正）。应用脚本可重复执行：已应用时会跳过，基线不匹配时会停止并报告错误。
+补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `88827afd368d4bbb4802b96ed44d9582f85b2f92`。应用脚本会校验基线、补丁 SHA256、工作树清洁性和应用后文件摘要；二次执行只在补丁集与结果都未变时安全跳过。桌面、OuO 和相机预览均由 `apps/system/desktop` 提供；board 层只负责注册 framebuffer、触摸和相机设备，不再包含或自动启动 LVGL 应用代码。0008/0009 还提供 `/dev/dsi-diag0` 与 `dsi_diag`，用原子 ioctl 快照取代依赖链接地址的 DSI 计数读取。0012 修复 QuickJS 归档文件名不一致，校验固定归档 SHA256，并使 LVGL Kconfig 版本与已固定的 v9.2.1 源码一致。0013 将 `esp-hal-3rdparty` 固定到 `78c092909fca38d1e2ccf767b5eff66bddc5c789`，并把原先的临时 Python 改写收敛为可审查、可重复应用的 HAL patch。0014 恢复 DSI 同步换页 API，并保留 LPWORK 回调模式，修正 0008 引入的头文件/实现不一致。0015 在生成的 sensor/panel 源码中记录固定的 Espressif 来源 commit；0016/0017 收口已确认的 NuttX 和应用头文件 nxstyle 缺陷；0018 使 CMake 与 Make 使用同一 HAL revision，并在 CMake 配置阶段核对 revision、幂等应用芯片级 HAL patch；0019 对齐 QuickJS 的 Make/CMake 源文件、RISC-V 浮点环境常量、补丁和下载校验；0020/0021 补齐 CSI/HAL、board camera 与 desktop 应用的 CMake target，0022 补齐 CSI HAL 的 CMake include path。完整许可清单见 `THIRD_PARTY.md`。
 
 ## 生成镜像与烧录
 

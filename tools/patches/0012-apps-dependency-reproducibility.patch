@@ -1,0 +1,57 @@
+diff --git a/old/graphics/lvgl/Kconfig b/new/graphics/lvgl/Kconfig
+index d672ba0..27a01b4 100644
+--- a/old/graphics/lvgl/Kconfig
++++ b/new/graphics/lvgl/Kconfig
+@@ -11,7 +11,7 @@ menuconfig GRAPHICS_LVGL
+ 
+ if GRAPHICS_LVGL
+ 
+-# Kconfig file for LVGL v9.2.2
++# Kconfig file for LVGL v9.2.1
+ 
+ menu "LVGL configuration"
+ 
+@@ -1495,7 +1495,7 @@ if GRAPHICS_LVGL
+ 			default 2 # LVGL_VERSION_MINOR
+ 		config LVGL_VERSION_PATCH
+ 			int
+-			default 2 # LVGL_VERSION_PATCH
++			default 1 # LVGL_VERSION_PATCH
+ 	endmenu
+ 
+ 	menu "Devices"
+diff --git a/old/interpreters/quickjs/Makefile b/new/interpreters/quickjs/Makefile
+index 74e1632..eff6b9d 100644
+--- a/old/interpreters/quickjs/Makefile
++++ b/new/interpreters/quickjs/Makefile
+@@ -24,8 +24,9 @@ include $(APPDIR)/Make.defs
+ QUICKJS_VERSION     = 2024-02-14
+ QUICKJS_COMMIT_ID   = 6e2e68fd0896957f92eb6c242a2e048c1ef3cae0
+ QUICKJS_UNPACK      = quickjs
+-QUICKJS_ARCHIVE     = $(QUICKJS_COMMIT_ID).zip
+-QUICKJS_URL         = https://github.com/bellard/quickjs/archive/$(QUICKJS_ARCHIVE)
++QUICKJS_ARCHIVE     = quickjs-$(QUICKJS_COMMIT_ID).zip
++QUICKJS_URL         = https://github.com/bellard/quickjs/archive/$(QUICKJS_COMMIT_ID).zip
++QUICKJS_ARCHIVE_SHA256 = d4542882686eefa8c0c80493dfb30d858588c0553ffe17a058189132607ff24e
+ 
+ CSRCS = quickjs.c libregexp.c libbf.c libunicode.c cutils.c qjs_nuttx_compat.c
+ 
+@@ -74,11 +75,15 @@ endif
+ 
+ $(QUICKJS_ARCHIVE):
+ 	$(Q) echo "Downloading $(QUICKJS_ARCHIVE)"
+-	$(Q) curl -L $(QUICKJS_URL) -o quickjs-$(QUICKJS_ARCHIVE)
++	$(Q) rm -f $@.tmp
++	$(Q) curl --fail --location --retry 3 $(QUICKJS_URL) -o $@.tmp
++	$(Q) printf '%s  %s\n' $(QUICKJS_ARCHIVE_SHA256) $@.tmp | \
++		sha256sum -c -
++	$(Q) mv $@.tmp $@
+ 
+ $(QUICKJS_UNPACK): $(QUICKJS_ARCHIVE)
+-	$(Q) echo "Unpacking quickjs-$(QUICKJS_ARCHIVE) to $(QUICKJS_UNPACK)"
+-	$(Q) unzip -q -o quickjs-$(QUICKJS_ARCHIVE)
++	$(Q) echo "Unpacking $(QUICKJS_ARCHIVE) to $(QUICKJS_UNPACK)"
++	$(Q) unzip -q -o $(QUICKJS_ARCHIVE)
+ 	$(Q) mv quickjs-$(QUICKJS_COMMIT_ID) $(QUICKJS_UNPACK)
+ 	$(Q) patch -d $(QUICKJS_UNPACK) -p1 < 0001-Disabled-unsupported-feature-on-NuttX.patch
+ 	$(Q) patch -d $(QUICKJS_UNPACK) -p1 < 0003-Avoid-NuttX-list-macro-collisions.patch

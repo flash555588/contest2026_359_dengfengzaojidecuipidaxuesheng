@@ -1,0 +1,14 @@
+diff --git a/old/system/desktop/qpk_homeassistant.h b/new/system/desktop/qpk_homeassistant.h
+index 4d56e73..3725a40 100644
+--- a/old/system/desktop/qpk_homeassistant.h
++++ b/new/system/desktop/qpk_homeassistant.h
+@@ -32,7 +32,8 @@ struct qpk_ha_result_s
+ 
+ int qpk_ha_get_state(const char *base_url, const char *token,
+                      const char *entity_id);
+-int qpk_ha_get(const char *base_url, const char *token, const char *resource);
++int qpk_ha_get(const char *base_url, const char *token,
++               const char *resource);
+ int qpk_ha_call_service(const char *base_url, const char *token,
+                         const char *domain, const char *service,
+                         const char *data);

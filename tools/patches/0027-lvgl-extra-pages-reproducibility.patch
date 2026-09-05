@@ -1,0 +1,90 @@
+diff --git a/old/graphics/lvgl/0003-nuttx-fbdev-extra-pages.patch b/new/graphics/lvgl/0003-nuttx-fbdev-extra-pages.patch
+new file mode 100644
+--- /dev/null
++++ b/new/graphics/lvgl/0003-nuttx-fbdev-extra-pages.patch
+@@ -0,0 +1,14 @@
++--- a/src/drivers/nuttx/lv_nuttx_fbdev.c
+++++ b/src/drivers/nuttx/lv_nuttx_fbdev.c
++@@ -143,7 +143,10 @@
++     lv_draw_buf_init(&dsc->buf1, w, h, color_format, stride, dsc->mem, data_size);
++ 
++     /* Check buffer mode */
++-    bool double_buffer = dsc->pinfo.yres_virtual == (dsc->vinfo.yres * 2);
+++    /* The board may expose additional pages to zero-copy producers such as
+++     * a camera.  LVGL still owns only the first two drawing pages.
+++     */
+++    bool double_buffer = dsc->pinfo.yres_virtual >= (dsc->vinfo.yres * 2);
++     if(double_buffer) {
++         if((ret = fbdev_init_mem2(dsc)) < 0) {
++             goto errout;
+diff --git a/old/graphics/lvgl/apply-p4-patches.sh b/new/graphics/lvgl/apply-p4-patches.sh
+new file mode 100644
+--- /dev/null
++++ b/new/graphics/lvgl/apply-p4-patches.sh
+@@ -0,0 +1,26 @@
++#!/usr/bin/env bash
++# SPDX-License-Identifier: Apache-2.0
++set -euo pipefail
++
++patch_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++source_dir="${1:?usage: apply-p4-patches.sh <lvgl-source-dir>}"
++patch_file="$patch_dir/0003-nuttx-fbdev-extra-pages.patch"
++
++if [[ -e "$source_dir/.git" ]]; then
++  actual="$(git -C "$source_dir" rev-parse HEAD)"
++  if [[ "$actual" != 59a6b61c9580b65089010c5273f2fcdd6c4d2aae ]]; then
++    echo "Unexpected LVGL revision: $actual" >&2
++    exit 1
++  fi
++fi
++
++if patch --batch --forward --dry-run -d "$source_dir" -p1 \
++    -i "$patch_file" >/dev/null 2>&1; then
++  patch --batch --forward -d "$source_dir" -p1 -i "$patch_file"
++elif patch --batch --reverse --dry-run -d "$source_dir" -p1 \
++    -i "$patch_file" >/dev/null 2>&1; then
++  echo "LVGL extra-pages patch: already applied"
++else
++  echo "LVGL extra-pages patch does not match this source tree" >&2
++  exit 1
++fi
+diff --git a/old/graphics/lvgl/Makefile b/new/graphics/lvgl/Makefile
+--- a/old/graphics/lvgl/Makefile
++++ b/new/graphics/lvgl/Makefile
+@@ -103,6 +103,17 @@
+ context:: $(LVGL_UNPACKNAME)
+ endif
+ 
++.PHONY: p4-lvgl-patches
++ifeq ($(CONFIG_ARCH_CHIP_ESP32P4),y)
++ifeq ($(wildcard $(LVGL_UNPACKNAME)/.git),)
++p4-lvgl-patches: $(LVGL_UNPACKNAME)
++endif
++p4-lvgl-patches:
++	$(Q) bash $(CURDIR)/apply-p4-patches.sh $(CURDIR)/$(LVGL_UNPACKNAME)
++
++context:: p4-lvgl-patches
++endif
++
+ include $(APPDIR)/Application.mk
+ 
+ ifeq ($(wildcard $(LVGL_UNPACKNAME)/.git),)
+diff --git a/old/graphics/lvgl/CMakeLists.txt b/new/graphics/lvgl/CMakeLists.txt
+--- a/old/graphics/lvgl/CMakeLists.txt
++++ b/new/graphics/lvgl/CMakeLists.txt
+@@ -56,6 +56,15 @@
+   # Flags and Sources
+   # ############################################################################
+ 
++  if(CONFIG_ARCH_CHIP_ESP32P4)
++    execute_process(
++      COMMAND bash "${CMAKE_CURRENT_LIST_DIR}/apply-p4-patches.sh" "${LVGL_DIR}"
++      RESULT_VARIABLE P4_LVGL_PATCH_RESULT)
++    if(NOT P4_LVGL_PATCH_RESULT EQUAL 0)
++      message(FATAL_ERROR "Cannot apply ESP32-P4 LVGL extra-pages patch")
++    endif()
++  endif()
++
+   # ############################################################################
+   # Library Configuration
+   # ############################################################################
