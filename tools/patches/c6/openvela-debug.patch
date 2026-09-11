@@ -1,0 +1,12 @@
+diff --git a/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c b/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
+--- a/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
++++ b/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
+@@ -29,7 +29,7 @@
+ #include <stdbool.h>
+ #include <string.h>
+ #include <assert.h>
+-#include <nuttx/debug.h>
++#include <debug.h>
+ #include <errno.h>
+ 
+ #include <nuttx/arch.h>

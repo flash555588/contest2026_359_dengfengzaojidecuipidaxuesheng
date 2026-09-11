@@ -1,0 +1,17 @@
+{
+  "nuttx": {
+    "repository": "https://github.com/streetartist/esp32p4_nuttx",
+    "base": "2f1387d56eb04ad2599baca58a3fa2380cdaaedb",
+    "head": "88f2644ee73207961fad3a9de14dda9c654abe13",
+    "patch": "nuttx.patch",
+    "sha256": "a3ca6952535d622562a93d9796dd93dcb5464009ba7ff4efe7ee09d2a38bdcc4",
+    "adaptation": "Make.defs hunk anchored to SMP block; preserves existing CHIP_CSRCS entries"
+  },
+  "apps": {
+    "repository": "https://github.com/streetartist/esp32p4_nuttx_apps",
+    "base": "88827afd368d4bbb4802b96ed44d9582f85b2f92",
+    "head": "23c90a2372409e04767a090c9753fe44c4b145bd",
+    "patch": "apps.patch",
+    "sha256": "f1010e5215ca281ff654256703649558fb2c12cd83db8bed1610654e34c92058"
+  }
+}
