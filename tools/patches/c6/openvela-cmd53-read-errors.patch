@@ -1,0 +1,25 @@
+diff --git a/drivers/mmcsd/sdio.c b/drivers/mmcsd/sdio.c
+--- a/drivers/mmcsd/sdio.c
++++ b/drivers/mmcsd/sdio.c
+@@ -306,7 +306,19 @@
+     {
+       wlinfo("prep read %d\n", blocklen * nblocks);
+-      SDIO_DMARECVSETUP(dev, buf, blocklen * nblocks);
+-      SDIO_SENDCMD(dev, SD_ACMD53RD, arg.value);
++      ret = SDIO_DMARECVSETUP(dev, buf, blocklen * nblocks);
++      if (ret < 0)
++        {
++          SDIO_CANCEL(dev);
++          sdio_givelock(dev);
++          return ret;
++        }
++      ret = SDIO_SENDCMD(dev, SD_ACMD53RD, arg.value);
++      if (ret < 0)
++        {
++          SDIO_CANCEL(dev);
++          sdio_givelock(dev);
++          return ret;
++        }
+ 
+       wkupevent = SDIO_EVENTWAIT(dev);
+       ret = SDIO_RECVR5(dev, SD_ACMD53RD, &data);

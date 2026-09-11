@@ -1,0 +1,11 @@
+diff --git a/system/c6probe/c6net.c b/system/c6probe/c6net.c
+--- a/system/c6probe/c6net.c
++++ b/system/c6probe/c6net.c
+@@ -17,6 +17,7 @@
+ #include <time.h>
+ #include <unistd.h>
+ 
++#include <nuttx/mutex.h>
+ #include <nuttx/net/net.h>
+ #include <nuttx/net/netdev.h>
+ #include <nuttx/net/netconfig.h>

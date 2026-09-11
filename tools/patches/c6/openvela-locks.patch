@@ -1,0 +1,11 @@
+diff --git a/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c b/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
+--- a/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
++++ b/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
+@@ -39,6 +39,7 @@
+ #include <nuttx/wqueue.h>
+ #include <nuttx/semaphore.h>
+ #include <nuttx/mmcsd.h>
++#include <nuttx/spinlock.h>
+ #if defined(CONFIG_ESP32P4_SDMMC_DMA) && defined(CONFIG_ESP32P4_SPIRAM)
+ #include <nuttx/kmalloc.h>
+ #endif

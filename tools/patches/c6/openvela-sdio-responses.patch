@@ -1,0 +1,19 @@
+diff --git a/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c b/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
+--- a/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
++++ b/arch/risc-v/src/esp32p4/esp32p4_sdmmc.c
+@@ -2170,6 +2170,7 @@
+   else if ((cmd & MMCSD_RESPONSE_MASK) != MMCSD_R1_RESPONSE &&
+            (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R1B_RESPONSE &&
++           (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R5_RESPONSE &&
+            (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R6_RESPONSE)
+     {
+       mcerr("ERROR: Wrong response CMD=%04lx\n", cmd);
+       ret = -EINVAL;
+@@ -2325,6 +2326,7 @@
+ #ifdef CONFIG_DEBUG_FEATURES
+   if ((cmd & MMCSD_RESPONSE_MASK) != MMCSD_R3_RESPONSE &&
++      (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R4_RESPONSE &&
+       (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R7_RESPONSE)
+     {
+       mcerr("ERROR: Wrong response CMD=%04lx\n", cmd);
+       ret = -EINVAL;

@@ -1,0 +1,45 @@
+diff --git a/system/c6probe/esp_hosted_rpc.c b/system/c6probe/esp_hosted_rpc.c
+--- a/system/c6probe/esp_hosted_rpc.c
++++ b/system/c6probe/esp_hosted_rpc.c
+@@ -16,6 +16,7 @@
+ #include <errno.h>
+ #include <inttypes.h>
++#include <pthread.h>
+ #include <stdio.h>
+ #include <string.h>
+ #include <syslog.h>
+ #include <unistd.h>
+@@ -277,3 +278,3 @@
+-static FAR Rpc *rpc_transact(FAR const Rpc *req, FAR const char *label)
++static FAR Rpc *rpc_transact_locked(FAR const Rpc *req, FAR const char *label)
+ {
+   FAR struct rpc_client_s *cli = &g_rpc;
+@@ -359,6 +360,28 @@
+   return cli->resp;
+ }
+ 
++/* Only the transaction caller owns this lock. RX/event callbacks must not
++ * start another synchronous RPC: they run inside the polling transaction.
++ */
++
++static pthread_mutex_t g_rpc_transaction_lock = PTHREAD_MUTEX_INITIALIZER;
++
++static FAR Rpc *rpc_transact(FAR const Rpc *req, FAR const char *label)
++{
++  FAR Rpc *response;
++  int ret;
++
++  ret = pthread_mutex_lock(&g_rpc_transaction_lock);
++  if (ret != 0)
++    {
++      return NULL;
++    }
++
++  response = rpc_transact_locked(req, label);
++  pthread_mutex_unlock(&g_rpc_transaction_lock);
++  return response;
++}
++
+ /****************************************************************************
+  * Name: esp_hosted_rpc_wifi_init
+  ****************************************************************************/
