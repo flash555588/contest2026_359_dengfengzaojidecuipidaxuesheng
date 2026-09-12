@@ -1,5 +1,106 @@
 # Optional C6 Wireless Overlay
 
+Backend integration candidate: composed output now includes desktop_backend.c/.h
+binding scan results and c6net_connect to the worker interface. The preparation
+adapter separates c6net_prepare from association; a cold scan can prepare the
+radio without explicitly issuing a connect RPC or requesting stored credentials.
+Backend mock tests and composition tests passed; the composed c6net and backend
+compiled for RISC-V. Preparation itself is not yet runtime-tested for absence of
+slave-side auto-reconnect. The Wi-Fi page still does not start or call the worker,
+and the build system does not yet compile these additional units. No active-tree
+replacement, full link, DHCP integration, radio operation or flash was performed.
+
+Desktop worker component: `c6/desktop_worker.c/.h` now implements one owned
+thread, serialized scan/connect requests, busy rejection and copied results
+without LVGL pointers. Credentials are wiped from queued and local buffers;
+results never contain passwords. Connect success means request accepted only.
+Host tests passed blocked-scan busy rejection, scan results, connection timeout,
+failed-scan result clearing and credential clearing. The worker compiled with
+the current v1 RISC-V headers; composed preparation includes both source files.
+It is not yet bound to the real C6 backend, built into the application or called
+by the Wi-Fi page. Stop waits for backend completion and must not run on the UI
+thread; bounded backend timeouts and application-owned lifecycle are required.
+No desktop radio functionality or hardware acceptance is claimed by these tests.
+
+Composed preparation: `prepare_c6_desktop.py SOURCE OUTPUT` now combines RX
+ownership, Wi-Fi event synchronization, scan results, daemon retry and link
+state adaptations. SOURCE is a mailbox-adapted system/c6probe folder; OUTPUT
+must be new and outside SOURCE. All transformations are checked before writing.
+The output includes the public link snapshot declaration and SHA-256 manifest.
+The preparation regression passed composition, hashes, rejection of existing
+output/invalid inputs and source preservation against the active v1 source.
+Generated RPC and c6net translation units compiled for RISC-V; the entire
+transport and final firmware link were not tested in this step. This output is
+still prerequisites only: desktop worker, password entry and DHCP/IP integration
+are absent. No active-tree replacement, firmware flash or radio operation occurred.
+
+Link integration candidate: `adapt_c6_link_state.py` runs after daemon-retry
+adaptation and replaces c6net's legacy link fields with the synchronized state
+component. Association callbacks publish events, ifup/ifdown update the state,
+and the daemon reconciles carrier under the netdev lock. Stale publication
+turns carrier off until the next iteration. The generated actual c6net source
+compiled for RISC-V in a temporary directory (with the existing mutex-header
+compatibility prerequisite). `test_link_integration.py` passes disconnect-during-
+publication, recovery and ifdown checks on the generated carrier function.
+This is not active-tree integration, a full netdev concurrency test or radio
+acceptance. IP state, desktop worker wiring and initialization failure cleanup
+still need completion before enabling desktop scan/connect.
+
+Link-state prerequisite: `c6/link_state.h` provides mutex-protected snapshots
+and generation-checked carrier publication. Disconnect, ifdown and stop clear
+carrier readiness; an obsolete carrier result returns EAGAIN. The state lock
+must never cover RPC or netdev calls. The owner must reconcile the actual
+netdev carrier after a stale publication; this component alone does not order
+hardware/netdev operations. `test_link_state.c` passes transition, stale-ticket,
+concurrent snapshot and generation-exhaustion tests on the host and compiles
+with the current v1 RISC-V toolchain/headers. It is not yet wired into c6net:
+the old volatile fields remain there. No IP state, desktop worker, active-tree
+integration, full firmware build or radio acceptance is claimed in this step.
+
+Initialization prerequisite: `adapt_c6_daemon_retry.py` retains registration
+ownership after task creation fails and retries only daemon startup, avoiding
+memset/re-registration of a live netdev. Connect routes through the existing
+initialization mutex. `test_daemon_retry.py` executes adapted initialization
+with task-create failure injection and passes retry/reconnect without duplicate
+registration. This is a host-only candidate, not active-tree integration or
+hardware validation. Registration failure cleanup and shared volatile link
+state remain unresolved; desktop scan/connect is still incomplete.
+
+Event prerequisite: `adapt_c6_wifi_events.py` serializes callback/argument
+registration, invocation and unregister with one mutex. Unregister waits for
+an in-flight callback; callbacks must only publish state and must not reenter
+RPC, registration or connection locks. `test_wifi_events.py` passed concurrent
+callback replacement and dispatch, including no calls after unregister.
+A temporary copy of the active mailbox-adapted RPC source accepted this adapter
+and the scan-results adapter and compiled for RISC-V. No active tree files were
+modified. c6net's volatile association/carrier/event flags still need a coherent
+state contract; desktop scan/connect, IP acquisition and hardware acceptance
+remain incomplete. These prerequisite tests do not constitute feature delivery.
+
+RX prerequisite: `adapt_c6_rx_dispatch.py` prepares a separate RX ownership
+mutex around read and dispatch, while releasing the bus before callbacks.
+Competing pollers return zero instead of waiting behind a callback. Interface
+registration shares the RX mutex, and dispatch rejects out-of-range interface
+IDs. Callbacks must not register handlers or issue synchronous RPCs.
+`test_rx_dispatch.py` compiles the actual adapted poll/register functions and
+passes deterministic two-thread contention, bus-unlocked callback, read-error,
+empty-read and disconnected cleanup checks. This is a host test, not a full
+transport or target build. The adapter has not been applied to the active tree.
+Wi-Fi event callback synchronization, connection state and desktop workers
+remain unresolved; do not enable concurrent desktop networking on this basis.
+
+Desktop prerequisite: `adapt_c6_scan_results.py` adds caller-owned scan records
+through `c6/scan_results.h`, while retaining the diagnostic printing wrapper.
+The response is bounded to ten APs and validates response payloads, record
+pointers and SSID byte lengths before returning a count. SSIDs retain an
+explicit byte length; they must not be assumed to be UTF-8 by the future UI.
+The header boundary test and the adapted actual RPC source RISC-V compilation
+passed in a temporary directory. This does not validate radio responses or
+scan concurrency. The adapter has not been applied to the active build tree.
+Desktop scan/connect remains disabled pending shared RX dispatch ownership,
+worker lifecycle and association/IP status integration. This is not a working
+desktop wireless feature and no device/network operation was performed.
+
 RPC mailbox integration: tools/adapt_c6_rpc_mailbox.py now applies a real
 mutex-protected response slot after the size and transaction-serialization
 patches. Each transaction uses a new nonzero UID; IDs are not reused after
