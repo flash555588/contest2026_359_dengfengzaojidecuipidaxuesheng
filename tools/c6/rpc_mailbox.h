@@ -54,6 +54,14 @@ static bool c6_rpc_ready(struct c6_rpc_mailbox *box)
   return ready;
 }
 
+static bool c6_rpc_waiting(struct c6_rpc_mailbox *box)
+{
+  if (pthread_mutex_lock(&box->lock) != 0) return true;
+  bool waiting = box->waiting != 0 || box->response != NULL;
+  pthread_mutex_unlock(&box->lock);
+  return waiting;
+}
+
 /* Close the response window atomically and transfer ownership to caller. */
 static void *c6_rpc_finish(struct c6_rpc_mailbox *box)
 {
