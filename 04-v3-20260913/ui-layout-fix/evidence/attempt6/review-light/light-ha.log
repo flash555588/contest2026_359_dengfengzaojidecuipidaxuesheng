@@ -1,0 +1,38 @@
+desktop ui ha
+[qpk] started Home Assistant (com.openvela.homeassistant 1.0.0) with QuickJS
+desktop: ui ha ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":0,"y":0,"w":1024,"h":600,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"button","x":13,"y":11,"w":52,"h":42,"scroll":false,"text":""},
+{"id":3,"parent":2,"type":"label","x":32,"y":19,"w":15,"h":27,"scroll":true,"text":""},
+{"id":4,"parent":1,"type":"label","x":79,"y":16,"w":204,"h":39,"scroll":true,"text":"Home Assistant"},
+{"id":5,"parent":1,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"label","x":25,"y":79,"w":20,"h":28,"scroll":true,"text":"家"},
+{"id":7,"parent":5,"type":"label","x":25,"y":109,"w":115,"h":22,"scroll":true,"text":"星期四  1  00:00"},
+{"id":8,"parent":5,"type":"label","x":823,"y":83,"w":63,"h":22,"scroll":true,"text":"-- C  --%"},
+{"id":9,"parent":5,"type":"label","x":25,"y":139,"w":814,"h":24,"scroll":true,"text":"配置地址和访问令牌"},
+{"id":10,"parent":5,"type":"label","x":863,"y":139,"w":0,"h":22,"scroll":true,"text":""},
+{"id":11,"parent":5,"type":"label","x":181,"y":231,"w":818,"h":100,"scroll":true,"text":"暂无设备\u000a点击设置，配置地址和访问令牌后同步"},
+{"id":12,"parent":5,"type":"button","x":25,"y":171,"w":108,"h":44,"scroll":false,"text":""},
+{"id":13,"parent":12,"type":"label","x":45,"y":179,"w":68,"h":28,"scroll":true,"text":"全部"},
+{"id":14,"parent":5,"type":"button","x":25,"y":226,"w":108,"h":44,"scroll":false,"text":""},
+{"id":15,"parent":14,"type":"label","x":45,"y":234,"w":68,"h":28,"scroll":true,"text":"摄像头"},
+{"id":16,"parent":5,"type":"button","x":25,"y":281,"w":108,"h":44,"scroll":false,"text":""},
+{"id":17,"parent":16,"type":"label","x":45,"y":289,"w":68,"h":28,"scroll":true,"text":"灯光"},
+{"id":18,"parent":5,"type":"button","x":25,"y":336,"w":108,"h":44,"scroll":false,"text":""},
+{"id":19,"parent":18,"type":"label","x":45,"y":344,"w":68,"h":28,"scroll":true,"text":"空调"},
+{"id":20,"parent":5,"type":"button","x":25,"y":391,"w":108,"h":44,"scroll":false,"text":""},
+{"id":21,"parent":20,"type":"label","x":45,"y":399,"w":68,"h":28,"scroll":true,"text":"传感器"},
+{"id":22,"parent":5,"type":"button","x":127,"y":499,"w":120,"h":36,"scroll":false,"text":""},
+{"id":23,"parent":22,"type":"label","x":147,"y":503,"w":80,"h":28,"scroll":true,"text":"同步"},
+{"id":24,"parent":5,"type":"button","x":257,"y":499,"w":120,"h":36,"scroll":false,"text":""},
+{"id":25,"parent":24,"type":"label","x":277,"y":503,"w":80,"h":28,"scroll":true,"text":"上页"},
+{"id":26,"parent":5,"type":"button","x":387,"y":499,"w":120,"h":36,"scroll":false,"text":""},
+{"id":27,"parent":26,"type":"label","x":407,"y":503,"w":80,"h":28,"scroll":true,"text":"下页"},
+{"id":28,"parent":5,"type":"button","x":647,"y":547,"w":120,"h":36,"scroll":false,"text":""},
+{"id":29,"parent":28,"type":"label","x":667,"y":551,"w":80,"h":28,"scroll":true,"text":"设置"}
+]
+UI_LAYOUT_END
+nsh> 

@@ -1,0 +1,60 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.13744820000283653,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "ble_register",
+    "command": "c6ble register",
+    "completed": true,
+    "elapsed_seconds": 0.16708310000103666,
+    "checks": {
+      "registration result=0": true
+    },
+    "output": "c6ble register\nc6ble: registration result=0\nnsh> \u001b[K"
+  },
+  {
+    "name": "ble_exit",
+    "command": "echo True",
+    "completed": true,
+    "elapsed_seconds": 0.16565779999655206,
+    "checks": {
+      "^0$": false
+    },
+    "output": "echo True\nTrue\nnsh> \u001b[K"
+  },
+  {
+    "name": "interfaces",
+    "command": "ifconfig",
+    "completed": true,
+    "elapsed_seconds": 0.16629330000432674,
+    "checks": {
+      "hci0": false,
+      "192.168.0.105": true
+    },
+    "output": "ifconfig\neth0\tLink encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500\n\tinet addr:192.168.0.105 DRaddr:192.168.0.1 Mask:255.255.255.0\n\nbnep0\tLink encap:UNSPEC at DOWN mtu -9\n\tinet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0\n\nnsh> \u001b[K"
+  },
+  {
+    "name": "tasks_after_registration",
+    "command": "ps",
+    "completed": true,
+    "elapsed_seconds": 0.058552499998768326,
+    "checks": {
+      "desktop": true,
+      "c6net": true
+    },
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 20.0% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 50.0% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b240 0x4ff4b28c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b1c0 0x4ff4b20c\n    5     5 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712 10.0% desktop\n    6     6 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  0.0% nsh\n   10    10 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004048 19.8% c6net\n   15     0 ---(0x00000003) 100 RR       Kthread   - Waiting  MQ empty  0000000000000000 0001984  0.0% BT_HCI_Tx\nnsh> "
+  },
+  {
+    "name": "heap",
+    "command": "free",
+    "completed": true,
+    "elapsed_seconds": 0.13795029999891995,
+    "checks": {},
+    "output": "\u001b[Kfree\n      total       used       free    maxused    maxfree  nused  nfree name\n   33554432    3818472   29735960    3835240   29732096   1315      6 Umem\n     359688      23352     336336      23824     335680    106      3 Kmem\nnsh> \u001b[K"
+  }
+]

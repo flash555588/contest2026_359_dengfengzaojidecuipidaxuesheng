@@ -1,0 +1,30 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.1436159000004409,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "stop",
+    "command": "desktop camera-stop",
+    "completed": true,
+    "elapsed_seconds": 0.19446050000260584,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop camera-stop\ndesktop: camera diagnostic stop requested\nnsh> \u001b[K"
+  },
+  {
+    "name": "idle",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.07289870000386145,
+    "checks": {
+      "busy=0 alive=0": true
+    },
+    "output": "desktop cameras\ncamera app: busy=0 alive=0 frames=0 error=0 photo=0 path=\ncamera display: frames=4677 underruns=0 pan_errors=0 mode=0x0\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=0 dropped=0 packets=0 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  }
+]

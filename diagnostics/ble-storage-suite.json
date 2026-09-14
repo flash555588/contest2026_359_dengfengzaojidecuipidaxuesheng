@@ -1,0 +1,5 @@
+[
+ {"name":"mount","command":"mount","expect":["/data type smartfs"]},
+ {"name":"storage","command":"desktop storage-test","timeout":30,"expect":["storage selftest PASS"]},
+ {"name":"tasks","command":"ps"}
+]

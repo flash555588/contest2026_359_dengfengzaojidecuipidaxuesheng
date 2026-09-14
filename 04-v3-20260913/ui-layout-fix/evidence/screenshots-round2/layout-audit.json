@@ -1,0 +1,165 @@
+[
+  {
+    "page": "light-2048",
+    "objects": 67,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-about",
+    "objects": 5,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-apps",
+    "objects": 25,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-bluetooth",
+    "objects": 12,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-dropdown",
+    "objects": 40,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-environment",
+    "objects": 8,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-files-new",
+    "objects": 12,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-files",
+    "objects": 28,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-ha",
+    "objects": 7,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-hello",
+    "objects": 15,
+    "overlaps": [
+      [
+        {
+          "id": 9,
+          "type": "label",
+          "text": "4",
+          "rect": [
+            525,
+            194,
+            16,
+            39
+          ]
+        },
+        {
+          "id": 11,
+          "type": "button",
+          "text": "",
+          "rect": [
+            363,
+            213,
+            300,
+            54
+          ]
+        }
+      ],
+      [
+        {
+          "id": 9,
+          "type": "label",
+          "text": "4",
+          "rect": [
+            525,
+            194,
+            16,
+            39
+          ]
+        },
+        {
+          "id": 12,
+          "type": "label",
+          "text": "Toast 提示",
+          "rect": [
+            465,
+            226,
+            97,
+            28
+          ]
+        }
+      ],
+      [
+        {
+          "id": 10,
+          "type": "label",
+          "text": "本次启动次数",
+          "rect": [
+            607,
+            205,
+            96,
+            22
+          ]
+        },
+        {
+          "id": 11,
+          "type": "button",
+          "text": "",
+          "rect": [
+            363,
+            213,
+            300,
+            54
+          ]
+        }
+      ]
+    ],
+    "overflow": []
+  },
+  {
+    "page": "light-home",
+    "objects": 47,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-music",
+    "objects": 12,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-ouo",
+    "objects": 7,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-resources",
+    "objects": 17,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-wifi",
+    "objects": 18,
+    "overlaps": [],
+    "overflow": []
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {"name":"open","command":"desktop camera","expect":["requested"],"settle":4},
+  {"name":"start","command":"desktop ui camera-start","expect":["clicked=1"],"settle":8},
+  {"name":"preview","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]","underruns=0 pan_errors=0 mode=640x480"]},
+  {"name":"photo","command":"desktop ui camera-photo","expect":["capture accepted=1"],"settle":25},
+  {"name":"photo_done","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]","photo=2 path=/data/photos/camera-[0-9]+.jpg","underruns=0 pan_errors=0"]},
+  {"name":"photos","command":"ls -l /data/photos","expect":["camera-[0-9]+.jpg"]},
+  {"name":"stop","command":"desktop camera-stop","expect":["requested"],"settle":3},
+  {"name":"idle","command":"desktop cameras","expect":["busy=0 alive=0"]},
+  {"name":"open_again","command":"desktop camera","expect":["requested"],"settle":3},
+  {"name":"start_again","command":"desktop ui camera-start","expect":["clicked=1"],"settle":8},
+  {"name":"preview_again","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]","underruns=0 pan_errors=0"]}
+]

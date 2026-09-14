@@ -1,0 +1,9 @@
+{
+  "firmware_sha256": "81825cd2c50b1687f3dffe8b6540a0d6a873f9d389d19a5f65dabd30e3e0c0c0",
+  "theme": "dark",
+  "requested_pages": [
+    "bluetooth"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

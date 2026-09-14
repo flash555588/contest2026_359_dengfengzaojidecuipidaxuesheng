@@ -1,0 +1,26 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.14162329999817302,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "qpk",
+    "command": "ls -l /data/qpk",
+    "completed": true,
+    "elapsed_seconds": 0.16418159999739146,
+    "checks": {},
+    "output": "ls -l /data/qpk\n/data/qpk:\n drwsrwsrwx           0 .data/\n drws--S---           0 .storage-check-7/\nnsh> \u001b[K"
+  },
+  {
+    "name": "check",
+    "command": "ls -R /data/qpk/.storage-check-7",
+    "completed": true,
+    "elapsed_seconds": 0.26069570000254316,
+    "checks": {},
+    "output": "ls -R /data/qpk/.storage-check-7\n/data/qpk/.storage-check-7:\n @2/\n/data/qpk/.storage-check-7/@2:\n ppppppppppppppppppppppppppppppp/\n/data/qpk/.storage-check-7/@2/ppppppppppppppppppppppppppppppp:\nnsh> \u001b[K"
+  }
+]

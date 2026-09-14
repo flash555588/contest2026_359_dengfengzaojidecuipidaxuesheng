@@ -1,0 +1,17 @@
+[
+  {"name":"build_version","command":"uname -a"},
+  {"name":"startup_tasks","command":"ps","expect":["desktop"]},
+  {"name":"startup_heap","command":"free"},
+  {"name":"interfaces_before_c6","command":"ifconfig"},
+  {"name":"devices","command":"ls /dev","expect":["fb0","input0"]},
+  {"name":"data_preserved","command":"ls /data","expect":["qpk/"]},
+  {"name":"c6_transport","command":"c6probe","timeout":20,"expect":["OK ESP-Hosted transport is up"]},
+  {"name":"saved_wifi_connect","command":"c6probe net","timeout":25,"expect":["network init ret=0"]},
+  {"name":"association_observation","command":"sleep 10","timeout":15},
+  {"name":"interfaces_after_c6","command":"ifconfig"},
+  {"name":"dhcp","command":"c6probe dhcp eth0","timeout":30,"expect":["DHCP ret=0"]},
+  {"name":"dhcp_exit","command":"echo $?","expect":["^0$"]},
+  {"name":"assigned_address","command":"ifconfig"},
+  {"name":"tasks_after_network","command":"ps","expect":["desktop","c6net"]},
+  {"name":"heap_after_network","command":"free"}
+]

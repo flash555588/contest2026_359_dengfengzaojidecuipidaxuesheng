@@ -1,0 +1,37 @@
+{
+  "status": "static-checks-passed",
+  "firmware_sha256": "e48104a70bedd0b1d40037008161befb5a318ff0c9118ae8b1f2587fb2bd2007",
+  "bytes": 3929876,
+  "flash_offset": "0x2000",
+  "flash_end_exclusive": "0x3c1714",
+  "erase_end_exclusive": "0x3c2000",
+  "data_offset": "0x400000",
+  "simpleboot_digest_valid": true,
+  "mapped_segments": [
+    {
+      "offset": "0x1e018",
+      "address": "0x40120020",
+      "bytes": 2654184
+    },
+    {
+      "offset": "0x2adff8",
+      "address": "0x40000000",
+      "bytes": 1120020
+    }
+  ],
+  "config_identical_to_storage_fix": true,
+  "prior_functional_fixes_preserved": true,
+  "required_symbols_present": [
+    "g_ui_probe_frame",
+    "g_ui_probe_frame_bytes",
+    "qpk_storage_read",
+    "qpk_storage_write",
+    "qpk_storage_remove",
+    "qpk_storage_selftest",
+    "qpk_runtime_launch",
+    "c6net_initialize",
+    "dhcpc_request",
+    "heap_caps_free",
+    "esp_timer_impl_early_init"
+  ]
+}

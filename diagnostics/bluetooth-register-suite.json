@@ -1,0 +1,37 @@
+[
+  {
+    "name": "ble_register",
+    "command": "c6ble register",
+    "timeout": 25,
+    "expect": [
+      "registration result=0"
+    ]
+  },
+  {
+    "name": "ble_exit",
+    "command": "echo True",
+    "expect": [
+      "^0$"
+    ]
+  },
+  {
+    "name": "interfaces",
+    "command": "ifconfig",
+    "expect": [
+      "hci0",
+      "192.168.0.105"
+    ]
+  },
+  {
+    "name": "tasks_after_registration",
+    "command": "ps",
+    "expect": [
+      "desktop",
+      "c6net"
+    ]
+  },
+  {
+    "name": "heap",
+    "command": "free"
+  }
+]

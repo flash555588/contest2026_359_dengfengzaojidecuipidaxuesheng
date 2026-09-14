@@ -1,0 +1,22 @@
+[1KCC:  misc/lib_utsname.c [1K[1KCC:  qpk_storage.c [1K[1KIN: libs/libc/libc.a -> staging/libc.a [1K[1KIN: /tmp/v3-desktop-app-storage-20260914/apps/libapps.a -> staging/libapps.a [1K[1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_flat_memory.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_flat_memory.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libc.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libc.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_sections.rev3.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_sections.rev3.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libgcc.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libgcc.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld.tmp [1K[1K[1K[1K[1K[1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/soc/esp32p4/ld/esp32p4.peripherals.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/soc/esp32p4/ld/esp32p4.peripherals.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld.tmp [1KCPP:  /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/riscv/ld/rom.api.ld-> /tmp/v3-desktop-app-storage-20260914/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/riscv/ld/rom.api.ld.tmp [1K[1K[1K[1K[1K[1K[1KLD: nuttx
+Memory region         Used Size  Region Size  %age Used
+   tcm_idram_seg:         104 B         8 KB      1.27%
+        irom_seg:     1116908 B        64 MB      1.66%
+        sram_seg:      159400 B     978880 B     16.28%
+        drom_seg:     3832224 B        64 MB      5.71%
+rev3_mspi_workaround_seg:           0 B          0 B
+      lp_ram_seg:         104 B      32744 B      0.32%
+ lp_reserved_seg:          24 B         24 B    100.00%
+  extern_ram_seg:           0 B        64 MB      0.00%
+CP: nuttx.hex
+MKIMAGE: NuttX binary
+esptool.py -c esp32p4 elf2image --ram-only-header --min-rev-full 301 --max-rev-full 399 -fs 16MB -fm dio -ff "80m" -o nuttx.bin nuttx
+[0;33mWarning:[0m DEPRECATED: 'esptool.py' is deprecated. Please use 'esptool' instead. The '.py' suffix will be removed in a future major release.
+esptool v5.3.1
+Creating ESP32-P4 image...
+Image has only RAM segments visible. ROM segments are hidden and SHA256 digest is not appended.
+Merged 2 ELF sections.
+Successfully created ESP32-P4 image.
+python3 tools/espressif/simple_boot_digest.py nuttx.bin
+Simple Boot RAM SHA256 added; mapped segment offsets unchanged
+Generated: nuttx.bin

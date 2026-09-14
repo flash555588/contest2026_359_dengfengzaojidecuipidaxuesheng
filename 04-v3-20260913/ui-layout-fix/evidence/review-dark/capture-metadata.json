@@ -1,0 +1,30 @@
+{
+  "firmware_sha256": "038b09a89f4a33e14fce5b8227cf373c63d2fb58705d363a4169464ce1765090",
+  "theme": "dark",
+  "requested_pages": [
+    "ha",
+    "ha-address",
+    "hello",
+    "dialog-menu",
+    "ha-settings",
+    "ha-advanced",
+    "settings",
+    "wifi",
+    "home",
+    "files",
+    "files-new",
+    "resources",
+    "apps",
+    "music",
+    "about",
+    "environment",
+    "2048",
+    "ouo",
+    "bluetooth",
+    "dropdown",
+    "dialog",
+    "toast"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

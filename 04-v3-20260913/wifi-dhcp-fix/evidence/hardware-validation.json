@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-14",
+  "status": "flashed-boot-display-driver-and-dhcp-verified",
+  "firmware_sha256": "559e8f13dc4f1627048c6a5250383762d96262f3b892018382a1a68c60bca953",
+  "flashed": true,
+  "flash_content_verified": true,
+  "port": "COM23",
+  "chip_revision": "3.2",
+  "boot_nsh": true,
+  "desktop_task_alive": true,
+  "display_video_running": true,
+  "display_geometry": "1024x600 RGB565",
+  "physical_screen_visual_confirmation": "not-observed",
+  "wifi_associated": true,
+  "wifi_credentials_source": "C6 stored configuration",
+  "dhcp_result": 0,
+  "ipv4": "192.168.0.105",
+  "gateway": "192.168.0.1",
+  "netmask": "255.255.255.0",
+  "dns": [
+    "183.221.253.100"
+  ],
+  "interface_count": 1,
+  "interface": "eth0",
+  "interface_mac": "10:bd:a3:89:58:74",
+  "data_partition_erased": false,
+  "data_qpk_directory_present": true,
+  "internet_session_tested": false,
+  "console_resumed_after_jtag": true,
+  "serial_port_released": true
+}

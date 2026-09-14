@@ -1,0 +1,235 @@
+--- a/apps/system/desktop/glass_ble.h
++++ b/apps/system/desktop/glass_ble.h
+@@ -2,12 +2,15 @@
+ #pragma once
+ #include <stdbool.h>
+ #include <stdint.h>
+-#define GLASS_BLE_LIMIT 12
++#define GLASS_BLE_LIMIT 32
++#define GLASS_BLE_NAME_MAX 63
+ struct glass_ble_device
+ {
+   uint8_t type;
+   uint8_t address[6];
+   int rssi;
++  bool name_complete;
++  char name[GLASS_BLE_NAME_MAX + 1];
+ };
+ struct glass_ble_state
+ {
+--- a/apps/wireless/bluetooth/nimble/glass_ble.h
++++ b/apps/wireless/bluetooth/nimble/glass_ble.h
+@@ -2,12 +2,15 @@
+ #pragma once
+ #include <stdbool.h>
+ #include <stdint.h>
+-#define GLASS_BLE_LIMIT 12
++#define GLASS_BLE_LIMIT 32
++#define GLASS_BLE_NAME_MAX 63
+ struct glass_ble_device
+ {
+   uint8_t type;
+   uint8_t address[6];
+   int rssi;
++  bool name_complete;
++  char name[GLASS_BLE_NAME_MAX + 1];
+ };
+ struct glass_ble_state
+ {
+--- a/apps/wireless/bluetooth/nimble/glass_ble.c
++++ b/apps/wireless/bluetooth/nimble/glass_ble.c
+@@ -1,5 +1,6 @@
+ /* SPDX-License-Identifier: Apache-2.0 */
+ #include "glass_ble.h"
++#include "glass_ble_name.h"
+ #include <errno.h>
+ #include <pthread.h>
+ #include <string.h>
+@@ -26,6 +27,29 @@
+   pthread_mutex_lock(&g_lock);
+   *state = g_state;
+   pthread_mutex_unlock(&g_lock);
++}
++
++/* Sort once discovery ends, keeping list order stable during the scan.
++ * Named devices come first; within each group show stronger signals first.
++ */
++static void sort_devices(void)
++{
++  for (unsigned i = 1; i < g_state.count; i++)
++    {
++      struct glass_ble_device device = g_state.devices[i];
++      unsigned j = i;
++      while (j > 0)
++        {
++          const struct glass_ble_device *previous = &g_state.devices[j - 1];
++          bool named = device.name[0] != 0;
++          bool previous_named = previous->name[0] != 0;
++          if (!(named && !previous_named) &&
++              !(named == previous_named && device.rssi > previous->rssi)) break;
++          g_state.devices[j] = *previous;
++          j--;
++        }
++      g_state.devices[j] = device;
++    }
+ }
+ 
+ static int gap_event(struct ble_gap_event *event, void *arg)
+@@ -47,10 +71,13 @@
+                 g_state.devices[i].type = event->disc.addr.type;
+                 memcpy(g_state.devices[i].address, event->disc.addr.val, 6);
+                 g_state.devices[i].rssi = event->disc.rssi;
++                glass_ble_update_name(&g_state.devices[i],
++                                      event->disc.data, event->disc.length_data);
+               }
+           }
+         break;
+       case BLE_GAP_EVENT_DISC_COMPLETE:
++        sort_devices();
+         g_state.scanning = false;
+         break;
+       case BLE_GAP_EVENT_CONNECT:
+@@ -80,7 +107,7 @@
+   if (command == 1)
+     {
+       struct ble_gap_disc_params params = {0};
+-      params.passive = 1;
++      params.passive = 0; /* Request names carried in scan responses. */
+       params.filter_duplicates = 1;
+       ret = ble_gap_disc(g_address_type, 10000, &params, gap_event, NULL);
+     }
+@@ -198,7 +225,12 @@
+   else if (command == 4 && !g_state.connected) ret = -ENOTCONN;
+   else
+     {
+-      if (command == 1) { g_state.count = 0; g_state.scanning = true; }
++      if (command == 1)
++        {
++          memset(g_state.devices, 0, sizeof(g_state.devices));
++          g_state.count = 0;
++          g_state.scanning = true;
++        }
+       if (command == 2)
+         {
+           g_state.connecting = true;
+--- /dev/null
++++ b/apps/wireless/bluetooth/nimble/glass_ble_name.h
+@@ -0,0 +1,77 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#pragma once
++#include "glass_ble.h"
++#include <stddef.h>
++#include <string.h>
++
++/* Advertising strings are untrusted, length-delimited UTF-8. Keep complete
++ * codepoints, replace malformed bytes and flatten control characters so a
++ * nearby transmitter cannot insert extra rows into the device list.
++ */
++static inline size_t glass_ble_name_copy(char *out, const uint8_t *data,
++                                         size_t length)
++{
++  size_t used = 0;
++  for (size_t i = 0; i < length && used < GLASS_BLE_NAME_MAX;)
++    {
++      uint8_t c = data[i];
++      size_t n = c < 0x80 ? 1 : c >= 0xc2 && c <= 0xdf ? 2 :
++                 c >= 0xe0 && c <= 0xef ? 3 :
++                 c >= 0xf0 && c <= 0xf4 ? 4 : 0;
++      bool valid = n && n <= length - i;
++      for (size_t j = 1; valid && j < n; j++)
++        valid = (data[i + j] & 0xc0) == 0x80;
++      if (valid && n >= 3)
++        valid = !((c == 0xe0 && data[i + 1] < 0xa0) ||
++                  (c == 0xed && data[i + 1] >= 0xa0) ||
++                  (c == 0xf0 && data[i + 1] < 0x90) ||
++                  (c == 0xf4 && data[i + 1] >= 0x90));
++      if (!valid)
++        {
++          out[used++] = '?';
++          i++;
++          continue;
++        }
++      if (n > GLASS_BLE_NAME_MAX - used) break;
++      if (n == 1 && (c < 0x20 || c == 0x7f))
++        out[used++] = ' ';
++      else
++        {
++          memcpy(out + used, data + i, n);
++          used += n;
++        }
++      i += n;
++    }
++  while (used && out[used - 1] == ' ') used--;
++  out[used] = '\0';
++  return used;
++}
++
++/* Merge advertisement and scan-response names for the same address. A
++ * complete local name (0x09) takes priority over a shortened name (0x08).
++ * A later packet without a name must not erase one already discovered.
++ */
++static inline void glass_ble_update_name(struct glass_ble_device *device,
++                                         const uint8_t *data, size_t length)
++{
++  if (!data) return;
++  while (length)
++    {
++      size_t field = data[0];
++      if (!field || field >= length) break;
++      if ((data[1] == 0x08 || data[1] == 0x09) && field > 1)
++        {
++          char name[GLASS_BLE_NAME_MAX + 1] = {0};
++          size_t used = glass_ble_name_copy(name, data + 2, field - 1);
++          bool complete = data[1] == 0x09;
++          if (used && (complete || (!device->name_complete &&
++                                   used > strlen(device->name))))
++            {
++              memcpy(device->name, name, sizeof(device->name));
++              device->name_complete = complete;
++            }
++        }
++      data += field + 1;
++      length -= field + 1;
++    }
++}
+--- a/apps/system/desktop/glass_ble.inc
++++ b/apps/system/desktop/glass_ble.inc
+@@ -64,14 +64,33 @@
+   else lv_obj_add_state(g_ble_disconnect, LV_STATE_DISABLED);
+   if (devices_changed)
+     {
+-      lv_obj_clean(g_ble_list);
++      /* Preserve row objects and scroll position while RSSI/names update. */
++      if (lv_obj_get_child_count(g_ble_list) > state.count)
++        lv_obj_clean(g_ble_list);
+       for (unsigned i = 0; i < state.count; i++)
+         {
+-          const uint8_t *a = state.devices[i].address;
++          const struct glass_ble_device *device = &state.devices[i];
++          const uint8_t *a = device->address;
++          const char *name = device->name[0] ? device->name : "未命名设备";
++          lv_obj_t *row = lv_obj_get_child(g_ble_list, i);
++          if (!row)
++            {
++              row = glass_button(g_ble_list, name, 4, i * 72, 816,
++                                 theme_surface(), glass_ble_pick,
++                                 (void *)(uintptr_t)i);
++              lv_obj_set_height(row, 68);
++              lv_obj_t *title = lv_obj_get_child(row, 0);
++              lv_obj_set_style_text_font(title, zh_font(20), 0);
++              lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_LEFT, 0);
++              lv_obj_align(title, LV_ALIGN_TOP_LEFT, 12, 5);
++              lv_obj_set_size(title, 788, 28);
++              lv_label_set_long_mode(title, LV_LABEL_LONG_DOT);
++              glass_text(row, "", 12, 38, 788, 16, theme_secondary());
++            }
++          lv_label_set_text(lv_obj_get_child(row, 0), name);
+           snprintf(text, sizeof(text), "%02X:%02X:%02X:%02X:%02X:%02X  %d dBm",
+-                   a[5], a[4], a[3], a[2], a[1], a[0], state.devices[i].rssi);
+-          glass_button(g_ble_list, text, 4, i * 52, 800, theme_surface(),
+-                       glass_ble_pick, (void *)(uintptr_t)i);
++                   a[5], a[4], a[3], a[2], a[1], a[0], device->rssi);
++          lv_label_set_text(lv_obj_get_child(row, 1), text);
+         }
+     }
+   for (unsigned i = 0; i < lv_obj_get_child_count(g_ble_list); i++)

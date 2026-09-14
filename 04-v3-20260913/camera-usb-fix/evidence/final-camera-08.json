@@ -1,0 +1,48 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.13197550000040792,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "open_camera",
+    "command": "desktop camera",
+    "completed": true,
+    "elapsed_seconds": 0.47084629999881145,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  },
+  {
+    "name": "inventory",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.06930939998710528,
+    "checks": {
+      "busy=0 alive=0": true,
+      "CSI=0": true,
+      "HD Web Camera": true
+    },
+    "output": "desktop cameras\ncamera app: busy=0 alive=0 frames=0 error=-5 photo=0 path=\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=0 dropped=0 packets=0 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> \u001b[K"
+  },
+  {
+    "name": "photos",
+    "command": "ls -l /data/photos",
+    "completed": true,
+    "elapsed_seconds": 0.20187090001127217,
+    "checks": {},
+    "output": "ls -l /data/photos\n/data/photos:\nnsh> \u001b[K"
+  },
+  {
+    "name": "alive",
+    "command": "cat /proc/uptime",
+    "completed": true,
+    "elapsed_seconds": 0.1971832999988692,
+    "checks": {},
+    "output": "cat /proc/uptime\n    495.44\nnsh> \u001b[K"
+  }
+]

@@ -1,0 +1,38 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x4ff42318 in esp_cpu_wait_for_intr () at chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c:68
+warning: 68	chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF42318, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42318, debug_reason=00000000
+$1 = true
+$2 = {fbmem = 0x480001c0, fblen = 3686400, stride = 2048, display = 0 '\000', bpp = 16 '\020', xres_virtual = 1024, yres_virtual = 1800, xoffset = 0, yoffset = 600}
+$3 = {host = {bus = 0, ops = 0x4013b4fc <g_esp_mipi_dsi_ops>}, hal = {host = 0x500a0000, bridge = 0x500a0800, lane_bit_rate_mbps = 1000, expect_dpi_clock_freq_mhz = 52, real_dpi_clock_freq_mhz = 48}, dw_hal = {dev = 0x50081000}, lock = {sem = {val = {semcount = 2147483647, mholder = 2147483647}, flags = 5, waitlist = {head = 0x0, tail = 0x0}}}, dmalock = {lock = 0}, device = 0x4ff709a0, fb = 0x4812c1c0, lli = 0x4ff70a40, lli_nc = 0x8ff70a40, pending_fb = 0x0, fb_done = {val = {semcount = 0, mholder = 0}, flags = 0, waitlist = {head = 0x0, tail = 0x0}}, fb_size = 1228800, dpi_h_res = 1024, dpi_v_res = 600, phy_pllref_clk_src = SOC_MOD_CLK_XTAL, phy_cfg_clk_src = SOC_MOD_CLK_PLL_F20M, dpi_clk_src = SOC_MOD_CLK_PLL_F240M, dma_cpuint = 4, num_data_lanes = 2 '\002', fb_bpp = 16 '\020', lane_bit_rate_mbps = 1000, initialized = true, dpi_configured = true, fb_bound = true, dma_enabled = true, video_running = true}
+$4 = OSINIT_IDLELOOP
+$5 = {source = 22 '\026', irq = 39 '\'', cpuint = 5, last_sof = 2440, connected = true, host_active = true, drop_tx = false, tx_wdog = {node = {next = 0x0, prev = 0x0}, arg = 1341435520, func = 0x0, expired = 2444}}
+$6 = (struct mm_heap_s *) 0x4ff6ffe8
+TASK 0 "CPU0 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_RUNNING
+TASK 1 "CPU1 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_RUNNING
+TASK 2 "hpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 3 "lpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 5 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SIG
+TASK 6 "nsh", '\000' <repeats 28 times> state TSTATE_WAIT_SEM
+TASK 9 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SEM
+TASK 10 "c6net", '\000' <repeats 26 times> state TSTATE_WAIT_SIG
+TASK 11 "BT_HCI_Tx", '\000' <repeats 22 times> state TSTATE_WAIT_MQNOTEMPTY
+TASK 12 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SIG
+TASK 13 "ble_npl_callout", '\000' <repeats 16 times> state TSTATE_WAIT_SEM
+TASK 14 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SEM
+$7 = 16
+$8 = "CPU0 IDLE", '\000' <repeats 22 times>
+$9 = "CPU1 IDLE", '\000' <repeats 22 times>
+g_netlock {mutex = {sem = {val = {semcount = 2147483647, mholder = 2147483647}, flags = 5, waitlist = {head = 0x0, tail = 0x0}}}, count = 0}
+*(struct bluetooth_conn_s *)g_active_bluetooth_connections.head {bc_conn = {s_node = {flink = 0x0, blink = 0x0}, s_list = 0x4ff67b3c <g_cbprealloc_buffer+392>, s_listtail = 0x4ff67b3c <g_cbprealloc_buffer+392>, s_lock = {mutex = {sem = {val = {semcount = 2147483647, mholder = 2147483647}, flags = 4, waitlist = {head = 0x0, tail = 0x0}}}, count = 0}, s_error = 0, s_options = 0, s_rcvtimeo = 0, s_sndtimeo = 0, s_boundto = 0 '\000', s_flags = 33 '!', s_tos = 0 '\000', s_ttl = 0 '\000'}, bc_laddr = {val = "\000\000\000\000\000"}, bc_raddr = {val = "\000\000\000\000\000"}, bc_ldev = 0 '\000', bc_channel = 0 '\000', bc_crefs = 1 '\001', bc_backlog = 0 '\000', bc_proto = 1 '\001', bc_rxhead = 0x0, bc_rxtail = 0x0}
+ble_hci_sock_state {sock = 7, evq = {mq = 6}, ev = {ev_queued = 0 '\000', ev_cb = 0x400b24b2 <ble_hci_sock_rx_ev>, ev_arg = 0x0}, timer = {c_ev = {ev_queued = 0 '\000', ev_cb = 0x400b24b2 <ble_hci_sock_rx_ev>, ev_arg = 0x0}, c_evq = 0x4ff637fc <ble_hci_sock_state+4>, c_ticks = 9770, c_timer = 1341611072, c_active = true}, rx_off = 0, rx_data = '\000' <repeats 511 times>}
+'glass_ble.c'::g_state {started = true, ready = false, scanning = false, connecting = false, connected = false, error = 19, count = 0, devices = {{type = 0 '\000', address = "\000\000\000\000\000", rssi = 0} <repeats 12 times>}}
+'glass_ble.c'::g_command 0
+g_hosted.seq_num {0, 0, 0, 4, 53, 1, 0, 0}
+g_hosted.tx_buffers 58
+UNAVAILABLE ((struct c6_ble_driver_s *)g_btdev.btdev)->tx[0]@16 Remote communication error.  Target disconnected: error while writing: No error.
+C:\Users\wenji\Desktop\新建文件夹 (2)\v3-sources-20260914\v3-sources-20260914\diagnostics\inspect-running.gdb:34: Error in sourced command file:
+"monitor" command not supported by this target.

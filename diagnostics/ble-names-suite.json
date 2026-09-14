@@ -1,0 +1,12 @@
+[
+  {"name":"transport","command":"c6probe","timeout":20,"expect":["OK ESP-Hosted transport is up", "BLE-only"]},
+  {"name":"open_ble","command":"desktop ui bluetooth","expect":["ready"]},
+  {"name":"startup_wait","command":"sleep 4","timeout":10},
+  {"name":"ready","command":"desktop ui audit","expect":["就绪"]},
+  {"name":"scan","command":"desktop ui ble-scan","expect":["ready"]},
+  {"name":"scan_wait","command":"sleep 11","timeout":15},
+  {"name":"devices","command":"desktop ui audit","expect":["就绪", "[1-9][0-9]* 个设备", "dBm"]},
+  {"name":"storage","command":"desktop storage-test","timeout":30,"expect":["storage selftest PASS"]},
+  {"name":"interfaces","command":"ifconfig","expect":["bnep0.*RUNNING"]},
+  {"name":"memory","command":"free"}
+]

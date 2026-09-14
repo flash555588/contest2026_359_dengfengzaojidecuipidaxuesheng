@@ -1,0 +1,18 @@
+desktop ui ha-address
+[qpk] started Home Assistant (com.openvela.homeassistant 1.0.0) with QuickJS
+desktop: ui ha-address ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":3,"parent":2,"type":"label","x":25,"y":85,"w":766,"h":39,"scroll":true,"text":"Home Assistant 地址"},
+{"id":4,"parent":2,"type":"button","x":815,"y":79,"w":92,"h":44,"scroll":false,"text":""},
+{"id":5,"parent":4,"type":"label","x":841,"y":87,"w":40,"h":28,"scroll":true,"text":"取消"},
+{"id":6,"parent":2,"type":"button","x":915,"y":79,"w":92,"h":44,"scroll":false,"text":""},
+{"id":7,"parent":6,"type":"label","x":941,"y":87,"w":40,"h":28,"scroll":true,"text":"确定"},
+{"id":8,"parent":2,"type":"input","x":25,"y":139,"w":974,"h":50,"scroll":true,"text":"请输入内容"},
+{"id":9,"parent":1,"type":"keyboard","x":1,"y":344,"w":1022,"h":255,"scroll":true,"text":""}
+]
+UI_LAYOUT_END
+nsh> 

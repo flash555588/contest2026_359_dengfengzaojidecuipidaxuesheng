@@ -1,0 +1,28 @@
+
+[CASE console]
+
+nsh> [K
+[CASE test_tree]
+ls -Rl /data/qpk/.storage-check-39
+/data/qpk/.storage-check-39:
+ drwsrwsrwx           0 @2pcom.example.hello/
+ drwsrwsrwx           0 @2pcom.example.game2048/
+ drwsrwsrwx           0 @2ppppppppppppppppppppppppppppp/
+/data/qpk/.storage-check-39/@2pcom.example.hello:
+ drwsrwsrwx           0 klaunches/
+/data/qpk/.storage-check-39/@2pcom.example.hello/klaunches:
+/data/qpk/.storage-check-39/@2pcom.example.game2048:
+ drwsrwsrwx           0 kbest/
+/data/qpk/.storage-check-39/@2pcom.example.game2048/kbest:
+/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp:
+ drwsrwsrwx           0 pppppppppppppppppppp/
+/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp:
+ drwsrwsrwx           0 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/
+/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk:
+ drwsrwsrwx           0 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/
+/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk:
+ drwsrwsrwx           0 kkkkk/
+/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/kkkkk:
+ -rwSrwSrw-           5 value.tmp
+ -rwSrwSrw-           5 value
+nsh> 

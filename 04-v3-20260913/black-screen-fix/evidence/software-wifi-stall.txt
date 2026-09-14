@@ -1,0 +1,4 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+C:\Users\wenji\Desktop\新建文件夹 (2)\v3-sources-20260914\v3-sources-20260914\diagnostics\inspect-running.gdb:4: Error in sourced command file:
+could not connect (error 138): 系统试图将驱动器合并到合并驱动器上的目录。

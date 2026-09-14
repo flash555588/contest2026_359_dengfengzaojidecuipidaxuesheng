@@ -1,0 +1,4 @@
+[
+  {"name":"idle","command":"desktop cameras","expect":["busy=0 alive=0"]},
+  {"name":"photo_bytes","command":"hexdump /data/photos/camera-00000001.jpg","timeout":30,"expect":["ff d8"]}
+]

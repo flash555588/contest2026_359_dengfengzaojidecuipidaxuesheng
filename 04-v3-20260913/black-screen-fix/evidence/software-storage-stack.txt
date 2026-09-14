@@ -1,0 +1,59 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x4ff42362 in esp_cpu_wait_for_intr () at chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c:68
+warning: 68	chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF42362, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42362, debug_reason=00000000
+$1 = true
+$2 = {fbmem = 0x480001c0, fblen = 3686400, stride = 2048, display = 0 '\000', bpp = 16 '\020', xres_virtual = 1024, yres_virtual = 1800, xoffset = 0, yoffset = 0}
+$3 = {host = {bus = 0, ops = 0x4013dbac <g_esp_mipi_dsi_ops>}, hal = {host = 0x500a0000, bridge = 0x500a0800, lane_bit_rate_mbps = 1000, expect_dpi_clock_freq_mhz = 52, real_dpi_clock_freq_mhz = 48}, dw_hal = {dev = 0x50081000}, lock = {sem = {val = {semcount = 2147483647, mholder = 2147483647}, flags = 5, waitlist = {head = 0x0, tail = 0x0}}}, dmalock = {lock = 0}, device = 0x4ff69720, fb = 0x480001c0, lli = 0x4ff697c0, lli_nc = 0x8ff697c0, pending_fb = 0x0, fb_done = {val = {semcount = 0, mholder = 0}, flags = 0, waitlist = {head = 0x0, tail = 0x0}}, fb_size = 1228800, dpi_h_res = 1024, dpi_v_res = 600, phy_pllref_clk_src = SOC_MOD_CLK_XTAL, phy_cfg_clk_src = SOC_MOD_CLK_PLL_F20M, dpi_clk_src = SOC_MOD_CLK_PLL_F240M, dma_cpuint = 4, num_data_lanes = 2 '\002', fb_bpp = 16 '\020', lane_bit_rate_mbps = 1000, initialized = true, dpi_configured = true, fb_bound = true, dma_enabled = true, video_running = true}
+$4 = OSINIT_IDLELOOP
+$5 = {source = 22 '\026', irq = 39 '\'', cpuint = 5, last_sof = 3985, connected = true, host_active = false, drop_tx = false, tx_wdog = {node = {next = 0x0, prev = 0x0}, arg = 1341437056, func = 0x0, expired = 3989}}
+$6 = (struct mm_heap_s *) 0x4ff68d68
+TASK 0 "CPU0 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_RUNNING
+TASK 1 "CPU1 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_RUNNING
+TASK 2 "hpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 3 "lpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 5 "esp_timer", '\000' <repeats 22 times> state TSTATE_WAIT_SEM
+TASK 6 "emac_rx", '\000' <repeats 24 times> state TSTATE_WAIT_SEM
+TASK 7 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SIG
+TASK 8 "nsh", '\000' <repeats 28 times> state TSTATE_WAIT_SEM
+$7 = 16
+$8 = "CPU0 IDLE", '\000' <repeats 22 times>
+$9 = "CPU1 IDLE", '\000' <repeats 22 times>
+WAITOBJ 0x4ff4b4a4 <g_uart_usbserial+36>
+SAVED REGS 0x4839df8c
+0x4839df8c:	0x40033fa4	0x4ff42102	0x4839e010	0x7fffffff
+0x4839df9c:	0x00000000	0x4fc00d66	0x00000000	0xffffffff
+0x4839dfac:	0x00000001	0x4ff50000	0x00000002	0x4ff69ae0
+0x4839dfbc:	0x00000000	0x4ff4f84c	0x00000081	0x00000000
+0x4839dfcc:	0x4ff4f90c	0x4ff4f8f8	0x4ff4f8f8	0x4ff50000
+0x4839dfdc:	0x00000089	0x4ff4b4c8	0x7fffffff	0x4ff4b4a4
+0x4839dfec:	0x4ff69868	0x0000000a	0x4ff4f8f8	0x00000000
+0x4839dffc:	0x00000001	0x00000000	0x4ff4f90c	0xffffffff
+0x4839e00c:	0x00001801	0x0000000a
+up_switch_context + 40 in section .flash.text
+_flash_rodata_dummy_start + 212900 in section .flash_rodata_dummy
+nxsched_switch + 28 in section .iram0.text
+0x4839e010:	0x0000000a	0x4ff4f8f8	0x00000028	0x00000001
+0x4839e020:	0x00000000	0x4ff4b4a4	0x4ff69ae0	0x40010ece
+0x4839e030:	0x400cc52a	0x4839eab0	0x00010001	0x00000000
+0x4839e040:	0x4ff4b4e4	0x00000000	0x4839e13f	0x00000000
+0x4839e050:	0x4ff4b4e4	0x00000000	0x4ff4b480	0x4001abba
+0x4839e060:	0x4fc00d66	0x00000000	0x00000001	0x00000089
+0x4839e070:	0x4839e118	0x4ff69c1c	0x00000000	0x00000000
+0x4839e080:	0x0000001b	0x0000007f	0x00000008	0x4839e19c
+0x4839e090:	0x7fffffff	0x00000001	0x00000000	0x4ff695b8
+0x4839e0a0:	0x4ff69868	0x4839e118	0x00000000	0x40008b24
+0x4839e0b0:	0x0000007f	0x0000001b	0x00000000	0x00000001
+0x4839e0c0:	0x403a8000	0x0000000a	0x00000050	0x00000000
+0x4839e0d0:	0x00000001	0x4839e118	0x00000000	0x40008b60
+0x4839e0e0:	0x403a8000	0x00000000	0x00000050	0x4ff69868
+0x4839e0f0:	0x4839ed6c	0x00000004	0x4839e19c	0x40008b96
+0x4839e100:	0x00000000	0x4ff4b4c8	0x4839e19c	0x40008bc2
+[esp32p4.hp.cpu0] Found 3 triggers
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF42364, debug_reason=00000004
+[esp32p4.hp.cpu1] Found 3 triggers
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42364, debug_reason=00000004
+[Inferior 1 (Remote target) detached]

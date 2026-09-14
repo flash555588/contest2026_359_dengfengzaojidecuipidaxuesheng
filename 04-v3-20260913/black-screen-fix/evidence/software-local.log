@@ -1,0 +1,39 @@
+
+[CASE console]
+
+nsh> [K
+[CASE memory_before]
+free
+      total       used       free    maxused    maxfree  nused  nfree name
+   33554432    3796104   29758328    3803992   29757496   1309      4 Umem
+     355912      38456     317456      40048     315784    129     12 Kmem
+nsh> [K
+[CASE espclaw_status]
+espclaw status
+ESP-Claw 0.1.0: cleanup pending no; chat settings missing or invalid (network not tested)
+nsh> [K
+[CASE espclaw_selftest_1]
+espclafrnw ]sel1eftest
+caESP-Claw 0.1.0: offline core selftest PASS; network/model not tested
+nsh> [K
+[CASE espclaw_selftest_2]
+espctme]a llaw selftest
+ESP-Claw 0.1.0: offline core selftest PASS; network/model not tested
+nsh> [K
+[CASE espclaw_selftest_3]
+es fszoapclaw selftest
+ESP-Claw 0.1.0: offline core selftest PASS; network/model not tested
+nsh> [K
+[CASE espclaw_cleanup_state]
+espclaw status
+ESP-Claw 0.1.0: cleanup pending no; chat settings missing or invalid (network not tested)
+nsh> [K
+[CASE ha_help]
+ha_panel -h
+Usage: ha_panel [-s host] [-p port] [-t token] [-f conf]
+  Home Assistant LVGL panel (ws://host:port/api/websocket)
+  Long-lived token: HA Profile -> Security -> Long-Lived Access Tokens
+nsh> [K
+[CASE scratch_directory]
+mkdir /data/.codex-sw-20260914-a3
+nsh> [K

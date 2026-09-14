@@ -1,0 +1,11 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+esp_mipi_dsi_dma_isr (irq=<optimized out>, context=<optimized out>, arg=0x4ff4b4c0 <g_esp_mipi_dsi>) at common/espressif/esp_mipi_dsi.c:316
+warning: 316	common/espressif/esp_mipi_dsi.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF41730, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42318, debug_reason=00000000
+dumped 51324 bytes in 1.785707s (28.068 KiB/s)
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF41734, debug_reason=00000004
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF4231A, debug_reason=00000004
+[Inferior 1 (Remote target) detached]

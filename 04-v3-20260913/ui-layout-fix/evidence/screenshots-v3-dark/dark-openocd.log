@@ -1,0 +1,25 @@
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+DEPRECATED! use 'gdb memory_map', not 'gdb_memory_map'
+DEPRECATED! use 'gdb flash_program', not 'gdb_flash_program'
+Info : esp_usb_jtag: serial (E8:F6:0A:E3:A9:5F)
+Info : esp_usb_jtag: Device found. Base speed 24000KHz, div range 1 to 255
+Info : clock speed 6000 kHz
+Error: esp_usb_jtag: IN buffer overflow! (0, size 48)
+Error: missing data from bitq interface
+Error: esp_usb_jtag: IN buffer overflow! (2, size 48)
+Error: missing data from bitq interface
+D:\.espressif\tools\openocd-esp32\v0.12.0-esp32-20250707\openocd-esp32\share\openocd\scripts/target/esp_common.cfg:9: Error: 
+Traceback (most recent call last):
+  File "D:\.espressif\tools\openocd-esp32\v0.12.0-esp32-20250707\openocd-esp32\share\openocd\scripts/target/esp_common.cfg", line 9, in script
+D:\.espressif\tools\openocd-esp32\v0.12.0-esp32-20250707\openocd-esp32\share\openocd\scripts/target/esp_common.cfg:9: Error: 
+Traceback (most recent call last):
+  File "D:\.espressif\tools\openocd-esp32\v0.12.0-esp32-20250707\openocd-esp32\share\openocd\scripts/target/esp_common.cfg", line 9, in script
+Error: [esp32p4.hp.cpu0] Unsupported DTM version: -1
+Error: [esp32p4.hp.cpu0] Could not identify target type.
+Error: [esp32p4.hp.cpu1] Unsupported DTM version: -1
+Error: [esp32p4.hp.cpu1] Could not identify target type.

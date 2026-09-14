@@ -1,0 +1,56 @@
+
+[CASE console]
+
+nsh> [K
+[CASE open]
+dsktop camera
+desktop: camera diagnostic requested
+nsh> [K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS
+
+[CASE start]
+desktop ui camera-start
+camera start clicked=1
+desktop: ui camera-start ready
+nsh> [K[qpk] camera USB MJPEG worker starting
+[qpk] camera direct preview ready
+[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1
+[qpk] USB MJPEG first frame 640x480
+
+[CASE status]
+desktop cameras
+camera app: busy=1 alive=1 frames=41 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=230 dropped=187 packets=60884 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE audit]
+[Kdesktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":0,"y":0,"w":1024,"h":600,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"button","x":13,"y":11,"w":52,"h":42,"scroll":false,"text":""},
+{"id":3,"parent":2,"type":"label","x":32,"y":19,"w":15,"h":27,"scroll":true,"text":""},
+{"id":4,"parent":1,"type":"label","x":79,"y":16,"w":56,"h":39,"scroll":true,"text":"相机"},
+{"id":5,"parent":1,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"label","x":25,"y":79,"w":254,"h":22,"scroll":true,"text":"已连接 1 个摄像头  ·  CSI 0  /  USB 1"},
+{"id":7,"parent":5,"type":"button","x":25,"y":117,"w":974,"h":38,"scroll":false,"text":""},
+{"id":8,"parent":7,"type":"label","x":45,"y":122,"w":934,"h":28,"scroll":true,"text":"[当前] 1. HD Web Camera · USB"},
+{"id":9,"parent":5,"type":"button","x":25,"y":451,"w":481,"h":42,"scroll":false,"text":""},
+{"id":10,"parent":9,"type":"label","x":45,"y":458,"w":441,"h":28,"scroll":true,"text":"640 x 480 · MJPEG"},
+{"id":11,"parent":5,"type":"button","x":518,"y":451,"w":481,"h":42,"scroll":false,"text":""},
+{"id":12,"parent":11,"type":"label","x":538,"y":458,"w":441,"h":28,"scroll":true,"text":"30.0 fps"},
+{"id":13,"parent":5,"type":"label","x":25,"y":505,"w":113,"h":22,"scroll":true,"text":"正在准备预览…"},
+{id":14,"parent":5,"type":"button","x":25,"y":541,"w":150,"h":44,"scroll":false,"text":""},
+{"id":15,"parent":14,"type":"label","x":45,"y":549,"w":110,"h":28,"scroll":true,"text":"开始预览"},
+{"id":16,"parent":5,"type":"button","x":187,"y":541,"w":110,"h":44,"scroll":false,"text":""},
+{"id":17,"parent":16,"type":"label","x":207,"y":549,"w":70,"h":28,"scroll":true,"text":"停止"},
+{"id":18,"parent":5,"type":"buttn","x":309,"y":541,"w":150,"h":44,"scroll":false,"text":""},
+{"id":19,"parent":18,"type":"label","x":329,"y":549,"w":110,"h":28,"scroll":true,"text":"刷新设备"}
+]
+UI_LAYOUT_END
+nsh> 

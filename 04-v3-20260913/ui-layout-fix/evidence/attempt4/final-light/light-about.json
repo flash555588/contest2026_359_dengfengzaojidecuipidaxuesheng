@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "parent": 0,
+    "type": "container",
+    "x": 40,
+    "y": 44,
+    "w": 944,
+    "h": 512,
+    "scroll": false,
+    "text": ""
+  },
+  {
+    "id": 2,
+    "parent": 1,
+    "type": "label",
+    "x": 65,
+    "y": 63,
+    "w": 824,
+    "h": 39,
+    "scroll": true,
+    "text": "关于"
+  },
+  {
+    "id": 3,
+    "parent": 1,
+    "type": "button",
+    "x": 909,
+    "y": 59,
+    "w": 54,
+    "h": 42,
+    "scroll": false,
+    "text": ""
+  },
+  {
+    "id": 4,
+    "parent": 3,
+    "type": "label",
+    "x": 928,
+    "y": 67,
+    "w": 17,
+    "h": 27,
+    "scroll": true,
+    "text": ""
+  },
+  {
+    "id": 5,
+    "parent": 1,
+    "type": "label",
+    "x": 65,
+    "y": 127,
+    "w": 384,
+    "h": 252,
+    "scroll": true,
+    "text": "ESP32-P4 中文触摸桌面\n\n作者：电子科技大学 闻家贤\n\n系统：Apache NuttX RTOS\n处理器：双核 RISC-V\n内存：内部 RAM + PSRAM\n运行时间：40 秒\n中文字体：阿里"
+  }
+]

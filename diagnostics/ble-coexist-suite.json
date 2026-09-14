@@ -1,0 +1,11 @@
+[
+ {"name":"scan_completion","command":"desktop ui audit","expect":["就绪", "个设备"]},
+ {"name":"wifi_connect","command":"c6probe net","timeout":25,"expect":["network init ret=0"]},
+ {"name":"association_wait","command":"sleep 10","timeout":15},
+ {"name":"dhcp","command":"c6probe dhcp eth0","timeout":30,"expect":["DHCP ret=0"]},
+ {"name":"address","command":"ifconfig","expect":["eth0.*RUNNING", "bnep0.*RUNNING", "192.168.0."]},
+ {"name":"memory","command":"free"},
+ {"name":"storage","command":"desktop storage-test","timeout":30,"expect":["storage selftest PASS"]},
+ {"name":"ble_reopen","command":"desktop ui bluetooth","expect":["ready"]},
+ {"name":"reopen_layout","command":"desktop ui audit","expect":["就绪", "个设备"]}
+]

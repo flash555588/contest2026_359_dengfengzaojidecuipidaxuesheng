@@ -1,0 +1,67 @@
+
+[CASE console]
+
+nsh> [K
+[CASE data_cleanup_verified]
+ls -l /data
+/data:
+ drwsrwsrwx           0 qpk/
+nsh> [K
+[CASE tmp_cleanup_verified]
+ls -l /tmp
+/tmp:
+nsh> [K
+[CASE c6_before_init]
+c6probe stat
+c6probe: CMD52 ret=-107 CCCR=0x00 IORDY=0x00
+c6probe: regs ret=-107 TOKEN=00000000 PKTLEN=00000000 INT=00000000
+nsh> [K
+[CASE c6_bringup]
+c6probe
+c6: reset C6 on GPIO54
+c6: SDIO enumerated, Function 1 ready, 4-bit/20MHz
+c6: ESP-Hosted data path open
+c6probe: C6 chip_id=13 capability=0d rx_q=20 tx_q=0
+c6probe: C6 supports WLAN over SDIO
+c6probe: C6 supports BT (HCI) over SDIO
+c6probe: C6 is BLE-only (no BR/EDR)
+c6probe: OK ESP-Hosted transport is up
+nsh> 
+[CASE c6_bringup_exit]
+[Kecho $?
+0
+nsh> [K
+[CASE c6_after_init]
+c6probe stat
+c6probe: CMD52 ret=0 CCCR=0x32 IORDY=0x02
+c6probe: regs ret=0 TOKEN=00150000 PKTLEN=03a0003a INT=004cf800
+nsh> [K
+[CASE c6_rpc]
+c6probe rpc
+rpc: GetMacAddress tx pb=10 tlv=22
+rpc: GetMacAddress pb bytes: 08 01 10 81 02 18 01 8a 10 00
+rpc: GetMacAddress resp code=12289 mac.len=0
+c6probe: GetMacAddress RPC failed: -5
+nsh> 
+[CASE c6_rpc_exit]
+[Kecho $?
+1
+nsh> [K
+[CASE tasks_after_c6]
+ps
+  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND
+    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 39.3% CPU0 IDLE
+    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 50.7% CPU1 IDLE
+    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b840 0x4ff4b88c
+    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b7c0 0x4ff4b80c
+    5     0 ---(0x00000003) 252 RR       Kthread   - Waiting  Semaphore 0000000000000000 0004016  0.0% esp_timer 0x4ff6dcc0
+    6     0 ---(0x00000003)  15 RR       Kthread   - Waiting  Semaphore 0000000000000000 0004024  0.0% emac_rx 0x4ff6eef0
+    7     7 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712  9.9% desktop
+    8     8 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  0.0% nsh
+nsh> 
+[CASE heap_after_c6]
+[Kfree
+      total       used       free    maxused    maxfree  nused  nfree name
+   33554432    3794304   29760128    3803992   29758016   1270      6 Umem
+     355912      38568     317344      71400     315784    132     11 Kmem
+nsh> [K

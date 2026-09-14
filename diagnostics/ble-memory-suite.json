@@ -1,0 +1,5 @@
+[
+ {"name":"memory","command":"free"},
+ {"name":"uptime","command":"cat /proc/uptime"},
+ {"name":"transport_status","command":"c6probe status","timeout":12}
+]

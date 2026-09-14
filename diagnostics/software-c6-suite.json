@@ -1,0 +1,12 @@
+[
+  {"name":"data_cleanup_verified","command":"ls -l /data"},
+  {"name":"tmp_cleanup_verified","command":"ls -l /tmp"},
+  {"name":"c6_before_init","command":"c6probe stat"},
+  {"name":"c6_bringup","command":"c6probe","timeout":25,"expect":["c6probe: OK"]},
+  {"name":"c6_bringup_exit","command":"echo $?","expect":["^0$"]},
+  {"name":"c6_after_init","command":"c6probe stat"},
+  {"name":"c6_rpc","command":"c6probe rpc","timeout":25,"expect":["c6probe: STA MAC"]},
+  {"name":"c6_rpc_exit","command":"echo $?","expect":["^0$"]},
+  {"name":"tasks_after_c6","command":"ps"},
+  {"name":"heap_after_c6","command":"free"}
+]

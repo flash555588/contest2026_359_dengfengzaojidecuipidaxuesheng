@@ -1,0 +1,50 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.14130840000871103,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "open",
+    "command": "desktop camera",
+    "completed": true,
+    "elapsed_seconds": 0.4532970000000205,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  },
+  {
+    "name": "start",
+    "command": "desktop ui camera-start",
+    "completed": true,
+    "elapsed_seconds": 0.44322299999475945,
+    "checks": {
+      "clicked=1": true
+    },
+    "output": "desktop ui camera-start\ncamera start clicked=1\ndesktop: ui camera-start ready\nnsh> \u001b[K[qpk] camera USB MJPEG worker starting\n[qpk] camera direct preview ready\n[E/USB] timeout ch=0 ep=00 state=2 hcchar=a0900040 size=c008001a int=00000010 mask=00000002\n[uvc] control type=21 req=01 value=0100 size=26 result=-14\n[uvc] stream start failed: -5\n[E/USB] timeout ch=0 ep=00 state=3 hcchar=a0908040 size=40080040 int=00000010 mask=00000002\n[uvc] control type=01 req=0b value=0000 size=0 result=-14\n[qpk] camera failure awaiting cleanup: -5\n"
+  },
+  {
+    "name": "status",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.07000880000123288,
+    "checks": {
+      "busy=1 alive=1 frames=[1-9]": false
+    },
+    "output": "desktop cameras\ncamera app: busy=0 alive=0 frames=0 error=-5 photo=0 path=\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=0 dropped=0 packets=0 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  },
+  {
+    "name": "audit",
+    "command": "desktop ui audit",
+    "completed": true,
+    "elapsed_seconds": 0.25885549999657087,
+    "checks": {
+      "UI_LAYOUT_BEGIN": true
+    },
+    "output": "\u001b[Kdesktop ui audit\nUI_LAYOUT_BEGIN\n[{\"id\":1,\"parent\":0,\"type\":\"container\",\"x\":0,\"y\":0,\"w\":1024,\"h\":600,\"scroll\":false,\"text\":\"\"},\n{\"id\":2,\"parent\":1,\"type\":\"button\",\"x\":13,\"y\":11,\"w\":52,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":3,\"parent\":2,\"type\":\"label\",\"x\":32,\"y\":19,\"w\":15,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":4,\"parent\":1,\"type\":\"label\",\"x\":79,\"y\":16,\"w\":56,\"h\":39,\"scroll\":true,\"text\":\"相机\"},\n{\"id\":5,\"parent\":1,\"type\":\"container\",\"x\":1,\"y\":63,\"w\":1022,\"h\":536,\"scroll\":false,\"text\":\"\"},\n{\"id\":6,\"parent\":5,\"type\":\"label\",\"x\":25,\"y\":79,\"w\":254,\"h\":22,\"scroll\":true,\"text\":\"已连接 1 个摄像头  ·  CSI 0  /  USB 1\"},\n{\"id\":7,\"parent\":5,\"type\":\"button\",\"x\":25,\"y\":117,\"w\":974,\"h\":38,\"scroll\":false,\"text\":\"\"},\n{\"id\":8,\"parent\":7,\"type\":\"label\",\"x\":45,\"y\":122,\"w\":934,\"h\":28,\"scroll\":true,\"text\":\"[当前] 1. HD Web Camera · USB\"},\n{\"id\":9,\"parent\":5,\"type\":\"button\",\"x\":25,\"y\":451,\"w\":481,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":10,\"parent\":9,\"type\":\"label\",\"x\":45,\"y\":458,\"w\":441,\"h\":28,\"scroll\":true,\"text\":\"640 x 480 · MJPEG\"},\n{\"id\":11,\"parent\":5,\"type\":\"button\",\"x\":518,\"y\":451,\"w\":481,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":12,\"parent\":11,\"type\":\"label\",\"x\":538,\"y\":458,\"w\":441,\"h\":28,\"scroll\":true,\"text\":\"30.0 fps\"},\n{\"id\":13,\"parent\":5,\"type\":\"label\",\"x\":25,\"y\":505,\"w\":336,\"h\":22,\"scroll\":true,\"text\":\"预览已停止（-5），请检查连接或更换视频模式\"},\n{\"id\":14,\"parent\":5,\"type\":\"button\",\"x\":25,\"y\":541,\"w\":150,\"h\":44,\"scroll\":false,\"text\":\"\"},\n{\"id\":15,\"parent\":14,\"type\":\"label\",\"x\":45,\"y\":549,\"w\":110,\"h\":28,\"scroll\":true,\"text\":\"开始预览\"},\n{\"id\":16,\"parent\":5,\"type\":\"button\",\"x\":187,\"y\":541,\"w\":110,\"h\":44,\"scroll\":false,\"text\":\"\"},\n{\"id\":17,\"parent\":16,\"type\":\"label\",\"x\":207,\"y\":549,\"w\":70,\"h\":28,\"scroll\":true,\"text\":\"停止\"},\n{\"id\":18,\"parent\":5,\"type\":\"button\",\"x\":309,\"y\":541,\"w\":150,\"h\":44,\"scroll\":false,\"text\":\"\"},\n{\"id\":19,\"parent\":18,\"type\":\"label\",\"x\":329,\"y\":549,\"w\":110,\"h\":28,\"scroll\":true,\"text\":\"刷新设备\"}\n]\nUI_LAYOUT_END\nnsh> "
+  }
+]

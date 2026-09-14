@@ -1,0 +1,31 @@
+
+[CASE console]
+
+nsh> [K
+[CASE uptime_after_jtag]
+cat /proc/uptime
+    163.81
+nsh> [K
+[CASE address_after_jtag]
+ifconfig
+eth0	Link encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500
+	inet addr:192.168.0.105 DRaddr:192.168.0.1 Mask:255.255.255.0
+
+nsh> [K
+[CASE dns_from_dhcp]
+c6probe dns
+c6probe: DNS 183.221.253.100
+c6probe: DNS entries=0
+nsh> [K
+[CASE final_tasks]
+ps
+  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND
+    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 19.7% CPU0 IDLE
+    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 50.4% CPU1 IDLE
+    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b240 0x4ff4b28c
+    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b1c0 0x4ff4b20c
+    5     5 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712  9.8% desktop
+    6     6 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  0.0% nsh
+    7     5 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0008152  0.0% desktop 0x4003cdfa 0x4ff54fa4
+   10    10 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004040 20.1% c6net
+nsh> [K

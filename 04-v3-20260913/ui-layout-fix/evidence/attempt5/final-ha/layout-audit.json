@@ -1,0 +1,26 @@
+[
+  {
+    "page": "light-ha-address",
+    "objects": 9,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-ha-advanced",
+    "objects": 34,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-ha-settings",
+    "objects": 34,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-ha",
+    "objects": 29,
+    "overlaps": [],
+    "overflow": []
+  }
+]

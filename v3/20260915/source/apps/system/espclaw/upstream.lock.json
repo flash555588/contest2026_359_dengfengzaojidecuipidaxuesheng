@@ -1,6 +1,0 @@
-{
-  "repository": "https://github.com/espressif/esp-claw.git",
-  "commit": "74b18700a1d6c40de472bfc71c19e49356ca1cc0",
-  "license": "Apache-2.0",
-  "source_directory": "../upstream/esp-claw"
-}

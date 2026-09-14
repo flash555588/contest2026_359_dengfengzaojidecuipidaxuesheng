@@ -1,0 +1,86 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.0008555999957025051,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "memory_before",
+    "command": "free",
+    "completed": true,
+    "elapsed_seconds": 0.014641099995060358,
+    "checks": {},
+    "output": "free\n      total       used       free    maxused    maxfree  nused  nfree name\n   33554432    3796104   29758328    3803992   29757496   1309      4 Umem\n     355912      38456     317456      40048     315784    129     12 Kmem\nnsh> \u001b[K"
+  },
+  {
+    "name": "espclaw_status",
+    "command": "espclaw status",
+    "completed": true,
+    "elapsed_seconds": 0.008222199998272117,
+    "checks": {
+      "cleanup pending no": true
+    },
+    "output": "espclaw status\nESP-Claw 0.1.0: cleanup pending no; chat settings missing or invalid (network not tested)\nnsh> \u001b[K"
+  },
+  {
+    "name": "espclaw_selftest_1",
+    "command": "espclaw selftest",
+    "completed": true,
+    "elapsed_seconds": 0.006169599997519981,
+    "checks": {
+      "offline core selftest PASS": true
+    },
+    "output": "espclafrnw ]sel1eftest\ncaESP-Claw 0.1.0: offline core selftest PASS; network/model not tested\nnsh> \u001b[K"
+  },
+  {
+    "name": "espclaw_selftest_2",
+    "command": "espclaw selftest",
+    "completed": true,
+    "elapsed_seconds": 0.005724400005419739,
+    "checks": {
+      "offline core selftest PASS": true
+    },
+    "output": "espctme]a llaw selftest\nESP-Claw 0.1.0: offline core selftest PASS; network/model not tested\nnsh> \u001b[K"
+  },
+  {
+    "name": "espclaw_selftest_3",
+    "command": "espclaw selftest",
+    "completed": true,
+    "elapsed_seconds": 0.0059086999972350895,
+    "checks": {
+      "offline core selftest PASS": true
+    },
+    "output": "es fszoapclaw selftest\nESP-Claw 0.1.0: offline core selftest PASS; network/model not tested\nnsh> \u001b[K"
+  },
+  {
+    "name": "espclaw_cleanup_state",
+    "command": "espclaw status",
+    "completed": true,
+    "elapsed_seconds": 0.006173299996589776,
+    "checks": {
+      "cleanup pending no": true
+    },
+    "output": "espclaw status\nESP-Claw 0.1.0: cleanup pending no; chat settings missing or invalid (network not tested)\nnsh> \u001b[K"
+  },
+  {
+    "name": "ha_help",
+    "command": "ha_panel -h",
+    "completed": true,
+    "elapsed_seconds": 0.01249390000157291,
+    "checks": {
+      "Usage: ha_panel": true
+    },
+    "output": "ha_panel -h\nUsage: ha_panel [-s host] [-p port] [-t token] [-f conf]\n  Home Assistant LVGL panel (ws://host:port/api/websocket)\n  Long-lived token: HA Profile -> Security -> Long-Lived Access Tokens\nnsh> \u001b[K"
+  },
+  {
+    "name": "scratch_directory",
+    "command": "mkdir /data/.codex-sw-20260914-a3",
+    "completed": true,
+    "elapsed_seconds": 0.021292400000675116,
+    "checks": {},
+    "output": "mkdir /data/.codex-sw-20260914-a3\nnsh> \u001b[K"
+  }
+]

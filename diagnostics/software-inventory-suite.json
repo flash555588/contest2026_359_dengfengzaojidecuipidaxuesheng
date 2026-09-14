@@ -1,0 +1,13 @@
+[
+  {"name":"commands", "command":"help"},
+  {"name":"version", "command":"uname -a", "expect":["NuttX", "esp32p4-function-ev-board"]},
+  {"name":"uptime", "command":"cat /proc/uptime"},
+  {"name":"memory", "command":"free", "expect":["Umem", "Kmem"]},
+  {"name":"tasks", "command":"ps", "expect":["desktop", "esp_timer"]},
+  {"name":"devices", "command":"ls /dev", "expect":["fb0", "input0"]},
+  {"name":"audio_devices", "command":"ls /dev/audio"},
+  {"name":"mounts", "command":"mount"},
+  {"name":"data", "command":"ls /data"},
+  {"name":"packages", "command":"ls /data/qpk"},
+  {"name":"interfaces", "command":"ifconfig"}
+]

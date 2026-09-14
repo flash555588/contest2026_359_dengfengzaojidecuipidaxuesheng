@@ -1,0 +1,11 @@
+{
+  "saved_jpeg_bytes": 29111,
+  "saved_jpeg_size": [
+    640,
+    480
+  ],
+  "saved_jpeg_sha256": "26fcbef98c584b7fdb599736ea6067f541aa0c4581a9aa39d82c43167e87ac51",
+  "independent_jpeg_decode": "passed",
+  "preview_toolbar_black_pixels": 0,
+  "scope": "One captured frame; temporal flicker still needs observation on the physical screen."
+}

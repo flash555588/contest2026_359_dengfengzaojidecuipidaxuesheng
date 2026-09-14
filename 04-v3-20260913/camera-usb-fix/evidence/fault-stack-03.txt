@@ -1,0 +1,92 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x40035044 in rspin_lock (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:693
+warning: 693	/tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x40035044, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4002FE3E, debug_reason=00000000
+[esp32p4.hp.cpu1] Halt cause (5) - (PMP Load access fault)
+$1 = 1
+$2 = {generation = 1, vid = 1443, pid = 37681, id = 0 '\000', connected = 1 '\001', supported = 1 '\001', reserved = 0 '\000', name = "HD Web Camera", '\000' <repeats 50 times>}
+$3 = {0x1, 0x0, 0x1, 0x5, 0x15, 0x16, 0x5, 0x0 <repeats 13 times>, 0x10, 0x0, 0x0, 0x4, 0x0, 0x0, 0xb8, 0xdd, 0x0 <repeats 36 times>}
+$4 = 0x100
+$5 = {generation = 1, interval = 333333, mode = 4 '\004', reserved = "\000\000", width = 640, height = 480, max_frame_size = 1048576, max_payload_size = 1024}
+$6 = {frames = 244, dropped = 56988, packets = 66546, errors = 0, error = 0}
+$7 = {fd = 5, fb_fd = 6, usb = true, usb_mode = {generation = 1, interval = 333333, mode = 4 '\004', reserved = "\000\000", width = 640, height = 480, max_frame_size = 1048576, max_payload_size = 1024}, fps_started_ms = 0, display_fps_started_ms = 0, profile_started_us = 0, profile_dq_us = 0, profile_invalidate_us = 0, profile_convert_us = 0, profile_clean_us = 0, profile_qbuf_us = 0, captured_frames = 25, dropped_frames = 0, frames = 25, profile_samples = 0, profile_converted = 0, dq_errors = 0, qbuf_errors = 0, pan_errors = 0, stop_requested = true, thread_alive = true, thread_error = 0, thread_running = true, thread = 10, streaming = false, direct_preview = true, mmap_buffers = {0x0, 0x0, 0x0}, mmap_lengths = {0, 0, 0}, mmap_count = 0, memory_type = 0, fb_video = {fmt = 11 '\v', xres = 1024, yres = 600, nplanes = 1 '\001'}, fb_plane = {fbmem = 0x480001c0, fblen = 3686400, stride = 2048, display = 0 '\000', bpp = 16 '\020', xres_virtual = 1024, yres_virtual = 1800, xoffset = 0, yoffset = 1200}, fb_page = 2}
+$8 = 0
+  Id   Target Id         Frame 
+* 1    Remote target     0x40035044 in rspin_lock (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:693
+
+Thread 1 (Remote target):
+#0  0x40035044 in rspin_lock (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:693
+#1  rspin_lock_irqsave (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:706
+#2  usb_osal_enter_critical_section () at chip/camera_usb/cherryusb/usb_osal_nuttx.c:379
+#3  0x4003416a in dwc2_chan_alloc (bus=0x4ff57040 <g_usbhost_bus>) at chip/camera_usb/cherryusb/port/dwc2/usb_hc_dwc2.c:477
+#4  usbh_submit_urb (urb=urb@entry=0x4ff580e0 <g_usbhost_bus+4256>) at chip/camera_usb/cherryusb/port/dwc2/usb_hc_dwc2.c:1032
+#5  0x40031360 in usbh_control_transfer (hport=0x4ff57070 <g_usbhost_bus+48>, setup=0x4ff5b400 <g_setup_buffer>, buffer=0x0) at chip/camera_usb/cherryusb/core/usbh_core.c:710
+#6  0x4002dcca in uvc_control (d=d@entry=0x4ff54140 <g_devices>, type=type@entry=1 '\001', request=request@entry=11 '\v', value=value@entry=0, index=<optimized out>, size=size@entry=0) at chip/camera_usb/camera_uvc.c:92
+#7  0x4002ddc6 in uvc_stop (d=0x4ff54140 <g_devices>) at chip/camera_usb/camera_uvc.c:108
+#8  0x4002e948 in uvc_ioctl (file=<optimized out>, cmd=29956, arg=0) at chip/camera_usb/camera_uvc.c:276
+#9  0x400072ba in file_vioctl (filep=0x4ff7fbb8, req=req@entry=29956, ap=0x483a336c, ap@entry=0x483a3368) at vfs/fs_ioctl.c:70
+#10 0x4000749e in nx_vioctl (fd=<optimized out>, req=29956, ap=0x483a3368) at vfs/fs_ioctl.c:208
+#11 ioctl (fd=<optimized out>, req=req@entry=29956) at vfs/fs_ioctl.c:289
+#12 0x40043f50 in qpk_camera_usb_thread (arg=0x4ff4ba28 <g_camera>, arg@entry=<error reading variable: value has been optimized out>) at /tmp/v3-desktop-camera-usb-20260914/apps/system/desktop/qpk_camera_usb.inc:59
+#13 0x4001fac8 in pthread_startup (entry=<optimized out>, arg=<optimized out>) at pthread/pthread_create.c:61
+#14 0x400f8650 in pthread_start () at pthread/pthread_create.c:151
+#15 0x00000000 in ?? ()
+Backtrace stopped: frame did not save the PC
+$9 = {saved_regs = 0x0, regs = 0x0}
+$10 = {saved_regs = 0x0, regs = 0x4ff7ed6c}
+$11 = {0x0 <repeats 34 times>}
+$12 = {0x4ff42318, 0x4ff42306, 0x4ff7edf0, 0x4ffbef70, 0x0, 0x4fc00d66, 0x4ff41b6c, 0x4ffbef70, 0x1, 0x0, 0x0, 0x1, 0x4ff4f178, 0x0, 0x1, 0x3ff06000, 0x0, 0x4ff4f168, 0x0 <repeats 14 times>, 0x1881, 0x0}
+$13 = {{0x0 <repeats 33 times>}, {0x4000d748, 0x4000d748, 0x4ff4fafc, 0x0, 0x0, 0x4ff4fdc0, 0x28000000, 0x4ffbef70, 0x5, 0x4ff51000, 0x4ff51304, 0x0, 0x1801, 0x4ff4f0bc, 0x4, 0x4ff4f158, 0x80000000, 0x10, 0x4ff51100, 0x40120d8c, 0x0, 0x4ff51280, 0x4ff4f000, 0x0, 0x6, 0x1, 0x84, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1801}}
+0x4ff4faec <g_intstackalloc+1324>:	0x40122000	0x4013b000	0x0000000c	0x00002199
+0x4ff4fafc <g_intstackalloc+1340>:	0x40121aa0	0x4000d418	0x4ff4fb34	0x0a000026
+0x4ff4fb0c <g_intstackalloc+1356>:	0x00000000	0x00000001	0x4ff51100	0x4ff51304
+0x4ff4fb1c <g_intstackalloc+1372>:	0x40120d8c	0x00000000	0x00000000	0x7474754e
+0x4ff4fb2c <g_intstackalloc+1388>:	0x4ff60058	0x00000001	0x00000035	0x4ff4f000
+0x4ff4fb3c <g_intstackalloc+1404>:	0x4ff400c8	0x40120d6c	0x00000005	0x4002143c
+0x4ff4fb4c <g_intstackalloc+1420>:	0x00000000	0x00000000	0x00000000	0x00000000
+0x4ff4fb5c <g_intstackalloc+1436>:	0x302e3000	0x0000302e	0x0000001c	0x0000021c
+0x4ff4fb6c <g_intstackalloc+1452>:	0x4ff62000	0x64640001	0x63623239	0x642d3466
+0x4ff4fb7c <g_intstackalloc+1468>:	0x79747269	0x70655320	0x20343120	0x36323032
+0x4ff4fb8c <g_intstackalloc+1484>:	0x3a333220	0x303a3431	0x00000037	0x4002153c
+0x4ff4fb9c <g_intstackalloc+1500>:	0x400214f2	0x00000000	0x7369726c	0x00762d63
+0x4ff4fbac <g_intstackalloc+1516>:	0x4013b000	0x4ff4fc54	0x00000005	0x4001a36a
+0x4ff4fbbc <g_intstackalloc+1532>:	0x00000000	0x00000000	0x00000000	0x00000000
+0x4ff4fbcc <g_intstackalloc+1548>:	0x00000000	0x00000400	0x0000001c	0x0000021c
+0x4ff4fbdc <g_intstackalloc+1564>:	0x4ff62000	0x00000001	0x00000001	0x4ff4f000
+0x4ff4fbec <g_intstackalloc+1580>:	0x4013b000	0x4ff4fc54	0x00000005	0x400036a4
+0x4ff4fbfc <g_intstackalloc+1596>:	0x00000000	0x00000005	0x4ff4f164	0x4ff41ec2
+0x4ff4fc0c <g_intstackalloc+1612>:	0x00000000	0x4ff61a9c	0x00000000	0x4ff4fc54
+0x4ff4fc1c <g_intstackalloc+1628>:	0x30000005	0x40032c44	0x4ff4fc54	0x4ff42194
+0x4ff4fc2c <g_intstackalloc+1644>:	0x4ff62000	0x00000001	0x4ff57040	0x4ff4fcd8
+0x4ff4fc3c <g_intstackalloc+1660>:	0x30000005	0x40032c44	0x4ff4fc54	0x4ff4019a
+0x4ff4fc4c <g_intstackalloc+1676>:	0x00000000	0x40032c44	0x40032c44	0x40032c40
+0x4ff4fc5c <g_intstackalloc+1692>:	0x4ff4fcd8	0x0000001c	0x00000000	0x4fc114ec
+0x4ff4fc6c <g_intstackalloc+1708>:	0xfffffff0	0x4ffbef70	0x00000000	0x00000000
+0x4ff4fc7c <g_intstackalloc+1724>:	0x00001881	0x00000000	0x00000001	0x4ff4f000
+0x4ff4fc8c <g_intstackalloc+1740>:	0x00000000	0x80000000	0x4ff4f178	0x4fc11284
+0x4ff4fc9c <g_intstackalloc+1756>:	0x00000000	0x4ff61a40	0x4ff57040	0x00000001
+0x4ff4fcac <g_intstackalloc+1772>:	0x4ff62000	0x0000021c	0x0000001c	0x00000400
+0x4ff4fcbc <g_intstackalloc+1788>:	0x00000000	0x00000000	0x00000000	0x00000000
+0x4ff4fccc <g_intstackalloc+1804>:	0x00000000	0x00000000	0x00001801	0x4ff4f000
+0x4ff4fcdc <g_intstackalloc+1820>:	0x00000001	0x4ff54bd8	0x40032c86	0x00000000
+0x4ff4fcec <g_intstackalloc+1836>:	0x00000000	0x4ff57040	0x4003479a	0x4ff50f70
+0x4ff4fcfc <g_intstackalloc+1852>:	0x00000004	0x4ff54bd8	0x4ff41230	0x00000000
+0x4ff4fd0c <g_intstackalloc+1868>:	0x0000100d	0x4ff517e4	0x4000f782	0x00000000
+0x4ff4fd1c <g_intstackalloc+1884>:	0x00000000	0x00000000	0x00000000	0x0000006e
+0x4ff4fd2c <g_intstackalloc+1900>:	0x4ff4f164	0x00000000	0x4ff7ed6c	0x00000001
+0x4ff4fd3c <g_intstackalloc+1916>:	0x0000006e	0x4ff40210	0x400350a6	0x00000000
+0x4ff4fd4c <g_intstackalloc+1932>:	0x00000000	0x4ff40210	0x4ff40292	0x00000000
+0x4ff4fd5c <g_intstackalloc+1948>:	0x00000000	0x00000000	0x4ff4f0bc	0x00000000
+mepc (/32): 0x40104424
+mtval (/32): 0x00000000
+sp (/32): 0x4ff4faec
+ra (/32): 0x4000da84
+[esp32p4.hp.cpu0] Found 3 triggers
+[esp32p4.hp.cpu0] Target halted, PC=0x4003504E, debug_reason=00000004
+[esp32p4.hp.cpu1] Found 3 triggers
+[esp32p4.hp.cpu1] Target halted, PC=0x4002FE2A, debug_reason=00000004
+[esp32p4.hp.cpu1] Halt cause (5) - (PMP Load access fault)
+[Inferior 1 (Remote target) detached]

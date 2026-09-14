@@ -1,0 +1,9 @@
+[
+  {"name":"release_capture","command":"desktop ui frame-free","expect":["frame released"]},
+  {"name":"restore_light","command":"desktop ui light","expect":["ready"]},
+  {"name":"show_control_panel","command":"desktop ui settings","expect":["ready"]},
+  {"name":"final_storage","command":"ls -l /data/qpk"},
+  {"name":"final_network","command":"ifconfig","expect":["192.168.0.105"]},
+  {"name":"final_tasks","command":"ps","expect":["desktop","c6net"]},
+  {"name":"final_uptime","command":"cat /proc/uptime"}
+]

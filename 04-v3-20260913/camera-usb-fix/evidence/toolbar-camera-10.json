@@ -1,0 +1,124 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.1448750999988988,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "open",
+    "command": "desktop camera",
+    "completed": true,
+    "elapsed_seconds": 0.4558837000076892,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  },
+  {
+    "name": "start",
+    "command": "desktop ui camera-start",
+    "completed": true,
+    "elapsed_seconds": 0.12178069999208674,
+    "checks": {
+      "clicked=1": true
+    },
+    "output": "desktop ui camera-start\ncamera start clicked=1\ndesktop: ui camera-start ready\nnsh> \u001b[K[qpk] camera USB MJPEG worker starting\n[qpk] camera direct preview ready\n[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1\n[qpk] USB MJPEG first frame 640x480\n"
+  },
+  {
+    "name": "preview",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.08077839999168646,
+    "checks": {
+      "busy=1 alive=1 frames=[1-9]": true,
+      "underruns=0 pan_errors=0 mode=640x480": true
+    },
+    "output": "dektop cameras\ncamera app: busy=1 alive=1 frames=46 error=0 photo=0 path=\ncamera display: frames=1418 underruns=0 pan_errors=0 mode=640x480\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=236 dropped=188 packets=62461 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  },
+  {
+    "name": "photo",
+    "command": "desktop ui camera-photo",
+    "completed": true,
+    "elapsed_seconds": 0.10078249999787658,
+    "checks": {
+      "capture accepted=1": true
+    },
+    "output": "\u001b[Kdesktop ui camer-photo\ncamera capture accepted=1\ndesktop: ui camera-photo ready\nnsh> \u001b[K[qpk] JPEG photo status=2 bytes=29111\n"
+  },
+  {
+    "name": "photo_done",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.07263159999274649,
+    "checks": {
+      "busy=1 alive=1 frames=[1-9]": true,
+      "photo=2 path=/data/photos/camera-[0-9]+.jpg": true,
+      "underruns=0 pan_errors=0": true
+    },
+    "output": "desktop cameras\ncamera app: busy=1 alive=1 frames=196 error=0 photo=2 path=/data/photos/camera-00000001.jpg\ncamera display: frames=2940 underruns=0 pan_errors=0 mode=640x480\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=992 dropped=794 packets=263861 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  },
+  {
+    "name": "photos",
+    "command": "ls -l /data/photos",
+    "completed": true,
+    "elapsed_seconds": 0.19902739999815822,
+    "checks": {
+      "camera-[0-9]+.jpg": true
+    },
+    "output": "\u001b[Kls -l /data/photos\n/data/photos:\n -rwSrwSrw-       29111 camera-00000001.jpg\nnsh> \u001b[K"
+  },
+  {
+    "name": "stop",
+    "command": "desktop camera-stop",
+    "completed": true,
+    "elapsed_seconds": 0.19464290000905748,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop amera-stop\ndesktop: camera diagnostic stop requested\nnsh> \u001b[K"
+  },
+  {
+    "name": "idle",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.07485129999986384,
+    "checks": {
+      "busy=0 alive=0": true
+    },
+    "output": "desktop cameras\ncamera app: busy=0 alive=0 frames=0 error=0 photo=2 path=/data/photos/camera-00000001.jpg\ncamera display: frames=3155 underruns=0 pan_errors=0 mode=0x0\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=1002 dropped=802 packets=266632 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  },
+  {
+    "name": "open_again",
+    "command": "desktop camera",
+    "completed": true,
+    "elapsed_seconds": 0.456049600004917,
+    "checks": {
+      "requested": true
+    },
+    "output": "\u001b[Kdesktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  },
+  {
+    "name": "start_again",
+    "command": "desktop ui camera-start",
+    "completed": true,
+    "elapsed_seconds": 0.1191971999942325,
+    "checks": {
+      "clicked=1": true
+    },
+    "output": "desktop ui camera-start\ncamera start clicked=1\ndesktop: ui camera-start ready\nnsh> \u001b[K[qpk] camera USB MJPEG worker starting\n[qpk] camera direct preview ready\n[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1\n[qpk] USB MJPEG first frame 640x480\n"
+  },
+  {
+    "name": "preview_again",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.07798269999329932,
+    "checks": {
+      "busy=1 alive=1 frames=[1-9]": true,
+      "underruns=0 pan_errors=0": true
+    },
+    "output": "desktop cameras\ncamera app: busy=1 alive=1 frames=46 error=0 photo=2 path=/data/photos/camera-00000001.jpg\ncamera display: frames=3867 underruns=0 pan_errors=0 mode=640x480\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=235 dropped=187 packets=62284 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {"name":"transport","command":"c6probe","timeout":20,"expect":["OK ESP-Hosted transport is up"]},
+  {"name":"wifi_connect","command":"c6probe net","timeout":25,"expect":["network init ret=0"]},
+  {"name":"association_wait","command":"sleep 10","timeout":15},
+  {"name":"dhcp","command":"c6probe dhcp eth0","timeout":30,"expect":["DHCP ret=0"]},
+  {"name":"wifi_before_ble","command":"ifconfig","expect":["eth0.*RUNNING", "192\\.168\\.0\\."]},
+  {"name":"open_ble","command":"desktop ui bluetooth","expect":["ready"]},
+  {"name":"startup_wait","command":"sleep 4","timeout":10},
+  {"name":"ble_ready","command":"desktop ui audit","expect":["就绪"]},
+  {"name":"start_scan","command":"desktop ui ble-scan","expect":["ready"]},
+  {"name":"scan_wait","command":"sleep 11","timeout":15},
+  {"name":"scan_finished","command":"desktop ui audit","expect":["就绪", "[1-9][0-9]* 个设备"]},
+  {"name":"network_after_scan","command":"ifconfig","expect":["eth0.*RUNNING", "bnep0.*RUNNING", "192\\.168\\.0\\."]},
+  {"name":"storage","command":"desktop storage-test","timeout":30,"expect":["storage selftest PASS"]},
+  {"name":"memory","command":"free"}
+]

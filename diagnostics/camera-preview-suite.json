@@ -1,0 +1,10 @@
+[
+  {"name":"open_camera","command":"desktop camera","expect":["requested"],"settle":4},
+  {"name":"start_preview","command":"desktop ui camera-start","expect":["ready"],"settle":5},
+  {"name":"preview_inventory","command":"desktop cameras","expect":["HD Web Camera"]},
+  {"name":"capture","command":"desktop ui camera-photo","expect":["capture accepted=1"],"settle":20},
+  {"name":"stream_stats","command":"desktop cameras","expect":["stream: frames=[1-9]"]},
+  {"name":"photos","command":"ls -l /data/photos","expect":["camera-"]},
+  {"name":"stop","command":"desktop camera-stop","expect":["requested"],"settle":2},
+  {"name":"memory_after","command":"free"}
+]

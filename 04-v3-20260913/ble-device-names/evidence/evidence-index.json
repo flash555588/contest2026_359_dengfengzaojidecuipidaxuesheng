@@ -1,0 +1,58 @@
+{
+  "firmware_sha256": "0ac1e9ff601f28db20a6878baf77cef7b48662c4837c427d76b7f34766dc6b09",
+  "serial_runs": {
+    "scan-sorted.json": {
+      "suite": "build-scripts/ble-names-suite.json",
+      "all_checks_passed": true,
+      "sha256": "1359a7d6a0a4d3d407b7cd397b8ed6f6aad1e97327c3ccd331cabc4fd0719fc9",
+      "case_count": 11
+    },
+    "repeat-sorted.json": {
+      "suite": "build-scripts/ble-names-repeat-suite.json",
+      "all_checks_passed": true,
+      "sha256": "2987f37194393e92b737532256ae7e58e579922c0399c35b5bc3dc545bac227d",
+      "case_count": 15
+    },
+    "final-console.json": {
+      "suite": "build-scripts/ble-final-suite.json",
+      "all_checks_passed": true,
+      "sha256": "fd44729395695ac17148b77e79093801efaba58b824e81caf962536cdb4f43a8",
+      "case_count": 10
+    }
+  },
+  "visual_runs": [
+    {
+      "page": "light-bluetooth",
+      "path": "evidence/review-light-final/light-bluetooth.png",
+      "overlaps": 0,
+      "overflow": 0
+    },
+    {
+      "page": "dark-bluetooth",
+      "path": "evidence/review-dark-final/dark-bluetooth.png",
+      "overlaps": 0,
+      "overflow": 0
+    }
+  ],
+  "final_image_evidence": [
+    "flash-sorted.log",
+    "boot-sorted.log",
+    "build.log",
+    "validation.json",
+    "image-info.txt",
+    "name-parser-test.json"
+  ],
+  "previous_image": {
+    "firmware_sha256": "81825cd2c50b1687f3dffe8b6540a0d6a873f9d389d19a5f65dabd30e3e0c0c0",
+    "evidence": [
+      "flash.log",
+      "boot.log",
+      "scan-final.json",
+      "review-light/",
+      "review-dark/"
+    ],
+    "note": "Initial name display before sorting named devices first. These are not final sorted-image evidence."
+  },
+  "temporary_windows_advertiser": "Start rejected by Windows with invalid argument. No passing result claimed; name evidence is a real nearby device.",
+  "other_files": "Auxiliary references or previous experiments; not final-image passing evidence."
+}

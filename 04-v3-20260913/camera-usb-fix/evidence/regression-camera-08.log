@@ -1,0 +1,94 @@
+
+[CASE console]
+
+nsh> [K
+[CASE camera_stop]
+desktop camera-stop
+desktop: camera diagnostic stop requested
+nsh> [K
+[CASE camera_idle]
+desktop cameras
+camera app: busy=0 alive=0 frames=0 error=-5 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=1 HD Web Camera [05a3:9331]
+  stream: frames=0 dropped=0 packets=0 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> [K
+[CASE mounts]
+mount
+  /data type smartfs
+  /proc type procfs
+  /tmp type tmpfs
+nsh> [K
+[CASE storage]
+desktop storage-test
+desktop: storage selftest PASS (ret=0, 3 namespaces, overwrite/read/delete)
+nsh> 
+[CASE ble]
+[Kdesktop ui ble-scan
+desktop: ui ble-scan ready
+nsh> [Krpc: WifiInit tx pb=50 tlv=62
+rpc: WifiInit pb bytes: 08 01 10 96 02 18 01 b2 11 28 0a 26 08 0a 10 20 18 01 28 20 40 01 48 01 58 01 68 06 78 f0 05 80 01 20 98 01 07 a0 01 cf fe bc f9 01 a8 01 01 b0 01 05
+rpc: EVENT msg_id=769
+rpc: WifiInit resp=0
+rpc: SetMode tx pb=12 tlv=24
+rpc: SetMode pb bytes: 08 01 10 84 02 18 02 a2 10 02 08 01
+rpc: SetMode(1) resp=0
+rpc: WifiStart tx pb=10 tlv=22
+rpc: WifiStart pb bytes: 08 01 10 98 02 18 03 c2 11 00
+rpc: WifiStart resp=0
+rpc: GetMacAddress tx pb=10 tlv=22
+rpc: GetMacAddress pb bytes: 08 01 10 81 02 18 04 8a 10 00
+rpc: EVENT msg_id=773
+rpc: EVENT msg_id=773
+
+[CASE ble_ready]
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":40,"y":44,"w":944,"h":512,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"label","x":65,"y":63,"w":824,"h":39,"scroll":true,"text":"蓝牙"},
+{"id":3,"parent":1,"type":"button","x":909,"y":59,"w":54,"h":42,"scroll":false,"text":""},
+{"id":4,"parent":3,"type":"label","x":928,"y":67,"w":17,"h":27,"scroll":true,"text":""},
+{"id":5,"parent":1,"type":"label","x":65,"y":121,"w":450,"h":28,"scroll":true,"text":"就绪 · 0 个设备"},
+{"id":6,"parent":1,"type":"button","x":521,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":7,"parent":6,"type":"label","x":533,"y":118,"w":86,"h":22,"scroll":true,"text":"扫描"},
+{"id":8,"parent":1,"type":"button","x":651,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":9,"parent":8,"type":"label","x":663,"y":118,"w":86,"h":22,"scroll":true,"text":"停止"},
+{"id":10,"parent":1,"type":"button","x":781,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":11,"parent":10,"type":"label","x":793,"y":118,"w":86,"h":22,"scroll":true,"text":"断开"},
+{"id":12,"parent":1,"type":"container","x":61,"y":165,"w":850,"h":330,"scroll":true,"text":""}
+]
+UI_LAYOUT_END
+nsh> 
+[CASE tasks]
+[Kps
+  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND
+    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 19.5% CPU0 IDLE
+    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 50.9% CPU1 IDLE
+    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b240 0x4ff4b28c
+    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b1c0 0x4ff4b20c
+    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006064  0.0% usbh_hub0 0x4ff57040
+    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712  9.0% desktop
+    7     7 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  0.4% nsh
+   31     6 ---(0x00000003) 100 RR       pthread   - Waiting  MQ empty  0000000000000000 0032728  0.0% desktop 0x400815ca 0
+   36    36 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004048 14.7% c6net
+   40     0 ---(0x00000003) 100 RR       Kthread   - Waiting  MQ empty  0000000000000000 0001976  0.0% BT_HCI_Tx
+   41     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0008160  5.3% desktop 0x400cda22 0x483bdd80
+   42     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0008160  0.0% ble_npl_callout 0x400c5886 0
+   43     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032728  0.0% desktop 0x40080fd6 0
+nsh> 
+[CASE memory]
+[Kfree
+      total       used       free    maxused    maxfree  nused  nfree name
+   33554432    3911648   29642784    7067200   29549200   1739     20 Umem
+     263944      32072     231872      32464     231872    148      1 Kmem
+nsh> [K
+[CASE camera_page]
+desktop camera
+desktop: camera diagnostic requested
+nsh> [K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS

@@ -1,0 +1,109 @@
+
+[CASE console]
+
+nsh> [K
+[CASE scan_completion]
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":40,"y":44,"w":944,"h":512,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"label","x":65,"y":63,"w":824,"h":39,"scroll":true,"text":"蓝牙"},
+{"id":3,"parent":1,"type":"button","x":909,"y":59,"w":54,"h":42,"scroll":false,"text":""},
+{"id":4,"parent":3,"type":"label","x":928,"y":67,"w":17,"h":27,"scroll":true,"text":""},
+{"id":5,"parent":1,"type":"label","x":65,"y":121,"w":450,"h":28,"scroll":true,"text":"就绪 · 12 个设备"},
+{"id":6,"parent":1,"type":"button","x":521,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":7,"parent":6,"type":"label","x":533,"y":118,"w":86,"h":22,"scroll":true,"text":"扫描"},
+{"id":8,"parent":1,"type":"button","x":651,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":9,"parent":8,"type":"label","x":663,"y":118,"w":86,"h":22,"scroll":true,"text":"停止"},
+{"id":10,"parent":1,"type":"button","x":781,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":11,"parent":10,"type":"label","x":793,"y":118,"w":86,"h":22,"scroll":true,"text":"断开"},
+{"id":12,"parent":1,"type":"container","x":61,"y":165,"w":850,"h":330,"scroll":true,"text":""},
+{"id":13,"parent":12,"type":"button","x":65,"y":165,"w":800,"h":48,"scroll":false,"text":""},
+{"id":14,"parent":13,"type":"label","x":77,"y":178,"w":776,"h":22,"scroll":true,"text":"48:1B:43:89:69:78  -90 dBm"},
+{"id":15,"parent":12,"type":"button","x":65,"y":217,"w":800,"h":48,"scroll":false,"text":""},
+{"id":16,"parent":15,"type":"label","x":77,"y":230,"w":776,"h":22,"scroll":true,"text":"DA:91:79:BD:34:5A  -85 dBm"},
+{"id":17,"parent":12,"type":"button","x":65,"y":269,"w":800,"h":48,"scroll":false,"text":""},
+{"id":18,"parent":17,"type":"label","x":77,"y":282,"w":776,"h":22,"scroll":true,"text":"4F:84:95:60:A8:86  -85 dBm"},
+{"id":19,"parent":12,"type":"button","x":65,"y":321,"w":800,"h":48,"scroll":false,"text":""},
+{"id":20,"parent":19,"type":"label","x":77,"y":334,"w":776,"h":22,"scroll":true,"text":"1A:D4:21:10:18:AF  -43 dBm"},
+{"id":21,"parent":12,"type":"button","x":65,"y":373,"w":800,"h":48,"scroll":false,"text":""},
+{"id":22,"parent":21,"type":"label","x":77,"y":386,"w":776,"h":22,"scroll":true,"text":"2C:7B:84:E9:E4:D4  -83 dBm"},
+{"id":23,"parent":12,"type":"button","x":65,"y":425,"w":800,"h":48,"scroll":false,"text":""},
+{"id":24,"parent":23,"type":"label","x":77,"y":438,"w":776,"h":22,"scroll":true,"text":"03:49:13:AA:6E:61  -76 dBm"},
+{"id":25,"parent":12,"type":"button","x":65,"y":477,"w":800,"h":48,"scroll":false,"text":""},
+{"id":26,"parent":25,"type":"label","x":77,"y":490,"w":776,"h":22,"scroll":true,"text":"31:D6:84:09:DB:19  -67 dBm"}
+]
+UI_LAYOUT_END
+nsh> 
+[CASE wifi_connect]
+[Kc6probe net
+rpc: skipping SetConfig, using slave's stored config
+rpc: WifiConnect tx pb=10 tlv=22
+rpc: WifiConnect pb bytes: 08 01 10 9a 02 18 05 d2 11 00
+rpc: WifiConnect resp=0
+c6probe: network init ret=0
+nsh> 
+[CASE association_wait]
+[Ksleep 10
+rpc: EVENT msg_id=773
+rpc: EVENT msg_id=775
+rpc: EVENT StaConnected
+nsh> 
+[CASE dhcp]
+[Kc6probe dhcp eth0
+c6probe: DHCP ret=0
+nsh> 
+[CASE address]
+[Kifconfig
+eth0	Link encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500
+	inet addr:192.168.0.105 DRaddr:192.168.0.1 Mask:255.255.255.0
+
+bnep0	Link encap:UNSPEC at RUNNING mtu -9
+	inet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0
+
+nsh> [K
+[CASE memory]
+free
+      total       used       free    maxused    maxfree  nused  nfree name
+   33554432    3908752   29645680    3935560   29644448   1841      6 Umem
+     326600      24680     301920      25072     301920    116      1 Kmem
+nsh> [K
+[CASE storage]
+desktop storage-test
+desktop: storage selftest PASS (ret=0, 3 namespaces, overwrite/read/delete)
+nsh> 
+[CASE ble_reopen]
+[Kdesktop ui bluetooth
+desktop: ui bluetooth ready
+nsh> 
+[CASE reopen_layout]
+[Kdesktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":40,"y":44,"w":944,"h":512,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"label","x":65,"y":63,"w":824,"h":39,"scroll":true,"text":"蓝牙"},
+{"id":3,"parent":1,"type":"button","x":909,"y":59,"w":54,"h":42,"scroll":false,"text":""},
+{"id":4,"parent":3,"type":"label","x":928,"y":67,"w":17,"h":27,"scroll":true,"text":""},
+{"id":5,"parent":1,"type":"label","x":65,"y":121,"w":450,"h":28,"scroll":true,"text":"就绪 · 12 个设备"},
+{"id":6,"parent":1,"type":"button","x":521,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":7,"parent":6,"type":"label","x":533,"y":118,"w":86,"h":22,"scroll":true,"text":"扫描"},
+{"id":8,"parent":1,"type":"button","x":651,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":9,"parent":8,"type":"label","x":663,"y":118,"w":86,"h":22,"scroll":true,"text":"停止"},
+{"id":10,"parent":1,"type":"button","x":781,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":11,"parent":10,"type":"label","x":793,"y":118,"w":86,"h":22,"scroll":true,"text":"断开"},
+{"id":12,"parent":1,"type":"container","x":61,"y":165,"w":850,"h":330,"scroll":true,"text":""},
+{"id":13,"parent":12,"type":"button","x":65,"y":165,"w":800,"h":48,"scroll":false,"text":""},
+{"id":14,"parent":13,"type":"label","x":77,"y":178,"w":776,"h":22,"scroll":true,"text":"48:1B:43:89:69:78  -90 dBm"},
+{"id":15,"parent":12,"type":"button","x":65,"y":217,"w":800,"h":48,"scroll":false,"text":""},
+{"id":16,"parent":15,"type":"label","x":77,"y":230,"w":776,"h":22,"scroll":true,"text":"DA:91:79:BD:34:5A  -85 dBm"},
+{"id":17,"parent":12,"type":"button","x":65,"y":269,"w":800,"h":48,"scroll":false,"text":""},
+{"id":18,"parent":17,"type":"label","x":77,"y":282,"w":776,"h":22,"scroll":true,"text":"4F:84:95:60:A8:86  -85 dBm"},
+{"id":19,"parent":12,"type":"button","x":65,"y":321,"w":800,"h":48,"scroll":false,"text":""},
+{"id":20,"parent":19,"type":"label","x":77,"y":334,"w":776,"h":22,"scroll":true,"text":"1A:D4:21:10:18:AF  -43 dBm"},
+{"id":21,"parent":12,"type":"button","x":65,"y":373,"w":800,"h":48,"scroll":false,"text":""},
+{"id":22,"parent":21,"type":"label","x":77,"y":386,"w":776,"h":22,"scroll":true,"text":"2C:7B:84:E9:E4:D4  -83 dBm"},
+{"id":23,"parent":12,"type":"button","x":65,"y":425,"w":800,"h":48,"scroll":false,"text":""},
+{"id":24,"parent":23,"type":"label","x":77,"y":438,"w":776,"h":22,"scroll":true,"text":"03:49:13:AA:6E:61  -76 dBm"},
+{"id":25,"parent":12,"type":"button","x":65,"y":477,"w":800,"h":48,"scroll":false,"text":""},
+{"id":26,"parent":25,"type":"label","x":77,"y":490,"w":776,"h":22,"scroll":true,"text":"31:D6:84:09:DB:19  -67 dBm"}
+]
+UI_LAYOUT_END
+nsh> 

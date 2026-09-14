@@ -1,0 +1,12 @@
+
+[CASE console]
+
+nsh> [K
+[CASE test_directory]
+ls -la /data/qpk/.storage-check-39
+nsh: ls: argument invalid
+nsh> [K
+[CASE test_files]
+ls -la /data/qpk/.storage-check-39/.data
+nsh: ls: argument invalid
+nsh> [K

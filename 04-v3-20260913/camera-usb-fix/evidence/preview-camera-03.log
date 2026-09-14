@@ -1,0 +1,56 @@
+
+[CASE console]
+
+nsh> [K
+[CASE open_camera]
+desktop camera
+desktop: camera diagnostic requested
+nsh> [K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS
+
+[CASE start_preview]
+desktop ui camera-start
+desktop: ui camera-start ready
+nsh> [K[qpk] camera USERPTR stream started, framebuffer zero-copy
+[qpk] camera direct preview ready
+[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1
+[qpk] USB MJPEG first frame 640x480
+
+[CASE preview_inventory]
+desktop caeras
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=1 HD Web Camera [05a3:9331]
+  stream: frames=132 dropped=32378 packets=37772 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> [K
+[CASE capture]
+desktop ui camera-photo
+camera capture accepted=1
+desktop: ui camera-photo ready
+nsh> [K
+[CASE stream_stats]
+desktop cameras
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=1 HD Web Camera [05a3:9331]
+  stream: frames=230 dropped=53778 packets=62799 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE photos]
+[Kls -l /data/photos
+/data/photos:
+ -rwSrwSrw-      251472 camera-00000001.bmp
+nsh> 
+[CASE stop]
+[Kdesktop camera-stop
+desktop: camera diagnostic stop requested
+nsh> [K[1c[du540 0r0  0400 0[] ESO- --4[0 4[ f r p: f i0     01a 021Rd[ ae[0cc 
+[CASE memory_after]

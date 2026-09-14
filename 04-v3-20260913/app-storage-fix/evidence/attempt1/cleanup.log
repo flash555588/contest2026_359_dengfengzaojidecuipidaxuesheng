@@ -1,0 +1,18 @@
+
+[CASE console]
+
+nsh> [K
+[CASE remove_test_leaf]
+rmdir /data/qpk/.storage-check-7/@2/ppppppppppppppppppppppppppppppp
+nsh> [K
+[CASE remove_test_marker]
+rmdir /data/qpk/.storage-check-7/@2
+nsh> [K
+[CASE remove_test_root]
+rmdir /data/qpk/.storage-check-7
+nsh> [K
+[CASE cleanup_check]
+ls -l /data/qpk
+/data/qpk:
+ drwsrwsrwx           0 .data/
+nsh> [K

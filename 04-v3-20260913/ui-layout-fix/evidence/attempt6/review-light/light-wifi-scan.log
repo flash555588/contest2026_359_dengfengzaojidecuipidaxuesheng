@@ -1,0 +1,41 @@
+desktop ui wifi-scan
+rpc: WifiScanStart tx pb=12 tlv=24
+rpc: WifiScanStart pb bytes: 08 01 10 9e 02 18 06 f2 11 02 10 01
+desktop: ui wifi-scan ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":40,"y":44,"w":944,"h":512,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"label","x":65,"y":63,"w":824,"h":39,"scroll":true,"text":"Wi-Fi"},
+{"id":3,"parent":1,"type":"button","x":909,"y":59,"w":54,"h":42,"scroll":false,"text":""},
+{"id":4,"parent":3,"type":"label","x":928,"y":67,"w":17,"h":27,"scroll":true,"text":""},
+{"id":5,"parent":1,"type":"label","x":65,"y":113,"w":440,"h":28,"scroll":true,"text":"10 个热点"},
+{"id":6,"parent":1,"type":"button","x":781,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":7,"parent":6,"type":"label","x":793,"y":118,"w":86,"h":22,"scroll":true,"text":"扫描"},
+{"id":8,"parent":1,"type":"button","x":521,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":9,"parent":8,"type":"label","x":533,"y":118,"w":86,"h":22,"scroll":true,"text":"断开"},
+{"id":10,"parent":1,"type":"button","x":651,"y":105,"w":110,"h":48,"scroll":false,"text":""},
+{"id":11,"parent":10,"type":"label","x":663,"y":118,"w":86,"h":22,"scroll":true,"text":"状态"},
+{"id":12,"parent":1,"type":"container","x":65,"y":165,"w":344,"h":356,"scroll":true,"text":""},
+{"id":13,"parent":12,"type":"button","x":69,"y":165,"w":330,"h":48,"scroll":false,"text":""},
+{"id":14,"parent":13,"type":"label","x":81,"y":178,"w":306,"h":22,"scroll":true,"text":"CMCC-ZMh9  -39 dBm"},
+{"id":15,"parent":12,"type":"button","x":69,"y":217,"w":330,"h":48,"scroll":false,"text":""},
+{"id":16,"parent":15,"type":"label","x":81,"y":230,"w":306,"h":22,"scroll":true,"text":"我是佐天泪子的狗  -49 dBm"},
+{"id":17,"parent":12,"type":"button","x":69,"y":269,"w":330,"h":48,"scroll":false,"text":""},
+{"id":18,"parent":17,"type":"label","x":81,"y":282,"w":306,"h":22,"scroll":true,"text":"TP-LINK_E641  -53 dBm"},
+{"id":19,"parent":12,"type":"button","x":69,"y":321,"w":330,"h":48,"scroll":false,"text":""},
+{"id":20,"parent":19,"type":"label","x":81,"y":334,"w":306,"h":22,"scroll":true,"text":"废弃酿酒厂_5G  -75 dBm"},
+{"id":21,"parent":12,"type":"button","x":69,"y":373,"w":330,"h":48,"scroll":false,"text":""},
+{"id":22,"parent":21,"type":"label","x":81,"y":386,"w":306,"h":22,"scroll":true,"text":"废弃酿酒厂  -77 dBm"},
+{"id":23,"parent":12,"type":"button","x":69,"y":425,"w":330,"h":48,"scroll":false,"text":""},
+{"id":24,"parent":23,"type":"label","x":81,"y":438,"w":306,"h":22,"scroll":true,"text":"ChinaTelecom-EDU2.4G  -78 dBm"},
+{"id":25,"parent":12,"type":"button","x":69,"y":477,"w":330,"h":48,"scroll":false,"text":""},
+{"id":26,"parent":25,"type":"label","x":81,"y":490,"w":306,"h":22,"scroll":true,"text":"ChinaTelecom-EDU2.4G  -81 dBm"},
+{"id":27,"parent":1,"type":"input","x":431,"y":165,"w":488,"h":50,"scroll":true,"text":"网络名称（SSID）"},
+{"id":28,"parent":1,"type":"input","x":431,"y":227,"w":344,"h":50,"scroll":true,"text":"密码"},
+{"id":29,"parent":1,"type":"button","x":791,"y":227,"w":128,"h":48,"scroll":false,"text":""},
+{"id":30,"parent":29,"type":"label","x":803,"y":240,"w":104,"h":22,"scroll":true,"text":"连接"},
+{"id":31,"parent":1,"type":"keyboard","x":431,"y":293,"w":488,"h":228,"scroll":true,"text":""}
+]
+UI_LAYOUT_END
+nsh> 

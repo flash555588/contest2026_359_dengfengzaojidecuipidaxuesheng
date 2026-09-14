@@ -1,0 +1,148 @@
+
+[CASE console]
+
+nsh> [K
+[CASE memory_before]
+free
+      total       used       free    maxused    maxfree  nused  nfree name
+   33554432    3855848   29698584    8797392   29605712   1621     37 Umem
+     263944      27184     236760      28888     235536    124      2 Kmem
+nsh> [K
+[CASE open1]
+desktop camera
+desktop: camera diagnostic requested
+nsh> [K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS
+
+[CASE start1]
+desktop ui camera-start
+caera start clicked=1
+desktop: ui camera-start ready
+nsh> [K[qpk] camera USB MJPEG worker starting
+[qpk] camera direct preview ready
+[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1
+[qpk] USB MJPEG first frame 640x480
+
+[CASE stats1]
+desktop cameras
+camera app: busy=1 alive=1 frames=26 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=146 dropped=118 packets=38489 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE stop1]
+[Kdesktop camera-stop
+desktop: camera diagnostic stop requested
+nsh> [K
+[CASE idle1]
+desktop cameras
+camera app: busy=0 alive=0 frames=0 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=149 dropped=121 packets=39439 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE open2]
+[Kdesktop camera
+desktop: camera diagnostic requested
+nsh> [K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS
+
+[CASE start2]
+desktop ui camera-start
+camera start clicked=1
+desktop: ui camera-start ready
+nsh> [K[qpk] camera USB MJPEG worker starting
+[qpk] camera direct preview ready
+[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1
+[qpk] USB MJPEG first frame 640x480
+
+[CASE stats2]
+desktop cameras
+camera app: busy=1 alive=1 frames=24 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=140 dropped=114 packets=36863 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE stop2]
+[Kdesktop camera-stop
+desktop: camera diagnostic stop requested
+nsh> [K
+[CASE idle2]
+desktop cameras
+camera app: busy=0 alive=0 frames=0 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=146 dropped=119 packets=38510 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE open3]
+[Kdesktop camera
+desktop: camera diagnostic requested
+nsh> [K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS
+
+[CASE start3]
+desktop ui camera-start
+camera start clicked=1
+desktop: ui camera-start ready
+nsh> [K[qpk] camera USB MJPEG worker starting
+[qpk] camera direct preview ready
+[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1
+[qpk] USB MJPEG first frame 640x480
+
+[CASE stats3]
+desktop cameras
+camera app: busy=1 alive=1 frames=20 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=114 dropped=92 packets=30018 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE stop3]
+[Kdesktop cmera-stop
+desktop: camera diagnostic stop requested
+nsh> [K
+[CASE idle3]
+desktop cameras
+camera app: busy=0 alive=0 frames=0 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=122 dropped=99 packets=32183 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE memory_after]
+[Kfree
+      total       used       free    maxused    maxfree  nused  nfree name
+   33554432    3823768   29730664    8811488   29617624   1620     61 Umem
+     263944      27184     236760      28888     235536    124      2 Kmem
+nsh> [K

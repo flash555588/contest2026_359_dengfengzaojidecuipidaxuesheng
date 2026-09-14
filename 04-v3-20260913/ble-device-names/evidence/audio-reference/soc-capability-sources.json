@@ -1,0 +1,12 @@
+{
+  "esp32c6": {
+    "source": "D:\\esp\\v5.5.2\\esp-idf\\components\\soc\\esp32c6\\include\\soc\\soc_caps.h",
+    "sha256": "cf322471b14fd81a2eb0d96386bd50f115af2f4092e44d02696633daf5e7aa35",
+    "classic_capability_defined": false
+  },
+  "esp32": {
+    "source": "D:\\esp\\v5.5.2\\esp-idf\\components\\soc\\esp32\\include\\soc\\soc_caps.h",
+    "sha256": "a46da629b2b0f2a19890b560a2228e67d30cfdff6afd9ad93121fe348df5fb0e",
+    "classic_capability_defined": true
+  }
+}

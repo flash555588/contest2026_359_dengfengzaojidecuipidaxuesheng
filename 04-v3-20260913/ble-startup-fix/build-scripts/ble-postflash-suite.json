@@ -1,0 +1,12 @@
+[
+  {"name":"transport","command":"c6probe","timeout":20,"expect":["OK ESP-Hosted transport is up"]},
+  {"name":"open_ble","command":"desktop ui bluetooth","expect":["ready"]},
+  {"name":"startup_wait","command":"sleep 4","timeout":10},
+  {"name":"ble_ready_layout","command":"desktop ui audit","expect":["UI_LAYOUT_END", "就绪"]},
+  {"name":"interfaces_after_ble","command":"ifconfig","expect":["bnep0.*RUNNING", "eth0.*(UP|RUNNING)"]},
+  {"name":"start_scan","command":"desktop ui ble-scan","expect":["ready"]},
+  {"name":"scan_wait","command":"sleep 11","timeout":15},
+  {"name":"scan_layout","command":"desktop ui audit","expect":["UI_LAYOUT_END", "就绪", "[1-9][0-9]* 个设备"]},
+  {"name":"network_after_scan","command":"ifconfig"},
+  {"name":"tasks","command":"ps","expect":["desktop","c6net"]}
+]

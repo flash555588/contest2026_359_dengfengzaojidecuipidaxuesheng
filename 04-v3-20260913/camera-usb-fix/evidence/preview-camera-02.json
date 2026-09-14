@@ -1,0 +1,88 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.14600470000004862,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "open_camera",
+    "command": "desktop camera",
+    "completed": true,
+    "elapsed_seconds": 0.4413267000054475,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  },
+  {
+    "name": "start_preview",
+    "command": "desktop ui camera-start",
+    "completed": true,
+    "elapsed_seconds": 0.09345980000216514,
+    "checks": {
+      "ready": true
+    },
+    "output": "desktop ui camera-start\ndesktop: ui camera-start ready\nnsh> \u001b[K[qpk] camera USERPTR stream started, framebuffer zero-copy\n[qpk] camera direct preview ready\n[qpk] camera failure awaiting cleanup: -71\n"
+  },
+  {
+    "name": "preview_inventory",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.06381389999296516,
+    "checks": {
+      "HD Web Camera": true
+    },
+    "output": "desktop cameras\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=0 dropped=0 packets=0 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  },
+  {
+    "name": "capture",
+    "command": "desktop ui camera-photo",
+    "completed": true,
+    "elapsed_seconds": 0.09597059999941848,
+    "checks": {
+      "capture accepted=1": false
+    },
+    "output": "\u001b[Kdesktop ui camera-photo\ncamera capture accepted=0\ndesktop: ui camera-photo ready\nnsh> \u001b[K"
+  },
+  {
+    "name": "stream_stats",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.06861149999895133,
+    "checks": {
+      "stream: frames=[1-9]": false
+    },
+    "output": "desktop cameras\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  stream: frames=0 dropped=0 packets=0 errors=0 error=0\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> "
+  },
+  {
+    "name": "photos",
+    "command": "ls -l /data/photos",
+    "completed": true,
+    "elapsed_seconds": 0.20178209998994134,
+    "checks": {
+      "camera-": false
+    },
+    "output": "\u001b[Kls -l /data/photos\nnsh: ls: stat failed: No such file or directory\nnsh> \u001b[K"
+  },
+  {
+    "name": "stop",
+    "command": "desktop camera-stop",
+    "completed": true,
+    "elapsed_seconds": 0.19667810000828467,
+    "checks": {
+      "requested": true
+    },
+    "output": "desktop camera-stop\ndesktop: camera diagnostic stop requested\nnsh> \u001b[K"
+  },
+  {
+    "name": "memory_after",
+    "command": "free",
+    "completed": true,
+    "elapsed_seconds": 0.13873900000180583,
+    "checks": {},
+    "output": "free\n      total       used       free    maxused    maxfree  nused  nfree name\n   33554432    3815944   29738488    3980576   29613928   1619     32 Umem\n     265608      27184     238424      28800     237200    124      2 Kmem\nnsh> \u001b[K"
+  }
+]

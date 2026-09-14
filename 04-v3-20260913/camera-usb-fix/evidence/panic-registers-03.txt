@@ -1,0 +1,223 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x40035026 in rspin_lock (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:691
+warning: 691	/tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x40035026, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4002FE38, debug_reason=00000000
+[esp32p4.hp.cpu1] Halt cause (5) - (PMP Load access fault)
+$1 = 1
+$2 = {generation = 1, vid = 1443, pid = 37681, id = 0 '\000', connected = 1 '\001', supported = 1 '\001', reserved = 0 '\000', name = "HD Web Camera", '\000' <repeats 50 times>}
+$3 = {0x1, 0x0, 0x1, 0x5, 0x15, 0x16, 0x5, 0x0 <repeats 13 times>, 0x10, 0x0, 0x0, 0x4, 0x0, 0x0, 0xb8, 0xdd, 0x0 <repeats 36 times>}
+$4 = 0x100
+$5 = {generation = 1, interval = 333333, mode = 4 '\004', reserved = "\000\000", width = 640, height = 480, max_frame_size = 1048576, max_payload_size = 1024}
+$6 = {frames = 244, dropped = 56988, packets = 66546, errors = 0, error = 0}
+$7 = {fd = 5, fb_fd = 6, usb = true, usb_mode = {generation = 1, interval = 333333, mode = 4 '\004', reserved = "\000\000", width = 640, height = 480, max_frame_size = 1048576, max_payload_size = 1024}, fps_started_ms = 0, display_fps_started_ms = 0, profile_started_us = 0, profile_dq_us = 0, profile_invalidate_us = 0, profile_convert_us = 0, profile_clean_us = 0, profile_qbuf_us = 0, captured_frames = 25, dropped_frames = 0, frames = 25, profile_samples = 0, profile_converted = 0, dq_errors = 0, qbuf_errors = 0, pan_errors = 0, stop_requested = true, thread_alive = true, thread_error = 0, thread_running = true, thread = 10, streaming = false, direct_preview = true, mmap_buffers = {0x0, 0x0, 0x0}, mmap_lengths = {0, 0, 0}, mmap_count = 0, memory_type = 0, fb_video = {fmt = 11 '\v', xres = 1024, yres = 600, nplanes = 1 '\001'}, fb_plane = {fbmem = 0x480001c0, fblen = 3686400, stride = 2048, display = 0 '\000', bpp = 16 '\020', xres_virtual = 1024, yres_virtual = 1800, xoffset = 0, yoffset = 1200}, fb_page = 2}
+$8 = 0
+  Id   Target Id         Frame 
+* 1    Remote target     0x40035026 in rspin_lock (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:691
+
+Thread 1 (Remote target):
+#0  0x40035026 in rspin_lock (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:691
+#1  rspin_lock_irqsave (lock=<optimized out>) at /tmp/v3-desktop-camera-usb-20260914/nuttx/include/nuttx/spinlock.h:706
+#2  usb_osal_enter_critical_section () at chip/camera_usb/cherryusb/usb_osal_nuttx.c:379
+#3  0x4003416a in dwc2_chan_alloc (bus=0x4ff57040 <g_usbhost_bus>) at chip/camera_usb/cherryusb/port/dwc2/usb_hc_dwc2.c:477
+#4  usbh_submit_urb (urb=urb@entry=0x4ff580e0 <g_usbhost_bus+4256>) at chip/camera_usb/cherryusb/port/dwc2/usb_hc_dwc2.c:1032
+#5  0x40031360 in usbh_control_transfer (hport=0x4ff57070 <g_usbhost_bus+48>, setup=0x4ff5b400 <g_setup_buffer>, buffer=0x0) at chip/camera_usb/cherryusb/core/usbh_core.c:710
+#6  0x4002dcca in uvc_control (d=d@entry=0x4ff54140 <g_devices>, type=type@entry=1 '\001', request=request@entry=11 '\v', value=value@entry=0, index=<optimized out>, size=size@entry=0) at chip/camera_usb/camera_uvc.c:92
+#7  0x4002ddc6 in uvc_stop (d=0x4ff54140 <g_devices>) at chip/camera_usb/camera_uvc.c:108
+#8  0x4002e948 in uvc_ioctl (file=<optimized out>, cmd=29956, arg=0) at chip/camera_usb/camera_uvc.c:276
+#9  0x400072ba in file_vioctl (filep=0x4ff7fbb8, req=req@entry=29956, ap=0x483a336c, ap@entry=0x483a3368) at vfs/fs_ioctl.c:70
+#10 0x4000749e in nx_vioctl (fd=<optimized out>, req=29956, ap=0x483a3368) at vfs/fs_ioctl.c:208
+#11 ioctl (fd=<optimized out>, req=req@entry=29956) at vfs/fs_ioctl.c:289
+#12 0x40043f50 in qpk_camera_usb_thread (arg=0x4ff4ba28 <g_camera>, arg@entry=<error reading variable: value has been optimized out>) at /tmp/v3-desktop-camera-usb-20260914/apps/system/desktop/qpk_camera_usb.inc:59
+#13 0x4001fac8 in pthread_startup (entry=<optimized out>, arg=<optimized out>) at pthread/pthread_create.c:61
+#14 0x400f8650 in pthread_start () at pthread/pthread_create.c:151
+#15 0x00000000 in ?? ()
+Backtrace stopped: frame did not save the PC
+$9 = {saved_regs = 0x0, regs = 0x0}
+$10 = {saved_regs = 0x0, regs = 0x4ff7ed6c}
+$11 = {0x0 <repeats 34 times>}
+$12 = {0x4ff42318, 0x4ff42306, 0x4ff7edf0, 0x4ffbef70, 0x0, 0x4fc00d66, 0x4ff41b6c, 0x4ffbef70, 0x1, 0x0, 0x0, 0x1, 0x4ff4f178, 0x0, 0x1, 0x3ff06000, 0x0, 0x4ff4f168, 0x0 <repeats 14 times>, 0x1881, 0x0}
+===== RISC-V Registers
+(0) zero (/32)
+(1) ra (/32)
+(2) sp (/32)
+(3) gp (/32)
+(4) tp (/32)
+(5) t0 (/32)
+(6) t1 (/32)
+(7) t2 (/32)
+(8) fp (/32)
+(9) s1 (/32)
+(10) a0 (/32)
+(11) a1 (/32)
+(12) a2 (/32)
+(13) a3 (/32)
+(14) a4 (/32)
+(15) a5 (/32)
+(16) a6 (/32)
+(17) a7 (/32)
+(18) s2 (/32)
+(19) s3 (/32)
+(20) s4 (/32)
+(21) s5 (/32)
+(22) s6 (/32)
+(23) s7 (/32)
+(24) s8 (/32)
+(25) s9 (/32)
+(26) s10 (/32)
+(27) s11 (/32)
+(28) t3 (/32)
+(29) t4 (/32)
+(30) t5 (/32)
+(31) t6 (/32)
+(32) pc (/32)
+(33) ft0 (/32)
+(34) ft1 (/32)
+(35) ft2 (/32)
+(36) ft3 (/32)
+(37) ft4 (/32)
+(38) ft5 (/32)
+(39) ft6 (/32)
+(40) ft7 (/32)
+(41) fs0 (/32)
+(42) fs1 (/32)
+(43) fa0 (/32)
+(44) fa1 (/32)
+(45) fa2 (/32)
+(46) fa3 (/32)
+(47) fa4 (/32)
+(48) fa5 (/32)
+(49) fa6 (/32)
+(50) fa7 (/32)
+(51) fs2 (/32)
+(52) fs3 (/32)
+(53) fs4 (/32)
+(54) fs5 (/32)
+(55) fs6 (/32)
+(56) fs7 (/32)
+(57) fs8 (/32)
+(58) fs9 (/32)
+(59) fs10 (/32)
+(60) fs11 (/32)
+(61) ft8 (/32)
+(62) ft9 (/32)
+(63) ft10 (/32)
+(64) ft11 (/32)
+(833) mstatus (/32)
+(834) misa (/32)
+(837) mie (/32)
+(838) mtvec (/32)
+(839) mcounteren (/32)
+(840) mtvt (/32)
+(865) mcountinhibit (/32)
+(873) mhpmevent8 (/32)
+(874) mhpmevent9 (/32)
+(878) mhpmevent13 (/32)
+(897) mscratch (/32)
+(898) mepc (/32)
+(899) mcause (/32): 0x30000005
+(900) mtval (/32)
+(901) mip (/32)
+(902) mnxti (/32)
+(903) mintstatus (/32)
+(905) mscratchcsw (/32)
+(906) mscratchcswl (/32)
+(913) csr_mclicbase (/32)
+(993) pmpcfg0 (/32)
+(994) pmpcfg1 (/32)
+(995) pmpcfg2 (/32)
+(996) pmpcfg3 (/32)
+(1009) pmpaddr0 (/32)
+(1010) pmpaddr1 (/32)
+(1011) pmpaddr2 (/32)
+(1012) pmpaddr3 (/32)
+(1013) pmpaddr4 (/32)
+(1014) pmpaddr5 (/32)
+(1015) pmpaddr6 (/32)
+(1016) pmpaddr7 (/32)
+(1017) pmpaddr8 (/32)
+(1018) pmpaddr9 (/32)
+(1019) pmpaddr10 (/32)
+(1020) pmpaddr11 (/32)
+(1021) pmpaddr12 (/32)
+(1022) pmpaddr13 (/32)
+(1023) pmpaddr14 (/32)
+(1024) pmpaddr15 (/32)
+(2017) tselect (/32)
+(2018) tdata1 (/32)
+(2019) tdata2 (/32)
+(2020) tdata3 (/32)
+(2021) tinfo (/32)
+(2022) tcontrol (/32)
+(2025) mcontext (/32)
+(2033) dcsr (/32): 0x400090c3
+(2034) dpc (/32): 0x4002fe38
+(2035) dscratch0 (/32)
+(2036) dscratch1 (/32)
+(2049) csr_mxstatus (/32)
+(2050) csr_mhcr (/32)
+(2054) csr_mhint (/32)
+(2081) csr_mraddr (/32)
+(2082) csr_mexstatus (/32)
+(2083) csr_mnmicause (/32)
+(2084) csr_mnmipc (/32)
+(2085) csr_cpu_testbus_ctrl (/32)
+(2116) csr_gpio_oen_user (/32)
+(2117) csr_gpio_in_user (/32)
+(2118) csr_gpio_out_user (/32)
+(2129) csr_pm_user (/32)
+(2881) mcycle (/32)
+(2883) minstret (/32)
+(2889) mhpmcounter8 (/32)
+(2890) mhpmcounter9 (/32)
+(2894) mhpmcounter13 (/32)
+(3009) mcycleh (/32)
+(3011) minstreth (/32)
+(3017) mhpmcounter8h (/32)
+(3018) mhpmcounter9h (/32)
+(3022) mhpmcounter13h (/32)
+(3073) csr_pma_cfg0 (/32)
+(3074) csr_pma_cfg1 (/32)
+(3075) csr_pma_cfg2 (/32)
+(3076) csr_pma_cfg3 (/32)
+(3077) csr_pma_cfg4 (/32)
+(3078) csr_pma_cfg5 (/32)
+(3079) csr_pma_cfg6 (/32)
+(3080) csr_pma_cfg7 (/32)
+(3081) csr_pma_cfg8 (/32)
+(3082) csr_pma_cfg9 (/32)
+(3083) csr_pma_cfg10 (/32)
+(3084) csr_pma_cfg11 (/32)
+(3085) csr_pma_cfg12 (/32)
+(3086) csr_pma_cfg13 (/32)
+(3087) csr_pma_cfg14 (/32)
+(3088) csr_pma_cfg15 (/32)
+(3089) csr_pma_addr0 (/32)
+(3090) csr_pma_addr1 (/32)
+(3091) csr_pma_addr2 (/32)
+(3092) csr_pma_addr3 (/32)
+(3093) csr_pma_addr4 (/32)
+(3094) csr_pma_addr5 (/32)
+(3095) csr_pma_addr6 (/32)
+(3096) csr_pma_addr7 (/32)
+(3097) csr_pma_addr8 (/32)
+(3098) csr_pma_addr9 (/32)
+(3099) csr_pma_addr10 (/32)
+(3100) csr_pma_addr11 (/32)
+(3101) csr_pma_addr12 (/32)
+(3102) csr_pma_addr13 (/32)
+(3103) csr_pma_addr14 (/32)
+(3104) csr_pma_addr15 (/32)
+(3922) mvendorid (/32)
+(3923) marchid (/32)
+(3924) mimpid (/32)
+(3925) mhartid (/32)
+(4161) priv (/8)
+[esp32p4.hp.cpu0] Found 3 triggers
+[esp32p4.hp.cpu0] Target halted, PC=0x4003502A, debug_reason=00000004
+[esp32p4.hp.cpu1] Found 3 triggers
+[esp32p4.hp.cpu1] Target halted, PC=0x4002FE3A, debug_reason=00000004
+[esp32p4.hp.cpu1] Halt cause (5) - (PMP Load access fault)
+[Inferior 1 (Remote target) detached]

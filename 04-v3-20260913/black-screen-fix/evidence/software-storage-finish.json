@@ -1,0 +1,112 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.14315150000038557,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_scratch",
+    "command": "cd /data/.codex-sw-20260914-a3",
+    "completed": true,
+    "elapsed_seconds": 0.23364399999991292,
+    "checks": {},
+    "output": "cd /data/.codex-sw-20260914-a3\nnsh> \u001b[K"
+  },
+  {
+    "name": "block_size",
+    "command": "ls -l blocks",
+    "completed": true,
+    "elapsed_seconds": 0.17185590000008233,
+    "checks": {
+      "32768": true
+    },
+    "output": "ls -l blocks\n -rwSr-Sr--       32768 /data/.codex-sw-20260914-a3/blocks\nnsh> \u001b[K"
+  },
+  {
+    "name": "copy_to_ram",
+    "command": "cp blocks /tmp/codex-sw-blocks",
+    "completed": true,
+    "elapsed_seconds": 0.2334742000020924,
+    "checks": {},
+    "output": "cp blocks /tmp/codex-sw-blocks\nnsh> \u001b[K"
+  },
+  {
+    "name": "compare_blocks",
+    "command": "cmp blocks /tmp/codex-sw-blocks",
+    "completed": true,
+    "elapsed_seconds": 0.16369490000215592,
+    "checks": {},
+    "output": "cmp blocks /tmp/codex-sw-blocks\nnsh> "
+  },
+  {
+    "name": "compare_result",
+    "command": "echo $?",
+    "completed": true,
+    "elapsed_seconds": 0.13158449999900768,
+    "checks": {
+      "^0$": true
+    },
+    "output": "\u001b[Kecho $?\n0\nnsh> \u001b[K"
+  },
+  {
+    "name": "rename",
+    "command": "mv check saved",
+    "completed": true,
+    "elapsed_seconds": 0.1687406999990344,
+    "checks": {},
+    "output": "mv check saved\nnsh> \u001b[K"
+  },
+  {
+    "name": "renamed_read",
+    "command": "cat saved",
+    "completed": true,
+    "elapsed_seconds": 0.17160350000631297,
+    "checks": {
+      "^SWTEST-20260914$": true
+    },
+    "output": "cat saved\nSWTEST-20260914\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_scratch_files",
+    "command": "rm blocks saved",
+    "completed": true,
+    "elapsed_seconds": 0.06355189999885624,
+    "checks": {},
+    "output": "rm blocks saved\nnsh> "
+  },
+  {
+    "name": "leave_scratch",
+    "command": "cd /",
+    "completed": true,
+    "elapsed_seconds": 0.1377966000000015,
+    "checks": {},
+    "output": "\u001b[Kcd /\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_scratch_directory",
+    "command": "rmdir /data/.codex-sw-20260914-a3",
+    "completed": true,
+    "elapsed_seconds": 0.2694021999996039,
+    "checks": {},
+    "output": "rmdir /data/.codex-sw-20260914-a3\nnsh: rmdir: rmdir failed: Directory not empty\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_ram_copy",
+    "command": "rm /tmp/codex-sw-blocks",
+    "completed": true,
+    "elapsed_seconds": 0.19234100000176113,
+    "checks": {},
+    "output": "rm /tmp/codex-sw-blocks\nnsh> \u001b[K"
+  },
+  {
+    "name": "free_after_storage",
+    "command": "free",
+    "completed": true,
+    "elapsed_seconds": 0.13792100000136998,
+    "checks": {},
+    "output": "free\n      total       used       free    maxused    maxfree  nused  nfree name\n   33554432    3793656   29760776    3803992   29758016   1254     10 Umem\n     355912      38496     317416      71400     315784    129     13 Kmem\nnsh> \u001b[K"
+  }
+]

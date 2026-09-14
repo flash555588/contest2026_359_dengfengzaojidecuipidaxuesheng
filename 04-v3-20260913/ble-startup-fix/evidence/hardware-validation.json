@@ -1,0 +1,59 @@
+{
+  "firmware_sha256": "314fc2168eb0873082018edc08a6e1f3fee5d58f18662f4458642273cccd14ee",
+  "flashed_and_verified": true,
+  "port": "COM23",
+  "device_serial": "E8:F6:0A:E3:A9:5F",
+  "chip_revision": "3.2",
+  "ble_host_ready": true,
+  "scan_counts": {
+    "ble-final.json": 12,
+    "repeat-final.json": 12,
+    "wifi-first-final.json": 12
+  },
+  "scan_deadline_ms": 10000,
+  "deadline_observed_after_wait_seconds": 11,
+  "repeat_scan_and_page_close_cancel_passed": true,
+  "wifi_first_and_ble_first_passed": true,
+  "dhcp_success_observed": true,
+  "verified_ipv4": "192.168.0.105",
+  "gateway": "192.168.0.1",
+  "netmask": "255.255.255.0",
+  "last_ipv4": "0.0.0.0",
+  "last_interfaces_checks_passed": true,
+  "last_wifi_associated": false,
+  "network_environment": "User confirmed moving to a different workplace; the previously tested hotspot is no longer available. No further connection attempts requested.",
+  "storage_selftest": "PASS: 3 namespaces; overwrite/read/delete",
+  "storage_during_scan": "PASS",
+  "data_partition_erased": false,
+  "framebuffer_visual_review": [
+    {
+      "page": "light-bluetooth",
+      "objects": 21,
+      "screenshot": "evidence/review-light/light-bluetooth.png",
+      "sha256": "cc3e282fc32013a2095e5f6e055a0015f4094c02fd68aff0605723eb0e565fe1",
+      "overlaps": 0,
+      "overflow": 0
+    },
+    {
+      "page": "dark-bluetooth",
+      "objects": 24,
+      "screenshot": "evidence/review-dark-final/dark-bluetooth.png",
+      "sha256": "e8c864faa8bc109defba1b1c5daa8fec1ba97a3b62c5f1cc9604a3b16f577027",
+      "overlaps": 0,
+      "overflow": 0
+    }
+  ],
+  "serial_resumed_after_final_jtag": true,
+  "final_state_source": "evidence/final-console-clean.json",
+  "observed_issues": [
+    "First dark JTAG capture lost USB communication and reported a reset; it is excluded from visual validation. Retry at 2000 kHz succeeded.",
+    "Later recovery-final.json and wifi-retry-final.json record STA disassociation and DHCP failure. User confirmed hotspot loss after relocation; these are environment-dependent observations, not firmware regression evidence. Prior coexistence runs passed."
+  ],
+  "limits": [
+    "ESP32-C6 is BLE-only; no BR/EDR or classic Bluetooth audio.",
+    "No designated peripheral: real connection, pairing, GATT and application profiles were not tested.",
+    "Scan count depends on nearby advertisements; device list capacity is 12.",
+    "Framebuffer review does not measure physical touch accuracy or panel color.",
+    "No camera modification or camera hardware validation in this release."
+  ]
+}

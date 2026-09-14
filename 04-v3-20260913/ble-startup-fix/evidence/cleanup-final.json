@@ -1,0 +1,210 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.1364876000006916,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_test_root",
+    "command": "cd /data/qpk/.storage-check-39",
+    "completed": true,
+    "elapsed_seconds": 0.2233430999913253,
+    "checks": {},
+    "output": "cd /data/qpk/.storage-check-39\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_hello_leaf",
+    "command": "rmdir @2pcom.example.hello/klaunches",
+    "completed": true,
+    "elapsed_seconds": 0.2564534000121057,
+    "checks": {},
+    "output": "rmdir @2pcom.example.hello/klaunches\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_hello",
+    "command": "rmdir @2pcom.example.hello",
+    "completed": true,
+    "elapsed_seconds": 0.22781450000184122,
+    "checks": {},
+    "output": "rmdir @2pcom.example.hello\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_game_leaf",
+    "command": "rmdir @2pcom.example.game2048/kbest",
+    "completed": true,
+    "elapsed_seconds": 0.2616320000088308,
+    "checks": {},
+    "output": "rmdir @2pcom.example.game2048/kbest\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_game",
+    "command": "rmdir @2pcom.example.game2048",
+    "completed": true,
+    "elapsed_seconds": 0.22985170000174548,
+    "checks": {},
+    "output": "rmdir @2pcom.example.game2048\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_long_package",
+    "command": "cd @2ppppppppppppppppppppppppppppp",
+    "completed": true,
+    "elapsed_seconds": 0.25912289999541827,
+    "checks": {},
+    "output": "cd @2ppppppppppppppppppppppppppppp\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_package_tail",
+    "command": "cd pppppppppppppppppppp",
+    "completed": true,
+    "elapsed_seconds": 0.1977953999885358,
+    "checks": {},
+    "output": "cd pppppppppppppppppppp\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_key_first",
+    "command": "cd kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "completed": true,
+    "elapsed_seconds": 0.2576165999926161,
+    "checks": {},
+    "output": "cd kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_key_second",
+    "command": "cd kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "completed": true,
+    "elapsed_seconds": 0.28450229999725707,
+    "checks": {},
+    "output": "cd kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_key_tail",
+    "command": "cd kkkkk",
+    "completed": true,
+    "elapsed_seconds": 0.1628879999916535,
+    "checks": {},
+    "output": "cd kkkkk\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_test_tmp",
+    "command": "rm value.tmp",
+    "completed": true,
+    "elapsed_seconds": 0.16547870000067633,
+    "checks": {},
+    "output": "rm value.tmp\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_test_value",
+    "command": "rm value",
+    "completed": true,
+    "elapsed_seconds": 0.1711959999956889,
+    "checks": {},
+    "output": "rm value\nnsh> \u001b[K"
+  },
+  {
+    "name": "leave_key_tail",
+    "command": "cd ..",
+    "completed": true,
+    "elapsed_seconds": 0.1345047000068007,
+    "checks": {},
+    "output": "cd ..\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_key_tail",
+    "command": "rmdir kkkkk",
+    "completed": true,
+    "elapsed_seconds": 0.16853329999139532,
+    "checks": {},
+    "output": "rmdir kkkkk\nnsh> \u001b[K"
+  },
+  {
+    "name": "leave_key_second",
+    "command": "cd ..",
+    "completed": true,
+    "elapsed_seconds": 0.13424050000321586,
+    "checks": {},
+    "output": "cd ..\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_key_second",
+    "command": "rmdir kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "completed": true,
+    "elapsed_seconds": 0.25552890000108164,
+    "checks": {},
+    "output": "rmdir kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk\nnsh> \u001b[K"
+  },
+  {
+    "name": "leave_key_first",
+    "command": "cd ..",
+    "completed": true,
+    "elapsed_seconds": 0.13337210001191124,
+    "checks": {},
+    "output": "cd ..\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_key_first",
+    "command": "rmdir kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+    "completed": true,
+    "elapsed_seconds": 0.25754399999277666,
+    "checks": {},
+    "output": "rmdir kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk\nnsh> \u001b[K"
+  },
+  {
+    "name": "leave_package_tail",
+    "command": "cd ..",
+    "completed": true,
+    "elapsed_seconds": 0.1382922999910079,
+    "checks": {},
+    "output": "cd ..\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_package_tail",
+    "command": "rmdir pppppppppppppppppppp",
+    "completed": true,
+    "elapsed_seconds": 0.2245907000033185,
+    "checks": {},
+    "output": "rmdir pppppppppppppppppppp\nnsh> \u001b[K"
+  },
+  {
+    "name": "leave_long_package",
+    "command": "cd ..",
+    "completed": true,
+    "elapsed_seconds": 0.1392448999977205,
+    "checks": {},
+    "output": "cd ..\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_long_package",
+    "command": "rmdir @2ppppppppppppppppppppppppppppp",
+    "completed": true,
+    "elapsed_seconds": 0.25654109999595676,
+    "checks": {},
+    "output": "rmdir @2ppppppppppppppppppppppppppppp\nnsh> \u001b[K"
+  },
+  {
+    "name": "leave_test_root",
+    "command": "cd /",
+    "completed": true,
+    "elapsed_seconds": 0.1364462000055937,
+    "checks": {},
+    "output": "cd /\nnsh> \u001b[K"
+  },
+  {
+    "name": "remove_test_root",
+    "command": "rmdir /data/qpk/.storage-check-39",
+    "completed": true,
+    "elapsed_seconds": 0.26000029999704566,
+    "checks": {},
+    "output": "rmdir /data/qpk/.storage-check-39\nnsh> \u001b[K"
+  },
+  {
+    "name": "cleanup_check",
+    "command": "ls -l /data/qpk",
+    "completed": true,
+    "elapsed_seconds": 0.1645769000024302,
+    "checks": {},
+    "output": "ls -l /data/qpk\n/data/qpk:\n drwsrwsrwx           0 .data/\nnsh> \u001b[K"
+  }
+]

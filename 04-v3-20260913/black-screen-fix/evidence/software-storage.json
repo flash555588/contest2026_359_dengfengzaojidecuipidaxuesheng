@@ -1,0 +1,72 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.0006156000017654151,
+    "checks": {},
+    "output": "\nnsh> "
+  },
+  {
+    "name": "tmpfs_write",
+    "command": "echo SWTEST-20260914 > /tmp/codex-sw-a",
+    "completed": true,
+    "elapsed_seconds": 0.002752599997620564,
+    "checks": {},
+    "output": "\u001b[Kecho SWTEST-20260914 > /tmp/codex-sw-a\nnsh> "
+  },
+  {
+    "name": "tmpfs_read",
+    "command": "cat /tmp/codex-sw-a",
+    "completed": true,
+    "elapsed_seconds": 0.002968900000269059,
+    "checks": {
+      "^SWTEST-20260914$": true
+    },
+    "output": "\u001b[Kcat /tmp/codex-sw-a\nSWTEST-20260914\nnsh> "
+  },
+  {
+    "name": "smartfs_copy",
+    "command": "cp /tmp/codex-sw-a /data/.codex-sw-20260914-a3/check",
+    "completed": true,
+    "elapsed_seconds": 0.01645519999874523,
+    "checks": {},
+    "output": "\u001b[Kcp /tmp/codex-sw-a /data/.codex-sw-20260914-a3/check\nnsh> "
+  },
+  {
+    "name": "smartfs_read",
+    "command": "cat /data/.codex-sw-20260914-a3/check",
+    "completed": true,
+    "elapsed_seconds": 0.004359899998235051,
+    "checks": {
+      "^SWTEST-20260914$": true
+    },
+    "output": "\u001b[Kcat /data/.codex-sw-20260914-a3/check\nSWTEST-20260914\nnsh> "
+  },
+  {
+    "name": "smartfs_compare",
+    "command": "cmp /tmp/codex-sw-a /data/.codex-sw-20260914-a3/check",
+    "completed": true,
+    "elapsed_seconds": 0.004047099995659664,
+    "checks": {},
+    "output": "\u001b[Kcmp /tmp/codex-sw-a /data/.codex-sw-20260914-a3/check\nnsh> "
+  },
+  {
+    "name": "smartfs_compare_result",
+    "command": "echo $?",
+    "completed": true,
+    "elapsed_seconds": 0.0011581999933696352,
+    "checks": {
+      "^0$": true
+    },
+    "output": "\u001b[Kecho $?\n0\nnsh> "
+  },
+  {
+    "name": "smartfs_blocks",
+    "command": "dd if=/dev/zero of=/data/.codex-sw-20260914-a3/blocks bs=512 count=64",
+    "completed": false,
+    "elapsed_seconds": 10.090105499999481,
+    "checks": {},
+    "output": "\u001b[Kdd if=/dev/zero of=/data/.codex-sw-20260914-a3/blocks bs=512 cont=64"
+  }
+]

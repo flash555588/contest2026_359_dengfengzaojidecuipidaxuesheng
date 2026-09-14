@@ -1,0 +1,52 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.031072400000994094,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "persisted_content",
+    "command": "cat /data/.codex-sw-20260914-a3/check",
+    "completed": true,
+    "elapsed_seconds": 0.15388099999836413,
+    "checks": {
+      "^SWTEST-20260914$": true
+    },
+    "output": "cat /data/.codex-sw-20260914-a3/check\nSWTEST-20260914\nnsh> \u001b[K"
+  },
+  {
+    "name": "scratch_contents",
+    "command": "ls -l /data/.codex-sw-20260914-a3",
+    "completed": true,
+    "elapsed_seconds": 0.377550400000473,
+    "checks": {},
+    "output": "ls -l /data/.codex-sw-20260914-a3\n/data/.codex-sw-20260914-a3:\n -rwSrwSrw-          16 check\n -rwSr-Sr--     2368704 blocks\nnsh> "
+  },
+  {
+    "name": "disk_space",
+    "command": "df",
+    "completed": true,
+    "elapsed_seconds": 0.03081939999538008,
+    "checks": {},
+    "output": "\u001b[Kdf\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096       2361        1735 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  },
+  {
+    "name": "enter_scratch",
+    "command": "cd /data/.codex-sw-20260914-a3",
+    "completed": true,
+    "elapsed_seconds": 0.12387090000265744,
+    "checks": {},
+    "output": "cd /data/.codex-sw-20260914-a3\nnsh> \u001b[K"
+  },
+  {
+    "name": "bounded_write",
+    "command": "dd if=/dev/zero of=blocks bs=512 count=64",
+    "completed": false,
+    "elapsed_seconds": 20.10176639999554,
+    "checks": {},
+    "output": "dd if=/dev/zero of=blocks bs=512 count=64\n"
+  }
+]

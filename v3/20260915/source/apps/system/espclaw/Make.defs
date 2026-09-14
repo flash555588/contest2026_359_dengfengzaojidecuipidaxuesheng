@@ -1,4 +1,0 @@
-# SPDX-License-Identifier: Apache-2.0
-ifeq ($(CONFIG_SYSTEM_ESPCLAW),y)
-CONFIGURED_APPS += $(APPDIR)/system/espclaw
-endif

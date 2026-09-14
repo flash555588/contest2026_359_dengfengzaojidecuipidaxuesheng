@@ -1,0 +1,8 @@
+[
+  {"name":"camera_inventory","command":"desktop cameras","expect":["camera: connected=", "CSI=0"]},
+  {"name":"device_nodes","command":"ls -l /dev","expect":["uvcctl", "uvc0", "fb0"]},
+  {"name":"mounts","command":"mount","expect":["/data"]},
+  {"name":"memory","command":"free"},
+  {"name":"threads","command":"ps","expect":["usbh_hub0"]},
+  {"name":"camera_app","command":"desktop camera","expect":["requested"]}
+]

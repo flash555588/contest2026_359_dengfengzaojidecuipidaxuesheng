@@ -1,0 +1,300 @@
+--- a/nuttx/net/bluetooth/bluetooth_conn.c
++++ b/nuttx/net/bluetooth/bluetooth_conn.c
+@@ -114,6 +114,10 @@
+   conn = mempool_zallocate(&g_bluetooth_connections, 0);
+   if (conn)
+     {
++      /* Initialize the socket lock before publishing the connection. */
++
++      conn_init(&conn->bc_conn);
++
+       /* Mark as unbound */
+ 
+       conn->bc_proto = BTPROTO_NONE;
+@@ -170,6 +174,10 @@
+ 
+       bluetooth_container_free(container);
+     }
++
++  /* Release resources initialized by conn_init before returning the slot. */
++
++  conn_uninit(&conn->bc_conn);
+ 
+   /* Free the connection structure */
+ 
+--- a/nuttx/net/bluetooth/bluetooth_finddev.c
++++ b/nuttx/net/bluetooth/bluetooth_finddev.c
+@@ -28,6 +28,7 @@
+ 
+ #include <assert.h>
+ 
++#include <netpacket/bluetooth.h>
+ #include <nuttx/net/net.h>
+ #include <nuttx/net/radiodev.h>
+ #include <nuttx/net/bluetooth.h>
+@@ -45,6 +46,7 @@
+ struct bluetooth_finddev_s
+ {
+   FAR const bt_addr_t       *bf_addr;
++  int                       bf_hci;
+   FAR struct radio_driver_s *bf_radio;
+ };
+ 
+@@ -74,6 +76,19 @@
+     (FAR struct bluetooth_finddev_s *)arg;
+ 
+   DEBUGASSERT(dev != NULL && match != NULL && match->bf_addr != NULL);
++
++  /* Raw HCI uses a controller number, independent of Ethernet ifindex. */
++
++  if (match->bf_hci >= 0)
++    {
++      if (dev->d_lltype == NET_LL_BLUETOOTH && match->bf_hci-- == 0)
++        {
++          match->bf_radio = (FAR struct radio_driver_s *)dev;
++          return 1;
++        }
++
++      return 0;
++    }
+ 
+   /* First, check if this network device is an Bluetooth radio and that
+    * it has an assigned Bluetooth address.
+@@ -127,6 +142,7 @@
+   int ret;
+ 
+   DEBUGASSERT(conn != NULL);
++  match.bf_hci   = conn->bc_proto == BTPROTO_HCI ? conn->bc_ldev : -1;
+   match.bf_addr  = addr;
+   match.bf_radio = NULL;
+ 
+--- a/nuttx/net/bluetooth/bluetooth_sendmsg.c
++++ b/nuttx/net/bluetooth/bluetooth_sendmsg.c
+@@ -269,31 +269,15 @@
+ 
+   /* Get the device driver that will service this transfer */
+ 
+-  if (psock->s_proto == BTPROTO_L2CAP)
+-    {
+-      radio = bluetooth_find_device(conn, &conn->bc_laddr);
+-      if (radio == NULL)
+-        {
+-          return -ENODEV;
+-        }
+-    }
+-  else if (psock->s_proto == BTPROTO_HCI)
+-    {
+-      /* TODO: should actually look among BT devices */
+-
+-      radio =
+-          (FAR struct radio_driver_s *)netdev_findbyindex(conn->bc_ldev + 1);
+-
+-      DEBUGASSERT(radio->r_dev.d_lltype == NET_LL_BLUETOOTH);
+-
+-      if (radio == NULL)
+-        {
+-          return -ENODEV;
+-        }
+-    }
+-  else
++  if (psock->s_proto != BTPROTO_L2CAP && psock->s_proto != BTPROTO_HCI)
+     {
+       return -EOPNOTSUPP;
++    }
++
++  radio = bluetooth_find_device(conn, &conn->bc_laddr);
++  if (radio == NULL)
++    {
++      return -ENODEV;
+     }
+ 
+   /* Perform the send operation */
+--- a/nuttx/wireless/bluetooth/bt_netdev.c
++++ b/nuttx/wireless/bluetooth/bt_netdev.c
+@@ -25,6 +25,7 @@
+  ****************************************************************************/
+ 
+ #include <nuttx/config.h>
++#include <nuttx/mutex.h>
+ 
+ #include <stdint.h>
+ #include <stdbool.h>
+@@ -504,11 +505,11 @@
+   frame      = buf->frame;
+   buf->frame = NULL;
+ 
+-  net_lock();
++  priv = (FAR struct btnet_driver_s *)context;
++  netdev_lock(&priv->bd_dev.r_dev);
+ 
+   /* Ignore the frame if the network is not up */
+ 
+-  priv = (FAR struct btnet_driver_s *)context;
+   if (!IFF_IS_RUNNING(priv->bd_dev.r_dev.d_flags))
+     {
+       wlwarn("WARNING: Dropped... Network is down\n");
+@@ -582,7 +583,7 @@
+ 
+   /* Release our reference on the buffer */
+ 
+-  net_unlock();
++  netdev_unlock(&priv->bd_dev.r_dev);
+ }
+ 
+ #endif
+@@ -721,7 +722,7 @@
+    * thread has been configured.
+    */
+ 
+-  net_lock();
++  netdev_lock(&priv->bd_dev.r_dev);
+ 
+   /* Ignore the notification if the interface is not yet up */
+ 
+@@ -738,7 +739,7 @@
+       devif_poll(&priv->bd_dev.r_dev, btnet_txpoll_callback);
+     }
+ 
+-  net_unlock();
++  netdev_unlock(&priv->bd_dev.r_dev);
+ }
+ 
+ /****************************************************************************
+--- a/apps/system/c6ble/ble_socket_register.c
++++ b/apps/system/c6ble/ble_socket_register.c
+@@ -7,6 +7,7 @@
+ #include "ble_hosted.h"
+ #include "ble_register.h"
+ #include "c6net.h"
++#include "netutils/netlib.h"
+ #include <errno.h>
+ #include <pthread.h>
+ #include <stdbool.h>
+@@ -17,7 +18,7 @@
+ static pthread_mutex_t g_registration_lock = PTHREAD_MUTEX_INITIALIZER;
+ static bool g_registered;
+ 
+-/* The command keeps its existing signature, but this build registers hci0
++/* The command keeps its existing signature, but this build registers bnep0
+  * for NimBLE's raw socket transport, not a UART character device. */
+ int c6_ble_register(const char *path)
+ {
+@@ -26,8 +27,7 @@
+   if (ret != 0) return -ret;
+   if (g_registered)
+     {
+-      pthread_mutex_unlock(&g_registration_lock);
+-      return 0;
++      goto ifup;
+     }
+   ret = c6net_prepare();
+   if (ret < 0) goto out;
+@@ -52,6 +52,8 @@
+       c6_ble_hosted_destroy(transport);
+     }
+   else g_registered = true;
++ifup:
++  if (g_registered && netlib_ifup("bnep0") < 0) ret = -errno;
+ out:
+   pthread_mutex_unlock(&g_registration_lock);
+   return ret;
+--- a/apps/system/c6probe/esp_hosted.c
++++ b/apps/system/c6probe/esp_hosted.c
+@@ -1184,7 +1184,6 @@
+     }
+ 
+   framelen = ESP_HOSTED_HEADER_SIZE + len;
+-  real_framelen = framelen;
+ 
+   /* HCI frames arrive as complete H4 packets; the type byte travels in the
+    * header's last field, exactly as the official host does.
+@@ -1195,6 +1194,12 @@
+       len -= 1;
+       framelen -= 1;
+     }
++
++  /* H4's type byte lives in the Hosted header, so exclude it from the
++   * SDIO window length as well as from the payload length.
++   */
++
++  real_framelen = framelen;
+ 
+   /* Wait until the slave has buffers for a frame of this size. */
+ 
+--- a/apps/system/c6ble/ble_hosted.c
++++ b/apps/system/c6ble/ble_hosted.c
+@@ -39,8 +39,13 @@
+ {
+   struct c6_ble_hosted_s *priv = arg;
+   (void)interface;
++  (void)type;
++  /* Controller-to-host packets carry H4 inline. Only host-to-controller
++   * traffic moves the H4 type into the ESP-Hosted header.
++   */
++  if (!data || length < 1) return;
+   /* Callback/arg remain immutable from claim until release completes. */
+-  (void)priv->receive(priv->arg, type, data, length);
++  (void)priv->receive(priv->arg, data[0], data + 1, length - 1);
+ }
+ 
+ static void *poll_hci(void *arg)
+--- a/nuttx/net/procfs/net_procfs.c
++++ b/nuttx/net/procfs/net_procfs.c
+@@ -235,7 +235,7 @@
+        * to determine if the name corresponds to a network device.
+        */
+ 
+-      copy = strdup(relpath);
++      copy = nx_strdup(relpath);
+       if (copy == NULL)
+         {
+           ferr("ERROR: strdup failed\n");
+@@ -244,7 +244,7 @@
+ 
+       devname = basename(copy);
+       dev     = netdev_findbyname(devname);
+-      lib_free(copy);
++      kmm_free(copy);
+ 
+       if (dev == NULL)
+         {
+@@ -621,7 +621,7 @@
+        * to determine if the name corresponds to a network device.
+        */
+ 
+-      copy = strdup(relpath);
++      copy = nx_strdup(relpath);
+       if (copy == NULL)
+         {
+           ferr("ERROR: strdup failed\n");
+@@ -630,7 +630,7 @@
+ 
+       devname = basename(copy);
+       dev     = netdev_findbyname(devname);
+-      lib_free(copy);
++      kmm_free(copy);
+ 
+       if (dev == NULL)
+         {
+--- a/apps/wireless/bluetooth/nimble/mynewt-nimble/porting/npl/nuttx/src/os_callout.c
++++ b/apps/wireless/bluetooth/nimble/mynewt-nimble/porting/npl/nuttx/src/os_callout.c
+@@ -113,10 +113,15 @@
+ bool
+ ble_npl_callout_is_active(struct ble_npl_callout *c)
+ {
+-    /* TODO: seek native posix method to determine whether timer_t is active.
+-       TODO: fix bug where one-shot timer is still active after fired. */
+-
+-    return c->c_active;
++    struct itimerspec its;
++
++    /* A one-shot timer becomes inactive at expiry. A stale c_active flag
++     * prevents the host from scheduling later GAP scan/connect deadlines.
++     */
++    if (!c->c_timer || timer_gettime(c->c_timer, &its) != 0) {
++        return false;
++    }
++    return its.it_value.tv_sec != 0 || its.it_value.tv_nsec != 0;
+ }
+ 
+ int

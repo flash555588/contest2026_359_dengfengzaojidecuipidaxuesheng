@@ -1,0 +1,11 @@
+[
+  {"name":"next360","command":"desktop ui camera-mode","expect":["ready"],"settle":1},
+  {"name":"start360","command":"desktop ui camera-start","expect":["clicked=1"],"settle":8},
+  {"name":"status360","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]"]},
+  {"name":"stop360","command":"desktop camera-stop","expect":["requested"],"settle":3},
+  {"name":"next1080","command":"desktop ui camera-mode","expect":["ready"],"settle":1},
+  {"name":"start1080","command":"desktop ui camera-start","expect":["clicked=1"],"settle":8},
+  {"name":"status1080","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]"]},
+  {"name":"stop1080","command":"desktop camera-stop","expect":["requested"],"settle":3},
+  {"name":"idle","command":"desktop cameras","expect":["busy=0 alive=0"]}
+]

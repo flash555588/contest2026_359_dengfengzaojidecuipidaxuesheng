@@ -1,0 +1,196 @@
+--- a/src/drivers/nuttx/lv_nuttx_fbdev.c
++++ b/src/drivers/nuttx/lv_nuttx_fbdev.c
+@@ -40,6 +40,7 @@ typedef struct {
+     void * mem;
+     void * mem2;
+     void * mem_off_screen;
++    bool mem_off_screen_heap;
+     uint32_t mem2_yoffset;
+ 
+     lv_draw_buf_t buf1;
+@@ -53,10 +54,12 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * colo
+ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * color_p);
+ static lv_color_format_t fb_fmt_to_color_format(int fmt);
+ static int fbdev_get_pinfo(int fd, struct fb_planeinfo_s * pinfo);
++#if !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
+ static int fbdev_init_mem2(lv_nuttx_fb_t * dsc);
++#endif
+ static void display_refr_timer_cb(lv_timer_t * tmr);
+ static void display_release_cb(lv_event_t * e);
+-#if defined(CONFIG_FB_UPDATE)
++#if defined(CONFIG_FB_UPDATE) && !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
+     static void fbdev_join_inv_areas(lv_display_t * disp, lv_area_t * final_inv_area);
+ #endif
+ 
+@@ -139,6 +142,29 @@ int lv_nuttx_fbdev_set_file(lv_display_t * disp, const char * file)
+     uint32_t w = dsc->vinfo.xres;
+     uint32_t h = dsc->vinfo.yres;
+     uint32_t stride = dsc->pinfo.stride;
++
++#if defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++    uint32_t buffer_height = CONFIG_LV_NUTTX_FBDEV_BUFFER_SIZE;
++    if(buffer_height > h) buffer_height = h;
++
++    uint32_t buffer_size = buffer_height * stride;
++    dsc->mem_off_screen = malloc(buffer_size);
++    LV_ASSERT_MALLOC(dsc->mem_off_screen);
++    if(!dsc->mem_off_screen) {
++        ret = -ENOMEM;
++        LV_LOG_ERROR("Failed to allocate partial render buffer");
++        goto errout;
++    }
++
++    dsc->mem_off_screen_heap = true;
++    lv_draw_buf_init(&dsc->buf1, w, buffer_height, color_format, stride,
++                     dsc->mem_off_screen, buffer_size);
++    lv_display_set_draw_buffers(disp, &dsc->buf1, NULL);
++    lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_PARTIAL);
++    LV_LOG_USER("Use cached partial render buffer: %p, rows: %" LV_PRIu32
++                ", size: %" LV_PRIu32,
++                dsc->mem_off_screen, buffer_height, buffer_size);
++#else
+     uint32_t data_size = h * stride;
+     lv_draw_buf_init(&dsc->buf1, w, h, color_format, stride, dsc->mem, data_size);
+ 
+@@ -150,24 +176,39 @@ int lv_nuttx_fbdev_set_file(lv_display_t * disp, const char * file)
+         }
+ 
+         lv_draw_buf_init(&dsc->buf2, w, h, color_format, stride, dsc->mem2, data_size);
+-        lv_display_set_draw_buffers(disp, &dsc->buf1, &dsc->buf2);
+     }
+     else {
+-        dsc->mem_off_screen = malloc(data_size);
+-        LV_ASSERT_MALLOC(dsc->mem_off_screen);
+-        if(!dsc->mem_off_screen) {
+-            ret = -ENOMEM;
+-            LV_LOG_ERROR("Failed to allocate memory for off-screen buffer");
+-            goto errout;
++        if(dsc->pinfo.fblen / 2 >= data_size) {
++            dsc->mem_off_screen = (uint8_t *)dsc->mem + data_size;
++            dsc->mem_off_screen_heap = false;
++            LV_LOG_USER("Use framebuffer-reserved off-screen memory: %p, size: %" LV_PRIu32,
++                        dsc->mem_off_screen, data_size);
+         }
++        else {
++            dsc->mem_off_screen = malloc(data_size);
++            LV_ASSERT_MALLOC(dsc->mem_off_screen);
++            if(!dsc->mem_off_screen) {
++                ret = -ENOMEM;
++                LV_LOG_ERROR("Failed to allocate memory for off-screen buffer");
++                goto errout;
++            }
+ 
+-        LV_LOG_USER("Use off-screen mode, memory: %p, size: %" LV_PRIu32, dsc->mem_off_screen, data_size);
+-        lv_draw_buf_init(&dsc->buf2, w, h, color_format, stride, dsc->mem_off_screen, data_size);
+-        lv_display_set_draw_buffers(disp, &dsc->buf2, NULL);
++            dsc->mem_off_screen_heap = true;
++            LV_LOG_USER("Use heap off-screen memory: %p, size: %" LV_PRIu32,
++                        dsc->mem_off_screen, data_size);
++        }
++
++        lv_draw_buf_init(&dsc->buf2, w, h, color_format, stride,
++                         dsc->mem_off_screen, data_size);
+     }
+ 
+-    lv_display_set_color_format(disp, color_format);
++    lv_display_set_draw_buffers(disp, double_buffer ? &dsc->buf1 : &dsc->buf2,
++                                double_buffer ? &dsc->buf2 : NULL);
++
+     lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_DIRECT);
++#endif
++
++    lv_display_set_color_format(disp, color_format);
+     lv_display_set_resolution(disp, dsc->vinfo.xres, dsc->vinfo.yres);
+     lv_timer_set_cb(disp->refr_timer, display_refr_timer_cb);
+ 
+@@ -185,7 +226,7 @@ errout:
+  *   STATIC FUNCTIONS
+  **********************/
+ 
+-#if defined(CONFIG_FB_UPDATE)
++#if defined(CONFIG_FB_UPDATE) && !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
+ static void fbdev_join_inv_areas(lv_display_t * disp, lv_area_t * final_inv_area)
+ {
+     uint16_t inv_index;
+@@ -236,12 +277,41 @@ static void display_refr_timer_cb(lv_timer_t * tmr)
+ 
+ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * color_p)
+ {
+-    LV_UNUSED(color_p);
+     lv_nuttx_fb_t * dsc = lv_display_get_driver_data(disp);
+ 
+-    if(dsc->mem_off_screen) {
+-        /* When rendering in off-screen mode, copy the drawing buffer to fb */
+-        /* buf2(off-screen buffer) -> buf1(fbmem)*/
++#if defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++    uint32_t width = lv_area_get_width(area);
++    uint32_t height = lv_area_get_height(area);
++    uint32_t px_size = lv_color_format_get_size(lv_display_get_color_format(disp));
++    uint32_t row_size = width * px_size;
++    uint8_t * dest = (uint8_t *)dsc->mem + area->y1 * dsc->pinfo.stride +
++                     area->x1 * px_size;
++
++    for(uint32_t row = 0; row < height; row++) {
++        lv_memcpy(dest, color_p, row_size);
++        dest += dsc->pinfo.stride;
++        color_p += row_size;
++    }
++
++#if defined(CONFIG_FB_UPDATE)
++    struct fb_area_s fb_area;
++    fb_area.x = area->x1;
++    fb_area.y = area->y1;
++    fb_area.w = width;
++    fb_area.h = height;
++    if(ioctl(dsc->fd, FBIO_UPDATE, (unsigned long)((uintptr_t)&fb_area)) < 0) {
++        LV_LOG_ERROR("ioctl(FBIO_UPDATE) failed: %d", errno);
++    }
++#endif
++
++    lv_display_flush_ready(disp);
++    return;
++#else
++    LV_UNUSED(color_p);
++
++    if(dsc->mem_off_screen && dsc->mem_off_screen_heap) {
++        /* Copy only LVGL's dirty region into the active scanout buffer. */
++
+         lv_draw_buf_copy(&dsc->buf1, area, &dsc->buf2, area);
+     }
+ 
+@@ -287,6 +357,7 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * colo
+         }
+     }
+     lv_display_flush_ready(disp);
++#endif
+ }
+ 
+ static lv_color_format_t fb_fmt_to_color_format(int fmt)
+@@ -326,6 +397,7 @@ static int fbdev_get_pinfo(int fd, FAR struct fb_planeinfo_s * pinfo)
+     return 0;
+ }
+ 
++#if !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
+ static int fbdev_init_mem2(lv_nuttx_fb_t * dsc)
+ {
+     uintptr_t buf_offset;
+@@ -379,6 +451,7 @@ static int fbdev_init_mem2(lv_nuttx_fb_t * dsc)
+ 
+     return 0;
+ }
++#endif
+ 
+ static void display_release_cb(lv_event_t * e)
+ {
+@@ -393,10 +466,8 @@ static void display_release_cb(lv_event_t * e)
+             dsc->fd = -1;
+         }
+ 
+-        if(dsc->mem_off_screen) {
+-            /* Free the off-screen buffer */
++        if(dsc->mem_off_screen_heap) {
+             free(dsc->mem_off_screen);
+-            dsc->mem_off_screen = NULL;
+         }
+ 
+         lv_free(dsc);

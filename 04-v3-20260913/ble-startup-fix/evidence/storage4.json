@@ -1,0 +1,38 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.13394149999658111,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "mount",
+    "command": "mount",
+    "completed": true,
+    "elapsed_seconds": 0.13808150000113528,
+    "checks": {
+      "/data type smartfs": true
+    },
+    "output": "mount\n  /data type smartfs\n  /proc type procfs\n  /tmp type tmpfs\nnsh> \u001b[K"
+  },
+  {
+    "name": "storage",
+    "command": "desktop storage-test",
+    "completed": true,
+    "elapsed_seconds": 0.3659438000031514,
+    "checks": {
+      "storage selftest PASS": true
+    },
+    "output": "desktop storage-test\ndesktop: storage selftest PASS (ret=0, 3 namespaces, overwrite/read/delete)\nnsh> "
+  },
+  {
+    "name": "tasks",
+    "command": "ps",
+    "completed": true,
+    "elapsed_seconds": 0.04622569998900872,
+    "checks": {},
+    "output": "\u001b[Kps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 37.6% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 52.5% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b240 0x4ff4b28c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b1c0 0x4ff4b20c\n    5     5 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712  9.6% desktop\n    6     6 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  0.2% nsh\nnsh> "
+  }
+]

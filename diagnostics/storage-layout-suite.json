@@ -1,0 +1,1 @@
+[{"name": "qpk", "command": "ls -l /data/qpk"}, {"name": "check", "command": "ls -R /data/qpk/.storage-check-7"}]

@@ -1,0 +1,18 @@
+[
+  {"name":"persisted_content", "command":"cat /data/.codex-sw-20260914-a3/check", "expect":["^SWTEST-20260914$"]},
+  {"name":"scratch_contents", "command":"ls -l /data/.codex-sw-20260914-a3"},
+  {"name":"disk_space", "command":"df"},
+  {"name":"enter_scratch", "command":"cd /data/.codex-sw-20260914-a3"},
+  {"name":"bounded_write", "command":"dd if=/dev/zero of=blocks bs=512 count=64", "timeout":20},
+  {"name":"block_size", "command":"ls -l blocks", "expect":["32768"]},
+  {"name":"copy_to_ram", "command":"cp blocks /tmp/codex-sw-blocks"},
+  {"name":"compare_blocks", "command":"cmp blocks /tmp/codex-sw-blocks"},
+  {"name":"compare_result", "command":"echo $?", "expect":["^0$"]},
+  {"name":"rename", "command":"mv check saved"},
+  {"name":"renamed_read", "command":"cat saved", "expect":["^SWTEST-20260914$"]},
+  {"name":"remove_scratch_files", "command":"rm blocks saved"},
+  {"name":"leave_scratch", "command":"cd /"},
+  {"name":"remove_scratch_directory", "command":"rmdir /data/.codex-sw-20260914-a3"},
+  {"name":"remove_ram_copy", "command":"rm /tmp/codex-sw-blocks"},
+  {"name":"free_after_storage", "command":"free"}
+]

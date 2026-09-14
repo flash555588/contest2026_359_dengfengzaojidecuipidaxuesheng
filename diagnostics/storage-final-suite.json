@@ -1,0 +1,29 @@
+[
+  {
+    "name": "console_after_jtag",
+    "command": "uname -a",
+    "expect": [
+      "NuttX"
+    ]
+  },
+  {
+    "name": "storage_after_jtag",
+    "command": "ls -l /data/qpk"
+  },
+  {
+    "name": "final_address",
+    "command": "ifconfig",
+    "expect": [
+      "192.168.0.105",
+      "10:bd:a3:89:58:74"
+    ]
+  },
+  {
+    "name": "final_tasks",
+    "command": "ps",
+    "expect": [
+      "desktop",
+      "c6net"
+    ]
+  }
+]

@@ -1,0 +1,32 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x400cd6fa in lv_color_24_16_mix (c1=<optimized out>, c2=<optimized out>, mix=238 '\356') at /tmp/v3-desktop-ble-startup-20260914/apps/graphics/lvgl/lvgl/src/draw/sw/blend/lv_draw_sw_blend_to_rgb565.c:1128
+warning: 1128	/tmp/v3-desktop-ble-startup-20260914/apps/graphics/lvgl/lvgl/src/draw/sw/blend/lv_draw_sw_blend_to_rgb565.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x400CD6FA, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42318, debug_reason=00000000
+[esp32p4.hp.cpu1] Halt cause (11) - (ECALL from M mode)
+libusb_bulk_read error: LIBUSB_ERROR_PIPE
+esp_usb_jtag: device not found!
+esp_usb_jtag: failed to revive USB device!
+libusb_bulk_read error: LIBUSB_ERROR_IO
+esp_usb_jtag: device not found!
+esp_usb_jtag: failed to revive USB device!
+libusb_bulk_read error: LIBUSB_ERROR_IO
+esp_usb_jtag: serial (E8:F6:0A:E3:A9:5F)
+esp_usb_jtag: Device found. Base speed 24000KHz, div range 1 to 255
+missing data from bitq interface
+dmi_scan failed jtag scan
+[esp32p4.hp.cpu0] Failed to read memory via system bus.
+[esp32p4.hp.cpu0] Failed DMI write at 0x10; status=1
+[esp32p4.hp.cpu0] Failed to read memory via program buffer.
+[esp32p4.hp.cpu0] Buggy aampostincrement! Address not incremented correctly.
+[esp32p4.hp.cpu0] Hart unexpectedly reset!
+[esp32p4.hp.cpu1] Hart unexpectedly reset!
+[esp32p4.hp.cpu1] Reset cause (1) - (Power on reset)
+dumped 77452 bytes in 6.002713s (12.600 KiB/s)
+[esp32p4.hp.cpu0] Reset cause (1) - (Power on reset)
+[esp32p4.hp.cpu0] Not halted.
+04-v3-20260913\ble-startup-fix\evidence\review-dark\dark-bluetooth.gdb:12: Error in sourced command file:
+Protocol error with Rcmd: D0.
+[Inferior 1 (Remote target) detached]

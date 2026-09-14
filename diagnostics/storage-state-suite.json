@@ -1,0 +1,8 @@
+[
+  {"name":"mounts","command":"mount"},
+  {"name":"space","command":"df -h"},
+  {"name":"data_root","command":"ls -l /data"},
+  {"name":"qpk_root","command":"ls -l /data/qpk"},
+  {"name":"app_storage","command":"ls -l /data/qpk/.data"},
+  {"name":"tasks","command":"ps"}
+]

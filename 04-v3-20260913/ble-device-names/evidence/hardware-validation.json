@@ -1,0 +1,32 @@
+{
+  "firmware_sha256": "0ac1e9ff601f28db20a6878baf77cef7b48662c4837c427d76b7f34766dc6b09",
+  "flashed_and_verified": true,
+  "port": "COM23",
+  "named_devices_visually_verified": [
+    "EDIFIER BLE"
+  ],
+  "last_scan_count": 16,
+  "active_scan": true,
+  "repeat_scan_and_cancel": true,
+  "storage_selftest": "PASS",
+  "serial_resumed_after_jtag": true,
+  "data_partition_erased": false,
+  "wifi_dhcp_this_release": "Not attempted: user confirmed previous hotspot unavailable after relocation.",
+  "bluetooth_audio": "Not implemented; current C6 does not support classic BR/EDR or A2DP.",
+  "pairing_tested": false,
+  "gatt_connection_tested": false,
+  "visual_review": [
+    {
+      "page": "light-bluetooth",
+      "path": "evidence/review-light-final/light-bluetooth.png",
+      "overlaps": 0,
+      "overflow": 0
+    },
+    {
+      "page": "dark-bluetooth",
+      "path": "evidence/review-dark-final/dark-bluetooth.png",
+      "overlaps": 0,
+      "overflow": 0
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+400a61ec T c6net_initialize
+400d80a8 T dhcpc_request
+4003ad76 t js_storage_delete
+4003aebc t js_storage_get
+4003ae00 t js_storage_set
+4003ad18 t qpk_storage_key
+4003cc24 T qpk_storage_path
+4003cce8 T qpk_storage_read
+4003cf1a T qpk_storage_remove
+4003cfc6 T qpk_storage_selftest
+4003cdb2 T qpk_storage_write

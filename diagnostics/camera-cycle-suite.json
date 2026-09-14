@@ -1,0 +1,19 @@
+[
+  {"name":"memory_before","command":"free"},
+  {"name":"open1","command":"desktop camera","expect":["requested"],"settle":4},
+  {"name":"start1","command":"desktop ui camera-start","expect":["ready"],"settle":5},
+  {"name":"stats1","command":"desktop cameras","expect":["connected=1 CSI=0 USB=1","busy=1 alive=1 frames=[1-9]","stream: frames=[1-9]"]},
+  {"name":"stop1","command":"desktop camera-stop","expect":["requested"],"settle":2},
+  {"name":"idle1","command":"desktop cameras","expect":["busy=0 alive=0"]},
+  {"name":"open2","command":"desktop camera","expect":["requested"],"settle":4},
+  {"name":"start2","command":"desktop ui camera-start","expect":["ready"],"settle":4},
+  {"name":"stats2","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]"]},
+  {"name":"stop2","command":"desktop camera-stop","expect":["requested"],"settle":2},
+  {"name":"idle2","command":"desktop cameras","expect":["busy=0 alive=0"]},
+  {"name":"open3","command":"desktop camera","expect":["requested"],"settle":4},
+  {"name":"start3","command":"desktop ui camera-start","expect":["ready"],"settle":4},
+  {"name":"stats3","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]"]},
+  {"name":"stop3","command":"desktop camera-stop","expect":["requested"],"settle":2},
+  {"name":"idle3","command":"desktop cameras","expect":["busy=0 alive=0"]},
+  {"name":"memory_after","command":"free"}
+]

@@ -1,0 +1,6 @@
+[
+  {"name":"open","command":"desktop camera","expect":["requested"],"settle":4},
+  {"name":"start","command":"desktop ui camera-start","expect":["clicked=1"],"settle":8},
+  {"name":"status","command":"desktop cameras","expect":["busy=1 alive=1 frames=[1-9]"]},
+  {"name":"audit","command":"desktop ui audit","expect":["UI_LAYOUT_BEGIN"]}
+]

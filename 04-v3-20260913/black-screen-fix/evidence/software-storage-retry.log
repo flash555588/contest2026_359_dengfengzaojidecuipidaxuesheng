@@ -1,0 +1,27 @@
+
+[CASE console]
+
+nsh> [K
+[CASE persisted_content]
+cat /data/.codex-sw-20260914-a3/check
+SWTEST-20260914
+nsh> [K
+[CASE scratch_contents]
+ls -l /data/.codex-sw-20260914-a3
+/data/.codex-sw-20260914-a3:
+ -rwSrwSrw-          16 check
+ -rwSr-Sr--     2368704 blocks
+nsh> 
+[CASE disk_space]
+[Kdf
+  Block    Number
+  Size     Blocks       Used   Available Mounted on
+  1024       4096       2361        1735 /data
+     0          0          0           0 /proc
+   512          1          1           0 /tmp
+nsh> [K
+[CASE enter_scratch]
+cd /data/.codex-sw-20260914-a3
+nsh> [K
+[CASE bounded_write]
+dd if=/dev/zero of=blocks bs=512 count=64

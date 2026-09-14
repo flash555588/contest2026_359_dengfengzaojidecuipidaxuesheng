@@ -1,0 +1,71 @@
+
+[CASE console]
+
+nsh> [K
+[CASE next360]
+desktop ui cameramode
+camera mode clicked=1
+desktop: ui camera-mode ready
+nsh> [K
+[CASE start360]
+dsktop ui camera-start
+camera start clicked=1
+desktop: ui camera-start ready
+nsh> [K
+[CASE status360]
+desktop cameras
+camera app: busy=1 alive=1 frames=68 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=376 dropped=306 packets=99841 errors=0 error=0
+  mod=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE stop360]
+[Kesktop camera-stop
+desktop: camera diagnostic stop requested
+nsh> [K
+[CASE next1080]
+desktop ui camera-mode
+camera mode clicked=0
+desktop: ui camera-mode ready
+nsh> [K
+[CASE start1080]
+desktop ui camera-start
+camera start clicked=0
+desktop: ui camera-start ready
+nsh> [K
+[CASE status1080]
+desktop cameras
+camera app: busy=0 alive=0 frames=0 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=384 dropped=313 packets=101904 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 
+[CASE stop1080]
+[Kdesktop camera-stop
+desktop: camera diagnostic stop requested
+nsh> [K
+[CASE idle]
+desktop cameras
+camera app: busy=0 alive=0 frames=0 error=0 photo=0 path=
+camera: connected=1 CSI=0 USB=1
+camera: usb0 generation=2 HD Web Camera [05a3:9331]
+  stream: frames=384 dropped=313 packets=101904 errors=0 error=0
+  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333
+  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333
+  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333
+  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333
+  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333
+  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333
+nsh> 

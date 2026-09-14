@@ -1,0 +1,97 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.1441999999951804,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "restore_light",
+    "command": "desktop ui light",
+    "completed": true,
+    "elapsed_seconds": 0.15209390000381973,
+    "checks": {
+      "ready": true
+    },
+    "output": "desktop ui light\ndesktop: ui light ready\nnsh> "
+  },
+  {
+    "name": "show_bluetooth",
+    "command": "desktop ui bluetooth",
+    "completed": true,
+    "elapsed_seconds": 0.6297532000025967,
+    "checks": {
+      "ready": true
+    },
+    "output": "\u001b[Kdesktop ui bluetooth\ndesktop: ui bluetooth ready\nnsh> "
+  },
+  {
+    "name": "ready_state",
+    "command": "desktop ui audit",
+    "completed": true,
+    "elapsed_seconds": 0.717294199988828,
+    "checks": {
+      "就绪": true,
+      "[1-9][0-9]* 个设备": true
+    },
+    "output": "\u001b[Kdesktop ui audit\nUI_LAYOUT_BEGIN\n[{\"id\":1,\"parent\":0,\"type\":\"container\",\"x\":40,\"y\":44,\"w\":944,\"h\":512,\"scroll\":false,\"text\":\"\"},\n{\"id\":2,\"parent\":1,\"type\":\"label\",\"x\":65,\"y\":63,\"w\":824,\"h\":39,\"scroll\":true,\"text\":\"蓝牙\"},\n{\"id\":3,\"parent\":1,\"type\":\"button\",\"x\":909,\"y\":59,\"w\":54,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":4,\"parent\":3,\"type\":\"label\",\"x\":928,\"y\":67,\"w\":17,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":5,\"parent\":1,\"type\":\"label\",\"x\":65,\"y\":121,\"w\":450,\"h\":28,\"scroll\":true,\"text\":\"就绪 · 16 个设备\"},\n{\"id\":6,\"parent\":1,\"type\":\"button\",\"x\":521,\"y\":105,\"w\":110,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":7,\"parent\":6,\"type\":\"label\",\"x\":533,\"y\":118,\"w\":86,\"h\":22,\"scroll\":true,\"text\":\"扫描\"},\n{\"id\":8,\"parent\":1,\"type\":\"button\",\"x\":651,\"y\":105,\"w\":110,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":9,\"parent\":8,\"type\":\"label\",\"x\":663,\"y\":118,\"w\":86,\"h\":22,\"scroll\":true,\"text\":\"停止\"},\n{\"id\":10,\"parent\":1,\"type\":\"button\",\"x\":781,\"y\":105,\"w\":110,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":11,\"parent\":10,\"type\":\"label\",\"x\":793,\"y\":118,\"w\":86,\"h\":22,\"scroll\":true,\"text\":\"断开\"},\n{\"id\":12,\"parent\":1,\"type\":\"container\",\"x\":61,\"y\":165,\"w\":850,\"h\":330,\"scroll\":true,\"text\":\"\"},\n{\"id\":13,\"parent\":12,\"type\":\"button\",\"x\":65,\"y\":165,\"w\":816,\"h\":68,\"scroll\":false,\"text\":\"\"},\n{\"id\":14,\"parent\":13,\"type\":\"label\",\"x\":78,\"y\":171,\"w\":788,\"h\":28,\"scroll\":true,\"text\":\"EDIFIER BLE\"},\n{\"id\":15,\"parent\":13,\"type\":\"label\",\"x\":78,\"y\":204,\"w\":788,\"h\":22,\"scroll\":true,\"text\":\"C8:24:70:8D:A2:CC  -90 dBm\"},\n{\"id\":16,\"parent\":12,\"type\":\"button\",\"x\":65,\"y\":237,\"w\":816,\"h\":68,\"scroll\":false,\"text\":\"\"},\n{\"id\":17,\"parent\":16,\"type\":\"label\",\"x\":78,\"y\":243,\"w\":788,\"h\":28,\"scroll\":true,\"text\":\"未命名设备\"},\n{\"id\":18,\"parent\":16,\"type\":\"label\",\"x\":78,\"y\":276,\"w\":788,\"h\":22,\"scroll\":true,\"text\":\"15:C4:1B:61:AA:2B  -53 dBm\"},\n{\"id\":19,\"parent\":12,\"type\":\"button\",\"x\":65,\"y\":309,\"w\":816,\"h\":68,\"scroll\":false,\"text\":\"\"},\n{\"id\":20,\"parent\":19,\"type\":\"label\",\"x\":78,\"y\":315,\"w\":788,\"h\":28,\"scroll\":true,\"text\":\"未命名设备\"},\n{\"id\":21,\"parent\":19,\"type\":\"label\",\"x\":78,\"y\":348,\"w\":788,\"h\":22,\"scroll\":true,\"text\":\"EE:23:4B:3C:DA:E3  -86 dBm\"},\n{\"id\":22,\"parent\":12,\"type\":\"button\",\"x\":65,\"y\":381,\"w\":816,\"h\":68,\"scroll\":false,\"text\":\"\"},\n{\"id\":23,\"parent\":22,\"type\":\"label\",\"x\":78,\"y\":387,\"w\":788,\"h\":28,\"scroll\":true,\"text\":\"未命名设备\"},\n{\"id\":24,\"parent\":22,\"type\":\"label\",\"x\":78,\"y\":420,\"w\":788,\"h\":22,\"scroll\":true,\"text\":\"2F:09:59:4B:33:7B  -87 dBm\"},\n{\"id\":25,\"parent\":12,\"type\":\"button\",\"x\":65,\"y\":453,\"w\":816,\"h\":68,\"scroll\":false,\"text\":\"\"},\n{\"id\":26,\"parent\":25,\"type\":\"label\",\"x\":78,\"y\":459,\"w\":788,\"h\":28,\"scroll\":true,\"text\":\"未命名设备\"},\n{\"id\":27,\"parent\":25,\"type\":\"label\",\"x\":78,\"y\":492,\"w\":788,\"h\":22,\"scroll\":true,\"text\":\"65:E8:79:47:D6:83  -87 dBm\"}\n]\nUI_LAYOUT_END\nnsh> "
+  },
+  {
+    "name": "storage_mounted",
+    "command": "mount",
+    "completed": true,
+    "elapsed_seconds": 0.13574480000534095,
+    "checks": {
+      "/data type smartfs": true
+    },
+    "output": "\u001b[Kmount\n  /data type smartfs\n  /proc type procfs\n  /tmp type tmpfs\nnsh> \u001b[K"
+  },
+  {
+    "name": "storage_cleanup",
+    "command": "ls -l /data/qpk",
+    "completed": true,
+    "elapsed_seconds": 0.1669932999939192,
+    "checks": {},
+    "output": "ls -l /data/qpk\n/data/qpk:\n drwsrwsrwx           0 .data/\nnsh> \u001b[K"
+  },
+  {
+    "name": "network",
+    "command": "ifconfig",
+    "completed": true,
+    "elapsed_seconds": 0.16611120000015944,
+    "checks": {
+      "eth0.*(UP|RUNNING)": true,
+      "bnep0.*RUNNING": true
+    },
+    "output": "ifconfig\neth0\tLink encap:Ethernet HWaddr 10:bd:a3:89:58:74 at UP mtu 1500\n\tinet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0\n\nbnep0\tLink encap:UNSPEC at RUNNING mtu -9\n\tinet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0\n\nnsh> \u001b[K"
+  },
+  {
+    "name": "tasks",
+    "command": "ps",
+    "completed": true,
+    "elapsed_seconds": 0.09626949999073986,
+    "checks": {
+      "desktop": true,
+      "c6net": true
+    },
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 12.1% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 50.3% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b240 0x4ff4b28c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b1c0 0x4ff4b20c\n    5     5 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712 25.0% desktop\n    6     6 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  1.0% nsh\n    9     5 ---(0x00000003) 100 RR       pthread   - Waiting  MQ empty  0000000000000000 0032736  0.0% desktop 0x4007a3e2 0\n   10    10 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004040  9.6% c6net\n   11     0 ---(0x00000003) 100 RR       Kthread   - Waiting  MQ empty  0000000000000000 0001984  0.0% BT_HCI_Tx\n   12     5 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0008152  2.0% desktop 0x400c56a8 0x4839f670\n   13     5 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0008160  0.0% ble_npl_callout 0x400bd50c 0\n   14     5 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032728  0.0% desktop 0x40079dee 0\nnsh> "
+  },
+  {
+    "name": "memory",
+    "command": "free",
+    "completed": true,
+    "elapsed_seconds": 0.1315032999991672,
+    "checks": {},
+    "output": "\u001b[Kfree\n      total       used       free    maxused    maxfree  nused  nfree name\n   33554432    3920032   29634400    6441344   29598800   2070     34 Umem\n     321736      24808     296928      25264     296488    119      3 Kmem\nnsh> \u001b[K"
+  },
+  {
+    "name": "uptime",
+    "command": "cat /proc/uptime",
+    "completed": true,
+    "elapsed_seconds": 0.19508929998846725,
+    "checks": {},
+    "output": "cat /proc/uptime\n    142.89\nnsh> \u001b[K"
+  }
+]

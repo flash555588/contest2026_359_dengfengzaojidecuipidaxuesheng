@@ -1,0 +1,71 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.13617270000395365,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "camera_inventory",
+    "command": "desktop cameras",
+    "completed": true,
+    "elapsed_seconds": 0.16481499999645166,
+    "checks": {
+      "camera: connected=": true,
+      "CSI=0": true
+    },
+    "output": "desktop cameras\ncamera: connected=1 CSI=0 USB=1\ncamera: usb0 generation=1 HD Web Camera [05a3:9331]\n  mode=0 MJPEG 1920x1080 default_interval=333333 intervals=333333\n  mode=1 MJPEG 1280x960 default_interval=333333 intervals=333333\n  mode=2 MJPEG 1280x720 default_interval=333333 intervals=333333\n  mode=3 MJPEG 800x600 default_interval=333333 intervals=333333\n  mode=4 MJPEG 640x480 default_interval=333333 intervals=333333\n  mode=5 MJPEG 640x360 default_interval=333333 intervals=333333\nnsh> \u001b[K"
+  },
+  {
+    "name": "device_nodes",
+    "command": "ls -l /dev",
+    "completed": true,
+    "elapsed_seconds": 0.17665359999227803,
+    "checks": {
+      "uvcctl": true,
+      "uvc0": true,
+      "fb0": true
+    },
+    "output": "ls -l /dev\n/dev:\n dr--r--r--           0 audio/\n crw-rw-rw-           0 console\n crw-rw-rw-           0 fb0\n cr--r--r--           0 input0\n crw-rw-rw-           0 null\n cr--r--r--           0 random\n brw-rw-rw-     4194304 smart0\n crw-rw-rw-           0 ttyACM0\n cr--r--r--           0 uvc0\n cr--r--r--           0 uvc1\n cr--r--r--           0 uvc2\n cr--r--r--           0 uvc3\n c---------           0 uvcctl\n crw-rw-rw-           0 zero\nnsh> \u001b[K"
+  },
+  {
+    "name": "mounts",
+    "command": "mount",
+    "completed": true,
+    "elapsed_seconds": 0.14395389999845065,
+    "checks": {
+      "/data": true
+    },
+    "output": "mount\n  /data type smartfs\n  /proc type procfs\n  /tmp type tmpfs\nnsh> \u001b[K"
+  },
+  {
+    "name": "memory",
+    "command": "free",
+    "completed": true,
+    "elapsed_seconds": 0.13599569999496453,
+    "checks": {},
+    "output": "free\n      total       used       free    maxused    maxfree  nused  nfree name\n   33554432    3796464   29757968    3832528   29756704   1340      9 Umem\n     265608      27184     238424      28800     237200    124      2 Kmem\nnsh> \u001b[K"
+  },
+  {
+    "name": "threads",
+    "command": "ps",
+    "completed": true,
+    "elapsed_seconds": 0.05562720001034904,
+    "checks": {
+      "usbh_hub0": true
+    },
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0002016 39.4% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0002016 50.2% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% hpwork 0x4ff4b240 0x4ff4b28c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001968  0.0% lpwork 0x4ff4b1c0 0x4ff4b20c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006064  0.0% usbh_hub0 0x4ff57040\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032712  9.6% desktop\n    7     7 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004048  1.2% nsh\nnsh> "
+  },
+  {
+    "name": "camera_app",
+    "command": "desktop camera",
+    "completed": false,
+    "elapsed_seconds": 10.051448199999868,
+    "checks": {
+      "requested": true
+    },
+    "output": "\u001b[Kdesktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  }
+]

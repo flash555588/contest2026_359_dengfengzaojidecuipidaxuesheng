@@ -1,0 +1,26 @@
+[
+  {
+    "page": "light-ha",
+    "objects": 28,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-hello",
+    "objects": 16,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-settings",
+    "objects": 40,
+    "overlaps": [],
+    "overflow": []
+  },
+  {
+    "page": "light-wifi",
+    "objects": 18,
+    "overlaps": [],
+    "overflow": []
+  }
+]

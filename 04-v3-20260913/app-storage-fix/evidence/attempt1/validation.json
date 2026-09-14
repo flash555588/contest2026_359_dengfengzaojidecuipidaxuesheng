@@ -1,0 +1,35 @@
+{
+  "status": "static-checks-passed",
+  "firmware_sha256": "58227942b860e7465ace80d8876696226cfd32a553bc21f6c09a3c0acee7f47e",
+  "bytes": 3926736,
+  "flash_offset": "0x2000",
+  "flash_end_exclusive": "0x3c0ad0",
+  "erase_end_exclusive": "0x3c1000",
+  "data_offset": "0x400000",
+  "simpleboot_digest_valid": true,
+  "mapped_segments": [
+    {
+      "offset": "0x1e018",
+      "address": "0x40120020",
+      "bytes": 2652544
+    },
+    {
+      "offset": "0x2adff8",
+      "address": "0x40000000",
+      "bytes": 1116880
+    }
+  ],
+  "config_identical_to_wifi_fix": true,
+  "prior_fix_overlay_unchanged": true,
+  "required_symbols_present": [
+    "qpk_storage_read",
+    "qpk_storage_write",
+    "qpk_storage_remove",
+    "qpk_storage_selftest",
+    "qpk_runtime_launch",
+    "c6net_initialize",
+    "dhcpc_request",
+    "heap_caps_free",
+    "esp_timer_impl_early_init"
+  ]
+}

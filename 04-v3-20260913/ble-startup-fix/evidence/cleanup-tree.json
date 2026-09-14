@@ -1,0 +1,18 @@
+[
+  {
+    "name": "console",
+    "command": "",
+    "completed": true,
+    "elapsed_seconds": 0.1396452000044519,
+    "checks": {},
+    "output": "\nnsh> \u001b[K"
+  },
+  {
+    "name": "test_tree",
+    "command": "ls -Rl /data/qpk/.storage-check-39",
+    "completed": true,
+    "elapsed_seconds": 0.21412649999547284,
+    "checks": {},
+    "output": "ls -Rl /data/qpk/.storage-check-39\n/data/qpk/.storage-check-39:\n drwsrwsrwx           0 @2pcom.example.hello/\n drwsrwsrwx           0 @2pcom.example.game2048/\n drwsrwsrwx           0 @2ppppppppppppppppppppppppppppp/\n/data/qpk/.storage-check-39/@2pcom.example.hello:\n drwsrwsrwx           0 klaunches/\n/data/qpk/.storage-check-39/@2pcom.example.hello/klaunches:\n/data/qpk/.storage-check-39/@2pcom.example.game2048:\n drwsrwsrwx           0 kbest/\n/data/qpk/.storage-check-39/@2pcom.example.game2048/kbest:\n/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp:\n drwsrwsrwx           0 pppppppppppppppppppp/\n/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp:\n drwsrwsrwx           0 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/\n/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk:\n drwsrwsrwx           0 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/\n/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk:\n drwsrwsrwx           0 kkkkk/\n/data/qpk/.storage-check-39/@2ppppppppppppppppppppppppppppp/pppppppppppppppppppp/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk/kkkkk:\n -rwSrwSrw-           5 value.tmp\n -rwSrwSrw-           5 value\nnsh> "
+  }
+]

@@ -1,3 +1,0 @@
-ifneq ($(CONFIG_SYSTEM_C6PROBE),)
-CONFIGURED_APPS += $(APPDIR)/system/c6probe
-endif

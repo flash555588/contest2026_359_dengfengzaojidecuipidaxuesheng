@@ -1,0 +1,55 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x4ff42318 in esp_cpu_wait_for_intr () at chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c:68
+warning: 68	chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF42318, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42318, debug_reason=00000000
+$1 = 1
+$2 = 0x3000140d
+$3 = 0x80000000
+$4 = 0x400002d
+$5 = 0xf0000
+$6 = 0x239ffed2
+$7 = 0xde11aa30
+$8 = 0x200
+$9 = 0x10ea5
+$10 = 0xb171993
+$11 = 0x1005
+$12 = 0x20908040
+$13 = 0x80000040
+$14 = 0x0
+$15 = 0x8090400
+$16 = {phy_type = 1 '\001', phy_utmi_width = 16 '\020', device_dma_enable = false, device_dma_desc_enable = false, device_rx_fifo_size = 0, device_tx_fifo_size = {0 <repeats 16 times>}, host_dma_desc_enable = false, host_rx_fifo_size = 640, host_nperio_tx_fifo_size = 128, host_perio_tx_fifo_size = 128, device_gccfg = 0, host_gccfg = 0, b_session_valid_override = false, total_fifo_size = 896}
+$17 = {generation = 1, vid = 1443, pid = 37681, id = 0 '\000', connected = 1 '\001', supported = 1 '\001', reserved = 0 '\000', name = "HD Web Camera", '\000' <repeats 50 times>}
+$18 = {0x1, 0x0, 0x1, 0x5, 0x15, 0x16, 0x5, 0x0 <repeats 13 times>, 0x10, 0x0, 0x0, 0x4, 0x0, 0x0, 0xb8, 0xdd, 0x0 <repeats 36 times>}
+$19 = 0x100
+$20 = {generation = 1, interval = 333333, mode = 4 '\004', reserved = "\000\000", width = 640, height = 480, max_frame_size = 1048576, max_payload_size = 1024}
+$21 = {frames = 0, dropped = 0, packets = 0, errors = 0, error = 0}
+$22 = {fd = -1, fb_fd = -1, usb = false, usb_mode = {generation = 0, interval = 0, mode = 0 '\000', reserved = "\000\000", width = 0, height = 0, max_frame_size = 0, max_payload_size = 0}, fps_started_ms = 0, display_fps_started_ms = 0, profile_started_us = 0, profile_dq_us = 0, profile_invalidate_us = 0, profile_convert_us = 0, profile_clean_us = 0, profile_qbuf_us = 0, captured_frames = 0, dropped_frames = 0, frames = 0, profile_samples = 0, profile_converted = 0, dq_errors = 0, qbuf_errors = 0, pan_errors = 0, stop_requested = false, thread_alive = false, thread_error = 0, thread_running = false, thread = 0, streaming = false, direct_preview = false, mmap_buffers = {0x0, 0x0, 0x0}, mmap_lengths = {0, 0, 0}, mmap_count = 0, memory_type = 0, fb_video = {fmt = 0 '\000', xres = 0, yres = 0, nplanes = 0 '\000'}, fb_plane = {fbmem = 0x0, fblen = 0, stride = 0, display = 0 '\000', bpp = 0 '\000', xres_virtual = 0, yres_virtual = 0, xoffset = 0, yoffset = 0}, fb_page = 0}
+$23 = -5
+  Id   Target Id         Frame 
+* 1    Remote target     0x4ff42318 in esp_cpu_wait_for_intr () at chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c:68
+
+Thread 1 (Remote target):
+#0  0x4ff42318 in esp_cpu_wait_for_intr () at chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c:68
+#1  0x40028b74 in esp_pm_impl_waiti () at chip/esp-hal-3rdparty/components/esp_pm/pm_impl.c:1110
+#2  0x40023912 in up_idle () at common/espressif/esp_idle.c:240
+#3  0x4000d376 in nx_start () at init/nx_start.c:875
+#4  0x4ff4ae30 in __esp_start () at common/espressif/esp_start.c:836
+#5  0x4ff4aa14 in __start () at common/espressif/esp_head.S:74
+Backtrace stopped: previous frame inner to this frame (corrupt stack?)
+$24 = {saved_regs = 0x0, regs = 0x0}
+$25 = {saved_regs = 0x0, regs = 0x0}
+$26 = {0x0 <repeats 34 times>}
+$27 = {0x0 <repeats 34 times>}
+$28 = {{0x0 <repeats 33 times>}, {0x0 <repeats 33 times>}}
+mepc (/32): 0x4ff42318
+mtval (/32): 0x00000000
+sp (/32): 0x4ff7f470
+ra (/32): 0x4ff42306
+[esp32p4.hp.cpu0] Found 3 triggers
+[esp32p4.hp.cpu0] Target halted, PC=0x4FF4231A, debug_reason=00000004
+[esp32p4.hp.cpu1] Found 3 triggers
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF4231A, debug_reason=00000004
+[Inferior 1 (Remote target) detached]

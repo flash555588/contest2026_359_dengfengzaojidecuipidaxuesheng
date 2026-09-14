@@ -1,0 +1,793 @@
+[
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\contest2026_359_dengfengzaojidecuipidaxuesheng\\logs\\build-repro-v3.2-20260827.log",
+    "destination": "05-logs-and-handoff/01-v3.2/contest2026_359_dengfengzaojidecuipidaxuesheng/logs/build-repro-v3.2-20260827.log",
+    "source_sha256": "43ca28fbee9f5e93591ff4c699d166bdf42c443982755483c8caffbcd4a821f6",
+    "exported_sha256": "43ca28fbee9f5e93591ff4c699d166bdf42c443982755483c8caffbcd4a821f6",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\contest2026_359_dengfengzaojidecuipidaxuesheng\\logs\\build-v3.2-final-20260827.log",
+    "destination": "05-logs-and-handoff/01-v3.2/contest2026_359_dengfengzaojidecuipidaxuesheng/logs/build-v3.2-final-20260827.log",
+    "source_sha256": "44a9f055844be47d4933f482ac234f9002729d66b288c284fbf8eb0185ee3385",
+    "exported_sha256": "44a9f055844be47d4933f482ac234f9002729d66b288c284fbf8eb0185ee3385",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3-20260906\\desktop\\build.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3-20260906/desktop/build.log",
+    "source_sha256": "07b6c5bcf785bbe869d8f8bdba1028b124e6c87b807817fb174ea795ac8c1ac8",
+    "exported_sha256": "07b6c5bcf785bbe869d8f8bdba1028b124e6c87b807817fb174ea795ac8c1ac8",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3-20260906\\desktop\\overlay.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3-20260906/desktop/overlay.log",
+    "source_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "exported_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3-20260906\\desktop\\pipeline.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3-20260906/desktop/pipeline.log",
+    "source_sha256": "20326f6581ecaa1edafddab6cb96e84e61c578060703d43b2d935d024ea6c12b",
+    "exported_sha256": "20326f6581ecaa1edafddab6cb96e84e61c578060703d43b2d935d024ea6c12b",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3-20260906\\nsh\\build.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3-20260906/nsh/build.log",
+    "source_sha256": "317d7190606c5601a2f07bb011e0ea2c3f2ceba7dd2538731a61ce7d348dc392",
+    "exported_sha256": "317d7190606c5601a2f07bb011e0ea2c3f2ceba7dd2538731a61ce7d348dc392",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3-20260906\\nsh\\overlay.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3-20260906/nsh/overlay.log",
+    "source_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "exported_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3-20260906\\nsh\\pipeline.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3-20260906/nsh/pipeline.log",
+    "source_sha256": "9481c520d28976107253832cea352498fa4098692bf0fb915ffa532699994c78",
+    "exported_sha256": "9481c520d28976107253832cea352498fa4098692bf0fb915ffa532699994c78",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3plus-20260906\\desktop\\build.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3plus-20260906/desktop/build.log",
+    "source_sha256": "e7dc9760ad6990ee0dbeb8ab34346f8348cebb8f991aee63d4999c33faef283d",
+    "exported_sha256": "e7dc9760ad6990ee0dbeb8ab34346f8348cebb8f991aee63d4999c33faef283d",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3plus-20260906\\desktop\\overlay.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3plus-20260906/desktop/overlay.log",
+    "source_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "exported_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3plus-20260906\\desktop\\pipeline.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3plus-20260906/desktop/pipeline.log",
+    "source_sha256": "7d9af6a6998aeb315db1a48d49fdd48ae24003e89747e0b8a9272e640a1305c7",
+    "exported_sha256": "7d9af6a6998aeb315db1a48d49fdd48ae24003e89747e0b8a9272e640a1305c7",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3plus-20260906\\nsh\\build.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3plus-20260906/nsh/build.log",
+    "source_sha256": "a8ed74dbcba61f6d1c0ebc30d5184d1d77fb13bea7bd5a0eb16b4c1cf25857c3",
+    "exported_sha256": "a8ed74dbcba61f6d1c0ebc30d5184d1d77fb13bea7bd5a0eb16b4c1cf25857c3",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3plus-20260906\\nsh\\overlay.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3plus-20260906/nsh/overlay.log",
+    "source_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "exported_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-v3plus-20260906\\nsh\\pipeline.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-v3plus-20260906/nsh/pipeline.log",
+    "source_sha256": "767488cc4b228ca677de67d04c2cfae8e6bd3956387741d0d31da6b5369bbe43",
+    "exported_sha256": "767488cc4b228ca677de67d04c2cfae8e6bd3956387741d0d31da6b5369bbe43",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-current-v3plus\\application-snapshot\\esphome\\tests\\blue-screen-20260906.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-current-v3plus/application-snapshot/esphome/tests/blue-screen-20260906.log",
+    "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "exported_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-current-v3plus\\application-snapshot\\esphome\\tests\\board_ui.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-current-v3plus/application-snapshot/esphome/tests/board_ui.log",
+    "source_sha256": "b6c9a5e83f60b438e133e834a07ece76fbc4001dc2f926d1e7ae4b14636d307a",
+    "exported_sha256": "b6c9a5e83f60b438e133e834a07ece76fbc4001dc2f926d1e7ae4b14636d307a",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-current-v3plus\\application-snapshot\\esphome\\tests\\board-smoke-20260906.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-current-v3plus/application-snapshot/esphome/tests/board-smoke-20260906.log",
+    "source_sha256": "4b661cf8baa3bdb190c625e1df718d9bf3eae68eab36fa8127af55242d65d822",
+    "exported_sha256": "4b661cf8baa3bdb190c625e1df718d9bf3eae68eab36fa8127af55242d65d822",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-current-v3plus\\desktop\\build.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-current-v3plus/desktop/build.log",
+    "source_sha256": "9107ba290c1301d8becd71ff13df23ffe7ee5d8cc552b4a9b9f6c29185776704",
+    "exported_sha256": "9107ba290c1301d8becd71ff13df23ffe7ee5d8cc552b4a9b9f6c29185776704",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-current-v3plus\\desktop\\overlay.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-current-v3plus/desktop/overlay.log",
+    "source_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "exported_sha256": "444cb2be726fa6916643dca78bbc7651a17f421c9b87c1237bb7933c6895ed48",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\isolated-current-v3plus\\desktop\\pipeline.log",
+    "destination": "05-logs-and-handoff/02-v3plus/isolated-current-v3plus/desktop/pipeline.log",
+    "source_sha256": "4f7ece2b619cd0bac27d5c2bb12f23c19f0d751511aa33d7204de75144a14a50",
+    "exported_sha256": "4f7ece2b619cd0bac27d5c2bb12f23c19f0d751511aa33d7204de75144a14a50",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\2048-syntax-fix-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/2048-syntax-fix-boot-20260830.log",
+    "source_sha256": "eb30837fbff98d7acbef008eeb6b017867fe4d25b1f72ece1310decba7f2dab4",
+    "exported_sha256": "eb30837fbff98d7acbef008eeb6b017867fe4d25b1f72ece1310decba7f2dab4",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\2048-syntax-fix-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/2048-syntax-fix-interaction-20260830.log",
+    "source_sha256": "9eb7016906e9058d5a6ee58f7793816ca4a5d834177102c6f69d1bb13f508727",
+    "exported_sha256": "9eb7016906e9058d5a6ee58f7793816ca4a5d834177102c6f69d1bb13f508727",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\core-ouo-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/core-ouo-boot-20260830.log",
+    "source_sha256": "e67032e08442ba757f113e1c02e49bd2edb7a30d8e4d4dd917b1b8193e47a963",
+    "exported_sha256": "e67032e08442ba757f113e1c02e49bd2edb7a30d8e4d4dd917b1b8193e47a963",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\core-ouo-capsule-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/core-ouo-capsule-boot-20260830.log",
+    "source_sha256": "d2bbdbd98269cdfedc9797df12cfe705e6e98eb60129979e56820c08e7b097b0",
+    "exported_sha256": "d2bbdbd98269cdfedc9797df12cfe705e6e98eb60129979e56820c08e7b097b0",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\core-ouo-capsule-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/core-ouo-capsule-interaction-20260830.log",
+    "source_sha256": "31524671962dae4d023c5fde499758dcfdca70daffc3088661f8556ff93e7280",
+    "exported_sha256": "31524671962dae4d023c5fde499758dcfdca70daffc3088661f8556ff93e7280",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\ouo-capsule-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/ouo-capsule-boot-20260830.log",
+    "source_sha256": "da29221c999c8bcdd03bbae716adab03bcb5451d66bf7e8f37f9766587155179",
+    "exported_sha256": "da29221c999c8bcdd03bbae716adab03bcb5451d66bf7e8f37f9766587155179",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\ouo-capsule-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/ouo-capsule-interaction-20260830.log",
+    "source_sha256": "8bbed5ec61168861818b6d48a95eec4c3f91dd5ebe36a0e96cdf715779a5dcb1",
+    "exported_sha256": "8bbed5ec61168861818b6d48a95eec4c3f91dd5ebe36a0e96cdf715779a5dcb1",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\ouo-eyes-only-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/ouo-eyes-only-boot-20260830.log",
+    "source_sha256": "9f2abb60250a0abb488031886c2735e3c5884db7567409d62619c4b4de34e880",
+    "exported_sha256": "9f2abb60250a0abb488031886c2735e3c5884db7567409d62619c4b4de34e880",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\pageflip-diag-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/pageflip-diag-boot-20260830.log",
+    "source_sha256": "17c04bb6e595165d13dc44638b4f1949b4f1a216942a332f58c3d230880edb2c",
+    "exported_sha256": "17c04bb6e595165d13dc44638b4f1949b4f1a216942a332f58c3d230880edb2c",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\pageflip-fix-diag-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/pageflip-fix-diag-boot-20260830.log",
+    "source_sha256": "5fc56ed86df4dd4293d20d6a1ffef1b896272ad2382bb37013810a1afc99fec9",
+    "exported_sha256": "5fc56ed86df4dd4293d20d6a1ffef1b896272ad2382bb37013810a1afc99fec9",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\pageflip-fix-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/pageflip-fix-interaction-20260830.log",
+    "source_sha256": "503794b4f1545bc7804e5b22e0434bbf1e4b785546c09c2d2b166153dc957227",
+    "exported_sha256": "503794b4f1545bc7804e5b22e0434bbf1e4b785546c09c2d2b166153dc957227",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-balanced-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-balanced-boot-20260830.log",
+    "source_sha256": "b87e67f7b94fde479137ad54a634c11c8850559db5e3d69944b128a26a58ec2d",
+    "exported_sha256": "b87e67f7b94fde479137ad54a634c11c8850559db5e3d69944b128a26a58ec2d",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-balanced-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-balanced-interaction-20260830.log",
+    "source_sha256": "1301e5d064bf748c54ed72fca5b1cd3b6bc7fb764f0ad4dca97da91ca8c5605e",
+    "exported_sha256": "1301e5d064bf748c54ed72fca5b1cd3b6bc7fb764f0ad4dca97da91ca8c5605e",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-final-candidate-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-final-candidate-boot-20260830.log",
+    "source_sha256": "77345146fd74ae7e1dc5c6b9a27f3e9756dc26ea453ce7e364655d79c7d59630",
+    "exported_sha256": "77345146fd74ae7e1dc5c6b9a27f3e9756dc26ea453ce7e364655d79c7d59630",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-final-candidate-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-final-candidate-interaction-20260830.log",
+    "source_sha256": "d67385c84e9a5807bd0ca8276d0baacaa49c3ee76d6f8d1c6560d03e8ef2dc0d",
+    "exported_sha256": "d67385c84e9a5807bd0ca8276d0baacaa49c3ee76d6f8d1c6560d03e8ef2dc0d",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-interaction-test-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-interaction-test-20260830.log",
+    "source_sha256": "dac1639304e5b74bc4de49f9f77d01001ec6bacf5fa67ee5186253a088fafad4",
+    "exported_sha256": "dac1639304e5b74bc4de49f9f77d01001ec6bacf5fa67ee5186253a088fafad4",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-startup-test-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-startup-test-20260830.log",
+    "source_sha256": "b720fb4cd3a14a7c8049ecc6c8bbdb1cd212199e126f981285c3ff76700b83a4",
+    "exported_sha256": "b720fb4cd3a14a7c8049ecc6c8bbdb1cd212199e126f981285c3ff76700b83a4",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-sweetspot-boot-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-sweetspot-boot-20260830.log",
+    "source_sha256": "96642539e36b4ba85c87a1a01909d8161a1a038c5516af9fc65451de0bf377fa",
+    "exported_sha256": "96642539e36b4ba85c87a1a01909d8161a1a038c5516af9fc65451de0bf377fa",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-sweetspot-interaction-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-sweetspot-interaction-20260830.log",
+    "source_sha256": "acfec0b44a3db3edc4a0258546ead36677ea0632bab1ea2b7bf47838c5097edb",
+    "exported_sha256": "acfec0b44a3db3edc4a0258546ead36677ea0632bab1ea2b7bf47838c5097edb",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-vsync-boot-test-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-vsync-boot-test-20260830.log",
+    "source_sha256": "3a01a0ea5933ec9aabc581c977a8e9a1124c6dd3d4d04a120cf411ddba52f7a2",
+    "exported_sha256": "3a01a0ea5933ec9aabc581c977a8e9a1124c6dd3d4d04a120cf411ddba52f7a2",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\esp32p4_v3_desktop\\quickapp-vsync-interaction-test-20260830.log",
+    "destination": "05-logs-and-handoff/03-early-v3/esp32p4_v3_desktop/quickapp-vsync-interaction-test-20260830.log",
+    "source_sha256": "38e7334d584679e9ddc5c8c366bc53f6c0d045ab43baacd61482fd62dffce181",
+    "exported_sha256": "38e7334d584679e9ddc5c8c366bc53f6c0d045ab43baacd61482fd62dffce181",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-ble-desktop-20260913\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-ble-desktop-20260913/build.log",
+    "source_sha256": "f15a6f6cfc247c6639b7799afdb1741a52dad5da596eb0887a52e351897ea736",
+    "exported_sha256": "f15a6f6cfc247c6639b7799afdb1741a52dad5da596eb0887a52e351897ea736",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-ble-desktop-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-ble-desktop-20260913/README.md",
+    "source_sha256": "4f8bf31165bbf562efc0a3c5f00d43a045fe67ab53258a7990d059193d4bc499",
+    "exported_sha256": "4f8bf31165bbf562efc0a3c5f00d43a045fe67ab53258a7990d059193d4bc499",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-ble-linked-20260913\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-ble-linked-20260913/build.log",
+    "source_sha256": "ce93c40bdbcd3a2664633de6dfe7d97a790163a2cb5d616c7232f094ac0c66d6",
+    "exported_sha256": "ce93c40bdbcd3a2664633de6dfe7d97a790163a2cb5d616c7232f094ac0c66d6",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-ble-linked-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-ble-linked-20260913/README.md",
+    "source_sha256": "792be7697d493c069ddda1b61b6cf318ceec7ab1490b0454c4d488dd185af967",
+    "exported_sha256": "792be7697d493c069ddda1b61b6cf318ceec7ab1490b0454c4d488dd185af967",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/README.md",
+    "source_sha256": "6d2995bee59a4a70c1dc1f6601773280038f633d6e00fca68884df940cdf954c",
+    "exported_sha256": "6d2995bee59a4a70c1dc1f6601773280038f633d6e00fca68884df940cdf954c",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\asan-detail.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/asan-detail.log",
+    "source_sha256": "f623b3c26986ff5057b58f3b4c2247b021f574b3d6b9eae7d0087fef477d4a74",
+    "exported_sha256": "f623b3c26986ff5057b58f3b4c2247b021f574b3d6b9eae7d0087fef477d4a74",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\asan-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/asan-tests.log",
+    "source_sha256": "f1a5b9b6c6f7c80bbc8b6b9c32dbc8f959464eb859e064fd4241849e27c4a2e5",
+    "exported_sha256": "f1a5b9b6c6f7c80bbc8b6b9c32dbc8f959464eb859e064fd4241849e27c4a2e5",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\baseline-stop.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/baseline-stop.log",
+    "source_sha256": "22f0f7502ee792144e2d570093b380c3896dae48b1b1e67c55c1d446607f8767",
+    "exported_sha256": "22f0f7502ee792144e2d570093b380c3896dae48b1b1e67c55c1d446607f8767",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\full-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/full-tests.log",
+    "source_sha256": "18e6b4e410212f4cadb4cf690b9b51617d32c2ff01490b2266db2af4beaee8ae",
+    "exported_sha256": "18e6b4e410212f4cadb4cf690b9b51617d32c2ff01490b2266db2af4beaee8ae",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\integration-build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/integration-build.log",
+    "source_sha256": "13e5f5088ba889edf28538e060be440d378cfd5638541b8a44030bcab38e08dd",
+    "exported_sha256": "13e5f5088ba889edf28538e060be440d378cfd5638541b8a44030bcab38e08dd",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\native-check.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/native-check.log",
+    "source_sha256": "1aecf0331850a161551b184e77e33c011276fe40910b0e3e7fd3f3030c8c3a6f",
+    "exported_sha256": "1aecf0331850a161551b184e77e33c011276fe40910b0e3e7fd3f3030c8c3a6f",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\tests\\v3-ui-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/tests/v3-ui-tests.log",
+    "source_sha256": "545ff2976bbeb53b203c888402b74d84fdb4d23e2dc9eef546e2e66ef97341b1",
+    "exported_sha256": "545ff2976bbeb53b203c888402b74d84fdb4d23e2dc9eef546e2e66ef97341b1",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-cancel-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-cancel-20260913/v3/build.log",
+    "source_sha256": "f55576b69f158bb6762ccdd4db0353e0364d4b66ffc26ba2781c3cc1066abcd3",
+    "exported_sha256": "f55576b69f158bb6762ccdd4db0353e0364d4b66ffc26ba2781c3cc1066abcd3",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-capture-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-capture-20260913/README.md",
+    "source_sha256": "e436196ae0f1f4f6a5797d55be4f11fb39e1c62a2a658c4d4fa5ef97ae3ce16b",
+    "exported_sha256": "e436196ae0f1f4f6a5797d55be4f11fb39e1c62a2a658c4d4fa5ef97ae3ce16b",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-capture-20260913\\tests\\normal.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-capture-20260913/tests/normal.log",
+    "source_sha256": "e2ffe55d27f138dfab7652efd3cb2fdd9241d6b765e07133bb15554671a01dec",
+    "exported_sha256": "e2ffe55d27f138dfab7652efd3cb2fdd9241d6b765e07133bb15554671a01dec",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-capture-20260913\\tests\\sanitizer.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-capture-20260913/tests/sanitizer.log",
+    "source_sha256": "8962ecc42b8503d9a51f06053fd0a960c28e67bc268dbe35d48f259aeddaaccf",
+    "exported_sha256": "8962ecc42b8503d9a51f06053fd0a960c28e67bc268dbe35d48f259aeddaaccf",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/README.md",
+    "source_sha256": "5086ab96a7aeb811892e761aa4e297a34e0afe494f4392d4ec370ebd88434944",
+    "exported_sha256": "5086ab96a7aeb811892e761aa4e297a34e0afe494f4392d4ec370ebd88434944",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\asan-configure.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/asan-configure.log",
+    "source_sha256": "d1b61576ca2e7f777b0b683b90a926df11de994f94af6c1a6256406de5835e4f",
+    "exported_sha256": "d1b61576ca2e7f777b0b683b90a926df11de994f94af6c1a6256406de5835e4f",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\asan-debug-stack-limit.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/asan-debug-stack-limit.log",
+    "source_sha256": "4d12b5eea80b265d6416749f133a223ff7dc0a7428a962c536ae2701f4c35770",
+    "exported_sha256": "4d12b5eea80b265d6416749f133a223ff7dc0a7428a962c536ae2701f4c35770",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\asan-detail.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/asan-detail.log",
+    "source_sha256": "6f843967437a9b73d4118d0c7a25c0f719aadd73a6ec6b3a5dda68edd3336899",
+    "exported_sha256": "6f843967437a9b73d4118d0c7a25c0f719aadd73a6ec6b3a5dda68edd3336899",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\asan-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/asan-tests.log",
+    "source_sha256": "62e53f511301f7696ac8c28a231162ea93e9e8b270aaf4dbd6d341bd32d12616",
+    "exported_sha256": "62e53f511301f7696ac8c28a231162ea93e9e8b270aaf4dbd6d341bd32d12616",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\build-script-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/build-script-tests.log",
+    "source_sha256": "693d10c0b9ef9b8a60d4af4aad9e376c5a79b6d65cbdca19db25d97fcf78692e",
+    "exported_sha256": "693d10c0b9ef9b8a60d4af4aad9e376c5a79b6d65cbdca19db25d97fcf78692e",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\camera-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/camera-tests.log",
+    "source_sha256": "056862df2ac361ad73716cd60214522c27d43304d47c6288be7c4b3b9bc3f916",
+    "exported_sha256": "056862df2ac361ad73716cd60214522c27d43304d47c6288be7c4b3b9bc3f916",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\tests\\native-check.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/tests/native-check.log",
+    "source_sha256": "6d47c1026a892079df9b4531861cf9d058e423073d374778dd40ed71db277369",
+    "exported_sha256": "6d47c1026a892079df9b4531861cf9d058e423073d374778dd40ed71db277369",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-camera-merge-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-camera-merge-20260913/v3/build.log",
+    "source_sha256": "fa1637c1b4782f23b48fc9b503c0423c0689648170a868ba333d9c90ec3f8251",
+    "exported_sha256": "fa1637c1b4782f23b48fc9b503c0423c0689648170a868ba333d9c90ec3f8251",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-claw-chat-20260913\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-claw-chat-20260913/build.log",
+    "source_sha256": "4670270dbe35715a4c4345d6b28ff2e022bbb3209864220912092931b04322fe",
+    "exported_sha256": "4670270dbe35715a4c4345d6b28ff2e022bbb3209864220912092931b04322fe",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-claw-chat-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-claw-chat-20260913/README.md",
+    "source_sha256": "a2a221ceaf9f8e2993ca53ec06adfd48c714b5d7715fbc8b22fb41aac15bd177",
+    "exported_sha256": "a2a221ceaf9f8e2993ca53ec06adfd48c714b5d7715fbc8b22fb41aac15bd177",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-claw-v3-recovered-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-claw-v3-recovered-20260913/v3/build.log",
+    "source_sha256": "bdcba9209f086a0a99df495fe099e526927835431d4e2ee0423afcaeac6ff324",
+    "exported_sha256": "bdcba9209f086a0a99df495fe099e526927835431d4e2ee0423afcaeac6ff324",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-claw-v3-recovered-20260913\\v3\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-claw-v3-recovered-20260913/v3/README.md",
+    "source_sha256": "0cd8f1bca1c154acee346287bae216c9581abb40e047e8b79affec1705fa5f58",
+    "exported_sha256": "0cd8f1bca1c154acee346287bae216c9581abb40e047e8b79affec1705fa5f58",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/README.md",
+    "source_sha256": "e0f23bec4bf91946a81e84fec33a3174c4cb9c3cdee37341505fbe58e926c758",
+    "exported_sha256": "e0f23bec4bf91946a81e84fec33a3174c4cb9c3cdee37341505fbe58e926c758",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\tests\\file-service-asan.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/tests/file-service-asan.log",
+    "source_sha256": "0a3f07405d7dfd0462df13c96a83a4152cb6a811cb72ea2db5cd57f2266cbd50",
+    "exported_sha256": "0a3f07405d7dfd0462df13c96a83a4152cb6a811cb72ea2db5cd57f2266cbd50",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\tests\\host-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/tests/host-tests.log",
+    "source_sha256": "602709d98dae7c43f260bbb926c6a0b0b88f319e03e2d3bb80b98f25eddb2439",
+    "exported_sha256": "602709d98dae7c43f260bbb926c6a0b0b88f319e03e2d3bb80b98f25eddb2439",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\tests\\native-check.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/tests/native-check.log",
+    "source_sha256": "554065e181b8b6e2db3f55aba6c0c48abd338d0134f133a46943a748e05663c0",
+    "exported_sha256": "554065e181b8b6e2db3f55aba6c0c48abd338d0134f133a46943a748e05663c0",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\tests\\wifi-v3-detail.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/tests/wifi-v3-detail.log",
+    "source_sha256": "bd89b677ab131c2a339e153e741245c8d984434ab83e8ff58762862f179673f6",
+    "exported_sha256": "bd89b677ab131c2a339e153e741245c8d984434ab83e8ff58762862f179673f6",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\tests\\wifi-v3-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/tests/wifi-v3-tests.log",
+    "source_sha256": "a3705cd5dc66d04678f99d0d0be32c6d08be66f03bdafe5a26439a9675b16869",
+    "exported_sha256": "a3705cd5dc66d04678f99d0d0be32c6d08be66f03bdafe5a26439a9675b16869",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-desktop-resources-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-desktop-resources-20260913/v3/build.log",
+    "source_sha256": "de8d371b0f48e8cb75b21dd5f8325e7ec60d4b59a7ffa6a90cfe484f115b8032",
+    "exported_sha256": "de8d371b0f48e8cb75b21dd5f8325e7ec60d4b59a7ffa6a90cfe484f115b8032",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/README.md",
+    "source_sha256": "6029a4357fdbb5ea6289b5b838e1c80cba485ba6744b4b03d3779c61034e3880",
+    "exported_sha256": "6029a4357fdbb5ea6289b5b838e1c80cba485ba6744b4b03d3779c61034e3880",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\build-script-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/build-script-tests.log",
+    "source_sha256": "08facc51bafb0a565163146199e9f8e7833d6a87ed4b19f88537b0168ee75522",
+    "exported_sha256": "08facc51bafb0a565163146199e9f8e7833d6a87ed4b19f88537b0168ee75522",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\default-detail.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/default-detail.log",
+    "source_sha256": "7bbbd2fdb427b88b1cbd169085a261424e67f43a3bd58031bf1d29c56ca6a288",
+    "exported_sha256": "7bbbd2fdb427b88b1cbd169085a261424e67f43a3bd58031bf1d29c56ca6a288",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\default-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/default-tests.log",
+    "source_sha256": "296717fd19d774663c92f5fcb7d37fb66ca74497ae78129ee0ff694731501508",
+    "exported_sha256": "296717fd19d774663c92f5fcb7d37fb66ca74497ae78129ee0ff694731501508",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\native-check.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/native-check.log",
+    "source_sha256": "ff9730b8bbee6f4e56dbac37ca0a45fa5f74b5a96b8e5adb16df08c6305930c2",
+    "exported_sha256": "ff9730b8bbee6f4e56dbac37ca0a45fa5f74b5a96b8e5adb16df08c6305930c2",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\preferences-asan-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/preferences-asan-tests.log",
+    "source_sha256": "903048248cd0eeb97fe08e50eec3eacdf701bdce59a81ec7253c2a8c0c6b08af",
+    "exported_sha256": "903048248cd0eeb97fe08e50eec3eacdf701bdce59a81ec7253c2a8c0c6b08af",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\qpk-asan-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/qpk-asan-tests.log",
+    "source_sha256": "3151ea2295e91ff41cbab2ad7a87605412cee67d7a7dcd6061ef25808e0ebc22",
+    "exported_sha256": "3151ea2295e91ff41cbab2ad7a87605412cee67d7a7dcd6061ef25808e0ebc22",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\qpk-baseline-test.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/qpk-baseline-test.log",
+    "source_sha256": "b2e113407375fd0dff5075f5eb3d2e2dabd4a8585fab4fdb4eba6d45b2bfde44",
+    "exported_sha256": "b2e113407375fd0dff5075f5eb3d2e2dabd4a8585fab4fdb4eba6d45b2bfde44",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\qpk-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/qpk-tests.log",
+    "source_sha256": "191006e9c00a9a27e4b51d8e1fd129d0e4b009742d562c133b7eb48a48e976dc",
+    "exported_sha256": "191006e9c00a9a27e4b51d8e1fd129d0e4b009742d562c133b7eb48a48e976dc",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\wifi-v3-detail.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/wifi-v3-detail.log",
+    "source_sha256": "6b62bc147f7c2d0d0747d0eba0d20cc79410cffa91357648e208243616cf6749",
+    "exported_sha256": "6b62bc147f7c2d0d0747d0eba0d20cc79410cffa91357648e208243616cf6749",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\tests\\wifi-v3-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/tests/wifi-v3-tests.log",
+    "source_sha256": "3dfcb3938382e9771321767a6df13d4b40cdde5d1a073d7b745c37ae259db199",
+    "exported_sha256": "3dfcb3938382e9771321767a6df13d4b40cdde5d1a073d7b745c37ae259db199",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-lifecycle-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-lifecycle-20260913/v3/build.log",
+    "source_sha256": "92640d69da9e6842e1b358ef85b043598d53adfc03813b7398205b45c7039e66",
+    "exported_sha256": "92640d69da9e6842e1b358ef85b043598d53adfc03813b7398205b45c7039e66",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-microphone-linked-20260913\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-microphone-linked-20260913/build.log",
+    "source_sha256": "385dae6bd5831ca91a273ac7b0ae65055bf5c6dbfba4918d56e82f3ae3d719e7",
+    "exported_sha256": "385dae6bd5831ca91a273ac7b0ae65055bf5c6dbfba4918d56e82f3ae3d719e7",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-microphone-linked-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-microphone-linked-20260913/README.md",
+    "source_sha256": "40357ae30dcc613cb043bb716c1c1f49bd828c5281c8c561520be2ca648fb620",
+    "exported_sha256": "40357ae30dcc613cb043bb716c1c1f49bd828c5281c8c561520be2ca648fb620",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/README.md",
+    "source_sha256": "692ef51c493928d8ba26ef189a2a4ee4dde49541e6d56b7688c0d1613f52c844",
+    "exported_sha256": "692ef51c493928d8ba26ef189a2a4ee4dde49541e6d56b7688c0d1613f52c844",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\tests\\baseline-dns.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/tests/baseline-dns.log",
+    "source_sha256": "09825e9238839662f5156aed51ee1392a22f6aa617d0ab08f16f807b3bbdbacd",
+    "exported_sha256": "09825e9238839662f5156aed51ee1392a22f6aa617d0ab08f16f807b3bbdbacd",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\tests\\build-script-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/tests/build-script-tests.log",
+    "source_sha256": "ea9fd78da7fc36ed07b3262f0b73e95664abfb7686624679b2497ae59fdeef6d",
+    "exported_sha256": "ea9fd78da7fc36ed07b3262f0b73e95664abfb7686624679b2497ae59fdeef6d",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\tests\\compat-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/tests/compat-tests.log",
+    "source_sha256": "b5b477375071ebedd0ab105aa06df5200d1abb2bfd19746b0824440db36bfc3c",
+    "exported_sha256": "b5b477375071ebedd0ab105aa06df5200d1abb2bfd19746b0824440db36bfc3c",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\tests\\ha-asan-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/tests/ha-asan-tests.log",
+    "source_sha256": "07a44b794930698fb826eb69a3943b79289e1887b91ba8776a47e4bcb520aa4a",
+    "exported_sha256": "07a44b794930698fb826eb69a3943b79289e1887b91ba8776a47e4bcb520aa4a",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\tests\\ha-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/tests/ha-tests.log",
+    "source_sha256": "8e9912e25e095e92d129b1e31320008a39f3af2462eacaeb861c7cf2e1bec2ad",
+    "exported_sha256": "8e9912e25e095e92d129b1e31320008a39f3af2462eacaeb861c7cf2e1bec2ad",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\tests\\native-check.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/tests/native-check.log",
+    "source_sha256": "d05dfbfd0dac183e72343e0bf66f3a3cb15c71cd63d84b9980a471050e986e4b",
+    "exported_sha256": "d05dfbfd0dac183e72343e0bf66f3a3cb15c71cd63d84b9980a471050e986e4b",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-network-cancel-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-network-cancel-20260913/v3/build.log",
+    "source_sha256": "543e527bd16c41eae6e0bf9f00589226520aaa62173d34cefa89e118c424e277",
+    "exported_sha256": "543e527bd16c41eae6e0bf9f00589226520aaa62173d34cefa89e118c424e277",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\README.md",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/README.md",
+    "source_sha256": "8b7f754d90cfe561c762d2f045877c6667a3b37aec6889ae970c058405996e33",
+    "exported_sha256": "8b7f754d90cfe561c762d2f045877c6667a3b37aec6889ae970c058405996e33",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\build-script-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/build-script-tests.log",
+    "source_sha256": "ef190367b8b5a5828a7b25dfd24c661483d46796371c0515ef718ef0999e33f3",
+    "exported_sha256": "ef190367b8b5a5828a7b25dfd24c661483d46796371c0515ef718ef0999e33f3",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\file-service-asan.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/file-service-asan.log",
+    "source_sha256": "0a3f07405d7dfd0462df13c96a83a4152cb6a811cb72ea2db5cd57f2266cbd50",
+    "exported_sha256": "0a3f07405d7dfd0462df13c96a83a4152cb6a811cb72ea2db5cd57f2266cbd50",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\host-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/host-tests.log",
+    "source_sha256": "9eccd984999e1216456177859418ab6e0fafdaee3780c60e115daa713d5c9e18",
+    "exported_sha256": "9eccd984999e1216456177859418ab6e0fafdaee3780c60e115daa713d5c9e18",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\native-check.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/native-check.log",
+    "source_sha256": "f9ef364ed015ff7f953680eafecc84fa622b6833c40cd068c89befd7f6f786e2",
+    "exported_sha256": "f9ef364ed015ff7f953680eafecc84fa622b6833c40cd068c89befd7f6f786e2",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\system-monitor-asan.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/system-monitor-asan.log",
+    "source_sha256": "0676123771121d36a6cd2e75b36f04b0564e4062718d35e25ffafad48df2a9b4",
+    "exported_sha256": "0676123771121d36a6cd2e75b36f04b0564e4062718d35e25ffafad48df2a9b4",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\wifi-v3-detail.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/wifi-v3-detail.log",
+    "source_sha256": "7a39c87b1df4408f822db1f16422f9cae378b527c57bb32876c4e00fc221c8dd",
+    "exported_sha256": "7a39c87b1df4408f822db1f16422f9cae378b527c57bb32876c4e00fc221c8dd",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\tests\\wifi-v3-tests.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/tests/wifi-v3-tests.log",
+    "source_sha256": "adcf80b0ab871b9ec0d46da7a345a5ad5d859c8384c44f590d955f662eb85358",
+    "exported_sha256": "adcf80b0ab871b9ec0d46da7a345a5ad5d859c8384c44f590d955f662eb85358",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\artifacts\\glass-system-monitor-20260913\\v3\\build.log",
+    "destination": "05-logs-and-handoff/04-v3-20260913/artifacts/glass-system-monitor-20260913/v3/build.log",
+    "source_sha256": "e9747b412a66bb2e54053656d201b9a88132d7dce8e71b8e67362f6aa96f1722",
+    "exported_sha256": "e9747b412a66bb2e54053656d201b9a88132d7dce8e71b8e67362f6aa96f1722",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\CAMERA_HANDOFF_20260831.md",
+    "destination": "05-logs-and-handoff/historical-handoff/CAMERA_HANDOFF_20260831.md",
+    "source_sha256": "1775b994f232e38dd3b01b4e532b755b8e2bfb97531fe9bd1124d71509eae086",
+    "exported_sha256": "1775b994f232e38dd3b01b4e532b755b8e2bfb97531fe9bd1124d71509eae086",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\ESP32P4_OPENVELA_V3_NSH_HANDOFF_20260907.md",
+    "destination": "05-logs-and-handoff/historical-handoff/ESP32P4_OPENVELA_V3_NSH_HANDOFF_20260907.md",
+    "source_sha256": "58f42d220926d8a9138aae1d4eebefd31b2df5f7d90a7132ca2fe45f13f12d45",
+    "exported_sha256": "58f42d220926d8a9138aae1d4eebefd31b2df5f7d90a7132ca2fe45f13f12d45",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\OPENVELA_P4_HANDOFF_20260907.md",
+    "destination": "05-logs-and-handoff/historical-handoff/OPENVELA_P4_HANDOFF_20260907.md",
+    "source_sha256": "bb63dc32fa03924f14b1d78395b7b52f65b6acb6d20d607f4a4d54193fdcbaac",
+    "exported_sha256": "bb63dc32fa03924f14b1d78395b7b52f65b6acb6d20d607f4a4d54193fdcbaac",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\PORT_COMPLETION_20260828.md",
+    "destination": "05-logs-and-handoff/historical-handoff/PORT_COMPLETION_20260828.md",
+    "source_sha256": "a36d3f09f0aa06cdd4bcca1d0af4dc6abd79fbb7be963f411466a9d1d26eff37",
+    "exported_sha256": "a36d3f09f0aa06cdd4bcca1d0af4dc6abd79fbb7be963f411466a9d1d26eff37",
+    "redacted": false
+  },
+  {
+    "source": "C:\\Users\\flash\\Desktop\\新建文件夹 (2)\\vlae\\PORTING_STATUS.md",
+    "destination": "05-logs-and-handoff/historical-handoff/PORTING_STATUS.md",
+    "source_sha256": "e0fc29b696bdc5b05f4bc5e10755796fa2611d41680d1d5e7fb6c80b8c38a8bc",
+    "exported_sha256": "e0fc29b696bdc5b05f4bc5e10755796fa2611d41680d1d5e7fb6c80b8c38a8bc",
+    "redacted": false
+  }
+]

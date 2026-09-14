@@ -1,0 +1,11 @@
+
+[CASE console]
+
+nsh> [K
+[CASE test_directory]
+ls -l /data/qpk/.storage-check-39
+/data/qpk/.storage-check-39:
+ drwsrwsrwx           0 @2pcom.example.hello/
+ drwsrwsrwx           0 @2pcom.example.game2048/
+ drwsrwsrwx           0 @2ppppppppppppppppppppppppppppp/
+nsh> [K

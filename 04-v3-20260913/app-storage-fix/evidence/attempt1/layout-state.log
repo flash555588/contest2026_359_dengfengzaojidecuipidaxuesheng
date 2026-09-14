@@ -1,0 +1,18 @@
+
+[CASE console]
+
+nsh> [K
+[CASE qpk]
+ls -l /data/qpk
+/data/qpk:
+ drwsrwsrwx           0 .data/
+ drws--S---           0 .storage-check-7/
+nsh> [K
+[CASE check]
+ls -R /data/qpk/.storage-check-7
+/data/qpk/.storage-check-7:
+ @2/
+/data/qpk/.storage-check-7/@2:
+ ppppppppppppppppppppppppppppppp/
+/data/qpk/.storage-check-7/@2/ppppppppppppppppppppppppppppppp:
+nsh> [K

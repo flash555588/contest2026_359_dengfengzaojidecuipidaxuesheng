@@ -1,0 +1,11 @@
+{
+  "firmware_sha256": "81825cd2c50b1687f3dffe8b6540a0d6a873f9d389d19a5f65dabd30e3e0c0c0",
+  "evidence": [
+    "flash.log",
+    "boot.log",
+    "scan-final.json",
+    "review-light/",
+    "review-dark/"
+  ],
+  "note": "Initial name display before sorting named devices first. These are not final sorted-image evidence."
+}

@@ -1,0 +1,26 @@
+desktop ui hello
+[qpk] hello QPK initialized
+[qpk] started 你好快应用 (com.example.hello 1.0.2) with QuickJS
+desktop: ui hello ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":0,"y":0,"w":1024,"h":600,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"button","x":13,"y":11,"w":52,"h":42,"scroll":false,"text":""},
+{"id":3,"parent":2,"type":"label","x":32,"y":19,"w":15,"h":27,"scroll":true,"text":""},
+{"id":4,"parent":1,"type":"label","x":79,"y":16,"w":140,"h":39,"scroll":true,"text":"你好快应用"},
+{"id":5,"parent":1,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"label","x":312,"y":167,"w":201,"h":22,"scroll":true,"text":"com.example.hello  v1.0.2"},
+{"id":7,"parent":5,"type":"label","x":312,"y":115,"w":140,"h":39,"scroll":true,"text":"你好快应用"},
+{"id":8,"parent":5,"type":"container","x":312,"y":213,"w":400,"h":96,"scroll":false,"text":""},
+{"id":9,"parent":5,"type":"container","x":332,"y":227,"w":80,"h":64,"scroll":false,"text":""},
+{"id":10,"parent":9,"type":"label","x":356,"y":240,"w":32,"h":39,"scroll":true,"text":"17"},
+{"id":11,"parent":5,"type":"label","x":432,"y":243,"w":120,"h":28,"scroll":true,"text":"累计启动次数"},
+{"id":12,"parent":5,"type":"button","x":312,"y":337,"w":400,"h":54,"scroll":false,"text":""},
+{"id":13,"parent":12,"type":"label","x":332,"y":350,"w":360,"h":28,"scroll":true,"text":"Toast 提示"},
+{"id":14,"parent":5,"type":"button","x":312,"y":407,"w":400,"h":54,"scroll":false,"text":""},
+{"id":15,"parent":14,"type":"label","x":332,"y":420,"w":360,"h":28,"scroll":true,"text":"对话框"},
+{"id":16,"parent":5,"type":"label","x":312,"y":489,"w":81,"h":22,"scroll":true,"text":"已运行 1 秒"}
+]
+UI_LAYOUT_END
+nsh> 
