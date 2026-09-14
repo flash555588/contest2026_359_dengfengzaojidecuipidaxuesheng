@@ -40,6 +40,8 @@ board/esp32p4-common/             ESP32-P4 公共板级支持 overlay
 chip/esp32p4/                     ESP32-P4 架构和 Espressif 驱动 overlay
 firmware/esp32p4-nsh/             可烧录固件与启动日志
 firmware/esp32p4-desktop-v1/      2026-08-30 最终 v1.0 桌面固件与测试报告
+firmware/esp32p4-sc2336-camera-v1.0/  2026-08-30 SC2336 RAW8 取帧固件与测试报告
+firmware/esp32p4-camera-preview-v1.0/ 2026-09-03 SC2336 RGB565 零拷贝实时预览固件与测试报告
 ouo/                              OuO QuickJS 应用源码、清单与设计说明
 logs/flash555588/                 AI Coding 日志和实板工作记录
 tools/patches/                     最终 nuttx/apps 可复现补丁
@@ -63,6 +65,9 @@ repo sync -c -j8
 当前构建流程在 WSL 中执行。仓内脚本会把 overlay 同步到 openvela 工作树并构建 ESP32-P4 NSH 配置：
 
 ```bash
+# 可选；默认使用 ~/vela-p4
+export OPENVELA_ROOT=/path/to/vela-p4
+
 # revision v1.x
 python tools/wsl_build_p4_nsh.py nsh
 python tools/wsl_copy_firmware.py --variant v1.x
@@ -74,7 +79,7 @@ python tools/wsl_copy_firmware.py --variant v3.2
 
 底层构建入口为 `tools/wsl_make_p4_nsh.sh`。详细的启动、镜像生成和调试说明见 `board/esp32p4-function-ev-board/README.md` 与 `DISPLAY_PLAN.md`。
 
-最终 v1.0 桌面/OuO 版本还需要在 `repo sync` 后应用两份可复现补丁：
+最终 v1.0 桌面/OuO/相机预览版本需要在 `repo sync` 后按顺序应用可复现补丁（nuttx：0001、0003、0004、0006、0007、0008、0011、0013、0014、0015、0016、0018、0020、0022、0024、0026；apps：0002、0005、0009、0010、0012、0017、0019、0021、0023、0025、0027）：
 
 ```bash
 cd contest2026_359_dengfengzaojidecuipidaxuesheng
@@ -85,7 +90,7 @@ tools/configure.sh esp32p4-function-ev-board:desktop-v1
 make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
 ```
 
-补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `88827afd368d4bbb4802b96ed44d9582f85b2f92`。应用脚本可重复执行：已应用时会跳过，基线不匹配时会停止并报告错误。
+补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `88827afd368d4bbb4802b96ed44d9582f85b2f92`。应用脚本会校验基线、补丁 SHA256、工作树清洁性和应用后文件摘要；二次执行只在补丁集与结果都未变时安全跳过。桌面、OuO 和相机预览均由 `apps/system/desktop` 提供；board 层只负责注册 framebuffer、触摸和相机设备，不再包含或自动启动 LVGL 应用代码。0008/0009 还提供 `/dev/dsi-diag0` 与 `dsi_diag`，用原子 ioctl 快照取代依赖链接地址的 DSI 计数读取。0012 修复 QuickJS 归档文件名不一致，校验固定归档 SHA256，并使 LVGL Kconfig 版本与已固定的 v9.2.1 源码一致。0013 将 `esp-hal-3rdparty` 固定到 `78c092909fca38d1e2ccf767b5eff66bddc5c789`，并把原先的临时 Python 改写收敛为可审查、可重复应用的 HAL patch。0014 恢复 DSI 同步换页 API，并保留 LPWORK 回调模式，修正 0008 引入的头文件/实现不一致。0015 在生成的 sensor/panel 源码中记录固定的 Espressif 来源 commit；0016/0017 收口已确认的 NuttX 和应用头文件 nxstyle 缺陷；0018 使 CMake 与 Make 使用同一 HAL revision，并在 CMake 配置阶段核对 revision、幂等应用芯片级 HAL patch；0019 对齐 QuickJS 的 Make/CMake 源文件、RISC-V 浮点环境常量、补丁和下载校验；0020/0021 补齐 CSI/HAL、board camera 与 desktop 应用的 CMake target，0022 补齐 CSI HAL 的 CMake include path。完整许可清单见 `THIRD_PARTY.md`。
 
 ## 生成镜像与烧录
 
@@ -95,8 +100,8 @@ make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
 
 ```powershell
 # 先用 esptool chip-id 或启动日志确认 revision，再选择对应镜像
-powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7
-powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7
+powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7 -Transport uart-bridge
+powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7 -Transport uart-bridge
 ```
 
 脚本默认以 460800 波特率将镜像烧录到 `0x2000`。ESP32-P4 Simple Boot 镜像不能写到 `0x0`；v3.2 镜像也不能用于本仓当前实测的 v1.0 芯片。

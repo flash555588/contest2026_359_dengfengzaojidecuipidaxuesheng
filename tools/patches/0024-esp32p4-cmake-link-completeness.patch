@@ -1,0 +1,105 @@
+diff --git a/old/arch/risc-v/src/esp32p4/esp32p4_smp.c b/new/arch/risc-v/src/esp32p4/esp32p4_smp.c
+--- a/old/arch/risc-v/src/esp32p4/esp32p4_smp.c
++++ b/new/arch/risc-v/src/esp32p4/esp32p4_smp.c
+@@ -33,48 +33,9 @@ extern int _mtvt_table;
+ 
+ static bool g_ipi_initialized[CONFIG_SMP_NCPUS];
+ 
+-struct esp_ipc_call_s
+-{
+-  esp_ipc_func_t func;
+-  void *arg;
+-};
+-
+-static int esp_ipc_call_adapter(void *arg)
+-{
+-  struct esp_ipc_call_s *call = arg;
+-
+-  call->func(call->arg);
+-  return OK;
+-}
+-
+-static esp_err_t esp_ipc_call_internal(uint32_t cpu_id,
+-                                       esp_ipc_func_t func, void *arg)
+-{
+-  struct esp_ipc_call_s call;
+-  int ret;
+-
+-  if (cpu_id >= CONFIG_SMP_NCPUS || func == NULL)
+-    {
+-      return ESP_ERR_INVALID_ARG;
+-    }
+-
+-  call.func = func;
+-  call.arg = arg;
+-  ret = nxsched_smp_call_single(cpu_id, esp_ipc_call_adapter, &call);
+-
+-  return ret < 0 ? ESP_FAIL : ESP_OK;
+-}
+-
+-esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
+-{
+-  return esp_ipc_call_internal(cpu_id, func, arg);
+-}
+-
+-esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func,
+-                                void *arg)
+-{
+-  return esp_ipc_call_internal(cpu_id, func, arg);
+-}
++/* esp_ipc_call* is provided by the HAL's task-based IPC implementation.
++ * In particular, flash coordination requires nonblocking dispatch.
++ */
+ 
+ void esp_ipi_send(int cpu)
+ {
+diff --git a/old/arch/risc-v/src/esp32p4/hal_esp32p4.mk b/new/arch/risc-v/src/esp32p4/hal_esp32p4.mk
+--- a/old/arch/risc-v/src/esp32p4/hal_esp32p4.mk
++++ b/new/arch/risc-v/src/esp32p4/hal_esp32p4.mk
+@@ -478,6 +478,10 @@ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)nuttx$(DELIM)src$(DELIM)heap_caps.c
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)nuttx$(DELIM)src$(DELIM)platform$(DELIM)os.c
+ 
++ifeq ($(CONFIG_SMP),y)
++  CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)nuttx$(DELIM)src$(DELIM)components$(DELIM)esp_system$(DELIM)esp_ipc.c
++endif
++
+ ifneq ($(CONFIG_ESPRESSIF_WIFI)$(CONFIG_ESPRESSIF_EMAC),)
+   CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)nuttx$(DELIM)src$(DELIM)esp_event.c
+ endif
+ 
+diff --git a/old/arch/risc-v/src/esp32p4/hal_esp32p4.cmake b/new/arch/risc-v/src/esp32p4/hal_esp32p4.cmake
+--- a/old/arch/risc-v/src/esp32p4/hal_esp32p4.cmake
++++ b/new/arch/risc-v/src/esp32p4/hal_esp32p4.cmake
+@@ -544,7 +544,16 @@ if(CONFIG_ESPRESSIF_MIPI_DSI)
+     APPEND
+     HAL_SRCS
+     ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_lcd/mipi_dsi_hal.c
+-    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_lcd/${CHIP_SERIES}/mipi_dsi_periph.c
+-    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_dma/dw_gdma_hal.c)
++    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_lcd/${CHIP_SERIES}/mipi_dsi_periph.c)
++endif()
++
++if(CONFIG_ESPRESSIF_MIPI_CSI)
++  list(APPEND HAL_SRCS
++    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_cam/mipi_csi_hal.c
++    ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_cam/${CHIP_SERIES}/mipi_csi_periph.c)
++endif()
++
++if(CONFIG_ESPRESSIF_MIPI_DSI OR CONFIG_ESPRESSIF_MIPI_CSI)
++  list(APPEND HAL_SRCS ${ESP_HAL_3RDPARTY_REPO}/components/esp_hal_dma/dw_gdma_hal.c)
+ endif()
+ 
+diff --git a/old/drivers/video/CMakeLists.txt b/new/drivers/video/CMakeLists.txt
+--- a/old/drivers/video/CMakeLists.txt
++++ b/new/drivers/video/CMakeLists.txt
+@@ -41,6 +41,10 @@ if(CONFIG_DRIVERS_VIDEO)
+ 
+   if(CONFIG_I2C)
+ 
++    if(CONFIG_VIDEO_SC2336)
++      list(APPEND SRCS sc2336.c)
++    endif()
++
+     if(CONFIG_VIDEO_ISX012)
+       list(APPEND SRCS isx012.c)
+     endif()

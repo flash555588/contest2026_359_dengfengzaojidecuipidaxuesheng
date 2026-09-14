@@ -5,7 +5,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path("/home/flash/vela-p4")
+ROOT = Path(os.environ.get("OPENVELA_ROOT", Path.home() / "vela-p4")).expanduser()
 GCC = ROOT / "riscv32-esp-elf/bin/riscv32-esp-elf-gcc"
 NUTTX = ROOT / "nuttx"
 CONFIG_NAME = sys.argv[1] if len(sys.argv) > 1 else "nsh"

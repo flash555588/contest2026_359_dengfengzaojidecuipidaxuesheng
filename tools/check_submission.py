@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEAM = "contest2026_359_dengfengzaojidecuipidaxuesheng"
 LOGS_ROOT = ROOT / "logs"
-ALLOWED_TOOLS = {"opencode", "claude-code", "codex", "kiro", "mimocode"}
+ALLOWED_TOOLS = {"opencode", "claude-code", "codex", "cursor", "kiro", "mimocode"}
 REQUIRED_EVENT_FIELDS = {
     "schema_version",
     "session_id",
@@ -28,7 +28,7 @@ REQUIRED_EVENT_FIELDS = {
 ALLOWED_ROLES = {"user", "assistant", "tool", "system"}
 LOG_PATH = re.compile(
     r"^logs/(?P<login>[A-Za-z0-9][A-Za-z0-9-]{0,38})/"
-    r"\d{4}-\d{2}-\d{2}/(?P<tool>opencode|claude-code|codex|kiro|mimocode)__"
+    r"\d{4}-\d{2}-\d{2}/(?P<tool>opencode|claude-code|codex|cursor|kiro|mimocode)__"
     r"(?P<session>.+)\.jsonl$"
 )
 
