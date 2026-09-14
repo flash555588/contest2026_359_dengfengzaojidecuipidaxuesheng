@@ -1,0 +1,3 @@
+ifeq ($(CONFIG_SYSTEM_C6BLE_V3_EXPERIMENTAL),y)
+CONFIGURED_APPS += $(APPDIR)/system/c6ble
+endif

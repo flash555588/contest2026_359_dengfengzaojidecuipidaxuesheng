@@ -28,3 +28,9 @@ __pycache__/
 
 # Configure-generated board link; its target is local-workspace specific
 board/esp32p4-common/board
+
+# Device-local voice service configuration and captured media
+**/espclaw/voice.json
+**/espclaw/ca.pem
+espclaw-record.wav
+espclaw-record.wav.part

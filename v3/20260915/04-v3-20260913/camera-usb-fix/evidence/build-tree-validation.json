@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "overlay_files_verified": 88,
+  "clean_build_camera_objects_verified": false,
+  "required_compilations_verified": [
+    "qpk_runtime.c"
+  ],
+  "symlinks_to_other_desktop_builds": false,
+  "firmware_sha256": "ee8465189b45167e567c9cd606106d9673e3cc9fe75c25226d444e1729e1f2d0"
+}

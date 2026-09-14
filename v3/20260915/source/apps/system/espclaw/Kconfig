@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+config SYSTEM_ESPCLAW
+	bool "ESP-Claw offline core selftest"
+	default n
+	depends on !DISABLE_PTHREAD && BUILD_FLAT
+	depends on NET && NET_TCP && LIBC_NETDB
+	depends on NETUTILS_CJSON && NETUTILS_WEBCLIENT
+	select PTHREAD_MUTEX_TYPES
+	help
+		Register espclaw selftest. Requires separately linked mbedTLS 4
+		and TF-PSA libraries; this does not enable online chat or Lua.
+
+if SYSTEM_ESPCLAW
+config SYSTEM_ESPCLAW_PRIORITY
+	int "Command priority"
+	default 100
+config SYSTEM_ESPCLAW_STACKSIZE
+	int "Command stack size"
+	default 8192
+endif

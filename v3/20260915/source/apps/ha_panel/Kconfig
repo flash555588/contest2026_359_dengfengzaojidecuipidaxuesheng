@@ -1,0 +1,110 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menuconfig HA_PANEL
+	bool "Home Assistant LVGL control panel"
+	default n
+	depends on GRAPHICS_LVGL
+	depends on NET
+	depends on NET_TCP
+	select NETUTILS_CJSON
+	select LV_USE_ARC
+	select LV_USE_BUTTON
+	select LV_USE_BUTTONMATRIX
+	select LV_USE_KEYBOARD
+	select LV_USE_LABEL
+	select LV_USE_SLIDER
+	select LV_USE_SWITCH
+	select LV_USE_TEXTAREA
+	select LV_USE_TABVIEW
+	select LV_USE_THEME_DEFAULT
+	select LV_USE_FLEX
+	---help---
+		Enable the ha_panel application: an LVGL based Home Assistant
+		dashboard for openvela.  The UI follows the official LVGL
+		widgets / tabview / flex / switch / slider / arc / keyboard
+		examples.  It talks to a Home Assistant instance over its
+		WebSocket API (ws://<host>:8123/api/websocket), shows lights /
+		switches / sensors / climate entities on a card dashboard and
+		can control devices, run Home Assistant scenes (movie / night /
+		leave / arrive / reading) and filter devices by room.  A long
+		lived access token must be created
+		in the Home Assistant web UI (Profile -> Security -> Long-Lived
+		Access Tokens).  With an empty token the panel starts in demo
+		mode so the UI can be exercised without a server.
+
+		nsh> ha_panel
+		nsh> ha_panel -s 192.168.1.50 -p 8123 -t <token>
+
+if HA_PANEL
+
+config HA_PANEL_PROGNAME
+	string "ha_panel program name"
+	default "ha_panel"
+	---help---
+		This is the name of the program that will be used when the NSH
+		program is installed.
+
+config HA_PANEL_PRIORITY
+	int "ha_panel UI task priority"
+	default 110
+
+config HA_PANEL_STACKSIZE
+	int "ha_panel UI task stack size"
+	default 24576
+
+config HA_PANEL_NET_PRIORITY
+	int "ha_panel network worker task priority"
+	default 100
+
+config HA_PANEL_NET_STACKSIZE
+	int "ha_panel network worker task stack size"
+	default 16384
+
+config HA_PANEL_SERVER_DEFAULT
+	string "Default Home Assistant server address"
+	default "192.168.1.100"
+	---help---
+		Used when neither /data/ha_panel.conf nor the command line
+		provides a server address.
+
+config HA_PANEL_PORT_DEFAULT
+	int "Default Home Assistant port"
+	default 8123
+
+config HA_PANEL_TOKEN_DEFAULT
+	string "Default long lived access token"
+	default ""
+
+config HA_PANEL_CONF_PATH
+	string "Primary configuration file path"
+	default "/data/ha_panel.conf"
+
+config HA_PANEL_CONF_PATH_ALT
+	string "Fallback configuration file path"
+	default "/mnt/smartfs/ha_panel.conf"
+
+config HA_PANEL_MAX_ENTITIES
+	int "Maximum number of tracked entities"
+	default 64
+
+config HA_PANEL_WS_RX_MAX
+	int "Maximum WebSocket message size in bytes"
+	default 262144
+	---help---
+		get_states() replies of large Home Assistant instances can
+		exceed 100 KB.  Increase this value if the panel reports
+		oversized messages.
+
+config HA_PANEL_TTF_CJK
+	string "Optional CJK TrueType font for entity names"
+	default "/data/ha_cjk.ttf"
+	---help---
+		If this file exists at start-up it is loaded with tiny_ttf so
+		Chinese entity names and the Chinese UI can be rendered.
+		Otherwise the UI falls back to the built-in Montserrat fonts
+		and English labels.
+
+endif

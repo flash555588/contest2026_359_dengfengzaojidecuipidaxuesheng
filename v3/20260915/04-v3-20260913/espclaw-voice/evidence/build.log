@@ -1,0 +1,79 @@
+[1KCC:  misc/lib_utsname.c [1K[1KCC:  port/http_webclient.c [1KCC:  port/voice_format.c [1KCC:  desktop_main.c In file included from /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_err.h:13,
+                 from /tmp/v3-desktop-voice-20260915/apps/system/espclaw/core/llm/claw_llm_types.h:14,
+                 from /tmp/v3-desktop-voice-20260915/apps/system/espclaw/core/llm/claw_llm_http_transport.h:10,
+                 from port/http_webclient.c:3:
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:19:6: warning: "CONFIG_COMPILER_OPTIMIZATION_PERF" is not defined, evaluates to 0 [-Wundef]
+   19 | #if (CONFIG_COMPILER_OPTIMIZATION_PERF)
+      |      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:59:5: warning: "__clang__" is not defined, evaluates to 0 [-Wundef]
+   59 | #if __clang__
+      |     ^~~~~~~~~
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:78:5: warning: "__clang_analyzer__" is not defined, evaluates to 0 [-Wundef]
+   78 | #if __clang_analyzer__ || CONFIG_COMPILER_STATIC_ANALYZER
+      |     ^~~~~~~~~~~~~~~~~~
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:78:27: warning: "CONFIG_COMPILER_STATIC_ANALYZER" is not defined, evaluates to 0 [-Wundef]
+   78 | #if __clang_analyzer__ || CONFIG_COMPILER_STATIC_ANALYZER
+      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1K[1KCC:  port/voice_service.c In file included from /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_err.h:13,
+                 from /tmp/v3-desktop-voice-20260915/apps/system/espclaw/include/claw_core.h:12,
+                 from port/voice_service.c:3:
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:19:6: warning: "CONFIG_COMPILER_OPTIMIZATION_PERF" is not defined, evaluates to 0 [-Wundef]
+   19 | #if (CONFIG_COMPILER_OPTIMIZATION_PERF)
+      |      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:59:5: warning: "__clang__" is not defined, evaluates to 0 [-Wundef]
+   59 | #if __clang__
+      |     ^~~~~~~~~
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:78:5: warning: "__clang_analyzer__" is not defined, evaluates to 0 [-Wundef]
+   78 | #if __clang_analyzer__ || CONFIG_COMPILER_STATIC_ANALYZER
+      |     ^~~~~~~~~~~~~~~~~~
+/tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/esp_common/include/esp_compiler.h:78:27: warning: "CONFIG_COMPILER_STATIC_ANALYZER" is not defined, evaluates to 0 [-Wundef]
+   78 | #if __clang_analyzer__ || CONFIG_COMPILER_STATIC_ANALYZER
+      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1K[1KIn file included from desktop_main.c:1252:
+glass_ui.inc:713:18: warning: 'glass_control_icon' defined but not used [-Wunused-function]
+  713 | static lv_obj_t *glass_control_icon(lv_obj_t *parent, const char *symbol,
+      |                  ^~~~~~~~~~~~~~~~~~
+glass_ui.inc:690:13: warning: 'glass_preferences_open' defined but not used [-Wunused-function]
+  690 | static void glass_preferences_open(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~~~~~
+glass_ui.inc:647:13: warning: 'glass_control_slide' defined but not used [-Wunused-function]
+  647 | static void glass_control_slide(void *object, int32_t y)
+      |             ^~~~~~~~~~~~~~~~~~~
+glass_ui.inc:560:13: warning: 'glass_theme_toggle' defined but not used [-Wunused-function]
+  560 | static void glass_theme_toggle(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~
+glass_ui.inc:176:17: warning: 'glass_tint' defined but not used [-Wunused-function]
+  176 | static uint32_t glass_tint(void)
+      |                 ^~~~~~~~~~
+glass_ui.inc:25:13: warning: 'glass_brightness_changed' defined but not used [-Wunused-function]
+   25 | static void glass_brightness_changed(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+In file included from glass_ui.inc:11:
+glass_settings_store.h:55:12: warning: 'glass_settings_save' defined but not used [-Wunused-function]
+   55 | static int glass_settings_save(const uint8_t values[4])
+      |            ^~~~~~~~~~~~~~~~~~~
+desktop_main.c:1175:18: warning: 'list_button' defined but not used [-Wunused-function]
+ 1175 | static lv_obj_t *list_button(lv_obj_t *parent, const char *title,
+      |                  ^~~~~~~~~~~
+[1KIN: libs/libc/libc.a -> staging/libc.a [1K[1K[1KIN: /tmp/v3-desktop-voice-20260915/apps/libapps.a -> staging/libapps.a [1K[1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_aliases.ld-> /tmp/v3-desktop-voice-20260915/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_aliases.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_flat_memory.ld-> /tmp/v3-desktop-voice-20260915/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_flat_memory.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_sections.rev3.ld-> /tmp/v3-desktop-voice-20260915/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_sections.rev3.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libc.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libc.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libgcc.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libgcc.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld.tmp [1K[1K[1K[1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld.tmp [1K[1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/soc/esp32p4/ld/esp32p4.peripherals.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/soc/esp32p4/ld/esp32p4.peripherals.ld.tmp [1KCPP:  /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/riscv/ld/rom.api.ld-> /tmp/v3-desktop-voice-20260915/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/riscv/ld/rom.api.ld.tmp [1K[1K[1K[1K[1K[1K[1KLD: nuttx
+Memory region         Used Size  Region Size  %age Used
+   tcm_idram_seg:         104 B         8 KB      1.27%
+        irom_seg:     1408030 B        64 MB      2.10%
+        sram_seg:      281672 B     978880 B     28.77%
+        drom_seg:     4189348 B        64 MB      6.24%
+rev3_mspi_workaround_seg:           0 B          0 B
+      lp_ram_seg:         104 B      32744 B      0.32%
+ lp_reserved_seg:          24 B         24 B    100.00%
+  extern_ram_seg:           0 B        64 MB      0.00%
+CP: nuttx.hex
+MKIMAGE: NuttX binary
+esptool.py -c esp32p4 elf2image --ram-only-header --min-rev-full 301 --max-rev-full 399 -fs 16MB -fm dio -ff "80m" -o nuttx.bin nuttx
+[0;33mWarning:[0m DEPRECATED: 'esptool.py' is deprecated. Please use 'esptool' instead. The '.py' suffix will be removed in a future major release.
+esptool v5.3.1
+Creating ESP32-P4 image...
+Image has only RAM segments visible. ROM segments are hidden and SHA256 digest is not appended.
+Merged 2 ELF sections.
+Successfully created ESP32-P4 image.
+python3 tools/espressif/simple_boot_digest.py nuttx.bin
+Simple Boot RAM SHA256 added; mapped segment offsets unchanged
+Generated: nuttx.bin

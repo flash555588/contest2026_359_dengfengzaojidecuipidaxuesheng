@@ -1,0 +1,9 @@
+# Home Assistant panel configuration
+# Copy to /data/ha_panel.conf on the device.
+#
+# Create a long-lived token in the Home Assistant web UI:
+#   Profile -> Security -> Long-Lived Access Tokens
+
+server=192.168.1.100
+port=8123
+token=

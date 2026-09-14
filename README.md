@@ -1,5 +1,10 @@
 # ESP32-P4 Function-EV-Board openvela 新硬件适配
 
+**2026-09-15 更新：** 当前 ESP32-P4 v3 实板桌面、Wi-Fi／存储／BLE 修复、USB MJPEG
+相机及 ESP-Claw 语音输入开发源码见 [v3 当前开发快照](v3/20260915/README.md)。
+相机第 11 版已烧录，预览／拍照／关闭重开通过；语音输入仍在开发，当前镜像体积超限，
+未烧录、未完成真实采音和在线问答验收。以下原有章节保留早期 v1.x／v3.2 版本记录。
+
 本项目面向 2026 首届 openvela AI 硬件开发者大赛“新硬件适配”赛道，目标是在乐鑫 ESP32-P4 Function-EV-Board 上完成 openvela/NuttX 启动、外部 PSRAM、MIPI-DSI LCD、GT911 触摸和 LVGL 图形桌面的板级适配。仓库同时维护早期 revision v1.x 与量产 revision v3.2 两套可复现配置。
 
 当前已在 ESP32-P4 revision v1.0 实板上完成 Simple Boot、稳定 NuttShell、32 MiB PSRAM 系统堆、MIPI-DSI/DW-GDMA framebuffer、`/dev/fb0`、GT911 `/dev/input0`、LVGL 桌面与 QuickJS 快应用运行时 bring-up。串口与实物已验证完整 1024×600 首帧更新、连续 DMA 帧计数、全屏 LVGL 桌面、触摸设备打开及 **GT911 实际点击/拖动坐标**（LVGL 输出 `TOUCH: pressed x=... y=...`，坐标方向正确）。2026-08-30 的最终 v1.0 固件还通过了重新烧录、镜像 SHA-256 校验和真实断电冷启动，OuO/QuickJS 自动启动并进入 NSH。剩余验收项为 v3.2 芯片实板回归；v3.2 配置已完成构建，但不得烧入 v1.0 芯片。
