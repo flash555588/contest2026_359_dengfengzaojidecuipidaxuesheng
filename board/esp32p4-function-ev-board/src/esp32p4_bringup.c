@@ -328,14 +328,6 @@ int esp_bringup(void)
   }
 #endif
 
-#if defined(CONFIG_ESPRESSIF_MIPI_DSI) && defined(CONFIG_GRAPHICS_LVGL)
-  if (dret == 0)
-    {
-      extern int esp32p4_desktop_start(void);
-      esp32p4_desktop_start();
-      bringup_progress("A7\n");
-    }
-#endif /* CONFIG_ESPRESSIF_MIPI_DSI && CONFIG_GRAPHICS_LVGL */
 #endif
 
   int ret = OK;

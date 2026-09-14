@@ -1,230 +1,5 @@
-diff --git a/graphics/lvgl/0001-nuttx-fbdev-render-buffer-modes.patch b/graphics/lvgl/0001-nuttx-fbdev-render-buffer-modes.patch
-new file mode 100644
-index 0000000000000000000000000000000000000000..a5c4e6008c3dfaa259eb45f506f4c50e13b1d26f
---- /dev/null
-+++ b/graphics/lvgl/0001-nuttx-fbdev-render-buffer-modes.patch
-@@ -0,0 +1,196 @@
-+--- a/src/drivers/nuttx/lv_nuttx_fbdev.c
-++++ b/src/drivers/nuttx/lv_nuttx_fbdev.c
-+@@ -40,6 +40,7 @@ typedef struct {
-+     void * mem;
-+     void * mem2;
-+     void * mem_off_screen;
-++    bool mem_off_screen_heap;
-+     uint32_t mem2_yoffset;
-+ 
-+     lv_draw_buf_t buf1;
-+@@ -53,10 +54,12 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * colo
-+ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * color_p);
-+ static lv_color_format_t fb_fmt_to_color_format(int fmt);
-+ static int fbdev_get_pinfo(int fd, struct fb_planeinfo_s * pinfo);
-++#if !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
-+ static int fbdev_init_mem2(lv_nuttx_fb_t * dsc);
-++#endif
-+ static void display_refr_timer_cb(lv_timer_t * tmr);
-+ static void display_release_cb(lv_event_t * e);
-+-#if defined(CONFIG_FB_UPDATE)
-++#if defined(CONFIG_FB_UPDATE) && !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
-+     static void fbdev_join_inv_areas(lv_display_t * disp, lv_area_t * final_inv_area);
-+ #endif
-+ 
-+@@ -139,6 +142,29 @@ int lv_nuttx_fbdev_set_file(lv_display_t * disp, const char * file)
-+     uint32_t w = dsc->vinfo.xres;
-+     uint32_t h = dsc->vinfo.yres;
-+     uint32_t stride = dsc->pinfo.stride;
-++
-++#if defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
-++    uint32_t buffer_height = CONFIG_LV_NUTTX_FBDEV_BUFFER_SIZE;
-++    if(buffer_height > h) buffer_height = h;
-++
-++    uint32_t buffer_size = buffer_height * stride;
-++    dsc->mem_off_screen = malloc(buffer_size);
-++    LV_ASSERT_MALLOC(dsc->mem_off_screen);
-++    if(!dsc->mem_off_screen) {
-++        ret = -ENOMEM;
-++        LV_LOG_ERROR("Failed to allocate partial render buffer");
-++        goto errout;
-++    }
-++
-++    dsc->mem_off_screen_heap = true;
-++    lv_draw_buf_init(&dsc->buf1, w, buffer_height, color_format, stride,
-++                     dsc->mem_off_screen, buffer_size);
-++    lv_display_set_draw_buffers(disp, &dsc->buf1, NULL);
-++    lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_PARTIAL);
-++    LV_LOG_USER("Use cached partial render buffer: %p, rows: %" LV_PRIu32
-++                ", size: %" LV_PRIu32,
-++                dsc->mem_off_screen, buffer_height, buffer_size);
-++#else
-+     uint32_t data_size = h * stride;
-+     lv_draw_buf_init(&dsc->buf1, w, h, color_format, stride, dsc->mem, data_size);
-+ 
-+@@ -150,24 +176,39 @@ int lv_nuttx_fbdev_set_file(lv_display_t * disp, const char * file)
-+         }
-+ 
-+         lv_draw_buf_init(&dsc->buf2, w, h, color_format, stride, dsc->mem2, data_size);
-+-        lv_display_set_draw_buffers(disp, &dsc->buf1, &dsc->buf2);
-+     }
-+     else {
-+-        dsc->mem_off_screen = malloc(data_size);
-+-        LV_ASSERT_MALLOC(dsc->mem_off_screen);
-+-        if(!dsc->mem_off_screen) {
-+-            ret = -ENOMEM;
-+-            LV_LOG_ERROR("Failed to allocate memory for off-screen buffer");
-+-            goto errout;
-++        if(dsc->pinfo.fblen / 2 >= data_size) {
-++            dsc->mem_off_screen = (uint8_t *)dsc->mem + data_size;
-++            dsc->mem_off_screen_heap = false;
-++            LV_LOG_USER("Use framebuffer-reserved off-screen memory: %p, size: %" LV_PRIu32,
-++                        dsc->mem_off_screen, data_size);
-+         }
-++        else {
-++            dsc->mem_off_screen = malloc(data_size);
-++            LV_ASSERT_MALLOC(dsc->mem_off_screen);
-++            if(!dsc->mem_off_screen) {
-++                ret = -ENOMEM;
-++                LV_LOG_ERROR("Failed to allocate memory for off-screen buffer");
-++                goto errout;
-++            }
-+ 
-+-        LV_LOG_USER("Use off-screen mode, memory: %p, size: %" LV_PRIu32, dsc->mem_off_screen, data_size);
-+-        lv_draw_buf_init(&dsc->buf2, w, h, color_format, stride, dsc->mem_off_screen, data_size);
-+-        lv_display_set_draw_buffers(disp, &dsc->buf2, NULL);
-++            dsc->mem_off_screen_heap = true;
-++            LV_LOG_USER("Use heap off-screen memory: %p, size: %" LV_PRIu32,
-++                        dsc->mem_off_screen, data_size);
-++        }
-++
-++        lv_draw_buf_init(&dsc->buf2, w, h, color_format, stride,
-++                         dsc->mem_off_screen, data_size);
-+     }
-+ 
-+-    lv_display_set_color_format(disp, color_format);
-++    lv_display_set_draw_buffers(disp, double_buffer ? &dsc->buf1 : &dsc->buf2,
-++                                double_buffer ? &dsc->buf2 : NULL);
-++
-+     lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_DIRECT);
-++#endif
-++
-++    lv_display_set_color_format(disp, color_format);
-+     lv_display_set_resolution(disp, dsc->vinfo.xres, dsc->vinfo.yres);
-+     lv_timer_set_cb(disp->refr_timer, display_refr_timer_cb);
-+ 
-+@@ -185,7 +226,7 @@ errout:
-+  *   STATIC FUNCTIONS
-+  **********************/
-+ 
-+-#if defined(CONFIG_FB_UPDATE)
-++#if defined(CONFIG_FB_UPDATE) && !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
-+ static void fbdev_join_inv_areas(lv_display_t * disp, lv_area_t * final_inv_area)
-+ {
-+     uint16_t inv_index;
-+@@ -236,12 +277,41 @@ static void display_refr_timer_cb(lv_timer_t * tmr)
-+ 
-+ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * color_p)
-+ {
-+-    LV_UNUSED(color_p);
-+     lv_nuttx_fb_t * dsc = lv_display_get_driver_data(disp);
-+ 
-+-    if(dsc->mem_off_screen) {
-+-        /* When rendering in off-screen mode, copy the drawing buffer to fb */
-+-        /* buf2(off-screen buffer) -> buf1(fbmem)*/
-++#if defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
-++    uint32_t width = lv_area_get_width(area);
-++    uint32_t height = lv_area_get_height(area);
-++    uint32_t px_size = lv_color_format_get_size(lv_display_get_color_format(disp));
-++    uint32_t row_size = width * px_size;
-++    uint8_t * dest = (uint8_t *)dsc->mem + area->y1 * dsc->pinfo.stride +
-++                     area->x1 * px_size;
-++
-++    for(uint32_t row = 0; row < height; row++) {
-++        lv_memcpy(dest, color_p, row_size);
-++        dest += dsc->pinfo.stride;
-++        color_p += row_size;
-++    }
-++
-++#if defined(CONFIG_FB_UPDATE)
-++    struct fb_area_s fb_area;
-++    fb_area.x = area->x1;
-++    fb_area.y = area->y1;
-++    fb_area.w = width;
-++    fb_area.h = height;
-++    if(ioctl(dsc->fd, FBIO_UPDATE, (unsigned long)((uintptr_t)&fb_area)) < 0) {
-++        LV_LOG_ERROR("ioctl(FBIO_UPDATE) failed: %d", errno);
-++    }
-++#endif
-++
-++    lv_display_flush_ready(disp);
-++    return;
-++#else
-++    LV_UNUSED(color_p);
-++
-++    if(dsc->mem_off_screen && dsc->mem_off_screen_heap) {
-++        /* Copy only LVGL's dirty region into the active scanout buffer. */
-++
-+         lv_draw_buf_copy(&dsc->buf1, area, &dsc->buf2, area);
-+     }
-+ 
-+@@ -287,6 +357,7 @@ static void flush_cb(lv_display_t * disp, const lv_area_t * area, uint8_t * colo
-+         }
-+     }
-+     lv_display_flush_ready(disp);
-++#endif
-+ }
-+ 
-+ static lv_color_format_t fb_fmt_to_color_format(int fmt)
-+@@ -326,6 +397,7 @@ static int fbdev_get_pinfo(int fd, FAR struct fb_planeinfo_s * pinfo)
-+     return 0;
-+ }
-+ 
-++#if !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
-+ static int fbdev_init_mem2(lv_nuttx_fb_t * dsc)
-+ {
-+     uintptr_t buf_offset;
-+@@ -379,6 +451,7 @@ static int fbdev_init_mem2(lv_nuttx_fb_t * dsc)
-+ 
-+     return 0;
-+ }
-++#endif
-+ 
-+ static void display_release_cb(lv_event_t * e)
-+ {
-+@@ -393,10 +466,8 @@ static void display_release_cb(lv_event_t * e)
-+             dsc->fd = -1;
-+         }
-+ 
-+-        if(dsc->mem_off_screen) {
-+-            /* Free the off-screen buffer */
-++        if(dsc->mem_off_screen_heap) {
-+             free(dsc->mem_off_screen);
-+-            dsc->mem_off_screen = NULL;
-+         }
-+ 
-+         lv_free(dsc);
-diff --git a/graphics/lvgl/0002-tiny-ttf-oom-guard.patch b/graphics/lvgl/0002-tiny-ttf-oom-guard.patch
-new file mode 100644
-index 0000000000000000000000000000000000000000..567b745314e4031347e89b4b530fe93c956b553f
---- /dev/null
-+++ b/graphics/lvgl/0002-tiny-ttf-oom-guard.patch
-@@ -0,0 +1,17 @@
-+--- a/src/libs/tiny_ttf/stb_truetype_htcw.h
-++++ b/src/libs/tiny_ttf/stb_truetype_htcw.h
-+@@ -2516,11 +2516,14 @@ static int stbtt__GetGlyphShapeT2(const stbtt_fontinfo * info, int glyph_index,
-+     stbtt__csctx output_ctx = STBTT__CSCTX_INIT(0);
-+     if(stbtt__run_charstring(info, glyph_index, &count_ctx)) {
-+         *pvertices = (stbtt_vertex *)STBTT_malloc(count_ctx.num_vertices * sizeof(stbtt_vertex), info->userdata);
-++        if(*pvertices == NULL)
-++            return 0;
-+         output_ctx.pvertices = *pvertices;
-+         if(stbtt__run_charstring(info, glyph_index, &output_ctx)) {
-+             STBTT_assert(output_ctx.num_vertices == count_ctx.num_vertices);
-+             return output_ctx.num_vertices;
-+         }
-++        STBTT_free(*pvertices, info->userdata);
-+     }
-+     *pvertices = NULL;
-+     return 0;
 diff --git a/graphics/lvgl/Kconfig b/graphics/lvgl/Kconfig
-index 2d9ad2f8e8ffa893fabdf6f7e207e8141f3bf36a..d00e8e0a44e528a9f0428e76e6f7ddc40e6fb2ec 100644
+index 2d9ad2f..d00e8e0 100644
 --- a/graphics/lvgl/Kconfig
 +++ b/graphics/lvgl/Kconfig
 @@ -1690,6 +1690,21 @@ menu "LVGL configuration"
@@ -250,7 +25,7 @@ index 2d9ad2f8e8ffa893fabdf6f7e207e8141f3bf36a..d00e8e0a44e528a9f0428e76e6f7ddc4
  			bool "Use uv loop to replace default timer loop and other fb/indev timers"
  			depends on LV_USE_NUTTX
 diff --git a/graphics/lvgl/Makefile b/graphics/lvgl/Makefile
-index ce9ad6b7f8b7ec550765098f90b0d5f7ed0c6335..bfb6914d83c7680594a721fd88ebaba4dd6be822 100644
+index ce9ad6b..bfb6914 100644
 --- a/graphics/lvgl/Makefile
 +++ b/graphics/lvgl/Makefile
 @@ -79,6 +79,8 @@ $(LVGL_UNPACKNAME): $(LVGL_TARBALL)
@@ -263,7 +38,7 @@ index ce9ad6b7f8b7ec550765098f90b0d5f7ed0c6335..bfb6914d83c7680594a721fd88ebaba4
  	$(ECHO_END)
  
 diff --git a/system/desktop/Makefile b/system/desktop/Makefile
-index 57082c802d3f034fc834333bfaeb211554b458b1..3a65bbeea37995f52936f24563ec1042c16c0b3c 100755
+index 57082c8..3a65bbe 100755
 --- a/system/desktop/Makefile
 +++ b/system/desktop/Makefile
 @@ -11,7 +11,7 @@ MODULE    = $(CONFIG_SYSTEM_DESKTOP)
@@ -276,213 +51,21 @@ index 57082c802d3f034fc834333bfaeb211554b458b1..3a65bbeea37995f52936f24563ec1042
  
  include $(APPDIR)/Application.mk
 diff --git a/system/desktop/desktop_main.c b/system/desktop/desktop_main.c
-index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290a780f162 100755
+index 737caa0..45e0b16 100755
 --- a/system/desktop/desktop_main.c
 +++ b/system/desktop/desktop_main.c
-@@ -1,918 +1,1379 @@
--/****************************************************************************
-- * apps/system/desktop/desktop_main.c
-- *
-- * SPDX-License-Identifier: Apache-2.0
-- *
-- * Chinese phone-style launcher for ESP32-P4 Function-EV-Board.
-- ****************************************************************************/
--
--#include <nuttx/config.h>
--
--#include <dirent.h>
--#include <stdint.h>
--#include <stdio.h>
--#include <stdlib.h>
--#include <string.h>
--#include <sys/stat.h>
--#include <time.h>
--#include <unistd.h>
--
--#include <nuttx/sched.h>
--#include <lvgl/lvgl.h>
--
--#include "qpk_runtime.h"
--
--#define QPK_DIR       CONFIG_SYSTEM_DESKTOP_QPK_DIR
--#define MAX_QPK       8
--#define NAME_MAXLEN   48
--#define PANEL_WIDTH   760
--#define PANEL_HEIGHT  470
--#define QAPP_HEADER_HEIGHT  64
--
--extern const uint8_t g_desktop_font_start[];
--extern const uint8_t g_desktop_font_end[];
--
--struct qpk_entry_s
--{
--  char dir[64];
--  char name[NAME_MAXLEN];
--  char package[NAME_MAXLEN];
--  char version[24];
--  char entry[64];
--};
--
--struct builtin_qpk_s
--{
--  struct qpk_entry_s manifest;
--  const char *kind;
--  const char *format;
--};
--
--/* Built-in QPK metadata.  The manifest name is used consistently by the
-- * launcher list, the full-screen title bar, and app.getInfo().
-- */
--
--static const struct builtin_qpk_s g_builtin_qpk =
--{
--  .manifest =
--    {
--      .name = "你好快应用",
--      .package = "com.example.hello",
--      .version = "1.0.2",
--      .entry = "builtin:/hello/app.js",
--    },
--  .kind = "内置示例",
--  .format = "QPK 1.0",
--};
--
--struct desktop_env_s
--{
--  lv_obj_t *screen;
--  lv_obj_t *statusbar;
--  lv_obj_t *clock_label;
--  lv_obj_t *home_title;
--  lv_obj_t *home_hint;
--  lv_obj_t *grid;
--  lv_obj_t *panel;
--  lv_obj_t *current_card;
--  lv_obj_t *toast;
--  lv_font_t *font16;
--  lv_font_t *font20;
--  lv_font_t *font28;
--  struct qpk_entry_s qpk[MAX_QPK];
--  int nqpk;
--  bool light_theme;
--};
--
--static struct desktop_env_s g_desktop;
--
--enum builtin_id_e
--{
--  APP_SETTINGS = 0,
--  APP_QPK,
--  APP_ABOUT
--};
--
--static const lv_font_t *zh_font(int size)
--{
--  if (size >= 28 && g_desktop.font28 != NULL)
--    {
--      return g_desktop.font28;
--    }
--
--  if (size >= 20 && g_desktop.font20 != NULL)
--    {
--      return g_desktop.font20;
--    }
--
--  if (g_desktop.font16 != NULL)
--    {
--      return g_desktop.font16;
--    }
--
--  return &lv_font_montserrat_24;
--}
--
--static uint32_t theme_primary(void)
--{
--  return g_desktop.light_theme ? 0x172033 : 0xffffff;
--}
--
--static uint32_t theme_secondary(void)
--{
--  return g_desktop.light_theme ? 0x65708a : 0x8f9bb5;
--}
--
--static uint32_t theme_card(void)
--{
--  return g_desktop.light_theme ? 0xf8f9fc : 0x151c2d;
--}
--
--static uint32_t theme_surface(void)
--{
--  return g_desktop.light_theme ? 0xe8ebf2 : 0x222b40;
--}
--
-+/****************************************************************************
-+ * apps/system/desktop/desktop_main.c
-+ *
-+ * SPDX-License-Identifier: Apache-2.0
-+ *
-+ * Chinese phone-style launcher for ESP32-P4 Function-EV-Board.
-+ ****************************************************************************/
-+
-+#include <nuttx/config.h>
-+
-+#include <dirent.h>
-+#include <stdint.h>
-+#include <stdio.h>
-+#include <stdlib.h>
-+#include <string.h>
-+#include <sys/stat.h>
-+#include <time.h>
-+#include <unistd.h>
-+
-+#include <nuttx/sched.h>
-+#include <lvgl/lvgl.h>
-+
-+#include "qpk_runtime.h"
-+
-+#define QPK_DIR       CONFIG_SYSTEM_DESKTOP_QPK_DIR
-+#define MAX_QPK       8
-+#define NAME_MAXLEN   48
-+#define PANEL_WIDTH   760
-+#define PANEL_HEIGHT  470
-+#define QAPP_HEADER_HEIGHT  64
+@@ -28,6 +28,7 @@
+ #define PANEL_WIDTH   760
+ #define PANEL_HEIGHT  470
+ #define QAPP_HEADER_HEIGHT  64
 +#define DESKTOP_FONT_CACHE_GLYPHS 64
-+
-+extern const uint8_t g_desktop_font_start[];
-+extern const uint8_t g_desktop_font_end[];
-+
-+struct qpk_entry_s
-+{
-+  char dir[64];
-+  char name[NAME_MAXLEN];
-+  char package[NAME_MAXLEN];
-+  char version[24];
-+  char entry[64];
-+};
-+
-+struct builtin_qpk_s
-+{
-+  struct qpk_entry_s manifest;
-+  const char *kind;
-+  const char *format;
-+};
-+
-+/* Built-in QPK metadata.  The manifest name is used consistently by the
-+ * launcher list, the full-screen title bar, and app.getInfo().
-+ */
-+
-+static const struct builtin_qpk_s g_builtin_qpk =
-+{
-+  .manifest =
-+    {
-+      .name = "你好快应用",
-+      .package = "com.example.hello",
-+      .version = "1.0.2",
-+      .entry = "builtin:/hello/app.js",
-+    },
-+  .kind = "内置示例",
-+  .format = "QPK 1.0",
-+};
-+
+ 
+ extern const uint8_t g_desktop_font_start[];
+ extern const uint8_t g_desktop_font_end[];
+@@ -65,6 +66,32 @@ static const struct builtin_qpk_s g_builtin_qpk =
+   .format = "QPK 1.0",
+ };
+ 
 +static const struct builtin_qpk_s g_builtin_2048_qpk =
 +{
 +  .manifest =
@@ -509,81 +92,35 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  .format = "QPK 1.0",
 +};
 +
-+struct desktop_env_s
-+{
-+  lv_obj_t *screen;
-+  lv_obj_t *statusbar;
-+  lv_obj_t *clock_label;
-+  lv_obj_t *home_title;
-+  lv_obj_t *home_hint;
-+  lv_obj_t *grid;
-+  lv_obj_t *panel;
-+  lv_obj_t *current_card;
-+  lv_obj_t *toast;
+ struct desktop_env_s
+ {
+   lv_obj_t *screen;
+@@ -76,12 +103,15 @@ struct desktop_env_s
+   lv_obj_t *panel;
+   lv_obj_t *current_card;
+   lv_obj_t *toast;
 +  lv_obj_t *dialog;
 +  lv_timer_t *toast_timer;
-+  lv_font_t *font16;
-+  lv_font_t *font20;
-+  lv_font_t *font28;
-+  struct qpk_entry_s qpk[MAX_QPK];
-+  int nqpk;
-+  bool light_theme;
+   lv_font_t *font16;
+   lv_font_t *font20;
+   lv_font_t *font28;
+   struct qpk_entry_s qpk[MAX_QPK];
+   int nqpk;
+   bool light_theme;
 +  bool settings_rebuild_pending;
-+};
-+
-+static struct desktop_env_s g_desktop;
-+
-+enum builtin_id_e
-+{
-+  APP_SETTINGS = 0,
-+  APP_QPK,
-+  APP_ABOUT
-+};
-+
+ };
+ 
+ static struct desktop_env_s g_desktop;
+@@ -93,6 +123,8 @@ enum builtin_id_e
+   APP_ABOUT
+ };
+ 
 +static void settings_rebuild_async(void *data);
 +
-+static const lv_font_t *zh_font(int size)
-+{
-+  if (size >= 28 && g_desktop.font28 != NULL)
-+    {
-+      return g_desktop.font28;
-+    }
-+
-+  if (size >= 20 && g_desktop.font20 != NULL)
-+    {
-+      return g_desktop.font20;
-+    }
-+
-+  if (g_desktop.font16 != NULL)
-+    {
-+      return g_desktop.font16;
-+    }
-+
-+  return &lv_font_montserrat_24;
-+}
-+
-+static uint32_t theme_primary(void)
-+{
-+  return g_desktop.light_theme ? 0x172033 : 0xffffff;
-+}
-+
-+static uint32_t theme_secondary(void)
-+{
-+  return g_desktop.light_theme ? 0x65708a : 0x8f9bb5;
-+}
-+
-+static uint32_t theme_card(void)
-+{
-+  return g_desktop.light_theme ? 0xf8f9fc : 0x151c2d;
-+}
-+
-+static uint32_t theme_surface(void)
-+{
-+  return g_desktop.light_theme ? 0xe8ebf2 : 0x222b40;
-+}
-+
- static lv_obj_t *make_label(lv_obj_t *parent, const char *text,
-                             uint32_t color, int size)
+ static const lv_font_t *zh_font(int size)
+ {
+   if (size >= 28 && g_desktop.font28 != NULL)
+@@ -138,12 +170,39 @@ static lv_obj_t *make_label(lv_obj_t *parent, const char *text,
  {
    lv_obj_t *label = lv_label_create(parent);
  
@@ -593,248 +130,65 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +    }
 +
    lv_label_set_text(label, text);
--  lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
--  lv_obj_set_style_text_font(label, zh_font(size), 0);
-+  lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
-+  lv_obj_set_style_text_font(label, zh_font(size), 0);
+   lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
+   lv_obj_set_style_text_font(label, zh_font(size), 0);
    return label;
  }
  
--static void json_get_string(const char *json, const char *field,
--                            char *out, size_t outlen)
 +static bool qpk_path_component_valid(const char *text)
- {
--  const char *p;
--  const char *end;
++{
 +  const char *cursor;
- 
--  out[0] = '\0';
--  p = strstr(json, field);
--  if (p == NULL)
++
 +  if (text == NULL || text[0] == '\0' || text[0] == '/' ||
 +      text[0] == '\\')
-     {
--      return;
--    }
--
--  p = strchr(p + strlen(field), ':');
--  if (p == NULL)
--    {
--      return;
--    }
--
--  p = strchr(p, '"');
--  if (p == NULL)
--    {
--      return;
--    }
--
--  p++;
--  end = strchr(p, '"');
--  if (end == NULL)
--    {
--      return;
++    {
 +      return false;
-     }
- 
--  if ((size_t)(end - p) >= outlen)
++    }
++
 +  for (cursor = text; *cursor != '\0'; cursor++)
-     {
--      end = p + outlen - 1;
++    {
 +      if (*cursor == ':' || *cursor == '\\' || *cursor == '/' ||
 +          (*cursor == '.' && cursor[1] == '.'))
 +        {
 +          return false;
 +        }
-     }
- 
--  memcpy(out, p, end - p);
--  out[end - p] = '\0';
++    }
++
 +  return true;
- }
--
--static bool qpk_probe(const char *dirpath, struct qpk_entry_s *entry)
--{
--  char path[192];
--  FILE *fp;
--  char buf[1024];
--  size_t n;
--
--  if (snprintf(path, sizeof(path), "%s/manifest.json", dirpath) >=
--      sizeof(path))
--    {
--      return false;
--    }
--
--  fp = fopen(path, "r");
--  if (fp == NULL)
-+
-+static void json_get_string(const char *json, const char *field,
-+                            char *out, size_t outlen)
-+{
-+  const char *p;
-+  const char *end;
-+
-+  out[0] = '\0';
-+  p = strstr(json, field);
-+  if (p == NULL)
-+    {
-+      return;
-+    }
-+
-+  p = strchr(p + strlen(field), ':');
-+  if (p == NULL)
-+    {
-+      return;
-+    }
-+
-+  p = strchr(p, '"');
-+  if (p == NULL)
-+    {
-+      return;
-+    }
-+
-+  p++;
-+  end = strchr(p, '"');
-+  if (end == NULL)
-+    {
-+      return;
-+    }
-+
-+  if ((size_t)(end - p) >= outlen)
-+    {
-+      end = p + outlen - 1;
-+    }
-+
-+  memcpy(out, p, end - p);
-+  out[end - p] = '\0';
 +}
 +
-+static bool qpk_probe(const char *dirpath, struct qpk_entry_s *entry)
-+{
-+  char path[192];
-+  FILE *fp;
-+  char buf[1024];
-+  size_t n;
-+
-+  if (snprintf(path, sizeof(path), "%s/manifest.json", dirpath) >=
-+      sizeof(path))
-+    {
-+      return false;
-+    }
-+
-+  fp = fopen(path, "r");
-+  if (fp == NULL)
-+    {
-+      return false;
-+    }
-+
-+  n = fread(buf, 1, sizeof(buf) - 1, fp);
-+  if (ferror(fp) || fclose(fp) != 0)
-     {
-       return false;
+ static void json_get_string(const char *json, const char *field,
+                             char *out, size_t outlen)
+ {
+@@ -205,7 +264,11 @@ static bool qpk_probe(const char *dirpath, struct qpk_entry_s *entry)
      }
  
--  n = fread(buf, 1, sizeof(buf) - 1, fp);
+   n = fread(buf, 1, sizeof(buf) - 1, fp);
 -  fclose(fp);
--  buf[n] = '\0';
--
--  json_get_string(buf, "\"name\"", entry->name, sizeof(entry->name));
--  json_get_string(buf, "\"package\"", entry->package,
--                  sizeof(entry->package));
-+  buf[n] = '\0';
++  if (ferror(fp) || fclose(fp) != 0)
++    {
++      return false;
++    }
 +
-+  json_get_string(buf, "\"name\"", entry->name, sizeof(entry->name));
-+  json_get_string(buf, "\"package\"", entry->package,
-+                  sizeof(entry->package));
+   buf[n] = '\0';
+ 
+   json_get_string(buf, "\"name\"", entry->name, sizeof(entry->name));
+@@ -214,7 +277,10 @@ static bool qpk_probe(const char *dirpath, struct qpk_entry_s *entry)
    json_get_string(buf, "\"versionName\"", entry->version,
                    sizeof(entry->version));
    json_get_string(buf, "\"entry\"", entry->entry, sizeof(entry->entry));
 -  return entry->name[0] != '\0';
--}
--
--static void qpk_scan(void)
--{
--  DIR *dp;
--  struct dirent *ent;
--  char path[192];
--  struct stat st;
--
--  g_desktop.nqpk = 0;
--  dp = opendir(QPK_DIR);
--  if (dp == NULL)
 +  return entry->name[0] != '\0' &&
 +         qpk_path_component_valid(entry->package) &&
 +         (entry->entry[0] == '\0' ||
 +          qpk_path_component_valid(entry->entry));
-+}
-+
-+static void qpk_scan(void)
-+{
-+  DIR *dp;
-+  struct dirent *ent;
-+  char path[192];
-+  struct stat st;
-+
-+  g_desktop.nqpk = 0;
-+  dp = opendir(QPK_DIR);
-+  if (dp == NULL)
-+    {
-+      return;
-+    }
-+
-+  while ((ent = readdir(dp)) != NULL && g_desktop.nqpk < MAX_QPK)
-+    {
-+      struct qpk_entry_s *qpk = &g_desktop.qpk[g_desktop.nqpk];
-+
-+      if (ent->d_name[0] == '.' ||
-+          snprintf(path, sizeof(path), "%s/%s", QPK_DIR, ent->d_name) >=
-+          sizeof(path) || stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
-+        {
-+          continue;
-+        }
-+
-+      memset(qpk, 0, sizeof(*qpk));
-+      if (!qpk_probe(path, qpk))
-+        {
-+          continue;
-+        }
-+
-+      strlcpy(qpk->dir, ent->d_name, sizeof(qpk->dir));
-+      g_desktop.nqpk++;
-+    }
-+
-+  closedir(dp);
-+}
-+
-+static void apply_theme(void)
-+{
-+  uint32_t screen = g_desktop.light_theme ? 0xf3f5fa : 0x090d18;
-+  uint32_t bar = g_desktop.light_theme ? 0xffffff : 0x11182a;
-+  uint32_t tile = g_desktop.light_theme ? 0xffffff : 0x202940;
-+  uint32_t primary = g_desktop.light_theme ? 0x172033 : 0xffffff;
-+  uint32_t secondary = g_desktop.light_theme ? 0x65708a : 0x8793ad;
-+  int i;
-+
-+  lv_obj_set_style_bg_color(g_desktop.screen, lv_color_hex(screen), 0);
-+  lv_obj_set_style_bg_color(g_desktop.statusbar, lv_color_hex(bar), 0);
-+  lv_obj_set_style_text_color(g_desktop.clock_label,
-+                              lv_color_hex(primary), 0);
-+  lv_obj_set_style_text_color(g_desktop.home_title,
-+                              lv_color_hex(primary), 0);
-+  lv_obj_set_style_text_color(g_desktop.home_hint,
-+                              lv_color_hex(secondary), 0);
-+  for (i = 0; i < lv_obj_get_child_count(g_desktop.grid); i++)
-+    {
-+      lv_obj_t *child = lv_obj_get_child(g_desktop.grid, i);
-+      lv_obj_set_style_bg_color(child, lv_color_hex(tile), 0);
-+      lv_obj_set_style_text_color(lv_obj_get_child(child, 1),
-+                                  lv_color_hex(primary), 0);
-+      lv_obj_set_style_text_color(lv_obj_get_child(child, 2),
-+                                  lv_color_hex(secondary), 0);
-+    }
-+}
-+
+ }
+ 
+ static void qpk_scan(void)
+@@ -283,10 +349,53 @@ static void apply_theme(void)
+     }
+ }
+ 
 +static void toast_cancel(void)
 +{
 +  lv_timer_t *timer = g_desktop.toast_timer;
@@ -877,206 +231,94 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +    }
 +}
 +
-+static void panel_hide(lv_event_t *e)
-+{
-+  LV_UNUSED(e);
-+  qpk_runtime_stop();
+ static void panel_hide(lv_event_t *e)
+ {
+   LV_UNUSED(e);
+   qpk_runtime_stop();
 +  desktop_transients_reset();
-+  lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
-+  g_desktop.current_card = NULL;
-+}
-+
-+static lv_obj_t *panel_card(const char *title)
-+{
-+  lv_obj_t *card;
-+  lv_obj_t *close;
-+  lv_obj_t *label;
-+
-+  qpk_runtime_stop();
+   lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
+   g_desktop.current_card = NULL;
+ }
+@@ -298,6 +407,7 @@ static lv_obj_t *panel_card(const char *title)
+   lv_obj_t *label;
+ 
+   qpk_runtime_stop();
 +  desktop_transients_reset();
-+  lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
-+  lv_obj_clean(g_desktop.panel);
-+  lv_obj_set_style_bg_color(g_desktop.panel, lv_color_hex(0x000000), 0);
-+  lv_obj_set_style_bg_opa(g_desktop.panel, LV_OPA_70, 0);
-+  lv_obj_set_style_pad_all(g_desktop.panel, 0, 0);
-+
-+  card = lv_obj_create(g_desktop.panel);
+   lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
+   lv_obj_clean(g_desktop.panel);
+   lv_obj_set_style_bg_color(g_desktop.panel, lv_color_hex(0x000000), 0);
+@@ -305,6 +415,11 @@ static lv_obj_t *panel_card(const char *title)
+   lv_obj_set_style_pad_all(g_desktop.panel, 0, 0);
+ 
+   card = lv_obj_create(g_desktop.panel);
 +  if (card == NULL)
-     {
--      return;
++    {
 +      return NULL;
-     }
- 
--  while ((ent = readdir(dp)) != NULL && g_desktop.nqpk < MAX_QPK)
-+  g_desktop.current_card = card;
-+  lv_obj_set_size(card, PANEL_WIDTH, PANEL_HEIGHT);
-+  lv_obj_center(card);
-+  lv_obj_set_style_bg_color(card, lv_color_hex(theme_card()), 0);
-+  lv_obj_set_style_border_color(card,
-+                                lv_color_hex(g_desktop.light_theme ?
-+                                             0xcbd1dd : 0x35415e), 0);
-+  lv_obj_set_style_radius(card, 22, 0);
-+  lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
++    }
 +
-+  label = make_label(card, title, theme_primary(), 28);
+   g_desktop.current_card = card;
+   lv_obj_set_size(card, PANEL_WIDTH, PANEL_HEIGHT);
+   lv_obj_center(card);
+@@ -316,14 +431,35 @@ static lv_obj_t *panel_card(const char *title)
+   lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+ 
+   label = make_label(card, title, theme_primary(), 28);
 +  if (label == NULL)
-     {
--      struct qpk_entry_s *qpk = &g_desktop.qpk[g_desktop.nqpk];
--
--      if (ent->d_name[0] == '.' ||
--          snprintf(path, sizeof(path), "%s/%s", QPK_DIR, ent->d_name) >=
--          sizeof(path) || stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
--        {
--          continue;
--        }
--
--      memset(qpk, 0, sizeof(*qpk));
--      if (!qpk_probe(path, qpk))
--        {
--          continue;
--        }
--
--      strlcpy(qpk->dir, ent->d_name, sizeof(qpk->dir));
--      g_desktop.nqpk++;
++    {
 +      lv_obj_delete(card);
 +      g_desktop.current_card = NULL;
 +      return NULL;
-     }
- 
--  closedir(dp);
--}
--
--static void apply_theme(void)
--{
--  uint32_t screen = g_desktop.light_theme ? 0xf3f5fa : 0x090d18;
--  uint32_t bar = g_desktop.light_theme ? 0xffffff : 0x11182a;
--  uint32_t tile = g_desktop.light_theme ? 0xffffff : 0x202940;
--  uint32_t primary = g_desktop.light_theme ? 0x172033 : 0xffffff;
--  uint32_t secondary = g_desktop.light_theme ? 0x65708a : 0x8793ad;
--  int i;
--
--  lv_obj_set_style_bg_color(g_desktop.screen, lv_color_hex(screen), 0);
--  lv_obj_set_style_bg_color(g_desktop.statusbar, lv_color_hex(bar), 0);
--  lv_obj_set_style_text_color(g_desktop.clock_label,
--                              lv_color_hex(primary), 0);
--  lv_obj_set_style_text_color(g_desktop.home_title,
--                              lv_color_hex(primary), 0);
--  lv_obj_set_style_text_color(g_desktop.home_hint,
--                              lv_color_hex(secondary), 0);
--  for (i = 0; i < lv_obj_get_child_count(g_desktop.grid); i++)
-+  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 22, 14);
++    }
 +
-+  close = lv_button_create(card);
+   lv_obj_align(label, LV_ALIGN_TOP_LEFT, 22, 14);
+ 
+   close = lv_button_create(card);
 +  if (close == NULL)
-     {
--      lv_obj_t *child = lv_obj_get_child(g_desktop.grid, i);
--      lv_obj_set_style_bg_color(child, lv_color_hex(tile), 0);
--      lv_obj_set_style_text_color(lv_obj_get_child(child, 1),
--                                  lv_color_hex(primary), 0);
--      lv_obj_set_style_text_color(lv_obj_get_child(child, 2),
--                                  lv_color_hex(secondary), 0);
++    {
 +      lv_obj_delete(card);
 +      g_desktop.current_card = NULL;
 +      return NULL;
-     }
--}
--
--static void panel_hide(lv_event_t *e)
--{
--  LV_UNUSED(e);
--  qpk_runtime_stop();
--  lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
--  g_desktop.current_card = NULL;
--}
--
--static lv_obj_t *panel_card(const char *title)
--{
--  lv_obj_t *card;
--  lv_obj_t *close;
--  lv_obj_t *label;
--
--  qpk_runtime_stop();
--  lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
--  lv_obj_clean(g_desktop.panel);
--  lv_obj_set_style_bg_color(g_desktop.panel, lv_color_hex(0x000000), 0);
--  lv_obj_set_style_bg_opa(g_desktop.panel, LV_OPA_70, 0);
--  lv_obj_set_style_pad_all(g_desktop.panel, 0, 0);
--
--  card = lv_obj_create(g_desktop.panel);
--  g_desktop.current_card = card;
--  lv_obj_set_size(card, PANEL_WIDTH, PANEL_HEIGHT);
--  lv_obj_center(card);
--  lv_obj_set_style_bg_color(card, lv_color_hex(theme_card()), 0);
--  lv_obj_set_style_border_color(card,
--                                lv_color_hex(g_desktop.light_theme ?
--                                             0xcbd1dd : 0x35415e), 0);
--  lv_obj_set_style_radius(card, 22, 0);
--  lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
--
--  label = make_label(card, title, theme_primary(), 28);
--  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 22, 14);
- 
--  close = lv_button_create(card);
--  lv_obj_set_size(close, 54, 42);
--  lv_obj_align(close, LV_ALIGN_TOP_RIGHT, -12, -4);
--  lv_obj_set_style_bg_color(close, lv_color_hex(theme_surface()), 0);
--  lv_obj_add_event_cb(close, panel_hide, LV_EVENT_CLICKED, NULL);
-+  lv_obj_set_size(close, 54, 42);
-+  lv_obj_align(close, LV_ALIGN_TOP_RIGHT, -12, -4);
-+  lv_obj_set_style_bg_color(close, lv_color_hex(theme_surface()), 0);
-+  lv_obj_add_event_cb(close, panel_hide, LV_EVENT_CLICKED, NULL);
++    }
++
+   lv_obj_set_size(close, 54, 42);
+   lv_obj_align(close, LV_ALIGN_TOP_RIGHT, -12, -4);
+   lv_obj_set_style_bg_color(close, lv_color_hex(theme_surface()), 0);
+   lv_obj_add_event_cb(close, panel_hide, LV_EVENT_CLICKED, NULL);
    label = lv_label_create(close);
--  lv_label_set_text(label, LV_SYMBOL_CLOSE);
--  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
--  lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
--  lv_obj_center(label);
--  return card;
--}
--
--static void toast_delete_cb(lv_timer_t *timer)
--{
--  if (g_desktop.toast != NULL)
 +  if (label == NULL)
++    {
++      lv_obj_delete(card);
++      g_desktop.current_card = NULL;
++      return NULL;
++    }
++
+   lv_label_set_text(label, LV_SYMBOL_CLOSE);
+   lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
+@@ -333,10 +469,16 @@ static lv_obj_t *panel_card(const char *title)
+ 
+ static void toast_delete_cb(lv_timer_t *timer)
+ {
+-  if (g_desktop.toast != NULL)
++  if (g_desktop.toast_timer == timer)
      {
 -      lv_obj_delete(g_desktop.toast);
--      g_desktop.toast = NULL;
-+      lv_obj_delete(card);
-+      g_desktop.current_card = NULL;
-+      return NULL;
-     }
- 
--  lv_timer_delete(timer);
--}
--
--static void show_toast(const char *text)
--{
--  if (g_desktop.toast != NULL)
-+  lv_label_set_text(label, LV_SYMBOL_CLOSE);
-+  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
-+  lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
-+  lv_obj_center(label);
-+  return card;
-+}
-+
-+static void toast_delete_cb(lv_timer_t *timer)
-+{
-+  if (g_desktop.toast_timer == timer)
-+    {
 +      lv_obj_t *toast = g_desktop.toast;
 +
 +      g_desktop.toast_timer = NULL;
-+      g_desktop.toast = NULL;
+       g_desktop.toast = NULL;
 +      if (toast != NULL)
 +        {
 +          lv_obj_delete(toast);
 +        }
-+    }
-+
-+  lv_timer_delete(timer);
-+}
-+
-+static void show_toast(const char *text)
-+{
+     }
+ 
+   lv_timer_delete(timer);
+@@ -344,26 +486,36 @@ static void toast_delete_cb(lv_timer_t *timer)
+ 
+ static void show_toast(const char *text)
+ {
+-  if (g_desktop.toast != NULL)
 +  toast_cancel();
 +
 +  g_desktop.toast = make_label(g_desktop.panel, text, 0xffffff, 20);
@@ -1087,79 +329,38 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
      }
  
 -  g_desktop.toast = make_label(g_desktop.panel, text, 0xffffff, 20);
--  lv_obj_set_style_bg_color(g_desktop.toast, lv_color_hex(0x30394f), 0);
--  lv_obj_set_style_bg_opa(g_desktop.toast, LV_OPA_COVER, 0);
--  lv_obj_set_style_radius(g_desktop.toast, 12, 0);
--  lv_obj_set_style_pad_hor(g_desktop.toast, 22, 0);
--  lv_obj_set_style_pad_ver(g_desktop.toast, 12, 0);
--  lv_obj_align(g_desktop.toast, LV_ALIGN_BOTTOM_MID, 0, -34);
+   lv_obj_set_style_bg_color(g_desktop.toast, lv_color_hex(0x30394f), 0);
+   lv_obj_set_style_bg_opa(g_desktop.toast, LV_OPA_COVER, 0);
+   lv_obj_set_style_radius(g_desktop.toast, 12, 0);
+   lv_obj_set_style_pad_hor(g_desktop.toast, 22, 0);
+   lv_obj_set_style_pad_ver(g_desktop.toast, 12, 0);
+   lv_obj_align(g_desktop.toast, LV_ALIGN_BOTTOM_MID, 0, -34);
 -  lv_timer_create(toast_delete_cb, 1600, NULL);
--}
--
--static const char g_hello_qpk_js[] =
-+  lv_obj_set_style_bg_color(g_desktop.toast, lv_color_hex(0x30394f), 0);
-+  lv_obj_set_style_bg_opa(g_desktop.toast, LV_OPA_COVER, 0);
-+  lv_obj_set_style_radius(g_desktop.toast, 12, 0);
-+  lv_obj_set_style_pad_hor(g_desktop.toast, 22, 0);
-+  lv_obj_set_style_pad_ver(g_desktop.toast, 12, 0);
-+  lv_obj_align(g_desktop.toast, LV_ALIGN_BOTTOM_MID, 0, -34);
 +  g_desktop.toast_timer = lv_timer_create(toast_delete_cb, 1600, NULL);
 +  if (g_desktop.toast_timer == NULL)
 +    {
 +      toast_cancel();
 +    }
-+}
-+
-+static const char g_hello_qpk_js[] =
-+  "'use strict';\n"
-+  "const info = app.getInfo();\n"
+ }
+ 
+ static const char g_hello_qpk_js[] =
+   "'use strict';\n"
+   "const info = app.getInfo();\n"
 +  "let launches = Number(system.storage.get('launches') || 0) + 1;\n"
 +  "system.storage.set('launches', String(launches));\n"
-+  "ui.text(info.packageName + '  v' + info.versionName, 24, 60, 16, ui.secondary);\n"
-+  "ui.text(info.name, 472, 92, 28, ui.primary);\n"
+   "ui.text(info.packageName + '  v' + info.versionName, 24, 60, 16, ui.secondary);\n"
+   "ui.text(info.name, 472, 92, 28, ui.primary);\n"
 +  "ui.number(String(launches), 472, 126, 120, 48, ui.primary);\n"
 +  "ui.text('本次启动次数', 606, 142, 16, ui.secondary);\n"
-+  "ui.button('Toast 提示', 362, 150, 300, 54, () => {\n"
-+  "  prompt.showToast({message: '来自真正 QuickJS QPK 的问候'});\n"
-+  "}, 0x6677f5);\n"
-+  "ui.button('对话框', 362, 218, 300, 54, () => {\n"
-+  "  prompt.dialog({title: 'QPK 运行时',\n"
-+  "    message: '界面由 JavaScript 创建，事件由 QuickJS 执行。'});\n"
-+  "}, ui.surface);\n"
-+  "let secs = 0;\n"
-+  "const tick = ui.text('已运行 0 秒', 456, 338, 16, ui.secondary);\n"
-+  "setInterval(() => { secs++; ui.setText(tick, '已运行 ' + secs + ' 秒'); }, 1000);\n"
-+  "console.log('hello QPK initialized');\n";
-+
+   "ui.button('Toast 提示', 362, 150, 300, 54, () => {\n"
+   "  prompt.showToast({message: '来自真正 QuickJS QPK 的问候'});\n"
+   "}, 0x6677f5);\n"
+@@ -376,9 +528,132 @@ static const char g_hello_qpk_js[] =
+   "setInterval(() => { secs++; ui.setText(tick, '已运行 ' + secs + ' 秒'); }, 1000);\n"
+   "console.log('hello QPK initialized');\n";
+ 
 +static const char g_2048_qpk_js[] =
-   "'use strict';\n"
--  "const info = app.getInfo();\n"
--  "ui.text(info.packageName + '  v' + info.versionName, 24, 60, 16, ui.secondary);\n"
--  "ui.text(info.name, 472, 92, 28, ui.primary);\n"
--  "ui.button('Toast 提示', 362, 150, 300, 54, () => {\n"
--  "  prompt.showToast({message: '来自真正 QuickJS QPK 的问候'});\n"
--  "}, 0x6677f5);\n"
--  "ui.button('对话框', 362, 218, 300, 54, () => {\n"
--  "  prompt.dialog({title: 'QPK 运行时',\n"
--  "    message: '界面由 JavaScript 创建，事件由 QuickJS 执行。'});\n"
--  "}, ui.surface);\n"
--  "let secs = 0;\n"
--  "const tick = ui.text('已运行 0 秒', 456, 338, 16, ui.secondary);\n"
--  "setInterval(() => { secs++; ui.setText(tick, '已运行 ' + secs + ' 秒'); }, 1000);\n"
--  "console.log('hello QPK initialized');\n";
--
--static void qpk_dialog_close(lv_event_t *e)
--{
--  lv_obj_delete(lv_event_get_user_data(e));
--}
--
--static void qpk_show_dialog(const char *text)
--{
--  lv_obj_t *shade;
--  lv_obj_t *box;
--  lv_obj_t *button;
--  lv_obj_t *label;
--
++  "'use strict';\n"
 +  "const viewport = ui.getSize();\n"
 +  "const W = viewport.width, H = viewport.height;\n"
 +  "const controlsY = H - 48;\n"
@@ -1274,8 +475,9 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  "ui.onSwipe(function (direction) { move(direction); });\n"
 +  "reset();\n";
 +
-+static void qpk_dialog_close(lv_event_t *e)
-+{
+ static void qpk_dialog_close(lv_event_t *e)
+ {
+-  lv_obj_delete(lv_event_get_user_data(e));
 +  lv_obj_t *shade = lv_event_get_user_data(e);
 +
 +  if (g_desktop.dialog == shade)
@@ -1284,482 +486,148 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +    }
 +
 +  lv_obj_delete(shade);
-+}
-+
-+static void qpk_show_dialog(const char *text)
-+{
-+  lv_obj_t *shade;
-+  lv_obj_t *box;
-+  lv_obj_t *button;
-+  lv_obj_t *label;
-+
+ }
+ 
+ static void qpk_show_dialog(const char *text)
+@@ -388,25 +663,56 @@ static void qpk_show_dialog(const char *text)
+   lv_obj_t *button;
+   lv_obj_t *label;
+ 
 +  dialog_cancel();
    shade = lv_obj_create(g_desktop.panel);
--  lv_obj_set_size(shade, lv_pct(100), lv_pct(100));
--  lv_obj_set_style_bg_color(shade, lv_color_hex(0x000000), 0);
--  lv_obj_set_style_bg_opa(shade, LV_OPA_70, 0);
 +  if (shade == NULL)
 +    {
 +      return;
 +    }
 +
 +  g_desktop.dialog = shade;
-+  lv_obj_set_size(shade, lv_pct(100), lv_pct(100));
-+  lv_obj_set_style_bg_color(shade, lv_color_hex(0x000000), 0);
-+  lv_obj_set_style_bg_opa(shade, LV_OPA_70, 0);
+   lv_obj_set_size(shade, lv_pct(100), lv_pct(100));
+   lv_obj_set_style_bg_color(shade, lv_color_hex(0x000000), 0);
+   lv_obj_set_style_bg_opa(shade, LV_OPA_70, 0);
    lv_obj_set_style_border_width(shade, 0, 0);
    box = lv_obj_create(shade);
--  lv_obj_set_size(box, 500, 240);
--  lv_obj_center(box);
--  lv_obj_set_style_bg_color(box, lv_color_hex(theme_card()), 0);
 +  if (box == NULL)
 +    {
 +      dialog_cancel();
 +      return;
 +    }
 +
-+  lv_obj_set_size(box, 500, 240);
-+  lv_obj_center(box);
-+  lv_obj_set_style_bg_color(box, lv_color_hex(theme_card()), 0);
+   lv_obj_set_size(box, 500, 240);
+   lv_obj_center(box);
+   lv_obj_set_style_bg_color(box, lv_color_hex(theme_card()), 0);
    lv_obj_set_style_radius(box, 18, 0);
    label = make_label(box, text ? text : "快应用", theme_primary(), 20);
--  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
--  lv_obj_set_width(label, 440);
 +  if (label == NULL)
 +    {
 +      dialog_cancel();
 +      return;
 +    }
 +
-+  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
-+  lv_obj_set_width(label, 440);
+   lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+   lv_obj_set_width(label, 440);
    lv_obj_align(label, LV_ALIGN_TOP_LEFT, 12, 12);
    button = lv_button_create(box);
--  lv_obj_set_size(button, 96, 42);
--  lv_obj_align(button, LV_ALIGN_BOTTOM_RIGHT, -8, -8);
 +  if (button == NULL)
 +    {
 +      dialog_cancel();
 +      return;
 +    }
 +
-+  lv_obj_set_size(button, 96, 42);
-+  lv_obj_align(button, LV_ALIGN_BOTTOM_RIGHT, -8, -8);
+   lv_obj_set_size(button, 96, 42);
+   lv_obj_align(button, LV_ALIGN_BOTTOM_RIGHT, -8, -8);
    lv_obj_add_event_cb(button, qpk_dialog_close, LV_EVENT_CLICKED, shade);
    label = make_label(button, "确定", 0xffffff, 20);
--  lv_obj_center(label);
--}
--
--static char *qpk_load_entry(const struct qpk_entry_s *qpk,
--                            char *filename, size_t filename_size,
--                            size_t *source_size)
--{
--  static const char *patterns[] = {"%s/%s/%s", "%s/%s/%s.js",
--                                   "%s/%s/%s/index.js"};
--  FILE *file;
--  char *source;
--  long size;
--  size_t got;
--  int i;
--
--  for (i = 0; i < 3; i++)
 +  if (label == NULL)
-     {
--      if (snprintf(filename, filename_size, patterns[i], QPK_DIR, qpk->dir,
--                   qpk->entry[0] ? qpk->entry : "app.js") >= filename_size)
--        {
--          continue;
--        }
--
--      file = fopen(filename, "rb");
--      if (file == NULL)
--        {
--          continue;
--        }
--
--      if (fseek(file, 0, SEEK_END) < 0 || (size = ftell(file)) <= 0 ||
--          size > 128 * 1024 || fseek(file, 0, SEEK_SET) < 0)
--        {
--          fclose(file);
--          continue;
--        }
--
--      source = malloc((size_t)size + 1);
--      if (source == NULL)
--        {
--          fclose(file);
--          return NULL;
--        }
--
--      got = fread(source, 1, (size_t)size, file);
--      fclose(file);
--      if (got != (size_t)size)
--        {
--          free(source);
--          continue;
--        }
--
--      source[got] = '\0';
--      *source_size = got;
--      return source;
++    {
 +      dialog_cancel();
 +      return;
-     }
++    }
++
+   lv_obj_center(label);
+ }
  
--  return NULL;
--}
--
--static void qpk_clicked(lv_event_t *e);
--
--static void qapp_back(lv_event_t *e)
--{
--  LV_UNUSED(e);
--  qpk_runtime_stop();
--  qpk_clicked(NULL);
--}
--
+@@ -475,7 +781,7 @@ static void qapp_back(lv_event_t *e)
+   qpk_clicked(NULL);
+ }
+ 
 -static lv_obj_t *qapp_page(const char *title)
--{
--  lv_obj_t *page;
--  lv_obj_t *content;
--  lv_obj_t *back;
--  lv_obj_t *label;
--  int height;
--
--  qpk_runtime_stop();
--  lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
++static lv_obj_t *qapp_page_prepare(const char *title)
+ {
+   lv_obj_t *page;
+   lv_obj_t *content;
+@@ -484,15 +790,16 @@ static lv_obj_t *qapp_page(const char *title)
+   int height;
+ 
+   qpk_runtime_stop();
++  desktop_transients_reset();
+   lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
 -  lv_obj_clean(g_desktop.panel);
 -  lv_obj_set_style_bg_color(g_desktop.panel,
 -                            lv_color_hex(theme_card()), 0);
 -  lv_obj_set_style_bg_opa(g_desktop.panel, LV_OPA_COVER, 0);
 -  lv_obj_set_style_pad_all(g_desktop.panel, 0, 0);
--
--  page = lv_obj_create(g_desktop.panel);
+ 
+   page = lv_obj_create(g_desktop.panel);
 -  g_desktop.current_card = page;
--  lv_obj_set_size(page, lv_pct(100), lv_pct(100));
--  lv_obj_set_style_bg_color(page, lv_color_hex(theme_card()), 0);
--  lv_obj_set_style_border_width(page, 0, 0);
--  lv_obj_set_style_radius(page, 0, 0);
--  lv_obj_set_style_pad_all(page, 0, 0);
--  lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
--
--  back = lv_button_create(page);
--  lv_obj_set_size(back, 52, 42);
--  lv_obj_set_pos(back, 12, 10);
--  lv_obj_set_style_bg_color(back, lv_color_hex(theme_surface()), 0);
--  lv_obj_set_style_radius(back, 12, 0);
--  lv_obj_add_event_cb(back, qapp_back, LV_EVENT_CLICKED, NULL);
--  label = lv_label_create(back);
--  lv_label_set_text(label, LV_SYMBOL_LEFT);
--  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
--  lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
-   lv_obj_center(label);
--
--  label = make_label(page, title, theme_primary(), 28);
--  lv_obj_set_pos(label, 78, 15);
--
--  content = lv_obj_create(page);
--  lv_obj_update_layout(page);
--  height = lv_obj_get_height(page) - QAPP_HEADER_HEIGHT;
--  lv_obj_set_size(content, lv_pct(100), height);
--  lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
--  lv_obj_set_style_bg_opa(content, LV_OPA_TRANSP, 0);
--  lv_obj_set_style_border_width(content, 0, 0);
--  lv_obj_set_style_radius(content, 0, 0);
--  lv_obj_set_style_pad_all(content, 0, 0);
--  lv_obj_remove_flag(content, LV_OBJ_FLAG_SCROLLABLE);
--
--  return content;
--}
--
--static void launch_builtin_qapp(lv_event_t *e)
--{
--  lv_obj_t *card;
--  const struct qpk_entry_s *manifest = &g_builtin_qpk.manifest;
--
--  LV_UNUSED(e);
--  card = qapp_page(manifest->name);
--  qpk_runtime_launch(card, manifest->name, manifest->package,
--                     manifest->version, manifest->entry, g_hello_qpk_js,
--                     sizeof(g_hello_qpk_js) - 1, zh_font, show_toast,
--                     qpk_show_dialog);
- }
--
--static void external_qapp_clicked(lv_event_t *e)
--{
--  intptr_t index = (intptr_t)lv_event_get_user_data(e);
--  struct qpk_entry_s *qpk;
--  lv_obj_t *card;
--  lv_obj_t *label;
--  char *source;
--  char filename[256];
--  char text[256];
--  size_t source_size = 0;
--
--  if (index < 0 || index >= g_desktop.nqpk)
-+
-+static char *qpk_load_entry(const struct qpk_entry_s *qpk,
-+                            char *filename, size_t filename_size,
-+                            size_t *source_size)
-+{
-+  static const char *patterns[] = {"%s/%s/%s", "%s/%s/%s.js",
-+                                   "%s/%s/%s/index.js"};
-+  FILE *file;
-+  char *source;
-+  long size;
-+  size_t got;
-+  int i;
-+
-+  for (i = 0; i < 3; i++)
++  if (page == NULL)
 +    {
-+      if (snprintf(filename, filename_size, patterns[i], QPK_DIR, qpk->dir,
-+                   qpk->entry[0] ? qpk->entry : "app.js") >= filename_size)
-+        {
-+          continue;
-+        }
-+
-+      file = fopen(filename, "rb");
-+      if (file == NULL)
-+        {
-+          continue;
-+        }
-+
-+      if (fseek(file, 0, SEEK_END) < 0 || (size = ftell(file)) <= 0 ||
-+          size > 128 * 1024 || fseek(file, 0, SEEK_SET) < 0)
-+        {
-+          fclose(file);
-+          continue;
-+        }
-+
-+      source = malloc((size_t)size + 1);
-+      if (source == NULL)
-+        {
-+          fclose(file);
-+          return NULL;
-+        }
-+
-+      got = fread(source, 1, (size_t)size, file);
-+      fclose(file);
-+      if (got != (size_t)size)
-+        {
-+          free(source);
-+          continue;
-+        }
-+
-+      source[got] = '\0';
-+      *source_size = got;
-+      return source;
++      return NULL;
 +    }
 +
-+  return NULL;
-+}
-+
-+static void qpk_clicked(lv_event_t *e);
-+
-+static void qapp_back(lv_event_t *e)
-+{
-+  LV_UNUSED(e);
-+  qpk_runtime_stop();
-+  qpk_clicked(NULL);
-+}
-+
-+static lv_obj_t *qapp_page_prepare(const char *title)
-+{
-+  lv_obj_t *page;
-+  lv_obj_t *content;
-+  lv_obj_t *back;
-+  lv_obj_t *label;
-+  int height;
-+
-+  qpk_runtime_stop();
-+  desktop_transients_reset();
-+  lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
-+
-+  page = lv_obj_create(g_desktop.panel);
-+  if (page == NULL)
-     {
--      return;
-+      return NULL;
-     }
- 
--  qpk = &g_desktop.qpk[index];
--  card = qapp_page(qpk->name);
--  source = qpk_load_entry(qpk, filename, sizeof(filename), &source_size);
--  if (source != NULL)
 +  lv_obj_set_style_opa(page, LV_OPA_TRANSP, 0);
-+  lv_obj_set_size(page, lv_pct(100), lv_pct(100));
-+  lv_obj_set_style_bg_color(page, lv_color_hex(theme_card()), 0);
-+  lv_obj_set_style_border_width(page, 0, 0);
-+  lv_obj_set_style_radius(page, 0, 0);
-+  lv_obj_set_style_pad_all(page, 0, 0);
-+  lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
-+
-+  back = lv_button_create(page);
+   lv_obj_set_size(page, lv_pct(100), lv_pct(100));
+   lv_obj_set_style_bg_color(page, lv_color_hex(theme_card()), 0);
+   lv_obj_set_style_border_width(page, 0, 0);
+@@ -501,21 +808,45 @@ static lv_obj_t *qapp_page(const char *title)
+   lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
+ 
+   back = lv_button_create(page);
 +  if (back == NULL)
-     {
--      int ret = qpk_runtime_launch(card, qpk->name, qpk->package,
--                                   qpk->version, filename, source,
--                                   source_size, zh_font, show_toast,
--                                   qpk_show_dialog);
--      free(source);
--      if (ret == 0)
--        {
--          return;
--        }
++    {
 +      lv_obj_delete(page);
 +      return NULL;
-     }
- 
--  snprintf(text, sizeof(text),
--           "包名：%s\n版本：%s\n入口：%s\n目录：%s/%s\n\n"
--           "无法加载 JavaScript 入口。当前运行时支持 .js QPK；"
--           "MicroReactor 风格 .ux 解析器将在下一阶段接入。",
--           qpk->package[0] ? qpk->package : "未声明",
--           qpk->version[0] ? qpk->version : "未声明",
--           qpk->entry[0] ? qpk->entry : "未声明", QPK_DIR, qpk->dir);
--  label = make_label(card, text, theme_secondary(), 20);
--  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
--  lv_obj_set_width(label, 690);
--  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 24, 76);
--}
--
--static lv_obj_t *list_button(lv_obj_t *parent, const char *title,
--                             const char *subtitle, int y,
--                             lv_event_cb_t cb, void *user)
--{
--  lv_obj_t *button = lv_button_create(parent);
--  lv_obj_t *label;
--
--  lv_obj_set_size(button, 690, 72);
--  lv_obj_align(button, LV_ALIGN_TOP_MID, 0, y);
--  lv_obj_set_style_bg_color(button, lv_color_hex(theme_surface()), 0);
--  lv_obj_set_style_radius(button, 14, 0);
--  lv_obj_add_event_cb(button, cb, LV_EVENT_CLICKED, user);
--  label = make_label(button, title, theme_primary(), 20);
--  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 12, 2);
--  label = make_label(button, subtitle, theme_secondary(), 16);
--  lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 12, -2);
--  return button;
--}
--
--static void qpk_clicked(lv_event_t *e)
--{
--  lv_obj_t *card;
--  char builtin_subtitle[96];
--  int i;
--
--  LV_UNUSED(e);
--  qpk_scan();
--  card = panel_card("快应用");
--  snprintf(builtin_subtitle, sizeof(builtin_subtitle), "%s · %s",
--           g_builtin_qpk.kind, g_builtin_qpk.format);
--  list_button(card, g_builtin_qpk.manifest.name, builtin_subtitle, 72,
--              launch_builtin_qapp, NULL);
--
--  for (i = 0; i < g_desktop.nqpk && i < 4; i++)
-+  lv_obj_set_size(back, 52, 42);
-+  lv_obj_set_pos(back, 12, 10);
-+  lv_obj_set_style_bg_color(back, lv_color_hex(theme_surface()), 0);
-+  lv_obj_set_style_radius(back, 12, 0);
-+  lv_obj_add_event_cb(back, qapp_back, LV_EVENT_CLICKED, NULL);
-+  label = lv_label_create(back);
-+  if (label == NULL)
-     {
--      char subtitle[96];
--
--      snprintf(subtitle, sizeof(subtitle), "%s · %s",
--               g_desktop.qpk[i].package[0] ? g_desktop.qpk[i].package :
--               g_desktop.qpk[i].dir,
--               g_desktop.qpk[i].version[0] ? g_desktop.qpk[i].version :
--               "QPK");
--      list_button(card, g_desktop.qpk[i].name, subtitle, 154 + i * 80,
--                  external_qapp_clicked, (void *)(intptr_t)i);
-+      lv_obj_delete(page);
-+      return NULL;
-     }
- 
--  if (g_desktop.nqpk == 0)
-+  lv_label_set_text(label, LV_SYMBOL_LEFT);
-+  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
-+  lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
-+  lv_obj_center(label);
++    }
 +
-+  label = make_label(page, title, theme_primary(), 28);
+   lv_obj_set_size(back, 52, 42);
+   lv_obj_set_pos(back, 12, 10);
+   lv_obj_set_style_bg_color(back, lv_color_hex(theme_surface()), 0);
+   lv_obj_set_style_radius(back, 12, 0);
+   lv_obj_add_event_cb(back, qapp_back, LV_EVENT_CLICKED, NULL);
+   label = lv_label_create(back);
 +  if (label == NULL)
-     {
--      lv_obj_t *label = make_label(card,
--                                   "外部应用目录为空：" QPK_DIR,
--                                   theme_secondary(), 16);
--      lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 24, -12);
++    {
 +      lv_obj_delete(page);
 +      return NULL;
-     }
--}
--
--static void settings_clicked(lv_event_t *e);
--
--static void settings_rebuild_async(void *data)
--{
--  LV_UNUSED(data);
--  settings_clicked(NULL);
--}
--
--static void theme_changed(lv_event_t *e)
--{
--  lv_obj_t *sw = lv_event_get_target(e);
--
--  g_desktop.light_theme = lv_obj_has_state(sw, LV_STATE_CHECKED);
--  apply_theme();
--  lv_async_call(settings_rebuild_async, NULL);
--}
--
--static void setting_row(lv_obj_t *parent, const char *title,
--                        const char *subtitle, int y, bool checked,
--                        lv_event_cb_t cb)
--{
--  lv_obj_t *label;
--  lv_obj_t *sw;
- 
--  label = make_label(parent, title, theme_primary(), 20);
--  lv_obj_set_pos(label, 28, y);
--  label = make_label(parent, subtitle, theme_secondary(), 16);
--  lv_obj_set_pos(label, 28, y + 30);
--  sw = lv_switch_create(parent);
--  lv_obj_set_size(sw, 58, 32);
--  lv_obj_set_pos(sw, 650, y + 8);
--  if (checked)
-+  lv_obj_set_pos(label, 78, 15);
++    }
 +
-+  content = lv_obj_create(page);
+   lv_label_set_text(label, LV_SYMBOL_LEFT);
+   lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
+   lv_obj_center(label);
+ 
+   label = make_label(page, title, theme_primary(), 28);
++  if (label == NULL)
++    {
++      lv_obj_delete(page);
++      return NULL;
++    }
++
+   lv_obj_set_pos(label, 78, 15);
+ 
+   content = lv_obj_create(page);
 +  if (content == NULL)
-     {
--      lv_obj_add_state(sw, LV_STATE_CHECKED);
++    {
 +      lv_obj_delete(page);
 +      return NULL;
-     }
++    }
++
+   lv_obj_update_layout(page);
+   height = lv_obj_get_height(page) - QAPP_HEADER_HEIGHT;
+   lv_obj_set_size(content, lv_pct(100), height);
+@@ -529,17 +860,110 @@ static lv_obj_t *qapp_page(const char *title)
+   return content;
+ }
  
--  lv_obj_add_event_cb(sw, cb, LV_EVENT_VALUE_CHANGED, NULL);
--}
--
--static void settings_clicked(lv_event_t *e)
--{
--  lv_obj_t *card;
--  lv_obj_t *label;
--  char info[256];
--
-+  lv_obj_update_layout(page);
-+  height = lv_obj_get_height(page) - QAPP_HEADER_HEIGHT;
-+  lv_obj_set_size(content, lv_pct(100), height);
-+  lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
-+  lv_obj_set_style_bg_opa(content, LV_OPA_TRANSP, 0);
-+  lv_obj_set_style_border_width(content, 0, 0);
-+  lv_obj_set_style_radius(content, 0, 0);
-+  lv_obj_set_style_pad_all(content, 0, 0);
-+  lv_obj_remove_flag(content, LV_OBJ_FLAG_SCROLLABLE);
-+
-+  return content;
-+}
-+
 +static void qapp_page_commit(lv_obj_t *content)
 +{
 +  lv_obj_t *page = lv_obj_get_parent(content);
@@ -1778,39 +646,25 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  g_desktop.current_card = page;
 +}
 +
-+static void launch_builtin_qapp(lv_event_t *e)
-+{
-+  lv_obj_t *card;
-+  const struct qpk_entry_s *manifest = &g_builtin_qpk.manifest;
+ static void launch_builtin_qapp(lv_event_t *e)
+ {
+   lv_obj_t *card;
+   const struct qpk_entry_s *manifest = &g_builtin_qpk.manifest;
 +  int ret;
-+
+ 
    LV_UNUSED(e);
--  card = panel_card("设置");
--  setting_row(card, "浅色桌面", "切换桌面背景与应用卡片", 82,
--              g_desktop.light_theme, theme_changed);
--
--  snprintf(info, sizeof(info),
--           "设备信息\nESP32-P4 Function-EV-Board\n"
--           "双核 RISC-V · PSRAM 已启用 · 触摸已连接\n"
--           "NuttX 桌面 · 已发现 %d 个外部 QPK",
--           g_desktop.nqpk);
--  label = make_label(card, info, theme_secondary(), 16);
--  lv_obj_set_pos(label, 28, 190);
--}
--
--static void about_clicked(lv_event_t *e)
--{
--  struct timespec ts;
--  lv_obj_t *card;
--  lv_obj_t *label;
--  char text[320];
+-  card = qapp_page(manifest->name);
+-  qpk_runtime_launch(card, manifest->name, manifest->package,
+-                     manifest->version, manifest->entry, g_hello_qpk_js,
+-                     sizeof(g_hello_qpk_js) - 1, zh_font, show_toast,
+-                     qpk_show_dialog);
 +  card = qapp_page_prepare(manifest->name);
 +  if (card == NULL)
 +    {
 +      show_toast("页面内存不足");
 +      return;
 +    }
- 
++
 +  ret = qpk_runtime_launch(card, manifest->name, manifest->package,
 +                           manifest->version, manifest->entry,
 +                           g_hello_qpk_js, sizeof(g_hello_qpk_js) - 1,
@@ -1831,67 +685,14 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  const struct qpk_entry_s *manifest = &g_builtin_2048_qpk.manifest;
 +  int ret;
 +
-   LV_UNUSED(e);
--  clock_gettime(CLOCK_MONOTONIC, &ts);
--  card = panel_card("关于");
--  snprintf(text, sizeof(text),
--           "ESP32-P4 中文触摸桌面\n\n"
--           "作者：电子科技大学 闻家贤\n\n"
--           "系统：Apache NuttX RTOS\n"
--           "处理器：双核 RISC-V\n"
--           "内存：内部 RAM + PSRAM\n"
--           "运行时间：%lu 秒\n"
--           "中文字体：阿里巴巴普惠体 3.0 55 Regular",
--           (unsigned long)ts.tv_sec);
--  label = make_label(card, text, theme_secondary(), 20);
--  lv_obj_set_pos(label, 24, 82);
--}
--
--static void tile_clicked(lv_event_t *e)
--{
--  switch ((intptr_t)lv_event_get_user_data(e))
++  LV_UNUSED(e);
 +  card = qapp_page_prepare(manifest->name);
 +  if (card == NULL)
-     {
--      case APP_SETTINGS:
--        settings_clicked(e);
--        break;
--      case APP_QPK:
--        qpk_clicked(e);
--        break;
--      case APP_ABOUT:
--        about_clicked(e);
--        break;
--      default:
--        break;
++    {
 +      show_toast("页面内存不足");
 +      return;
-     }
--}
--
--static void add_tile(lv_obj_t *parent, const char *icon, const char *name,
--                     const char *hint, uint32_t accent, intptr_t id)
--{
--  lv_obj_t *button;
--  lv_obj_t *label;
--
--  button = lv_button_create(parent);
--  lv_obj_set_size(button, 210, 190);
--  lv_obj_set_style_radius(button, 24, 0);
--  lv_obj_set_style_bg_color(button, lv_color_hex(0x202940), 0);
--  lv_obj_set_style_shadow_width(button, 0, 0);
--  lv_obj_add_event_cb(button, tile_clicked, LV_EVENT_CLICKED, (void *)id);
--
--  label = lv_label_create(button);
--  lv_label_set_text(label, icon);
--  lv_obj_set_style_text_font(label, &lv_font_montserrat_48, 0);
--  lv_obj_set_style_text_color(label, lv_color_hex(accent), 0);
--  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, 10);
- 
--  label = make_label(button, name, 0xffffff, 28);
--  lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 10, -38);
--  label = make_label(button, hint, 0x8793ad, 16);
--  lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 10, -8);
++    }
++
 +  ret = qpk_runtime_launch(card, manifest->name, manifest->package,
 +                           manifest->version, manifest->entry,
 +                           g_2048_qpk_js, sizeof(g_2048_qpk_js) - 1,
@@ -1904,261 +705,83 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +    {
 +      lv_obj_delete(lv_obj_get_parent(card));
 +    }
- }
- 
--static void clock_timer_cb(lv_timer_t *timer)
++}
++
 +static void launch_builtin_ouo_qapp(lv_event_t *e)
- {
--  struct timespec ts;
--  char buf[20];
--
--  LV_UNUSED(timer);
--  clock_gettime(CLOCK_MONOTONIC, &ts);
--  snprintf(buf, sizeof(buf), "%02ld:%02ld",
--           (long)(ts.tv_sec / 60) % 100, (long)ts.tv_sec % 60);
--  lv_label_set_text(g_desktop.clock_label, buf);
--}
--
--static lv_obj_t *statusbar_create(lv_obj_t *parent)
--{
--  lv_obj_t *bar = lv_obj_create(parent);
--  lv_obj_t *label;
--
--  lv_obj_set_size(bar, lv_pct(100), 44);
--  lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, 0);
--  lv_obj_set_style_bg_color(bar, lv_color_hex(0x11182a), 0);
--  lv_obj_set_style_border_width(bar, 0, 0);
--  lv_obj_set_style_radius(bar, 0, 0);
--  lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
--
--  label = make_label(bar, "NuttX 桌面", 0x91a2ff, 20);
--  lv_obj_align(label, LV_ALIGN_LEFT_MID, 14, 0);
--  label = lv_label_create(bar);
--  lv_label_set_text(label, LV_SYMBOL_WIFI "  " LV_SYMBOL_CHARGE);
--  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
--  lv_obj_set_style_text_color(label, lv_color_hex(0x9aa7cc), 0);
--  lv_obj_align(label, LV_ALIGN_RIGHT_MID, -104, 0);
--
--  g_desktop.clock_label = make_label(bar, "00:00", 0xffffff, 20);
--  lv_obj_align(g_desktop.clock_label, LV_ALIGN_RIGHT_MID, -12, 0);
--  return bar;
--}
--
--static void desktop_ui_create(void)
--{
--  lv_obj_t *screen = lv_screen_active();
--  size_t font_size = (size_t)(g_desktop_font_end - g_desktop_font_start);
--
--  memset(&g_desktop, 0, sizeof(g_desktop));
--  g_desktop.font16 = lv_tiny_ttf_create_data(g_desktop_font_start,
--                                              font_size, 16);
--  g_desktop.font20 = lv_tiny_ttf_create_data(g_desktop_font_start,
--                                              font_size, 20);
--  g_desktop.font28 = lv_tiny_ttf_create_data(g_desktop_font_start,
--                                              font_size, 28);
--  g_desktop.screen = screen;
--  lv_obj_set_style_bg_color(screen, lv_color_hex(0x090d18), 0);
--  g_desktop.statusbar = statusbar_create(screen);
--
--  g_desktop.home_title = make_label(screen, "欢迎使用 ESP32-P4",
--                                     0xffffff, 28);
--  lv_obj_set_pos(g_desktop.home_title, 36, 72);
--  g_desktop.home_hint = make_label(screen, "触摸图标打开应用",
--                                    0x74819d, 16);
--  lv_obj_set_pos(g_desktop.home_hint, 38, 114);
--
--  g_desktop.grid = lv_obj_create(screen);
--  lv_obj_set_size(g_desktop.grid, lv_pct(100), 230);
--  lv_obj_align(g_desktop.grid, LV_ALIGN_TOP_MID, 0, 154);
--  lv_obj_set_style_bg_opa(g_desktop.grid, LV_OPA_TRANSP, 0);
--  lv_obj_set_style_border_width(g_desktop.grid, 0, 0);
--  lv_obj_set_flex_flow(g_desktop.grid, LV_FLEX_FLOW_ROW);
--  lv_obj_set_flex_align(g_desktop.grid, LV_FLEX_ALIGN_CENTER,
--                        LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
--  lv_obj_set_style_pad_column(g_desktop.grid, 28, 0);
--
--  add_tile(g_desktop.grid, LV_SYMBOL_SETTINGS, "设置", "主题与设备信息",
--           0x92a1ff, APP_SETTINGS);
--  add_tile(g_desktop.grid, LV_SYMBOL_FILE, "快应用", "QPK 应用与示例",
--           0x55d6a7, APP_QPK);
--  add_tile(g_desktop.grid, LV_SYMBOL_BELL, "关于", "系统运行状态",
--           0xf2b56b, APP_ABOUT);
--
--  qpk_scan();
--
--  g_desktop.panel = lv_obj_create(screen);
--  lv_obj_set_size(g_desktop.panel, lv_pct(100), lv_pct(100));
--  lv_obj_set_style_bg_color(g_desktop.panel, lv_color_hex(0x000000), 0);
--  lv_obj_set_style_bg_opa(g_desktop.panel, LV_OPA_70, 0);
--  lv_obj_set_style_border_width(g_desktop.panel, 0, 0);
--  lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
--
--  lv_timer_create(clock_timer_cb, 1000, NULL);
--  clock_timer_cb(NULL);
--}
--
--int main(int argc, FAR char *argv[])
--{
--  lv_nuttx_dsc_t info;
--  lv_nuttx_result_t result;
--#ifdef CONFIG_SYSTEM_NSH
--  extern int nsh_main(int argc, FAR char *argv[]);
--#endif
--#ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
--  extern int board_touch_initialize(void);
--#endif
++{
 +  lv_obj_t *card;
 +  const struct qpk_entry_s *manifest = &g_builtin_ouo_qpk.manifest;
 +  extern const char *ouo_get_app_js(unsigned int *len);
 +  unsigned int source_size;
 +  const char *source;
 +  int ret;
- 
--  LV_UNUSED(argc);
--  LV_UNUSED(argv);
--  if (lv_is_initialized())
++
 +  LV_UNUSED(e);
 +  source = ouo_get_app_js(&source_size);
 +  card = qapp_page_prepare(manifest->name);
 +  if (card == NULL || source == NULL || source_size == 0)
-     {
--      return -1;
++    {
 +      show_toast("页面内存不足");
 +      return;
-     }
- 
--#ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
--  if (board_touch_initialize() < 0)
++    }
++
 +  ret = qpk_runtime_launch(card, manifest->name, manifest->package,
 +                           manifest->version, manifest->entry,
 +                           source, source_size, zh_font,
 +                           show_toast, qpk_show_dialog);
 +  if (ret == 0)
-     {
--      fprintf(stderr, "desktop: touch init failed\n");
-+      qapp_page_commit(card);
-     }
--#endif
--
--  lv_init();
--  lv_nuttx_dsc_init(&info);
--  info.fb_path = "/dev/fb0";
--#ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
--  info.input_path = "/dev/input0";
--#else
--  info.input_path = NULL;
--#endif
--
--  lv_nuttx_init(&info, &result);
--  if (result.disp == NULL)
-+  else
-     {
--      fprintf(stderr, "desktop: display init failed\n");
--      return 1;
-+      lv_obj_delete(lv_obj_get_parent(card));
-     }
-+}
- 
--  desktop_ui_create();
--  lv_refr_now(result.disp);
--
--#ifdef CONFIG_SYSTEM_NSH
--  if (task_create("nsh", 100, 4096, nsh_main, NULL) < 0)
--    {
--      fprintf(stderr, "desktop: failed to start NSH\n");
--    }
--#endif
--
--  while (1)
-+static void external_qapp_clicked(lv_event_t *e)
-+{
-+  intptr_t index = (intptr_t)lv_event_get_user_data(e);
-+  struct qpk_entry_s *qpk;
-+  lv_obj_t *card;
-+  lv_obj_t *label;
-+  char *source;
-+  char filename[256];
-+  char text[256];
-+  size_t source_size = 0;
-+
-+  if (index < 0 || index >= g_desktop.nqpk)
 +    {
-+      return;
++      qapp_page_commit(card);
 +    }
-+
-+  qpk = &g_desktop.qpk[index];
++  else
++    {
++      lv_obj_delete(lv_obj_get_parent(card));
++    }
+ }
+ 
+ static void external_qapp_clicked(lv_event_t *e)
+@@ -559,7 +983,13 @@ static void external_qapp_clicked(lv_event_t *e)
+     }
+ 
+   qpk = &g_desktop.qpk[index];
+-  card = qapp_page(qpk->name);
 +  card = qapp_page_prepare(qpk->name);
 +  if (card == NULL)
-     {
--      uint32_t idle = lv_timer_handler();
--      usleep((idle ? idle : 1) * 1000);
++    {
 +      show_toast("页面内存不足");
 +      return;
-     }
- 
--  return 0;
--}
-+  source = qpk_load_entry(qpk, filename, sizeof(filename), &source_size);
-+  if (source != NULL)
-+    {
-+      int ret = qpk_runtime_launch(card, qpk->name, qpk->package,
-+                                   qpk->version, filename, source,
-+                                   source_size, zh_font, show_toast,
-+                                   qpk_show_dialog);
-+      free(source);
-+      if (ret == 0)
-+        {
-+          qapp_page_commit(card);
-+          return;
-+        }
 +    }
 +
-+  snprintf(text, sizeof(text),
-+           "包名：%s\n版本：%s\n入口：%s\n目录：%s/%s\n\n"
-+           "无法加载 JavaScript 入口。当前运行时支持 .js QPK；"
-+           "MicroReactor 风格 .ux 解析器将在下一阶段接入。",
-+           qpk->package[0] ? qpk->package : "未声明",
-+           qpk->version[0] ? qpk->version : "未声明",
-+           qpk->entry[0] ? qpk->entry : "未声明", QPK_DIR, qpk->dir);
-+  label = make_label(card, text, theme_secondary(), 20);
-+  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
-+  lv_obj_set_width(label, 690);
-+  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 24, 76);
+   source = qpk_load_entry(qpk, filename, sizeof(filename), &source_size);
+   if (source != NULL)
+     {
+@@ -570,6 +1000,7 @@ static void external_qapp_clicked(lv_event_t *e)
+       free(source);
+       if (ret == 0)
+         {
++          qapp_page_commit(card);
+           return;
+         }
+     }
+@@ -585,6 +1016,7 @@ static void external_qapp_clicked(lv_event_t *e)
+   lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+   lv_obj_set_width(label, 690);
+   lv_obj_align(label, LV_ALIGN_TOP_LEFT, 24, 76);
 +  qapp_page_commit(card);
-+}
-+
-+static lv_obj_t *list_button(lv_obj_t *parent, const char *title,
-+                             const char *subtitle, int y,
-+                             lv_event_cb_t cb, void *user)
-+{
-+  lv_obj_t *button = lv_button_create(parent);
-+  lv_obj_t *label;
-+
-+  lv_obj_set_size(button, 690, 72);
-+  lv_obj_align(button, LV_ALIGN_TOP_MID, 0, y);
-+  lv_obj_set_style_bg_color(button, lv_color_hex(theme_surface()), 0);
-+  lv_obj_set_style_radius(button, 14, 0);
-+  lv_obj_add_event_cb(button, cb, LV_EVENT_CLICKED, user);
-+  label = make_label(button, title, theme_primary(), 20);
-+  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 12, 2);
-+  label = make_label(button, subtitle, theme_secondary(), 16);
-+  lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 12, -2);
-+  return button;
-+}
-+
-+static void qpk_clicked(lv_event_t *e)
-+{
-+  lv_obj_t *card;
-+  char builtin_subtitle[96];
-+  int i;
-+
-+  LV_UNUSED(e);
-+  card = panel_card("快应用");
-+  snprintf(builtin_subtitle, sizeof(builtin_subtitle), "%s · %s",
-+           g_builtin_qpk.kind, g_builtin_qpk.format);
-+  list_button(card, g_builtin_qpk.manifest.name, builtin_subtitle, 72,
-+              launch_builtin_qapp, NULL);
-+
+ }
+ 
+ static lv_obj_t *list_button(lv_obj_t *parent, const char *title,
+@@ -613,13 +1045,22 @@ static void qpk_clicked(lv_event_t *e)
+   int i;
+ 
+   LV_UNUSED(e);
+-  qpk_scan();
+   card = panel_card("快应用");
+   snprintf(builtin_subtitle, sizeof(builtin_subtitle), "%s · %s",
+            g_builtin_qpk.kind, g_builtin_qpk.format);
+   list_button(card, g_builtin_qpk.manifest.name, builtin_subtitle, 72,
+               launch_builtin_qapp, NULL);
+ 
 +  snprintf(builtin_subtitle, sizeof(builtin_subtitle), "%s - %s",
 +           g_builtin_2048_qpk.kind, g_builtin_2048_qpk.format);
 +  list_button(card, g_builtin_2048_qpk.manifest.name, builtin_subtitle, 154,
@@ -2169,201 +792,49 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  list_button(card, g_builtin_ouo_qpk.manifest.name, builtin_subtitle, 234,
 +              launch_builtin_ouo_qapp, NULL);
 +
-+  for (i = 0; i < g_desktop.nqpk && i < 4; i++)
-+    {
-+      char subtitle[96];
-+
-+      snprintf(subtitle, sizeof(subtitle), "%s · %s",
-+               g_desktop.qpk[i].package[0] ? g_desktop.qpk[i].package :
-+               g_desktop.qpk[i].dir,
-+               g_desktop.qpk[i].version[0] ? g_desktop.qpk[i].version :
-+               "QPK");
+   for (i = 0; i < g_desktop.nqpk && i < 4; i++)
+     {
+       char subtitle[96];
+@@ -629,7 +1070,7 @@ static void qpk_clicked(lv_event_t *e)
+                g_desktop.qpk[i].dir,
+                g_desktop.qpk[i].version[0] ? g_desktop.qpk[i].version :
+                "QPK");
+-      list_button(card, g_desktop.qpk[i].name, subtitle, 154 + i * 80,
 +      list_button(card, g_desktop.qpk[i].name, subtitle, 314 + i * 80,
-+                  external_qapp_clicked, (void *)(intptr_t)i);
-+    }
-+
-+  if (g_desktop.nqpk == 0)
-+    {
-+      lv_obj_t *label = make_label(card,
-+                                   "外部应用目录为空：" QPK_DIR,
-+                                   theme_secondary(), 16);
-+      lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 24, -12);
-+    }
-+}
-+
-+static void settings_clicked(lv_event_t *e);
-+
-+static void settings_rebuild_async(void *data)
-+{
-+  LV_UNUSED(data);
+                   external_qapp_clicked, (void *)(intptr_t)i);
+     }
+ 
+@@ -647,6 +1088,7 @@ static void settings_clicked(lv_event_t *e);
+ static void settings_rebuild_async(void *data)
+ {
+   LV_UNUSED(data);
 +  g_desktop.settings_rebuild_pending = false;
-+  settings_clicked(NULL);
-+}
-+
-+static void theme_changed(lv_event_t *e)
-+{
-+  lv_obj_t *sw = lv_event_get_target(e);
-+
-+  g_desktop.light_theme = lv_obj_has_state(sw, LV_STATE_CHECKED);
-+  apply_theme();
+   settings_clicked(NULL);
+ }
+ 
+@@ -656,7 +1098,11 @@ static void theme_changed(lv_event_t *e)
+ 
+   g_desktop.light_theme = lv_obj_has_state(sw, LV_STATE_CHECKED);
+   apply_theme();
+-  lv_async_call(settings_rebuild_async, NULL);
 +  if (!g_desktop.settings_rebuild_pending &&
 +      lv_async_call(settings_rebuild_async, NULL) == LV_RESULT_OK)
 +    {
 +      g_desktop.settings_rebuild_pending = true;
 +    }
-+}
-+
-+static void setting_row(lv_obj_t *parent, const char *title,
-+                        const char *subtitle, int y, bool checked,
-+                        lv_event_cb_t cb)
-+{
-+  lv_obj_t *label;
-+  lv_obj_t *sw;
-+
-+  label = make_label(parent, title, theme_primary(), 20);
-+  lv_obj_set_pos(label, 28, y);
-+  label = make_label(parent, subtitle, theme_secondary(), 16);
-+  lv_obj_set_pos(label, 28, y + 30);
-+  sw = lv_switch_create(parent);
-+  lv_obj_set_size(sw, 58, 32);
-+  lv_obj_set_pos(sw, 650, y + 8);
-+  if (checked)
-+    {
-+      lv_obj_add_state(sw, LV_STATE_CHECKED);
-+    }
-+
-+  lv_obj_add_event_cb(sw, cb, LV_EVENT_VALUE_CHANGED, NULL);
-+}
-+
-+static void settings_clicked(lv_event_t *e)
-+{
-+  lv_obj_t *card;
-+  lv_obj_t *label;
-+  char info[256];
-+
-+  LV_UNUSED(e);
-+  card = panel_card("设置");
-+  setting_row(card, "浅色桌面", "切换桌面背景与应用卡片", 82,
-+              g_desktop.light_theme, theme_changed);
-+
-+  snprintf(info, sizeof(info),
-+           "设备信息\nESP32-P4 Function-EV-Board\n"
-+           "双核 RISC-V · PSRAM 已启用 · 触摸已连接\n"
-+           "NuttX 桌面 · 已发现 %d 个外部 QPK",
-+           g_desktop.nqpk);
-+  label = make_label(card, info, theme_secondary(), 16);
-+  lv_obj_set_pos(label, 28, 190);
-+}
-+
-+static void about_clicked(lv_event_t *e)
-+{
-+  struct timespec ts;
-+  lv_obj_t *card;
-+  lv_obj_t *label;
-+  char text[320];
-+
-+  LV_UNUSED(e);
-+  clock_gettime(CLOCK_MONOTONIC, &ts);
-+  card = panel_card("关于");
-+  snprintf(text, sizeof(text),
-+           "ESP32-P4 中文触摸桌面\n\n"
-+           "作者：电子科技大学 闻家贤\n\n"
-+           "系统：Apache NuttX RTOS\n"
-+           "处理器：双核 RISC-V\n"
-+           "内存：内部 RAM + PSRAM\n"
-+           "运行时间：%lu 秒\n"
-+           "中文字体：阿里巴巴普惠体 3.0 55 Regular",
-+           (unsigned long)ts.tv_sec);
-+  label = make_label(card, text, theme_secondary(), 20);
-+  lv_obj_set_pos(label, 24, 82);
-+}
-+
-+static void tile_clicked(lv_event_t *e)
-+{
-+  switch ((intptr_t)lv_event_get_user_data(e))
-+    {
-+      case APP_SETTINGS:
-+        settings_clicked(e);
-+        break;
-+      case APP_QPK:
-+        qpk_clicked(e);
-+        break;
-+      case APP_ABOUT:
-+        about_clicked(e);
-+        break;
-+      default:
-+        break;
-+    }
-+}
-+
-+static void add_tile(lv_obj_t *parent, const char *icon, const char *name,
-+                     const char *hint, uint32_t accent, intptr_t id)
-+{
-+  lv_obj_t *button;
-+  lv_obj_t *label;
-+
-+  button = lv_button_create(parent);
-+  lv_obj_set_size(button, 210, 190);
-+  lv_obj_set_style_radius(button, 24, 0);
-+  lv_obj_set_style_bg_color(button, lv_color_hex(0x202940), 0);
-+  lv_obj_set_style_shadow_width(button, 0, 0);
-+  lv_obj_add_event_cb(button, tile_clicked, LV_EVENT_CLICKED, (void *)id);
-+
-+  label = lv_label_create(button);
-+  lv_label_set_text(label, icon);
-+  lv_obj_set_style_text_font(label, &lv_font_montserrat_48, 0);
-+  lv_obj_set_style_text_color(label, lv_color_hex(accent), 0);
-+  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 10, 10);
-+
-+  label = make_label(button, name, 0xffffff, 28);
-+  lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 10, -38);
-+  label = make_label(button, hint, 0x8793ad, 16);
-+  lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 10, -8);
-+}
-+
-+static void clock_timer_cb(lv_timer_t *timer)
-+{
-+  struct timespec ts;
-+  char buf[20];
-+
-+  LV_UNUSED(timer);
-+  clock_gettime(CLOCK_MONOTONIC, &ts);
-+  snprintf(buf, sizeof(buf), "%02ld:%02ld",
-+           (long)(ts.tv_sec / 60) % 100, (long)ts.tv_sec % 60);
-+  lv_label_set_text(g_desktop.clock_label, buf);
-+}
-+
-+static lv_obj_t *statusbar_create(lv_obj_t *parent)
-+{
-+  lv_obj_t *bar = lv_obj_create(parent);
-+  lv_obj_t *label;
-+
-+  lv_obj_set_size(bar, lv_pct(100), 44);
-+  lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, 0);
-+  lv_obj_set_style_bg_color(bar, lv_color_hex(0x11182a), 0);
-+  lv_obj_set_style_border_width(bar, 0, 0);
-+  lv_obj_set_style_radius(bar, 0, 0);
-+  lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
-+
-+  label = make_label(bar, "NuttX 桌面", 0x91a2ff, 20);
-+  lv_obj_align(label, LV_ALIGN_LEFT_MID, 14, 0);
-+  label = lv_label_create(bar);
-+  lv_label_set_text(label, LV_SYMBOL_WIFI "  " LV_SYMBOL_CHARGE);
-+  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
-+  lv_obj_set_style_text_color(label, lv_color_hex(0x9aa7cc), 0);
-+  lv_obj_align(label, LV_ALIGN_RIGHT_MID, -104, 0);
-+
-+  g_desktop.clock_label = make_label(bar, "00:00", 0xffffff, 20);
-+  lv_obj_align(g_desktop.clock_label, LV_ALIGN_RIGHT_MID, -12, 0);
-+  return bar;
-+}
-+
-+static void desktop_ui_create(void)
-+{
-+  lv_obj_t *screen = lv_screen_active();
-+  size_t font_size = (size_t)(g_desktop_font_end - g_desktop_font_start);
-+
-+  memset(&g_desktop, 0, sizeof(g_desktop));
+ }
+ 
+ static void setting_row(lv_obj_t *parent, const char *title,
+@@ -810,12 +1256,15 @@ static void desktop_ui_create(void)
+   size_t font_size = (size_t)(g_desktop_font_end - g_desktop_font_start);
+ 
+   memset(&g_desktop, 0, sizeof(g_desktop));
+-  g_desktop.font16 = lv_tiny_ttf_create_data(g_desktop_font_start,
+-                                              font_size, 16);
+-  g_desktop.font20 = lv_tiny_ttf_create_data(g_desktop_font_start,
+-                                              font_size, 20);
+-  g_desktop.font28 = lv_tiny_ttf_create_data(g_desktop_font_start,
+-                                              font_size, 28);
 +  g_desktop.font16 = lv_tiny_ttf_create_data_ex(
 +    g_desktop_font_start, font_size, 16, LV_FONT_KERNING_NORMAL,
 +    DESKTOP_FONT_CACHE_GLYPHS);
@@ -2373,92 +844,20 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  g_desktop.font28 = lv_tiny_ttf_create_data_ex(
 +    g_desktop_font_start, font_size, 28, LV_FONT_KERNING_NORMAL,
 +    DESKTOP_FONT_CACHE_GLYPHS);
-+  g_desktop.screen = screen;
-+  lv_obj_set_style_bg_color(screen, lv_color_hex(0x090d18), 0);
-+  g_desktop.statusbar = statusbar_create(screen);
-+
-+  g_desktop.home_title = make_label(screen, "欢迎使用 ESP32-P4",
-+                                     0xffffff, 28);
-+  lv_obj_set_pos(g_desktop.home_title, 36, 72);
-+  g_desktop.home_hint = make_label(screen, "触摸图标打开应用",
-+                                    0x74819d, 16);
-+  lv_obj_set_pos(g_desktop.home_hint, 38, 114);
-+
-+  g_desktop.grid = lv_obj_create(screen);
-+  lv_obj_set_size(g_desktop.grid, lv_pct(100), 230);
-+  lv_obj_align(g_desktop.grid, LV_ALIGN_TOP_MID, 0, 154);
-+  lv_obj_set_style_bg_opa(g_desktop.grid, LV_OPA_TRANSP, 0);
-+  lv_obj_set_style_border_width(g_desktop.grid, 0, 0);
-+  lv_obj_set_flex_flow(g_desktop.grid, LV_FLEX_FLOW_ROW);
-+  lv_obj_set_flex_align(g_desktop.grid, LV_FLEX_ALIGN_CENTER,
-+                        LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-+  lv_obj_set_style_pad_column(g_desktop.grid, 28, 0);
-+
-+  add_tile(g_desktop.grid, LV_SYMBOL_SETTINGS, "设置", "主题与设备信息",
-+           0x92a1ff, APP_SETTINGS);
-+  add_tile(g_desktop.grid, LV_SYMBOL_FILE, "快应用", "QPK 应用与示例",
-+           0x55d6a7, APP_QPK);
-+  add_tile(g_desktop.grid, LV_SYMBOL_BELL, "关于", "系统运行状态",
-+           0xf2b56b, APP_ABOUT);
-+
-+  qpk_scan();
-+
-+  g_desktop.panel = lv_obj_create(screen);
-+  lv_obj_set_size(g_desktop.panel, lv_pct(100), lv_pct(100));
-+  lv_obj_set_style_bg_color(g_desktop.panel, lv_color_hex(0x000000), 0);
-+  lv_obj_set_style_bg_opa(g_desktop.panel, LV_OPA_70, 0);
-+  lv_obj_set_style_border_width(g_desktop.panel, 0, 0);
-+  lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
-+
-+  lv_timer_create(clock_timer_cb, 1000, NULL);
-+  clock_timer_cb(NULL);
-+}
-+
-+int main(int argc, FAR char *argv[])
-+{
-+  lv_nuttx_dsc_t info;
-+  lv_nuttx_result_t result;
-+#ifdef CONFIG_SYSTEM_NSH
-+  extern int nsh_main(int argc, FAR char *argv[]);
-+#endif
-+#ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
-+  extern int board_touch_initialize(void);
-+#endif
-+
-+  LV_UNUSED(argc);
-+  LV_UNUSED(argv);
-+  if (lv_is_initialized())
-+    {
-+      return -1;
-+    }
-+
-+#ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
-+  if (board_touch_initialize() < 0)
-+    {
-+      fprintf(stderr, "desktop: touch init failed\n");
-+    }
-+#endif
-+
-+  lv_init();
-+  lv_nuttx_dsc_init(&info);
-+  info.fb_path = "/dev/fb0";
-+#ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
-+  info.input_path = "/dev/input0";
-+#else
-+  info.input_path = NULL;
-+#endif
-+
-+  lv_nuttx_init(&info, &result);
-+  if (result.disp == NULL)
-+    {
-+      fprintf(stderr, "desktop: display init failed\n");
-+      return 1;
+   g_desktop.screen = screen;
+   lv_obj_set_style_bg_color(screen, lv_color_hex(0x090d18), 0);
+   g_desktop.statusbar = statusbar_create(screen);
+@@ -896,11 +1345,23 @@ int main(int argc, FAR char *argv[])
+     {
+       fprintf(stderr, "desktop: display init failed\n");
+       return 1;
+-    }
 +  }
-+
-+  desktop_ui_create();
+ 
+   desktop_ui_create();
 +  lv_obj_invalidate(lv_screen_active());
-+  lv_refr_now(result.disp);
-+
+   lv_refr_now(result.disp);
+ 
 +#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
 +    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
 +  {
@@ -2470,523 +869,11 @@ index 737caa0a45f0616862fd802bbcf848f62dc5d5a2..f948f95ff631446d3563212250ee3290
 +  }
 +#endif
 +
-+#ifdef CONFIG_SYSTEM_NSH
-+  if (task_create("nsh", 100, 4096, nsh_main, NULL) < 0)
-+    {
-+      fprintf(stderr, "desktop: failed to start NSH\n");
-+    }
-+#endif
-+
-+  while (1)
-+    {
-+      uint32_t idle = lv_timer_handler();
-+      usleep((idle ? idle : 1) * 1000);
-+    }
-+
-+  return 0;
-+}
-diff --git a/system/desktop/ouo_resource.c b/system/desktop/ouo_resource.c
-new file mode 100644
-index 0000000000000000000000000000000000000000..d91668136f8290fce49041a46ef06b14dcfb2270
---- /dev/null
-+++ b/system/desktop/ouo_resource.c
-@@ -0,0 +1,494 @@
-+/* Auto-generated from ouo/app.js; do not edit. */
-+#include <stddef.h>
-+
-+static const unsigned char g_ouo_app_js[] = {
-+  0x27, 0x75, 0x73, 0x65, 0x20, 0x73, 0x74, 0x72, 0x69, 0x63, 0x74, 0x27,
-+  0x3b, 0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x76, 0x69, 0x65,
-+  0x77, 0x20, 0x3d, 0x20, 0x75, 0x69, 0x2e, 0x67, 0x65, 0x74, 0x53, 0x69,
-+  0x7a, 0x65, 0x28, 0x29, 0x3b, 0x0a, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20,
-+  0x57, 0x20, 0x3d, 0x20, 0x76, 0x69, 0x65, 0x77, 0x2e, 0x77, 0x69, 0x64,
-+  0x74, 0x68, 0x3b, 0x0a, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x48, 0x20,
-+  0x3d, 0x20, 0x76, 0x69, 0x65, 0x77, 0x2e, 0x68, 0x65, 0x69, 0x67, 0x68,
-+  0x74, 0x3b, 0x0a, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x66, 0x61, 0x6c,
-+  0x6c, 0x62, 0x61, 0x63, 0x6b, 0x49, 0x64, 0x20, 0x3d, 0x20, 0x27, 0x30,
-+  0x32, 0x27, 0x3b, 0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x73,
-+  0x74, 0x61, 0x74, 0x65, 0x73, 0x20, 0x3d, 0x20, 0x7b, 0x0a, 0x20, 0x20,
-+  0x27, 0x30, 0x30, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe7, 0xa6, 0xbb, 0xe7,
-+  0xba, 0xbf, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30,
-+  0x78, 0x32, 0x39, 0x33, 0x31, 0x33, 0x64, 0x2c, 0x20, 0x30, 0x78, 0x36,
-+  0x66, 0x37, 0x62, 0x38, 0x38, 0x2c, 0x20, 0x33, 0x34, 0x2c, 0x20, 0x35,
-+  0x2c, 0x20, 0x20, 0x37, 0x30, 0x2c, 0x20, 0x36, 0x2c, 0x20, 0x30, 0x2c,
-+  0x20, 0x27, 0x6f, 0x66, 0x66, 0x6c, 0x69, 0x6e, 0x65, 0x27, 0x5d, 0x2c,
-+  0x0a, 0x20, 0x20, 0x27, 0x30, 0x31, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5,
-+  0x90, 0xaf, 0xe5, 0x8a, 0xa8, 0xe4, 0xb8, 0xad, 0x27, 0x2c, 0x20, 0x20,
-+  0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x30, 0x32, 0x62, 0x33, 0x36, 0x2c,
-+  0x20, 0x30, 0x78, 0x35, 0x30, 0x64, 0x35, 0x62, 0x37, 0x2c, 0x20, 0x34,
-+  0x30, 0x2c, 0x20, 0x31, 0x30, 0x2c, 0x20, 0x36, 0x38, 0x2c, 0x20, 0x38,
-+  0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x73, 0x63, 0x61, 0x6e, 0x27, 0x5d,
-+  0x2c, 0x0a, 0x20, 0x20, 0x27, 0x30, 0x32, 0x27, 0x3a, 0x20, 0x5b, 0x27,
-+  0xe5, 0xbe, 0x85, 0xe6, 0x9c, 0xba, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20,
-+  0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x30, 0x32, 0x32, 0x32, 0x63, 0x2c,
-+  0x20, 0x30, 0x78, 0x37, 0x33, 0x64, 0x66, 0x63, 0x30, 0x2c, 0x20, 0x34,
-+  0x32, 0x2c, 0x20, 0x31, 0x32, 0x2c, 0x20, 0x35, 0x38, 0x2c, 0x20, 0x38,
-+  0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x62, 0x72, 0x65, 0x61, 0x74, 0x68,
-+  0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x30, 0x33, 0x27, 0x3a,
-+  0x20, 0x5b, 0x27, 0xe4, 0xbc, 0x91, 0xe7, 0x9c, 0xa0, 0x27, 0x2c, 0x20,
-+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x37, 0x31, 0x62,
-+  0x32, 0x35, 0x2c, 0x20, 0x30, 0x78, 0x36, 0x33, 0x37, 0x30, 0x38, 0x30,
-+  0x2c, 0x20, 0x34, 0x38, 0x2c, 0x20, 0x33, 0x2c, 0x20, 0x20, 0x34, 0x38,
-+  0x2c, 0x20, 0x34, 0x2c, 0x20, 0x30, 0x2c, 0x20, 0x27, 0x73, 0x6c, 0x65,
-+  0x65, 0x70, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x30, 0x34, 0x27,
-+  0x3a, 0x20, 0x5b, 0x27, 0xe5, 0x94, 0xa4, 0xe9, 0x86, 0x92, 0x27, 0x2c,
-+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x36, 0x32,
-+  0x39, 0x33, 0x61, 0x2c, 0x20, 0x30, 0x78, 0x39, 0x66, 0x64, 0x39, 0x66,
-+  0x66, 0x2c, 0x20, 0x34, 0x36, 0x2c, 0x20, 0x31, 0x36, 0x2c, 0x20, 0x37,
-+  0x32, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x62, 0x6f,
-+  0x75, 0x6e, 0x63, 0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x30,
-+  0x35, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe8, 0x81, 0x86, 0xe5, 0x90, 0xac,
-+  0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31,
-+  0x31, 0x32, 0x64, 0x33, 0x35, 0x2c, 0x20, 0x30, 0x78, 0x35, 0x37, 0x64,
-+  0x37, 0x63, 0x61, 0x2c, 0x20, 0x33, 0x38, 0x2c, 0x20, 0x31, 0x34, 0x2c,
-+  0x20, 0x35, 0x30, 0x2c, 0x20, 0x36, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27,
-+  0x6c, 0x69, 0x73, 0x74, 0x65, 0x6e, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20,
-+  0x27, 0x30, 0x36, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe8, 0xa1, 0xa8, 0xe8,
-+  0xbe, 0xbe, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30,
-+  0x78, 0x32, 0x64, 0x32, 0x32, 0x33, 0x39, 0x2c, 0x20, 0x30, 0x78, 0x64,
-+  0x36, 0x61, 0x34, 0x66, 0x66, 0x2c, 0x20, 0x34, 0x34, 0x2c, 0x20, 0x31,
-+  0x33, 0x2c, 0x20, 0x37, 0x36, 0x2c, 0x20, 0x39, 0x2c, 0x20, 0x31, 0x2c,
-+  0x20, 0x27, 0x73, 0x70, 0x65, 0x61, 0x6b, 0x27, 0x5d, 0x2c, 0x0a, 0x20,
-+  0x20, 0x27, 0x30, 0x37, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0x85, 0x85,
-+  0xe7, 0x94, 0xb5, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-+  0x30, 0x78, 0x31, 0x37, 0x33, 0x30, 0x32, 0x36, 0x2c, 0x20, 0x30, 0x78,
-+  0x37, 0x65, 0x65, 0x37, 0x38, 0x37, 0x2c, 0x20, 0x34, 0x32, 0x2c, 0x20,
-+  0x31, 0x32, 0x2c, 0x20, 0x35, 0x36, 0x2c, 0x20, 0x38, 0x2c, 0x20, 0x31,
-+  0x2c, 0x20, 0x27, 0x63, 0x68, 0x61, 0x72, 0x67, 0x65, 0x27, 0x5d, 0x2c,
-+  0x0a, 0x20, 0x20, 0x27, 0x30, 0x38, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe4,
-+  0xbd, 0x8e, 0xe7, 0x94, 0xb5, 0xe9, 0x87, 0x8f, 0x27, 0x2c, 0x20, 0x20,
-+  0x20, 0x20, 0x20, 0x30, 0x78, 0x33, 0x38, 0x32, 0x33, 0x31, 0x66, 0x2c,
-+  0x20, 0x30, 0x78, 0x66, 0x66, 0x39, 0x62, 0x37, 0x32, 0x2c, 0x20, 0x34,
-+  0x36, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x20, 0x34, 0x34, 0x2c, 0x20, 0x35,
-+  0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x73, 0x6c, 0x6f, 0x77, 0x27, 0x5d,
-+  0x2c, 0x0a, 0x20, 0x20, 0x27, 0x30, 0x39, 0x27, 0x3a, 0x20, 0x5b, 0x27,
-+  0xe6, 0x9b, 0xb4, 0xe6, 0x96, 0xb0, 0xe7, 0xb3, 0xbb, 0xe7, 0xbb, 0x9f,
-+  0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x62, 0x32, 0x38, 0x34,
-+  0x30, 0x2c, 0x20, 0x30, 0x78, 0x38, 0x30, 0x62, 0x36, 0x66, 0x66, 0x2c,
-+  0x20, 0x34, 0x30, 0x2c, 0x20, 0x31, 0x30, 0x2c, 0x20, 0x36, 0x34, 0x2c,
-+  0x20, 0x36, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x73, 0x63, 0x61, 0x6e,
-+  0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x31, 0x30, 0x27, 0x3a, 0x20,
-+  0x5b, 0x27, 0xe5, 0xbc, 0x80, 0xe5, 0xbf, 0x83, 0x27, 0x2c, 0x20, 0x20,
-+  0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x34, 0x33, 0x33, 0x32,
-+  0x39, 0x2c, 0x20, 0x30, 0x78, 0x37, 0x30, 0x65, 0x35, 0x61, 0x33, 0x2c,
-+  0x20, 0x34, 0x36, 0x2c, 0x20, 0x31, 0x35, 0x2c, 0x20, 0x37, 0x38, 0x2c,
-+  0x20, 0x39, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x62, 0x6f, 0x75, 0x6e,
-+  0x63, 0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x31, 0x31, 0x27,
-+  0x3a, 0x20, 0x5b, 0x27, 0xe5, 0x85, 0xb4, 0xe5, 0xa5, 0x8b, 0x27, 0x2c,
-+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x33, 0x32, 0x32,
-+  0x37, 0x32, 0x61, 0x2c, 0x20, 0x30, 0x78, 0x66, 0x66, 0x62, 0x66, 0x36,
-+  0x39, 0x2c, 0x20, 0x35, 0x32, 0x2c, 0x20, 0x31, 0x38, 0x2c, 0x20, 0x38,
-+  0x32, 0x2c, 0x20, 0x31, 0x30, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x73,
-+  0x70, 0x61, 0x72, 0x6b, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x31,
-+  0x32, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0xae, 0xb3, 0xe7, 0xbe, 0x9e,
-+  0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x33,
-+  0x35, 0x32, 0x35, 0x32, 0x66, 0x2c, 0x20, 0x30, 0x78, 0x66, 0x34, 0x61,
-+  0x36, 0x63, 0x31, 0x2c, 0x20, 0x33, 0x38, 0x2c, 0x20, 0x31, 0x31, 0x2c,
-+  0x20, 0x35, 0x32, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27,
-+  0x73, 0x68, 0x79, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x31, 0x33,
-+  0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0xb9, 0xb3, 0xe9, 0x9d, 0x99, 0x27,
-+  0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x39,
-+  0x32, 0x63, 0x33, 0x32, 0x2c, 0x20, 0x30, 0x78, 0x38, 0x33, 0x63, 0x35,
-+  0x62, 0x65, 0x2c, 0x20, 0x34, 0x36, 0x2c, 0x20, 0x39, 0x2c, 0x20, 0x20,
-+  0x36, 0x32, 0x2c, 0x20, 0x35, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x62,
-+  0x72, 0x65, 0x61, 0x74, 0x68, 0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20,
-+  0x27, 0x31, 0x34, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe9, 0x9a, 0xbe, 0xe8,
-+  0xbf, 0x87, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30,
-+  0x78, 0x32, 0x30, 0x32, 0x39, 0x33, 0x63, 0x2c, 0x20, 0x30, 0x78, 0x38,
-+  0x36, 0x61, 0x39, 0x64, 0x36, 0x2c, 0x20, 0x33, 0x38, 0x2c, 0x20, 0x38,
-+  0x2c, 0x20, 0x20, 0x34, 0x38, 0x2c, 0x20, 0x34, 0x2c, 0x20, 0x31, 0x2c,
-+  0x20, 0x27, 0x73, 0x61, 0x64, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27,
-+  0x31, 0x35, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe7, 0x94, 0x9f, 0xe6, 0xb0,
-+  0x94, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x78,
-+  0x33, 0x62, 0x32, 0x32, 0x32, 0x33, 0x2c, 0x20, 0x30, 0x78, 0x66, 0x66,
-+  0x37, 0x31, 0x36, 0x63, 0x2c, 0x20, 0x35, 0x30, 0x2c, 0x20, 0x39, 0x2c,
-+  0x20, 0x20, 0x37, 0x30, 0x2c, 0x20, 0x35, 0x2c, 0x20, 0x31, 0x2c, 0x20,
-+  0x27, 0x6a, 0x69, 0x74, 0x74, 0x65, 0x72, 0x27, 0x5d, 0x2c, 0x0a, 0x20,
-+  0x20, 0x27, 0x31, 0x36, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe6, 0x83, 0x8a,
-+  0xe8, 0xae, 0xb6, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-+  0x30, 0x78, 0x32, 0x62, 0x32, 0x39, 0x33, 0x63, 0x2c, 0x20, 0x30, 0x78,
-+  0x63, 0x39, 0x61, 0x37, 0x66, 0x66, 0x2c, 0x20, 0x33, 0x30, 0x2c, 0x20,
-+  0x32, 0x32, 0x2c, 0x20, 0x33, 0x32, 0x2c, 0x20, 0x31, 0x38, 0x2c, 0x20,
-+  0x31, 0x2c, 0x20, 0x27, 0x70, 0x6f, 0x70, 0x27, 0x5d, 0x2c, 0x0a, 0x20,
-+  0x20, 0x27, 0x31, 0x37, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0xa5, 0xbd,
-+  0xe5, 0xa5, 0x87, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-+  0x30, 0x78, 0x31, 0x38, 0x33, 0x32, 0x33, 0x39, 0x2c, 0x20, 0x30, 0x78,
-+  0x36, 0x34, 0x64, 0x38, 0x65, 0x36, 0x2c, 0x20, 0x34, 0x30, 0x2c, 0x20,
-+  0x31, 0x33, 0x2c, 0x20, 0x35, 0x36, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x31,
-+  0x2c, 0x20, 0x27, 0x70, 0x65, 0x65, 0x6b, 0x27, 0x5d, 0x2c, 0x0a, 0x20,
-+  0x20, 0x27, 0x31, 0x38, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0x9b, 0xb0,
-+  0xe6, 0x83, 0x91, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-+  0x30, 0x78, 0x33, 0x30, 0x32, 0x61, 0x32, 0x32, 0x2c, 0x20, 0x30, 0x78,
-+  0x65, 0x36, 0x63, 0x33, 0x36, 0x61, 0x2c, 0x20, 0x34, 0x34, 0x2c, 0x20,
-+  0x38, 0x2c, 0x20, 0x20, 0x33, 0x36, 0x2c, 0x20, 0x35, 0x2c, 0x20, 0x31,
-+  0x2c, 0x20, 0x27, 0x74, 0x69, 0x6c, 0x74, 0x27, 0x5d, 0x2c, 0x0a, 0x20,
-+  0x20, 0x27, 0x31, 0x39, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe8, 0x87, 0xaa,
-+  0xe4, 0xbf, 0xa1, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-+  0x30, 0x78, 0x32, 0x32, 0x32, 0x63, 0x33, 0x62, 0x2c, 0x20, 0x30, 0x78,
-+  0x38, 0x64, 0x62, 0x34, 0x66, 0x66, 0x2c, 0x20, 0x35, 0x30, 0x2c, 0x20,
-+  0x31, 0x31, 0x2c, 0x20, 0x37, 0x32, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x31,
-+  0x2c, 0x20, 0x27, 0x70, 0x72, 0x6f, 0x75, 0x64, 0x27, 0x5d, 0x2c, 0x0a,
-+  0x20, 0x20, 0x27, 0x33, 0x30, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe6, 0x80,
-+  0x9d, 0xe8, 0x80, 0x83, 0xe4, 0xb8, 0xad, 0x27, 0x2c, 0x20, 0x20, 0x20,
-+  0x20, 0x20, 0x30, 0x78, 0x32, 0x30, 0x32, 0x33, 0x33, 0x61, 0x2c, 0x20,
-+  0x30, 0x78, 0x39, 0x66, 0x39, 0x63, 0x66, 0x66, 0x2c, 0x20, 0x34, 0x30,
-+  0x2c, 0x20, 0x39, 0x2c, 0x20, 0x20, 0x34, 0x32, 0x2c, 0x20, 0x35, 0x2c,
-+  0x20, 0x31, 0x2c, 0x20, 0x27, 0x74, 0x68, 0x69, 0x6e, 0x6b, 0x27, 0x5d,
-+  0x2c, 0x0a, 0x20, 0x20, 0x27, 0x33, 0x31, 0x27, 0x3a, 0x20, 0x5b, 0x27,
-+  0xe6, 0xa3, 0x80, 0xe7, 0xb4, 0xa2, 0xe8, 0xb5, 0x84, 0xe6, 0x96, 0x99,
-+  0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x32, 0x32, 0x65, 0x33,
-+  0x37, 0x2c, 0x20, 0x30, 0x78, 0x34, 0x66, 0x64, 0x39, 0x63, 0x38, 0x2c,
-+  0x20, 0x33, 0x36, 0x2c, 0x20, 0x31, 0x30, 0x2c, 0x20, 0x35, 0x30, 0x2c,
-+  0x20, 0x36, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x73, 0x63, 0x61, 0x6e,
-+  0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x33, 0x32, 0x27, 0x3a, 0x20,
-+  0x5b, 0x27, 0xe9, 0x98, 0x85, 0xe8, 0xaf, 0xbb, 0xe5, 0x86, 0x85, 0xe5,
-+  0xae, 0xb9, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78, 0x32, 0x34, 0x33,
-+  0x31, 0x32, 0x38, 0x2c, 0x20, 0x30, 0x78, 0x38, 0x62, 0x64, 0x31, 0x37,
-+  0x63, 0x2c, 0x20, 0x34, 0x36, 0x2c, 0x20, 0x36, 0x2c, 0x20, 0x20, 0x36,
-+  0x36, 0x2c, 0x20, 0x34, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x72, 0x65,
-+  0x61, 0x64, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x33, 0x33, 0x27,
-+  0x3a, 0x20, 0x5b, 0x27, 0xe7, 0xbc, 0x96, 0xe5, 0x86, 0x99, 0xe4, 0xbb,
-+  0xa3, 0xe7, 0xa0, 0x81, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31,
-+  0x39, 0x32, 0x39, 0x33, 0x61, 0x2c, 0x20, 0x30, 0x78, 0x36, 0x65, 0x62,
-+  0x37, 0x66, 0x66, 0x2c, 0x20, 0x33, 0x38, 0x2c, 0x20, 0x31, 0x31, 0x2c,
-+  0x20, 0x35, 0x38, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27,
-+  0x63, 0x6f, 0x64, 0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x33,
-+  0x34, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe8, 0xa7, 0x84, 0xe5, 0x88, 0x92,
-+  0xe6, 0xad, 0xa5, 0xe9, 0xaa, 0xa4, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x30,
-+  0x78, 0x32, 0x63, 0x32, 0x38, 0x33, 0x38, 0x2c, 0x20, 0x30, 0x78, 0x63,
-+  0x36, 0x61, 0x33, 0x66, 0x66, 0x2c, 0x20, 0x34, 0x32, 0x2c, 0x20, 0x31,
-+  0x30, 0x2c, 0x20, 0x36, 0x32, 0x2c, 0x20, 0x36, 0x2c, 0x20, 0x31, 0x2c,
-+  0x20, 0x27, 0x70, 0x6c, 0x61, 0x6e, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20,
-+  0x27, 0x33, 0x35, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe7, 0xad, 0x89, 0xe5,
-+  0xbe, 0x85, 0xe5, 0x93, 0x8d, 0xe5, 0xba, 0x94, 0x27, 0x2c, 0x20, 0x20,
-+  0x20, 0x30, 0x78, 0x32, 0x64, 0x32, 0x64, 0x33, 0x31, 0x2c, 0x20, 0x30,
-+  0x78, 0x62, 0x34, 0x62, 0x61, 0x63, 0x33, 0x2c, 0x20, 0x34, 0x34, 0x2c,
-+  0x20, 0x38, 0x2c, 0x20, 0x20, 0x34, 0x36, 0x2c, 0x20, 0x35, 0x2c, 0x20,
-+  0x31, 0x2c, 0x20, 0x27, 0x73, 0x6c, 0x6f, 0x77, 0x27, 0x5d, 0x2c, 0x0a,
-+  0x20, 0x20, 0x27, 0x33, 0x36, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe4, 0xbb,
-+  0xbb, 0xe5, 0x8a, 0xa1, 0xe6, 0x88, 0x90, 0xe5, 0x8a, 0x9f, 0x27, 0x2c,
-+  0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x35, 0x33, 0x34, 0x32, 0x36, 0x2c,
-+  0x20, 0x30, 0x78, 0x36, 0x39, 0x65, 0x33, 0x39, 0x62, 0x2c, 0x20, 0x35,
-+  0x30, 0x2c, 0x20, 0x31, 0x35, 0x2c, 0x20, 0x38, 0x32, 0x2c, 0x20, 0x39,
-+  0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x63, 0x65, 0x6c, 0x65, 0x62, 0x72,
-+  0x61, 0x74, 0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x33, 0x37,
-+  0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe9, 0x9c, 0x80, 0xe8, 0xa6, 0x81, 0xe6,
-+  0xb3, 0xa8, 0xe6, 0x84, 0x8f, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78,
-+  0x33, 0x62, 0x33, 0x31, 0x32, 0x30, 0x2c, 0x20, 0x30, 0x78, 0x66, 0x66,
-+  0x63, 0x63, 0x36, 0x36, 0x2c, 0x20, 0x34, 0x30, 0x2c, 0x20, 0x31, 0x32,
-+  0x2c, 0x20, 0x35, 0x34, 0x2c, 0x20, 0x38, 0x2c, 0x20, 0x31, 0x2c, 0x20,
-+  0x27, 0x70, 0x75, 0x6c, 0x73, 0x65, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20,
-+  0x27, 0x33, 0x38, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0x8f, 0x91, 0xe7,
-+  0x94, 0x9f, 0xe9, 0x94, 0x99, 0xe8, 0xaf, 0xaf, 0x27, 0x2c, 0x20, 0x20,
-+  0x20, 0x30, 0x78, 0x33, 0x62, 0x32, 0x30, 0x32, 0x36, 0x2c, 0x20, 0x30,
-+  0x78, 0x66, 0x66, 0x36, 0x66, 0x38, 0x36, 0x2c, 0x20, 0x33, 0x34, 0x2c,
-+  0x20, 0x38, 0x2c, 0x20, 0x20, 0x33, 0x32, 0x2c, 0x20, 0x35, 0x2c, 0x20,
-+  0x31, 0x2c, 0x20, 0x27, 0x6a, 0x69, 0x74, 0x74, 0x65, 0x72, 0x27, 0x5d,
-+  0x2c, 0x0a, 0x20, 0x20, 0x27, 0x33, 0x39, 0x27, 0x3a, 0x20, 0x5b, 0x27,
-+  0xe6, 0xad, 0xa3, 0xe5, 0x9c, 0xa8, 0xe9, 0x87, 0x8d, 0xe8, 0xaf, 0x95,
-+  0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78, 0x33, 0x30, 0x32, 0x61, 0x32,
-+  0x32, 0x2c, 0x20, 0x30, 0x78, 0x66, 0x30, 0x62, 0x37, 0x36, 0x38, 0x2c,
-+  0x20, 0x34, 0x30, 0x2c, 0x20, 0x31, 0x30, 0x2c, 0x20, 0x35, 0x36, 0x2c,
-+  0x20, 0x36, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x73, 0x70, 0x69, 0x6e,
-+  0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27, 0x34, 0x30, 0x27, 0x3a, 0x20,
-+  0x5b, 0x27, 0xe8, 0xbf, 0x9e, 0xe6, 0x8e, 0xa5, 0xe6, 0x9c, 0x8d, 0xe5,
-+  0x8a, 0xa1, 0x27, 0x2c, 0x20, 0x20, 0x20, 0x30, 0x78, 0x31, 0x39, 0x32,
-+  0x62, 0x33, 0x61, 0x2c, 0x20, 0x30, 0x78, 0x36, 0x62, 0x62, 0x63, 0x66,
-+  0x66, 0x2c, 0x20, 0x33, 0x38, 0x2c, 0x20, 0x31, 0x32, 0x2c, 0x20, 0x36,
-+  0x30, 0x2c, 0x20, 0x37, 0x2c, 0x20, 0x31, 0x2c, 0x20, 0x27, 0x63, 0x6f,
-+  0x6e, 0x6e, 0x65, 0x63, 0x74, 0x27, 0x5d, 0x2c, 0x0a, 0x20, 0x20, 0x27,
-+  0x34, 0x31, 0x27, 0x3a, 0x20, 0x5b, 0x27, 0xe5, 0x90, 0x8c, 0xe6, 0xad,
-+  0xa5, 0xe6, 0x95, 0xb0, 0xe6, 0x8d, 0xae, 0x27, 0x2c, 0x20, 0x20, 0x20,
-+  0x30, 0x78, 0x31, 0x36, 0x32, 0x66, 0x33, 0x35, 0x2c, 0x20, 0x30, 0x78,
-+  0x35, 0x38, 0x64, 0x34, 0x64, 0x30, 0x2c, 0x20, 0x34, 0x32, 0x2c, 0x20,
-+  0x31, 0x30, 0x2c, 0x20, 0x36, 0x38, 0x2c, 0x20, 0x36, 0x2c, 0x20, 0x31,
-+  0x2c, 0x20, 0x27, 0x73, 0x63, 0x61, 0x6e, 0x27, 0x5d, 0x0a, 0x7d, 0x3b,
-+  0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x69, 0x64, 0x73, 0x20,
-+  0x3d, 0x20, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x2e, 0x6b, 0x65, 0x79,
-+  0x73, 0x28, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x29, 0x3b, 0x0a, 0x6c,
-+  0x65, 0x74, 0x20, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x49, 0x64,
-+  0x20, 0x3d, 0x20, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x73, 0x74,
-+  0x6f, 0x72, 0x61, 0x67, 0x65, 0x2e, 0x67, 0x65, 0x74, 0x28, 0x27, 0x65,
-+  0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x27, 0x29, 0x20, 0x7c, 0x7c, 0x20,
-+  0x66, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63, 0x6b, 0x49, 0x64, 0x3b, 0x0a,
-+  0x69, 0x66, 0x20, 0x28, 0x21, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x5b,
-+  0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x5d, 0x29, 0x20,
-+  0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x20, 0x3d, 0x20,
-+  0x66, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63, 0x6b, 0x49, 0x64, 0x3b, 0x0a,
-+  0x6c, 0x65, 0x74, 0x20, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x20, 0x3d,
-+  0x20, 0x74, 0x72, 0x75, 0x65, 0x3b, 0x0a, 0x6c, 0x65, 0x74, 0x20, 0x74,
-+  0x6f, 0x75, 0x72, 0x54, 0x69, 0x6d, 0x65, 0x72, 0x20, 0x3d, 0x20, 0x30,
-+  0x3b, 0x0a, 0x6c, 0x65, 0x74, 0x20, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e,
-+  0x64, 0x65, 0x78, 0x20, 0x3d, 0x20, 0x69, 0x64, 0x73, 0x2e, 0x69, 0x6e,
-+  0x64, 0x65, 0x78, 0x4f, 0x66, 0x28, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e,
-+  0x74, 0x49, 0x64, 0x29, 0x3b, 0x0a, 0x6c, 0x65, 0x74, 0x20, 0x67, 0x61,
-+  0x7a, 0x65, 0x58, 0x20, 0x3d, 0x20, 0x30, 0x3b, 0x0a, 0x6c, 0x65, 0x74,
-+  0x20, 0x67, 0x61, 0x7a, 0x65, 0x59, 0x20, 0x3d, 0x20, 0x30, 0x3b, 0x0a,
-+  0x6c, 0x65, 0x74, 0x20, 0x70, 0x68, 0x61, 0x73, 0x65, 0x20, 0x3d, 0x20,
-+  0x30, 0x3b, 0x0a, 0x6c, 0x65, 0x74, 0x20, 0x62, 0x6c, 0x69, 0x6e, 0x6b,
-+  0x55, 0x6e, 0x74, 0x69, 0x6c, 0x20, 0x3d, 0x20, 0x30, 0x3b, 0x0a, 0x6c,
-+  0x65, 0x74, 0x20, 0x6e, 0x65, 0x78, 0x74, 0x42, 0x6c, 0x69, 0x6e, 0x6b,
-+  0x20, 0x3d, 0x20, 0x33, 0x35, 0x3b, 0x0a, 0x0a, 0x75, 0x69, 0x2e, 0x62,
-+  0x61, 0x63, 0x6b, 0x67, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x28, 0x30, 0x78,
-+  0x66, 0x66, 0x66, 0x37, 0x66, 0x31, 0x29, 0x3b, 0x0a, 0x63, 0x6f, 0x6e,
-+  0x73, 0x74, 0x20, 0x65, 0x79, 0x65, 0x4c, 0x20, 0x3d, 0x20, 0x75, 0x69,
-+  0x2e, 0x70, 0x61, 0x6e, 0x65, 0x6c, 0x28, 0x33, 0x32, 0x32, 0x2c, 0x20,
-+  0x31, 0x38, 0x34, 0x2c, 0x20, 0x35, 0x34, 0x2c, 0x20, 0x31, 0x32, 0x38,
-+  0x2c, 0x20, 0x32, 0x37, 0x2c, 0x20, 0x30, 0x78, 0x37, 0x64, 0x64, 0x66,
-+  0x63, 0x33, 0x2c, 0x20, 0x32, 0x35, 0x35, 0x29, 0x3b, 0x0a, 0x63, 0x6f,
-+  0x6e, 0x73, 0x74, 0x20, 0x65, 0x79, 0x65, 0x52, 0x20, 0x3d, 0x20, 0x75,
-+  0x69, 0x2e, 0x70, 0x61, 0x6e, 0x65, 0x6c, 0x28, 0x57, 0x20, 0x2d, 0x20,
-+  0x33, 0x37, 0x36, 0x2c, 0x20, 0x31, 0x38, 0x34, 0x2c, 0x20, 0x35, 0x34,
-+  0x2c, 0x20, 0x31, 0x32, 0x38, 0x2c, 0x20, 0x32, 0x37, 0x2c, 0x20, 0x30,
-+  0x78, 0x37, 0x64, 0x64, 0x66, 0x63, 0x33, 0x2c, 0x20, 0x32, 0x35, 0x35,
-+  0x29, 0x3b, 0x0a, 0x0a, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e,
-+  0x20, 0x73, 0x65, 0x74, 0x45, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x28,
-+  0x69, 0x64, 0x2c, 0x20, 0x61, 0x75, 0x74, 0x6f, 0x6d, 0x61, 0x74, 0x69,
-+  0x63, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20, 0x28, 0x21,
-+  0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x5b, 0x69, 0x64, 0x5d, 0x29, 0x20,
-+  0x69, 0x64, 0x20, 0x3d, 0x20, 0x66, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63,
-+  0x6b, 0x49, 0x64, 0x3b, 0x0a, 0x20, 0x20, 0x63, 0x75, 0x72, 0x72, 0x65,
-+  0x6e, 0x74, 0x49, 0x64, 0x20, 0x3d, 0x20, 0x69, 0x64, 0x3b, 0x0a, 0x20,
-+  0x20, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x73, 0x20, 0x3d, 0x20, 0x73,
-+  0x74, 0x61, 0x74, 0x65, 0x73, 0x5b, 0x69, 0x64, 0x5d, 0x3b, 0x0a, 0x20,
-+  0x20, 0x75, 0x69, 0x2e, 0x62, 0x61, 0x63, 0x6b, 0x67, 0x72, 0x6f, 0x75,
-+  0x6e, 0x64, 0x28, 0x73, 0x5b, 0x31, 0x5d, 0x29, 0x3b, 0x0a, 0x20, 0x20,
-+  0x75, 0x69, 0x2e, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6c, 0x6f, 0x72, 0x28,
-+  0x65, 0x79, 0x65, 0x4c, 0x2c, 0x20, 0x73, 0x5b, 0x32, 0x5d, 0x29, 0x3b,
-+  0x20, 0x75, 0x69, 0x2e, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6c, 0x6f, 0x72,
-+  0x28, 0x65, 0x79, 0x65, 0x52, 0x2c, 0x20, 0x73, 0x5b, 0x32, 0x5d, 0x29,
-+  0x3b, 0x0a, 0x20, 0x20, 0x75, 0x69, 0x2e, 0x73, 0x65, 0x74, 0x53, 0x69,
-+  0x7a, 0x65, 0x28, 0x65, 0x79, 0x65, 0x4c, 0x2c, 0x20, 0x4d, 0x61, 0x74,
-+  0x68, 0x2e, 0x6d, 0x61, 0x78, 0x28, 0x32, 0x30, 0x2c, 0x20, 0x73, 0x5b,
-+  0x34, 0x5d, 0x20, 0x2a, 0x20, 0x33, 0x29, 0x2c, 0x20, 0x4d, 0x61, 0x74,
-+  0x68, 0x2e, 0x6d, 0x61, 0x78, 0x28, 0x33, 0x36, 0x2c, 0x20, 0x73, 0x5b,
-+  0x33, 0x5d, 0x20, 0x2a, 0x20, 0x32, 0x29, 0x29, 0x3b, 0x0a, 0x20, 0x20,
-+  0x75, 0x69, 0x2e, 0x73, 0x65, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x28, 0x65,
-+  0x79, 0x65, 0x52, 0x2c, 0x20, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x6d, 0x61,
-+  0x78, 0x28, 0x32, 0x30, 0x2c, 0x20, 0x73, 0x5b, 0x34, 0x5d, 0x20, 0x2a,
-+  0x20, 0x33, 0x29, 0x2c, 0x20, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x6d, 0x61,
-+  0x78, 0x28, 0x33, 0x36, 0x2c, 0x20, 0x73, 0x5b, 0x33, 0x5d, 0x20, 0x2a,
-+  0x20, 0x32, 0x29, 0x29, 0x3b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20, 0x28,
-+  0x21, 0x61, 0x75, 0x74, 0x6f, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x29, 0x20,
-+  0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e, 0x73, 0x74, 0x6f, 0x72, 0x61,
-+  0x67, 0x65, 0x2e, 0x73, 0x65, 0x74, 0x28, 0x27, 0x65, 0x6d, 0x6f, 0x74,
-+  0x69, 0x6f, 0x6e, 0x27, 0x2c, 0x20, 0x69, 0x64, 0x29, 0x3b, 0x0a, 0x20,
-+  0x20, 0x70, 0x68, 0x61, 0x73, 0x65, 0x20, 0x3d, 0x20, 0x30, 0x3b, 0x0a,
-+  0x7d, 0x0a, 0x0a, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20,
-+  0x73, 0x65, 0x74, 0x47, 0x61, 0x7a, 0x65, 0x28, 0x6e, 0x78, 0x2c, 0x20,
-+  0x6e, 0x79, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x67, 0x61, 0x7a, 0x65,
-+  0x58, 0x20, 0x3d, 0x20, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x6d, 0x61, 0x78,
-+  0x28, 0x2d, 0x31, 0x2c, 0x20, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x6d, 0x69,
-+  0x6e, 0x28, 0x31, 0x2c, 0x20, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x28,
-+  0x6e, 0x78, 0x29, 0x20, 0x7c, 0x7c, 0x20, 0x30, 0x29, 0x29, 0x3b, 0x0a,
-+  0x20, 0x20, 0x67, 0x61, 0x7a, 0x65, 0x59, 0x20, 0x3d, 0x20, 0x4d, 0x61,
-+  0x74, 0x68, 0x2e, 0x6d, 0x61, 0x78, 0x28, 0x2d, 0x31, 0x2c, 0x20, 0x4d,
-+  0x61, 0x74, 0x68, 0x2e, 0x6d, 0x69, 0x6e, 0x28, 0x31, 0x2c, 0x20, 0x4e,
-+  0x75, 0x6d, 0x62, 0x65, 0x72, 0x28, 0x6e, 0x79, 0x29, 0x20, 0x7c, 0x7c,
-+  0x20, 0x30, 0x29, 0x29, 0x3b, 0x0a, 0x7d, 0x0a, 0x0a, 0x66, 0x75, 0x6e,
-+  0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65,
-+  0x41, 0x49, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x28, 0x6d, 0x65,
-+  0x73, 0x73, 0x61, 0x67, 0x65, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x6c,
-+  0x65, 0x74, 0x20, 0x64, 0x61, 0x74, 0x61, 0x20, 0x3d, 0x20, 0x6d, 0x65,
-+  0x73, 0x73, 0x61, 0x67, 0x65, 0x3b, 0x0a, 0x20, 0x20, 0x74, 0x72, 0x79,
-+  0x20, 0x7b, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x69, 0x66, 0x20, 0x28, 0x74,
-+  0x79, 0x70, 0x65, 0x6f, 0x66, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
-+  0x65, 0x20, 0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x73, 0x74, 0x72, 0x69, 0x6e,
-+  0x67, 0x27, 0x29, 0x20, 0x64, 0x61, 0x74, 0x61, 0x20, 0x3d, 0x20, 0x4a,
-+  0x53, 0x4f, 0x4e, 0x2e, 0x70, 0x61, 0x72, 0x73, 0x65, 0x28, 0x6d, 0x65,
-+  0x73, 0x73, 0x61, 0x67, 0x65, 0x29, 0x3b, 0x0a, 0x20, 0x20, 0x20, 0x20,
-+  0x69, 0x66, 0x20, 0x28, 0x21, 0x64, 0x61, 0x74, 0x61, 0x20, 0x7c, 0x7c,
-+  0x20, 0x21, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x5b, 0x53, 0x74, 0x72,
-+  0x69, 0x6e, 0x67, 0x28, 0x64, 0x61, 0x74, 0x61, 0x2e, 0x65, 0x6d, 0x6f,
-+  0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x29, 0x5d, 0x29, 0x20, 0x74, 0x68,
-+  0x72, 0x6f, 0x77, 0x20, 0x6e, 0x65, 0x77, 0x20, 0x45, 0x72, 0x72, 0x6f,
-+  0x72, 0x28, 0x27, 0x69, 0x6e, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x20, 0x65,
-+  0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x27, 0x29, 0x3b, 0x0a,
-+  0x20, 0x20, 0x20, 0x20, 0x73, 0x65, 0x74, 0x45, 0x6d, 0x6f, 0x74, 0x69,
-+  0x6f, 0x6e, 0x28, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x28, 0x64, 0x61,
-+  0x74, 0x61, 0x2e, 0x65, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64,
-+  0x29, 0x2c, 0x20, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x29, 0x3b, 0x0a, 0x20,
-+  0x20, 0x20, 0x20, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x74, 0x72,
-+  0x75, 0x65, 0x3b, 0x0a, 0x20, 0x20, 0x7d, 0x20, 0x63, 0x61, 0x74, 0x63,
-+  0x68, 0x20, 0x28, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x29, 0x20, 0x7b, 0x0a,
-+  0x20, 0x20, 0x20, 0x20, 0x73, 0x65, 0x74, 0x45, 0x6d, 0x6f, 0x74, 0x69,
-+  0x6f, 0x6e, 0x28, 0x66, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63, 0x6b, 0x49,
-+  0x64, 0x2c, 0x20, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x29, 0x3b, 0x0a, 0x20,
-+  0x20, 0x20, 0x20, 0x72, 0x65, 0x74, 0x75, 0x72, 0x6e, 0x20, 0x66, 0x61,
-+  0x6c, 0x73, 0x65, 0x3b, 0x0a, 0x20, 0x20, 0x7d, 0x0a, 0x7d, 0x0a, 0x0a,
-+  0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x73, 0x74, 0x61,
-+  0x72, 0x74, 0x54, 0x6f, 0x75, 0x72, 0x28, 0x70, 0x65, 0x72, 0x69, 0x6f,
-+  0x64, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x73, 0x74, 0x6f, 0x70, 0x54,
-+  0x6f, 0x75, 0x72, 0x28, 0x29, 0x3b, 0x0a, 0x20, 0x20, 0x63, 0x6f, 0x6e,
-+  0x73, 0x74, 0x20, 0x64, 0x65, 0x6c, 0x61, 0x79, 0x20, 0x3d, 0x20, 0x4d,
-+  0x61, 0x74, 0x68, 0x2e, 0x6d, 0x61, 0x78, 0x28, 0x35, 0x30, 0x30, 0x2c,
-+  0x20, 0x4e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x28, 0x70, 0x65, 0x72, 0x69,
-+  0x6f, 0x64, 0x29, 0x20, 0x7c, 0x7c, 0x20, 0x31, 0x38, 0x30, 0x30, 0x29,
-+  0x3b, 0x0a, 0x20, 0x20, 0x74, 0x6f, 0x75, 0x72, 0x54, 0x69, 0x6d, 0x65,
-+  0x72, 0x20, 0x3d, 0x20, 0x73, 0x65, 0x74, 0x49, 0x6e, 0x74, 0x65, 0x72,
-+  0x76, 0x61, 0x6c, 0x28, 0x28, 0x29, 0x20, 0x3d, 0x3e, 0x20, 0x7b, 0x0a,
-+  0x20, 0x20, 0x20, 0x20, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e, 0x64, 0x65,
-+  0x78, 0x20, 0x3d, 0x20, 0x28, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e, 0x64,
-+  0x65, 0x78, 0x20, 0x2b, 0x20, 0x31, 0x29, 0x20, 0x25, 0x20, 0x69, 0x64,
-+  0x73, 0x2e, 0x6c, 0x65, 0x6e, 0x67, 0x74, 0x68, 0x3b, 0x0a, 0x20, 0x20,
-+  0x20, 0x20, 0x73, 0x65, 0x74, 0x45, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
-+  0x28, 0x69, 0x64, 0x73, 0x5b, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e, 0x64,
-+  0x65, 0x78, 0x5d, 0x2c, 0x20, 0x74, 0x72, 0x75, 0x65, 0x29, 0x3b, 0x0a,
-+  0x20, 0x20, 0x7d, 0x2c, 0x20, 0x64, 0x65, 0x6c, 0x61, 0x79, 0x29, 0x3b,
-+  0x0a, 0x7d, 0x0a, 0x0a, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f, 0x6e,
-+  0x20, 0x73, 0x74, 0x6f, 0x70, 0x54, 0x6f, 0x75, 0x72, 0x28, 0x29, 0x20,
-+  0x7b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20, 0x28, 0x74, 0x6f, 0x75, 0x72,
-+  0x54, 0x69, 0x6d, 0x65, 0x72, 0x29, 0x20, 0x63, 0x6c, 0x65, 0x61, 0x72,
-+  0x49, 0x6e, 0x74, 0x65, 0x72, 0x76, 0x61, 0x6c, 0x28, 0x74, 0x6f, 0x75,
-+  0x72, 0x54, 0x69, 0x6d, 0x65, 0x72, 0x29, 0x3b, 0x0a, 0x20, 0x20, 0x74,
-+  0x6f, 0x75, 0x72, 0x54, 0x69, 0x6d, 0x65, 0x72, 0x20, 0x3d, 0x20, 0x30,
-+  0x3b, 0x0a, 0x7d, 0x0a, 0x0a, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69, 0x6f,
-+  0x6e, 0x20, 0x73, 0x65, 0x74, 0x41, 0x63, 0x74, 0x69, 0x76, 0x65, 0x28,
-+  0x76, 0x61, 0x6c, 0x75, 0x65, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x61,
-+  0x63, 0x74, 0x69, 0x76, 0x65, 0x20, 0x3d, 0x20, 0x21, 0x21, 0x76, 0x61,
-+  0x6c, 0x75, 0x65, 0x3b, 0x0a, 0x7d, 0x0a, 0x0a, 0x66, 0x75, 0x6e, 0x63,
-+  0x74, 0x69, 0x6f, 0x6e, 0x20, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x53,
-+  0x74, 0x61, 0x74, 0x69, 0x63, 0x28, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20,
-+  0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x46, 0x72, 0x61, 0x6d, 0x65, 0x28,
-+  0x29, 0x3b, 0x0a, 0x7d, 0x0a, 0x0a, 0x66, 0x75, 0x6e, 0x63, 0x74, 0x69,
-+  0x6f, 0x6e, 0x20, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x46, 0x72, 0x61,
-+  0x6d, 0x65, 0x28, 0x29, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20,
-+  0x28, 0x21, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x29, 0x20, 0x72, 0x65,
-+  0x74, 0x75, 0x72, 0x6e, 0x3b, 0x0a, 0x20, 0x20, 0x63, 0x6f, 0x6e, 0x73,
-+  0x74, 0x20, 0x73, 0x20, 0x3d, 0x20, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73,
-+  0x5b, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x5d, 0x3b,
-+  0x0a, 0x20, 0x20, 0x70, 0x68, 0x61, 0x73, 0x65, 0x2b, 0x2b, 0x3b, 0x0a,
-+  0x20, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x74, 0x20, 0x3d, 0x20,
-+  0x70, 0x68, 0x61, 0x73, 0x65, 0x20, 0x2f, 0x20, 0x35, 0x3b, 0x0a, 0x20,
-+  0x20, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
-+  0x6e, 0x20, 0x3d, 0x20, 0x73, 0x5b, 0x38, 0x5d, 0x3b, 0x0a, 0x20, 0x20,
-+  0x6c, 0x65, 0x74, 0x20, 0x6f, 0x78, 0x20, 0x3d, 0x20, 0x67, 0x61, 0x7a,
-+  0x65, 0x58, 0x20, 0x2a, 0x20, 0x32, 0x30, 0x3b, 0x0a, 0x20, 0x20, 0x6c,
-+  0x65, 0x74, 0x20, 0x6f, 0x79, 0x20, 0x3d, 0x20, 0x67, 0x61, 0x7a, 0x65,
-+  0x59, 0x20, 0x2a, 0x20, 0x31, 0x30, 0x3b, 0x0a, 0x20, 0x20, 0x6c, 0x65,
-+  0x74, 0x20, 0x62, 0x72, 0x65, 0x61, 0x74, 0x68, 0x20, 0x3d, 0x20, 0x4d,
-+  0x61, 0x74, 0x68, 0x2e, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x28, 0x4d, 0x61,
-+  0x74, 0x68, 0x2e, 0x73, 0x69, 0x6e, 0x28, 0x74, 0x20, 0x2a, 0x20, 0x30,
-+  0x2e, 0x32, 0x32, 0x29, 0x20, 0x2a, 0x20, 0x33, 0x29, 0x3b, 0x0a, 0x20,
-+  0x20, 0x69, 0x66, 0x20, 0x28, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x20,
-+  0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x6a, 0x69, 0x74, 0x74, 0x65, 0x72, 0x27,
-+  0x29, 0x20, 0x6f, 0x78, 0x20, 0x2b, 0x3d, 0x20, 0x28, 0x28, 0x70, 0x68,
-+  0x61, 0x73, 0x65, 0x20, 0x25, 0x20, 0x33, 0x29, 0x20, 0x2d, 0x20, 0x31,
-+  0x29, 0x20, 0x2a, 0x20, 0x35, 0x3b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20,
-+  0x28, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20,
-+  0x27, 0x73, 0x63, 0x61, 0x6e, 0x27, 0x29, 0x20, 0x6f, 0x78, 0x20, 0x2b,
-+  0x3d, 0x20, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x72, 0x6f, 0x75, 0x6e, 0x64,
-+  0x28, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x73, 0x69, 0x6e, 0x28, 0x74, 0x20,
-+  0x2a, 0x20, 0x30, 0x2e, 0x35, 0x35, 0x29, 0x20, 0x2a, 0x20, 0x31, 0x38,
-+  0x29, 0x3b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20, 0x28, 0x6d, 0x6f, 0x74,
-+  0x69, 0x6f, 0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x70, 0x65, 0x65,
-+  0x6b, 0x27, 0x29, 0x20, 0x6f, 0x78, 0x20, 0x2b, 0x3d, 0x20, 0x4d, 0x61,
-+  0x74, 0x68, 0x2e, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x28, 0x4d, 0x61, 0x74,
-+  0x68, 0x2e, 0x73, 0x69, 0x6e, 0x28, 0x74, 0x20, 0x2a, 0x20, 0x30, 0x2e,
-+  0x31, 0x36, 0x29, 0x20, 0x2a, 0x20, 0x31, 0x32, 0x29, 0x3b, 0x0a, 0x20,
-+  0x20, 0x69, 0x66, 0x20, 0x28, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x20,
-+  0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x73, 0x61, 0x64, 0x27, 0x29, 0x20, 0x6f,
-+  0x79, 0x20, 0x2b, 0x3d, 0x20, 0x38, 0x3b, 0x0a, 0x20, 0x20, 0x69, 0x66,
-+  0x20, 0x28, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x3d, 0x3d, 0x3d,
-+  0x20, 0x27, 0x70, 0x72, 0x6f, 0x75, 0x64, 0x27, 0x29, 0x20, 0x6f, 0x79,
-+  0x20, 0x2d, 0x3d, 0x20, 0x35, 0x3b, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20,
-+  0x28, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20,
-+  0x27, 0x62, 0x6f, 0x75, 0x6e, 0x63, 0x65, 0x27, 0x20, 0x7c, 0x7c, 0x20,
-+  0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20, 0x27,
-+  0x63, 0x65, 0x6c, 0x65, 0x62, 0x72, 0x61, 0x74, 0x65, 0x27, 0x29, 0x20,
-+  0x6f, 0x79, 0x20, 0x2b, 0x3d, 0x20, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x72,
-+  0x6f, 0x75, 0x6e, 0x64, 0x28, 0x4d, 0x61, 0x74, 0x68, 0x2e, 0x73, 0x69,
-+  0x6e, 0x28, 0x74, 0x20, 0x2a, 0x20, 0x30, 0x2e, 0x34, 0x32, 0x29, 0x20,
-+  0x2a, 0x20, 0x37, 0x29, 0x3b, 0x0a, 0x0a, 0x20, 0x20, 0x69, 0x66, 0x20,
-+  0x28, 0x70, 0x68, 0x61, 0x73, 0x65, 0x20, 0x3e, 0x3d, 0x20, 0x6e, 0x65,
-+  0x78, 0x74, 0x42, 0x6c, 0x69, 0x6e, 0x6b, 0x29, 0x20, 0x7b, 0x0a, 0x20,
-+  0x20, 0x20, 0x20, 0x62, 0x6c, 0x69, 0x6e, 0x6b, 0x55, 0x6e, 0x74, 0x69,
-+  0x6c, 0x20, 0x3d, 0x20, 0x70, 0x68, 0x61, 0x73, 0x65, 0x20, 0x2b, 0x20,
-+  0x32, 0x3b, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x6e, 0x65, 0x78, 0x74, 0x42,
-+  0x6c, 0x69, 0x6e, 0x6b, 0x20, 0x3d, 0x20, 0x70, 0x68, 0x61, 0x73, 0x65,
-+  0x20, 0x2b, 0x20, 0x33, 0x30, 0x20, 0x2b, 0x20, 0x28, 0x70, 0x68, 0x61,
-+  0x73, 0x65, 0x20, 0x25, 0x20, 0x32, 0x35, 0x29, 0x3b, 0x0a, 0x20, 0x20,
-+  0x7d, 0x0a, 0x20, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x62, 0x6c,
-+  0x69, 0x6e, 0x6b, 0x69, 0x6e, 0x67, 0x20, 0x3d, 0x20, 0x70, 0x68, 0x61,
-+  0x73, 0x65, 0x20, 0x3c, 0x20, 0x62, 0x6c, 0x69, 0x6e, 0x6b, 0x55, 0x6e,
-+  0x74, 0x69, 0x6c, 0x20, 0x7c, 0x7c, 0x20, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
-+  0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x73, 0x6c, 0x65, 0x65, 0x70,
-+  0x27, 0x3b, 0x0a, 0x20, 0x20, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x20, 0x65,
-+  0x79, 0x65, 0x48, 0x20, 0x3d, 0x20, 0x62, 0x6c, 0x69, 0x6e, 0x6b, 0x69,
-+  0x6e, 0x67, 0x20, 0x3f, 0x20, 0x36, 0x20, 0x3a, 0x20, 0x4d, 0x61, 0x74,
-+  0x68, 0x2e, 0x6d, 0x61, 0x78, 0x28, 0x33, 0x36, 0x2c, 0x20, 0x73, 0x5b,
-+  0x33, 0x5d, 0x20, 0x2a, 0x20, 0x32, 0x29, 0x3b, 0x0a, 0x20, 0x20, 0x63,
-+  0x6f, 0x6e, 0x73, 0x74, 0x20, 0x65, 0x79, 0x65, 0x59, 0x20, 0x3d, 0x20,
-+  0x31, 0x37, 0x30, 0x20, 0x2b, 0x20, 0x62, 0x72, 0x65, 0x61, 0x74, 0x68,
-+  0x20, 0x2b, 0x20, 0x6f, 0x79, 0x3b, 0x0a, 0x20, 0x20, 0x75, 0x69, 0x2e,
-+  0x73, 0x65, 0x74, 0x50, 0x6f, 0x73, 0x28, 0x65, 0x79, 0x65, 0x4c, 0x2c,
-+  0x20, 0x33, 0x32, 0x32, 0x20, 0x2b, 0x20, 0x6f, 0x78, 0x2c, 0x20, 0x65,
-+  0x79, 0x65, 0x59, 0x29, 0x3b, 0x20, 0x75, 0x69, 0x2e, 0x73, 0x65, 0x74,
-+  0x50, 0x6f, 0x73, 0x28, 0x65, 0x79, 0x65, 0x52, 0x2c, 0x20, 0x57, 0x20,
-+  0x2d, 0x20, 0x33, 0x37, 0x36, 0x20, 0x2b, 0x20, 0x6f, 0x78, 0x2c, 0x20,
-+  0x65, 0x79, 0x65, 0x59, 0x29, 0x3b, 0x0a, 0x20, 0x20, 0x75, 0x69, 0x2e,
-+  0x73, 0x65, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x28, 0x65, 0x79, 0x65, 0x4c,
-+  0x2c, 0x20, 0x35, 0x34, 0x2c, 0x20, 0x65, 0x79, 0x65, 0x48, 0x29, 0x3b,
-+  0x20, 0x75, 0x69, 0x2e, 0x73, 0x65, 0x74, 0x53, 0x69, 0x7a, 0x65, 0x28,
-+  0x65, 0x79, 0x65, 0x52, 0x2c, 0x20, 0x35, 0x34, 0x2c, 0x20, 0x65, 0x79,
-+  0x65, 0x48, 0x29, 0x3b, 0x0a, 0x7d, 0x0a, 0x0a, 0x75, 0x69, 0x2e, 0x6f,
-+  0x6e, 0x53, 0x77, 0x69, 0x70, 0x65, 0x28, 0x64, 0x69, 0x72, 0x65, 0x63,
-+  0x74, 0x69, 0x6f, 0x6e, 0x20, 0x3d, 0x3e, 0x20, 0x7b, 0x0a, 0x20, 0x20,
-+  0x69, 0x66, 0x20, 0x28, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f,
-+  0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x6c, 0x65, 0x66, 0x74, 0x27,
-+  0x20, 0x7c, 0x7c, 0x20, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f,
-+  0x6e, 0x20, 0x3d, 0x3d, 0x3d, 0x20, 0x27, 0x64, 0x6f, 0x77, 0x6e, 0x27,
-+  0x29, 0x20, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x2b,
-+  0x2b, 0x3b, 0x0a, 0x20, 0x20, 0x65, 0x6c, 0x73, 0x65, 0x20, 0x74, 0x6f,
-+  0x75, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x2d, 0x2d, 0x3b, 0x0a, 0x20,
-+  0x20, 0x69, 0x66, 0x20, 0x28, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e, 0x64,
-+  0x65, 0x78, 0x20, 0x3c, 0x20, 0x30, 0x29, 0x20, 0x74, 0x6f, 0x75, 0x72,
-+  0x49, 0x6e, 0x64, 0x65, 0x78, 0x20, 0x3d, 0x20, 0x69, 0x64, 0x73, 0x2e,
-+  0x6c, 0x65, 0x6e, 0x67, 0x74, 0x68, 0x20, 0x2d, 0x20, 0x31, 0x3b, 0x0a,
-+  0x20, 0x20, 0x69, 0x66, 0x20, 0x28, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e,
-+  0x64, 0x65, 0x78, 0x20, 0x3e, 0x3d, 0x20, 0x69, 0x64, 0x73, 0x2e, 0x6c,
-+  0x65, 0x6e, 0x67, 0x74, 0x68, 0x29, 0x20, 0x74, 0x6f, 0x75, 0x72, 0x49,
-+  0x6e, 0x64, 0x65, 0x78, 0x20, 0x3d, 0x20, 0x30, 0x3b, 0x0a, 0x20, 0x20,
-+  0x73, 0x74, 0x6f, 0x70, 0x54, 0x6f, 0x75, 0x72, 0x28, 0x29, 0x3b, 0x0a,
-+  0x20, 0x20, 0x73, 0x65, 0x74, 0x45, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
-+  0x28, 0x69, 0x64, 0x73, 0x5b, 0x74, 0x6f, 0x75, 0x72, 0x49, 0x6e, 0x64,
-+  0x65, 0x78, 0x5d, 0x2c, 0x20, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x29, 0x3b,
-+  0x0a, 0x7d, 0x29, 0x3b, 0x0a, 0x0a, 0x67, 0x6c, 0x6f, 0x62, 0x61, 0x6c,
-+  0x54, 0x68, 0x69, 0x73, 0x2e, 0x56, 0x65, 0x6c, 0x61, 0x4d, 0x6f, 0x6f,
-+  0x64, 0x20, 0x3d, 0x20, 0x7b, 0x0a, 0x20, 0x20, 0x73, 0x65, 0x74, 0x45,
-+  0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x2c, 0x0a, 0x20, 0x20, 0x73, 0x65,
-+  0x74, 0x47, 0x61, 0x7a, 0x65, 0x2c, 0x0a, 0x20, 0x20, 0x68, 0x61, 0x6e,
-+  0x64, 0x6c, 0x65, 0x41, 0x49, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
-+  0x2c, 0x0a, 0x20, 0x20, 0x73, 0x74, 0x61, 0x72, 0x74, 0x54, 0x6f, 0x75,
-+  0x72, 0x2c, 0x0a, 0x20, 0x20, 0x73, 0x74, 0x6f, 0x70, 0x54, 0x6f, 0x75,
-+  0x72, 0x2c, 0x0a, 0x20, 0x20, 0x73, 0x65, 0x74, 0x41, 0x63, 0x74, 0x69,
-+  0x76, 0x65, 0x2c, 0x0a, 0x20, 0x20, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72,
-+  0x53, 0x74, 0x61, 0x74, 0x69, 0x63, 0x2c, 0x0a, 0x20, 0x20, 0x73, 0x74,
-+  0x61, 0x74, 0x65, 0x73, 0x3a, 0x20, 0x69, 0x64, 0x73, 0x2e, 0x73, 0x6c,
-+  0x69, 0x63, 0x65, 0x28, 0x29, 0x0a, 0x7d, 0x3b, 0x0a, 0x0a, 0x73, 0x65,
-+  0x74, 0x45, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x28, 0x63, 0x75, 0x72,
-+  0x72, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x2c, 0x20, 0x74, 0x72, 0x75, 0x65,
-+  0x29, 0x3b, 0x0a, 0x73, 0x65, 0x74, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x76,
-+  0x61, 0x6c, 0x28, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x46, 0x72, 0x61,
-+  0x6d, 0x65, 0x2c, 0x20, 0x38, 0x30, 0x29, 0x3b, 0x0a, 0x63, 0x6f, 0x6e,
-+  0x73, 0x6f, 0x6c, 0x65, 0x2e, 0x6c, 0x6f, 0x67, 0x28, 0x27, 0x56, 0x65,
-+  0x6c, 0x61, 0x20, 0x4d, 0x6f, 0x6f, 0x64, 0x20, 0x43, 0x6f, 0x6e, 0x73,
-+  0x6f, 0x6c, 0x65, 0x20, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69,
-+  0x7a, 0x65, 0x64, 0x20, 0x77, 0x69, 0x74, 0x68, 0x20, 0x27, 0x20, 0x2b,
-+  0x20, 0x69, 0x64, 0x73, 0x2e, 0x6c, 0x65, 0x6e, 0x67, 0x74, 0x68, 0x20,
-+  0x2b, 0x20, 0x27, 0x20, 0x6f, 0x72, 0x69, 0x67, 0x69, 0x6e, 0x61, 0x6c,
-+  0x20, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x27, 0x29, 0x3b, 0x0a,
-+};
-+
-+const char *ouo_get_app_js(unsigned int *len)
-+{
-+  *len = sizeof(g_ouo_app_js);
-+  return (const char *)g_ouo_app_js;
-+}
+ #ifdef CONFIG_SYSTEM_NSH
+   if (task_create("nsh", 100, 4096, nsh_main, NULL) < 0)
+     {
 diff --git a/system/desktop/qpk_runtime.c b/system/desktop/qpk_runtime.c
-index 4f488796be095a582be8bf3747200b0f1568b50f..836c215811e693b4e2cbdf0d5db15a541bd97f31 100644
+index 4f48879..836c215 100644
 --- a/system/desktop/qpk_runtime.c
 +++ b/system/desktop/qpk_runtime.c
 @@ -9,6 +9,7 @@

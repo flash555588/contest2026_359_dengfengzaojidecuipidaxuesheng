@@ -125,7 +125,7 @@ if(CONFIG_ESPRESSIF_TEMP)
 endif()
 
 if(CONFIG_ESPRESSIF_I2C)
-  if(CONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE)
+  if(CONFIG_ESPRESSIF_I2C_PERIPH)
     list(APPEND SRCS esp_i2c.c)
   endif()
   if(CONFIG_ESPRESSIF_I2C_BITBANG)
@@ -233,7 +233,7 @@ if(DEFINED ENV{ESP_HAL_3RDPARTY_VERSION})
       CACHE STRING "ESP HAL 3rdparty version")
 else()
   set(ESP_HAL_3RDPARTY_VERSION
-      8d0a898910084206721a0892ab093021bca1496a
+      78c092909fca38d1e2ccf767b5eff66bddc5c789
       CACHE STRING "ESP HAL 3rdparty version")
 endif()
 
@@ -346,6 +346,51 @@ if(NOT IS_DIRECTORY "${ESP_HAL_3RDPARTY_REPO}")
     endif()
   endif()
 endif()
+
+execute_process(
+  COMMAND git rev-parse HEAD
+  WORKING_DIRECTORY ${ESP_HAL_3RDPARTY_REPO}
+  RESULT_VARIABLE ESP_HAL_REVISION_RESULT
+  OUTPUT_VARIABLE ESP_HAL_ACTUAL_REVISION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET)
+if(NOT ESP_HAL_REVISION_RESULT EQUAL 0 OR
+   NOT ESP_HAL_ACTUAL_REVISION STREQUAL ESP_HAL_3RDPARTY_VERSION)
+  message(
+    FATAL_ERROR
+      "esp-hal-3rdparty expected ${ESP_HAL_3RDPARTY_VERSION}, got ${ESP_HAL_ACTUAL_REVISION}"
+  )
+endif()
+
+file(
+  GLOB ESP_HAL_3RDPARTY_PATCHES CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_LIST_DIR}/../../${CHIP_SERIES}/patches/${ESP_HAL_3RDPARTY_REPO_NAME}/*.patch"
+)
+foreach(ESP_HAL_PATCH IN LISTS ESP_HAL_3RDPARTY_PATCHES)
+  execute_process(
+    COMMAND git apply --check ${ESP_HAL_PATCH}
+    WORKING_DIRECTORY ${ESP_HAL_3RDPARTY_REPO}
+    RESULT_VARIABLE ESP_HAL_PATCH_CHECK_RESULT
+    ERROR_QUIET)
+  if(ESP_HAL_PATCH_CHECK_RESULT EQUAL 0)
+    execute_process(
+      COMMAND git apply ${ESP_HAL_PATCH}
+      WORKING_DIRECTORY ${ESP_HAL_3RDPARTY_REPO}
+      RESULT_VARIABLE ESP_HAL_PATCH_RESULT)
+    if(NOT ESP_HAL_PATCH_RESULT EQUAL 0)
+      message(FATAL_ERROR "Failed to apply ${ESP_HAL_PATCH}")
+    endif()
+  else()
+    execute_process(
+      COMMAND git apply --reverse --check ${ESP_HAL_PATCH}
+      WORKING_DIRECTORY ${ESP_HAL_3RDPARTY_REPO}
+      RESULT_VARIABLE ESP_HAL_PATCH_REVERSE_RESULT
+      ERROR_QUIET)
+    if(NOT ESP_HAL_PATCH_REVERSE_RESULT EQUAL 0)
+      message(FATAL_ERROR "HAL patch state is invalid: ${ESP_HAL_PATCH}")
+    endif()
+  endif()
+endforeach()
 # cmake-format: on
 
 # This is done previously on configure time but must be done again if a 'clean'

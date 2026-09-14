@@ -1,0 +1,549 @@
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+index 0c6c77b..34c3330 100644
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+@@ -97,3 +97,7 @@ CONFIG_SYSTEM_DUMPSTACK=y
+ CONFIG_SYSTEM_NSH=y
+ CONFIG_SYSTEM_NXCAMERA=y
+ CONFIG_UART0_SERIAL_CONSOLE=y
++
++CONFIG_INPUT_GT9XX_POLL_INTERVAL=50
++
++CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS=500
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_touch.c b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_touch.c
+old mode 100755
+new mode 100644
+index b51e261..8bd25d9
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_touch.c
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_touch.c
+@@ -4,6 +4,10 @@
+  * SPDX-License-Identifier: Apache-2.0
+  ****************************************************************************/
+ 
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
+ #include <nuttx/config.h>
+ 
+ #include <errno.h>
+@@ -16,6 +20,10 @@
+ 
+ #ifdef CONFIG_INPUT_GT9XX
+ 
++/****************************************************************************
++ * Pre-processor Definitions
++ ****************************************************************************/
++
+ /* ESP32-P4 Function EV Board: GT911 at I2C0 address 0x5d,
+  * SCL GPIO8, SDA GPIO7.  The official Espressif BSP defines both the touch
+  * interrupt and reset pins as not connected.  GPIO23 is the LCD backlight,
+@@ -24,6 +32,11 @@
+ 
+ #define TP_I2C_PORT 0
+ #define TP_I2C_ADDR 0x5d
++
++/****************************************************************************
++ * Private Functions
++ ****************************************************************************/
++
+ static int tp_irq_attach(const struct gt9xx_board_s *state, xcpt_t isr,
+                          FAR void *arg)
+ {
+@@ -41,13 +54,23 @@ static int tp_set_power(const struct gt9xx_board_s *state, bool on)
+   return OK;
+ }
+ 
++/****************************************************************************
++ * Private Data
++ ****************************************************************************/
++
+ static const struct gt9xx_board_s g_gt9xx_board =
+ {
+-  .irq_attach = tp_irq_attach,
+-  .irq_enable = tp_irq_enable,
+-  .set_power  = tp_set_power,
++  .irq_attach   = tp_irq_attach,
++  .irq_enable   = tp_irq_enable,
++  .set_power    = tp_set_power,
++  .set_reset    = NULL,
++  .set_irq_mode = NULL,
+ };
+ 
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
+ int board_touch_initialize(void)
+ {
+   FAR struct i2c_master_s *i2c;
+diff --git a/old/drivers/input/Kconfig b/new/drivers/input/Kconfig
+index 36c168e..fdb1cb3 100644
+--- a/old/drivers/input/Kconfig
++++ b/new/drivers/input/Kconfig
+@@ -649,6 +649,24 @@ config INPUT_GT9XX_I2C_FREQUENCY
+ 	---help---
+ 		I2C frequency in Hz
+ 
++config INPUT_GT9XX_POLL_INTERVAL
++	int "Polling interval in milliseconds (0 = interrupt mode)"
++	default 0
++	range 0 1000
++	---help---
++		Set this to a non-zero value when the touch interrupt is not wired.
++		A low-priority worker wakes poll waiters; the I2C transaction remains
++		in the reader's thread context.  The worker is cancelled on last close.
++
++config INPUT_GT9XX_STARTUP_DISCARD_MS
++	int "Discard touches after first open (milliseconds)"
++	default 0
++	range 0 5000
++	---help---
++		Ignore touch reports for this interval after the controller is powered
++		on.  This prevents reset and power-on transients from being interpreted
++		as user input.
++
+ endif # INPUT_GT9XX
+ 
+ config INPUT_BUTTONS
+diff --git a/old/drivers/input/gt9xx.c b/new/drivers/input/gt9xx.c
+index 37b7a3c..0804360 100644
+--- a/old/drivers/input/gt9xx.c
++++ b/new/drivers/input/gt9xx.c
+@@ -41,10 +41,12 @@
+ #include <debug.h>
+ 
+ #include <nuttx/arch.h>
++#include <nuttx/clock.h>
+ #include <nuttx/kmalloc.h>
+ #include <nuttx/signal.h>
+ #include <nuttx/spinlock.h>
+ #include <nuttx/mutex.h>
++#include <nuttx/wqueue.h>
+ #include <nuttx/i2c/i2c_master.h>
+ #include <nuttx/input/touchscreen.h>
+ #include <nuttx/input/gt9xx.h>
+@@ -71,6 +73,14 @@
+ #  define CONFIG_INPUT_GT9XX_NPOLLWAITERS 1
+ #endif
+ 
++#ifndef CONFIG_INPUT_GT9XX_POLL_INTERVAL
++#  define CONFIG_INPUT_GT9XX_POLL_INTERVAL 0
++#endif
++
++#ifndef CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS
++#  define CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS 0
++#endif
++
+ /* I2C Registers for Goodix GT9XX Touch Panel */
+ 
+ #define GTP_REG_VERSION    0x8140  /* Product ID */
+@@ -103,6 +113,15 @@ struct gt9xx_dev_s
+   uint16_t y;       /* Y Coordinate of Last Touch Point */
+   uint8_t flags;    /* Touch Up or Touch Down for Last Touch Point */
+ 
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL > 0
++  struct work_s work; /* Poll notification worker */
++  bool polling;       /* True while the worker should requeue itself */
++#endif
++
++#if CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS > 0
++  clock_t discard_until; /* Ignore startup transients before this tick */
++#endif
++
+   /* Poll Waiters for device */
+ 
+   FAR struct pollfd *fds[CONFIG_INPUT_GT9XX_NPOLLWAITERS];
+@@ -121,6 +140,9 @@ static int gt9xx_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+ #endif
+ static int gt9xx_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                       bool setup);
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL > 0
++static void gt9xx_poll_worker(FAR void *arg);
++#endif
+ 
+ /****************************************************************************
+  * Private Data
+@@ -355,6 +377,97 @@ static int gt9xx_probe_device(FAR struct gt9xx_dev_s *dev)
+   return OK;
+ }
+ 
++/****************************************************************************
++ * Name: gt9xx_select_address
++ *
++ * Description:
++ *   Power the controller and, when RESET and INT are wired, perform the
++ *   address-selection sequence documented by Goodix.  Boards with neither
++ *   signal connected retain the power-up-and-probe fallback.
++ *
++ ****************************************************************************/
++
++static int gt9xx_select_address(FAR struct gt9xx_dev_s *dev, uint8_t addr)
++{
++  bool irq_high = addr == 0x14;
++  int ret;
++
++  if ((dev->board->set_reset == NULL) !=
++      (dev->board->set_irq_mode == NULL))
++    {
++      ierr("RESET and INT mode callbacks must be provided together\n");
++      return -EINVAL;
++    }
++
++  ret = dev->board->set_power(dev->board, true);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  dev->addr = addr;
++  if (dev->board->set_reset == NULL)
++    {
++      nxsig_usleep(100 * 1000);
++      return OK;
++    }
++
++  ret = dev->board->set_reset(dev->board, true);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  ret = dev->board->set_irq_mode(dev->board, true, irq_high);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  nxsig_usleep(100);
++  ret = dev->board->set_reset(dev->board, false);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  nxsig_usleep(5 * 1000);
++  ret = dev->board->set_irq_mode(dev->board, false, false);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  nxsig_usleep(50 * 1000);
++  return OK;
++}
++
++static int gt9xx_select_and_probe(FAR struct gt9xx_dev_s *dev,
++                                  uint8_t addr)
++{
++  int tries;
++  int ret;
++
++  ret = gt9xx_select_address(dev, addr);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  for (tries = 0; tries < 3; tries++)
++    {
++      ret = gt9xx_probe_device(dev);
++      if (ret == OK)
++        {
++          return OK;
++        }
++
++      nxsig_usleep(50 * 1000);
++    }
++
++  return ret;
++}
++
+ /****************************************************************************
+  * Name: gt9xx_set_status
+  *
+@@ -551,6 +664,9 @@ static ssize_t gt9xx_read(FAR struct file *filep, FAR char *buffer,
+   FAR struct gt9xx_dev_s *priv;
+   struct touch_sample_s sample;
+   const size_t outlen = sizeof(sample);
++#if CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS > 0
++  bool discard;
++#endif
+   irqstate_t flags;
+   int ret;
+ 
+@@ -594,6 +710,15 @@ static ssize_t gt9xx_read(FAR struct file *filep, FAR char *buffer,
+ 
+   ret = gt9xx_read_touch_data(priv, &sample);
+ 
++#if CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS > 0
++  discard = clock_systime_ticks() < priv->discard_until;
++  if (discard && ret >= 0)
++    {
++      priv->flags = 0;
++      ret = -EAGAIN;
++    }
++#endif
++
+   /* Begin Critical Section: clear the Interrupt Pending Flag */
+ 
+   flags = enter_critical_section();
+@@ -687,6 +812,51 @@ static ssize_t gt9xx_read(FAR struct file *filep, FAR char *buffer,
+   return (ret < 0) ? ret : outlen;
+ }
+ 
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL > 0
++/****************************************************************************
++ * Name: gt9xx_poll_worker
++ *
++ * Description:
++ *   Wake poll waiters on boards without a connected touch interrupt.  I2C
++ *   access remains in gt9xx_read(), so the low-priority worker never blocks
++ *   on the bus and can be cancelled synchronously on last close.
++ *
++ ****************************************************************************/
++
++static void gt9xx_poll_worker(FAR void *arg)
++{
++  FAR struct gt9xx_dev_s *priv = arg;
++  irqstate_t flags;
++  bool polling;
++  int ret;
++
++  flags = enter_critical_section();
++  polling = priv->polling;
++  if (polling)
++    {
++      priv->int_pending = true;
++    }
++
++  leave_critical_section(flags);
++
++  if (!polling)
++    {
++      return;
++    }
++
++  poll_notify(priv->fds, CONFIG_INPUT_GT9XX_NPOLLWAITERS, POLLIN);
++  ret = work_queue(LPWORK, &priv->work, gt9xx_poll_worker, priv,
++                   MSEC2TICK(CONFIG_INPUT_GT9XX_POLL_INTERVAL));
++  if (ret < 0)
++    {
++      flags = enter_critical_section();
++      priv->polling = false;
++      leave_critical_section(flags);
++      ierr("Failed to requeue poll worker: %d\n", ret);
++    }
++}
++#endif
++
+ /****************************************************************************
+  * Name: gt9xx_open
+  *
+@@ -732,57 +902,59 @@ static int gt9xx_open(FAR struct file *filep)
+   DEBUGASSERT(use_count < UINT8_MAX && use_count > priv->cref);
+   if (use_count == 1)
+     {
+-      /* If first user, power on the Touch Panel */
++      uint8_t preferred = priv->addr;
++
++      /* Select the configured address and probe it.  If that fails, perform
++       * a fresh power/reset sequence before probing the alternate address.
++       */
+ 
+       DEBUGASSERT(priv->board->set_power != NULL);
+-      ret = priv->board->set_power(priv->board, true);
++      ret = gt9xx_select_and_probe(priv, preferred);
+       if (ret < 0)
+         {
+-          goto out_lock;
++          priv->board->set_power(priv->board, false);
++          nxsig_usleep(10 * 1000);
++          ret = gt9xx_select_and_probe(priv, GT9XX_ADDR_ALT(preferred));
+         }
+ 
+-      /* Let Touch Panel power up before probing */
+-
+-      nxsig_usleep(100 * 1000);
+-
+-      /* Check that Touch Panel exists on I2C */
+-
++      if (ret < 0)
+         {
+-          int tries;
++          /* No such device, power off the Touch Panel */
+ 
+-          ret = -ENODEV;
+-          for (tries = 0; tries < 5; tries++)
+-            {
+-              ret = gt9xx_probe_device(priv);
+-              if (ret == OK)
+-                {
+-                  break;
+-                }
+-
+-              if (tries == 2)
+-                {
+-                  priv->addr = GT9XX_ADDR_ALT(priv->addr);
+-                }
+-
+-              nxsig_usleep(50 * 1000);
+-            }
++          priv->board->set_power(priv->board, false);
++          goto out_lock;
+         }
+ 
++      ret = gt9xx_set_status(priv, 0);
+       if (ret < 0)
+         {
+-          /* No such device, power off the Touch Panel */
+-
+           priv->board->set_power(priv->board, false);
+           goto out_lock;
+         }
+ 
+-      gt9xx_set_status(priv, 0);
+-      ret = OK;
++#if CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS > 0
++      priv->discard_until = clock_systime_ticks() +
++          MSEC2TICK(CONFIG_INPUT_GT9XX_STARTUP_DISCARD_MS);
++#endif
++
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL > 0
++      /* Start the cancellable polling notifier when INT is not wired. */
+ 
++      priv->polling = true;
++      ret = work_queue(LPWORK, &priv->work, gt9xx_poll_worker, priv,
++                       MSEC2TICK(CONFIG_INPUT_GT9XX_POLL_INTERVAL));
++      if (ret < 0)
++        {
++          priv->polling = false;
++          priv->board->set_power(priv->board, false);
++          goto out_lock;
++        }
++#else
+       /* Enable Touch Panel Interrupts */
+ 
+       DEBUGASSERT(priv->board->irq_enable);
+       priv->board->irq_enable(priv->board, true);
++#endif
+     }
+ 
+   /* Set the Reference Count */
+@@ -840,15 +1012,25 @@ static int gt9xx_close(FAR struct file *filep)
+   DEBUGASSERT(use_count >= 0);
+   if (use_count == 0)
+     {
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL > 0
++      irqstate_t flags;
++
++      flags = enter_critical_section();
++      priv->polling = false;
++      leave_critical_section(flags);
++      work_cancel_sync(LPWORK, &priv->work);
++#else
+       /* If final user, disable Touch Panel Interrupts */
+ 
+       DEBUGASSERT(priv->board && priv->board->irq_enable);
+       priv->board->irq_enable(priv->board, false);
++#endif
+ 
+       /* Power off the Touch Panel */
+ 
+       DEBUGASSERT(priv->board->set_power);
+       priv->board->set_power(priv->board, false);
++      priv->flags = 0;
+     }
+ 
+   /* Set the Reference Count */
+@@ -966,6 +1148,7 @@ out:
+   return ret;
+ }
+ 
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL == 0
+ /****************************************************************************
+  * Name: gt9xx_isr_handler
+  *
+@@ -1006,6 +1189,7 @@ static int gt9xx_isr_handler(int irq, FAR void *context, FAR void *arg)
+   poll_notify(priv->fds, CONFIG_INPUT_GT9XX_NPOLLWAITERS, POLLIN);
+   return OK;
+ }
++#endif
+ 
+ /****************************************************************************
+  * Public Functions
+@@ -1039,6 +1223,11 @@ int gt9xx_register(FAR const char *devpath,
+ 
+   iinfo("devpath=%s, i2c_devaddr=%d\n", devpath, i2c_devaddr);
+   DEBUGASSERT(devpath != NULL && i2c_dev != NULL && board_config != NULL);
++  if (devpath == NULL || i2c_dev == NULL || board_config == NULL ||
++      board_config->set_power == NULL)
++    {
++      return -EINVAL;
++    }
+ 
+   /* Allocate the Touch Panel Device Structure */
+ 
+@@ -1067,16 +1256,34 @@ int gt9xx_register(FAR const char *devpath,
+       return ret;
+     }
+ 
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL == 0
+   /* Attach the Interrupt Handler */
+ 
+-  DEBUGASSERT(priv->board->irq_attach);
+-  priv->board->irq_attach(priv->board, gt9xx_isr_handler, priv);
++  if (priv->board->irq_attach == NULL || priv->board->irq_enable == NULL)
++    {
++      ret = -EINVAL;
++      goto err_unregister;
++    }
++
++  ret = priv->board->irq_attach(priv->board, gt9xx_isr_handler, priv);
++  if (ret < 0)
++    {
++      goto err_unregister;
++    }
+ 
+   /* Disable Touch Panel Interrupts */
+ 
+-  DEBUGASSERT(priv->board->irq_enable);
+   priv->board->irq_enable(priv->board, false);
++#endif
+ 
+   iinfo("GT9XX Touch Panel registered\n");
+   return OK;
++
++#if CONFIG_INPUT_GT9XX_POLL_INTERVAL == 0
++err_unregister:
++  unregister_driver(devpath);
++  nxmutex_destroy(&priv->devlock);
++  kmm_free(priv);
++  return ret;
++#endif
+ }
+diff --git a/old/include/nuttx/input/gt9xx.h b/new/include/nuttx/input/gt9xx.h
+index b9d7dea..24ee1a2 100644
+--- a/old/include/nuttx/input/gt9xx.h
++++ b/new/include/nuttx/input/gt9xx.h
+@@ -52,6 +52,20 @@ struct gt9xx_board_s
+   /* Power on or off the Touch Panel */
+ 
+   int (*set_power) (const struct gt9xx_board_s *state, bool on);
++
++  /* Assert or release the active-low reset signal.  This callback is
++   * optional for boards where the signal is not connected.
++   */
++
++  int (*set_reset) (const struct gt9xx_board_s *state, bool asserted);
++
++  /* Select whether INT is an output and, when it is, drive it high or low.
++   * The GT9xx samples INT while reset is released to select its I2C address.
++   * This callback is optional for boards where INT is not connected.
++   */
++
++  int (*set_irq_mode) (const struct gt9xx_board_s *state, bool output,
++                       bool high);
+ };
+ 
+ /****************************************************************************

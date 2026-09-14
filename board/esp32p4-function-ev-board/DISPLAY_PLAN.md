@@ -83,8 +83,8 @@ DISP: display_init -> 0
 
 ### D4 触摸 ✅（2026-08-22 上午）
 
-- I2C0：SDA=GPIO7 / SCL=GPIO8（官方 BSP 引脚），控制器需两个**孤儿宏**才能编译/运行：
-  `-DCONFIG_ESPRESSIF_I2C_PERIPH_MASTER_MODE=1 -DCONFIG_ESPRESSIF_I2C0_MASTER_MODE=1`（arch Make.defs + 板级 Make.defs 双侧）
+- I2C1：SDA=GPIO7 / SCL=GPIO8（本板引脚）；当前配置通过 Kconfig/defconfig
+  启用 `CONFIG_ESPRESSIF_I2C_PERIPH`，不再从编译参数注入私有 `CONFIG_*` 宏
 - GT911 地址 **0x5D** 命中；INT 线 NC → 给 `drivers/input/gt9xx.c` 新增可选轮询模式
   （`CONFIG_INPUT_GT9XX_POLL=50ms`，HPWORK 工作队列模拟 ISR；补丁存 `tools/patches/nuttx_gt9xx_polling.patch`）
 - 板级回调三件套为 no-op 桩（无 INT 无电源控制）
@@ -98,7 +98,8 @@ D5 LVGL：开 `CONFIG_GRAPHICS_LVGL`+`lvgldemo`（fb 后端）→ 定制桌面�
 ### D5 桌面 ✅（2026-08-22）
 
 - `/dev/fb0` 注册完成（`up_fbinitialize/up_fbgetvplane` 适配层 + `fb_register(0,0)`）
-- 新增 `esp32p4_desktop.c`：开机 `task_create("desktop")` 启动 LVGL 任务
+- 早期原型曾由 board 内的 `esp32p4_desktop.c` 自动启动；最终版本已迁移到
+  `apps/system/desktop`，board 层只注册 `/dev/fb0`、`/dev/input0` 和相机设备
   - 深蓝背景 + 蓝色标题栏「openvela · ESP32-P4 Desktop」
   - 中央 Montserrat 字体实时 uptime 时钟（1s 刷新）
   - 「tap me」按钮 + 触摸计数反馈（GT911 轮询驱动）

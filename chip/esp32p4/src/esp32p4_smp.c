@@ -33,48 +33,9 @@ extern int _mtvt_table;
 
 static bool g_ipi_initialized[CONFIG_SMP_NCPUS];
 
-struct esp_ipc_call_s
-{
-  esp_ipc_func_t func;
-  void *arg;
-};
-
-static int esp_ipc_call_adapter(void *arg)
-{
-  struct esp_ipc_call_s *call = arg;
-
-  call->func(call->arg);
-  return OK;
-}
-
-static esp_err_t esp_ipc_call_internal(uint32_t cpu_id,
-                                       esp_ipc_func_t func, void *arg)
-{
-  struct esp_ipc_call_s call;
-  int ret;
-
-  if (cpu_id >= CONFIG_SMP_NCPUS || func == NULL)
-    {
-      return ESP_ERR_INVALID_ARG;
-    }
-
-  call.func = func;
-  call.arg = arg;
-  ret = nxsched_smp_call_single(cpu_id, esp_ipc_call_adapter, &call);
-
-  return ret < 0 ? ESP_FAIL : ESP_OK;
-}
-
-esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
-{
-  return esp_ipc_call_internal(cpu_id, func, arg);
-}
-
-esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func,
-                                void *arg)
-{
-  return esp_ipc_call_internal(cpu_id, func, arg);
-}
+/* esp_ipc_call* is provided by the HAL's task-based IPC implementation.
+ * In particular, flash coordination requires nonblocking dispatch.
+ */
 
 void esp_ipi_send(int cpu)
 {

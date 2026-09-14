@@ -178,10 +178,10 @@ def check_firmware_hashes(result: CheckResult) -> None:
             expected, name = parsed
             artifact = (checksum_file.parent / name).resolve()
             try:
-                artifact.relative_to(checksum_file.parent.resolve())
+                artifact.relative_to(ROOT.resolve())
             except ValueError:
                 result.errors.append(
-                    f"checksum path escapes directory: {relative(checksum_file)}:{line_number}"
+                    f"checksum path escapes repository: {relative(checksum_file)}:{line_number}"
                 )
                 continue
             if not artifact.is_file():
