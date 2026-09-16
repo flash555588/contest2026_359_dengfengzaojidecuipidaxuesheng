@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=3 mode=0 busy=0 stage=6 error=-5 frame=0 count=0 ms=0 track=0 target=-1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-start",
+    "output": "desktop ui espdl-start\nespdl start clicked=0\ndesktop: ui espdl-start ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop esdl\nespdl request=3 mode=0 busy=0 stage=6 error=-5 frame=0 count=0 ms=0 track=0 target=-1\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 40.1% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0001984 50.0% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936  0.0% hpwork 0x4ff4b4c0 0x4ff4b50c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936  0.0% lpwork 0x4ff4b440 0x4ff4b48c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006024  0.0% usbh_hub0 0x4ff586c0\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680  9.9% desktop\n    7     7 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016  0.4% nsh\nnsh> \u001b[K"
+  }
+]

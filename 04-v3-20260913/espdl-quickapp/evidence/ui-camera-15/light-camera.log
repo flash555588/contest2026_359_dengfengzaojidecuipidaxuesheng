@@ -1,0 +1,31 @@
+desktop camera
+desktop: camera diagnostic requested
+nsh> [K
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":0,"y":0,"w":1024,"h":600,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"button","x":13,"y":11,"w":52,"h":42,"scroll":false,"text":""},
+{"id":3,"parent":2,"type":"label","x":32,"y":19,"w":15,"h":27,"scroll":true,"text":""},
+{"id":4,"parent":1,"type":"label","x":79,"y":16,"w":56,"h":39,"scroll":true,"text":"相机"},
+{"id":5,"parent":1,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"label","x":25,"y":71,"w":520,"h":28,"scroll":true,"text":"选择摄像头，然后开始预览"},
+{"id":7,"parent":5,"type":"container","x":699,"y":67,"w":300,"h":36,"scroll":false,"text":""},
+{"id":8,"parent":5,"type":"label","x":707,"y":73,"w":284,"h":24,"scroll":true,"text":"已连接 1 个摄像头 · USB 1 / CSI 0"},
+{"id":9,"parent":5,"type":"button","x":25,"y":119,"w":974,"h":54,"scroll":false,"text":""},
+{"id":10,"parent":9,"type":"label","x":45,"y":132,"w":934,"h":28,"scroll":true,"text":"HD Web Camera · USB"},
+{"id":11,"parent":5,"type":"container","x":25,"y":435,"w":974,"h":96,"scroll":false,"text":""},
+{"id":12,"parent":5,"type":"label","x":49,"y":447,"w":200,"h":24,"scroll":true,"text":"视频参数"},
+{"id":13,"parent":5,"type":"button","x":49,"y":475,"w":455,"h":44,"scroll":false,"text":""},
+{"id":14,"parent":13,"type":"label","x":70,"y":483,"w":413,"h":28,"scroll":true,"text":"640 x 480 · MJPEG"},
+{"id":15,"parent":5,"type":"button","x":520,"y":475,"w":455,"h":44,"scroll":false,"text":""},
+{"id":16,"parent":15,"type":"label","x":541,"y":483,"w":413,"h":28,"scroll":true,"text":"30.0 fps"},
+{"id":17,"parent":5,"type":"label","x":25,"y":541,"w":520,"h":32,"scroll":true,"text":"已选择 HD Web Camera"},
+{"id":18,"parent":5,"type":"button","x":487,"y":551,"w":200,"h":48,"scroll":false,"text":""},
+{"id":19,"parent":18,"type":"label","x":507,"y":561,"w":160,"h":28,"scroll":true,"text":"开始预览"},
+{"id":20,"parent":5,"type":"button","x":703,"y":551,"w":160,"h":48,"scroll":false,"text":""},
+{"id":21,"parent":20,"type":"label","x":724,"y":561,"w":118,"h":28,"scroll":true,"text":"刷新设备"},
+{"id":22,"parent":5,"type":"button","x":879,"y":551,"w":120,"h":48,"scroll":false,"text":""},
+{"id":23,"parent":22,"type":"label","x":900,"y":561,"w":78,"h":28,"scroll":true,"text":"停止"}
+]
+UI_LAYOUT_END
+nsh> 

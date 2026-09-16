@@ -17,6 +17,8 @@
 # Device-local configuration and captured media
 **/.env
 **/.env.*
+**/music_credentials.h
+**/evidence/music-sample.mp3
 **/espclaw/voice.json
 **/espclaw/ca.pem
 **/evidence/**/*.png
@@ -41,3 +43,7 @@
 /03-early-v3/reference-source-current.tar.gz
 /04-v3-20260913/current-build-tree-source.tar.gz
 /diagnostics/cherryusb-reference/source.tar.gz
+
+# Private device backups, never part of source delivery
+/diagnostics/private/
+/diagnostics/qpk-authoring-baseline/

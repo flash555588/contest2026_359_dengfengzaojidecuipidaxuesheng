@@ -3,26 +3,26 @@ set confirm off
 set remotetimeout 20
 target remote 127.0.0.1:3333
 monitor halt
-p g_lcd_ready
-p g_lcd_plane
-p g_esp_mipi_dsi
-p g_nx_initstate
-p g_usbserial_priv
-p g_kmmheap
 python
-for i in range(int(gdb.parse_and_eval('g_npidhash'))):
-    task = gdb.parse_and_eval('g_pidhash[%d]' % i)
-    if int(task):
-        print('TASK', task['pid'], task['name'], 'state', task['task_state'])
-end
-p g_npidhash
-p g_running_tasks[0]->name
-p g_running_tasks[1]->name
-python
-if False and int(gdb.parse_and_eval('g_lcd_ready')):
-    address = int(gdb.parse_and_eval('g_esp_mipi_dsi.fb'))
-    size = int(gdb.parse_and_eval('g_esp_mipi_dsi.fb_size'))
-    gdb.execute('monitor dump_image diagnostics/desktop-framebuffer.bin 0x%x 0x%x' % (address, size))
+for expr in ["g_iob_count", "g_iob_freelist", "g_active_tcp_connections", "g_netlock", "'glass_music_service.c'::player_active", "'glass_music_service.c'::want_play", "'glass_music_service.c'::want_pause", "'glass_music_service.c'::state.state", "'glass_music_service.c'::state.search_error"]:
+    try: print(expr, gdb.parse_and_eval(expr))
+    except gdb.error as error: print('UNAVAILABLE', expr, error)
+try:
+    node = gdb.parse_and_eval('g_active_tcp_connections.head')
+    seen = set()
+    while int(node) and int(node) not in seen and len(seen) < 64:
+        seen.add(int(node))
+        conn = node.cast(gdb.lookup_type('struct tcp_conn_s').pointer()).dereference()
+        print('TCP', hex(int(node)), 'state', int(conn['tcpstateflags']),
+              'refs', int(conn['crefs']), 'readahead', hex(int(conn['readahead'])))
+        chain = conn['readahead']
+        count = 0
+        while int(chain) and count < 256:
+            count += 1
+            chain = chain['io_flink']
+        print('IOB chain length', count)
+        node = node['flink']
+except gdb.error as error: print(error)
 end
 monitor resume
 detach

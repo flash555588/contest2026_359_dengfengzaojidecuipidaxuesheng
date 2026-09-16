@@ -1,0 +1,26 @@
+[
+  {
+    "command": "reset",
+    "output": "ESP-ROM:esp32p4-eco7-20260109\nBuild:Jan  9 2026\nrst:0x17 (CHIP_USB_UART_RESET),boot:0xc (SPI_FAST_FLASH_BOOT)\nSPI mode:DIO, clock div:1\nload:0x30100000,len:0x68\nload:0x4ff40000,len:0x1e248\nentry 0x4ff4af84\n*** Booting NuttX ***\nI (32) boot: chip revision: v3.2\nI (32) boot: efuse block revision: v1.2\nI (32) boot.esp32p4: SPI Speed      : 80MHz\nI (33) boot.esp32p4: SPI Mode       : DIO\nI (36) boot.esp32p4: SPI Flash Size : 16MB\nI (39) boot: Enabling RNG early entropy source...\ntcm: lma 0x00002020 vma 0x30100000 len 0x68     (104)\ndram: lma 0x00002090 vma 0x4ff40000 len 0x1e248  (123464)\npadd: lma 0x00020308 vma 0x00000000 len 0xfd10   (64784)\nimap: lma 0x00030020 vma 0x40260020 len 0x3f88e8 (4163816)\npadd: lma 0x00428910 vma 0x00000000 len 0x76e8   (30440)\nimap: lma 0x00430000 vma 0x40000000 len 0x25a44c (2466892)\ntotal segments stored 6\nI (79) hex_psram: vendor id    : 0x0d (AP)\nI (80) hex_psram: Latency      : 0x01 (Fixed)\nI (84) hex_psram: DriveStr.    : 0x00 (25 Ohm)\nI (88) hex_psram: dev id       : 0x03 (generation 4)\nI (93) hex_psram: density      : 0x07 (256 Mbit)\nI (97) hex_psram: good-die     : 0x06 (Pass)\nI (101) hex_psram: SRF          : 0x02 (Slow Refresh)\nI (106) hex_psram: BurstType    : 0x00 ( Wrap)\nI (110) hex_psram: BurstLen     : 0x03 (2048 Byte)\nI (115) hex_psram: BitMode      : 0x01 (X16 Mode)\nI (119) hex_psram: Readlatency  : 0x04 (14 cycles@Fixed)\nI (124) hex_psram: DriveStrength: 0x00 (1/1)\nI (128) MSPI Timing: Enter psram timing tuning\nI (293) esp_psram: Found 32MB PSRAM device\nI (293) esp_psram: Speed: 200MHz\nI (305) hex_psram: psram CS IO is dedicated\nABCDV1: soc startup begin\nI (306) cpu_start: Pro cpu start user code\nI (307) cpu_start: cpu freq: 400000000 Hz\nI (307) esp_psram: Adding pool of 32768K of PSRAM memory to heap allocator\nW (314) spi_flash: Detected GigaDevice flash chip but using generic driver. For optimal functionality, enable `SPI_FLASH_SUPPORT_GD_CHIP` in menuconfig\nI (327) spi_flash: detected chip: generic\nI (331) spi_flash: flash io: dio\nV1: soc startup end\n[0[1:[ei\nNuttShell (NSH)\nnsh> \u001b[K\nnsh> \u001b[Krpc: WifiInit tx pb=50 tlv=62\nrpc: WifiInit pb bytes: 08 01 10 96 02 18 01 b2 11 28 0a 26 08 0a 10 20 18 01 28 20 40 01 48 01 58 01 68 06 78 f0 05 80 01 20 98 01 07 a0 01 cf fe bc f9 01 a8 01 01 b0 01 05\nrpc: EVENT msg_id=769\nrpc: WifiInit resp=0\nrpc: SetMode tx pb=12 tlv=24\nrpc: SetMode pb bytes: 08 01 10 84 02 18 02 a2 10 02 08 01\nrpc: SetMode(1) resp=0\nrpc: WifiStart tx pb=10 tlv=22\nrpc: WifiStart pb bytes: 08 01 10 98 02 18 03 c2 11 00\nrpc: WifiStart resp=0\nrpc: GetMacAddress tx pb=10 tlv=22\nrpc: GetMacAddress pb bytes: 08 01 10 81 02 18 04 8a 10 00\nrpc: EVENT msg_id=773\nrpc: EVENT msg_id=773\n"
+  },
+  {
+    "command": "desktop ui chat",
+    "output": "desktop ui chat\ndesktop: ui chat ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=3 last_state=2 last_error=10 editor=0\nchat-stream text_bytes=0 thinking_bytes=0 thinking_tokens=0 tokens_known=0 rounds=0 rebuilds=2 updates=0 refresh_max_ms=60 draft_bytes=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-draft-status",
+    "output": "desktop ui qpk-draft-status\nqpk-draft loaded=1 busy=0 revision=3 previewed=0 saved=0 error=0 preview_active=0 name=指尖星尘 package=\nqpk-save stage=0 elapsed_ms=0\nflash-stack ops=274 caller=483f713c worker=4ffadacc\nnsh> \u001b[Krpc: skipping SetConfig, using slave's stored config\nrpc: WifiConnect tx pb=10 tlv=22\nrpc: WifiConnect pb bytes: 08 01 10 9a 02 18 05 d2 11 00\nrpc: WifiConnect resp=0\n[qpk] stardust ready\n[qpk] started 指尖星尘 (preview.stardust draft) with QuickJS\n"
+  },
+  {
+    "command": "desktop ui chat-scroll-up",
+    "output": "esktop ui chat-croll-up\nnsh> \u001b[Krpc: EVENT msg_id=773\nrpc: EVENT msg_id=775\nrpc: EVENT StaConnected\n[net] associated, requesting a lease\n[net] online 192.168.0.102\n[net] ntp start: 31\n"
+  },
+  {
+    "command": "desktop ui chat-scroll-down",
+    "output": "desktop ui chat-scroll-down\nnsh> \u001b[K[weather] HTTP 200 bytes=445 ret=0\n[weather] updated city=成都市 AQI=14 temp=17 humidity=98\n"
+  }
+]

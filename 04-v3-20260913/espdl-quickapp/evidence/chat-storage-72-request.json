@@ -1,0 +1,7 @@
+[
+  {
+    "command": "desktop ui chat-type:Reply OK.",
+    "output": "",
+    "error": "Write timeout"
+  }
+]

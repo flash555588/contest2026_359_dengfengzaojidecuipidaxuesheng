@@ -1,0 +1,646 @@
+import bisect
+from typing import List
+
+import numpy as np
+import torch
+
+from esp_ppq.core import (
+    DataType,
+    OperationQuantizationConfig,
+    convert_any_to_torch_tensor,
+)
+from esp_ppq.IR import BaseGraph, Operation, OperationExporter, Variable
+from esp_ppq.IR.quantize import QuantableOperation
+from esp_ppq.log import NaiveLogger
+from esp_ppq.parser.espdl.espdl_graph_utils import (
+    fuse_downstream_operation,
+    get_default_perm,
+    get_inverse_transpose,
+    insert_transpose_node,
+    restore_origin_shape,
+    transpose_shape,
+)
+from esp_ppq.parser.espdl.espdl_typedef import (
+    ACTIVATION_OP_SET,
+    ADD_LIKE_OP_SET,
+    AXIS_TRANSFORM_OP_SET,
+    CONV_LAYOUT_OP_SET,
+    LP_NORM_OP_SET,
+    OTHER_OP_SET,
+    PASSIVE_LAYOUT_OP_SET,
+    REDUCE_OP_SET,
+    SOFTMAX_LIKE_OP_SET,
+    ExporterPatternInfo,
+)
+
+logger = NaiveLogger.get_logger('ESPDL')
+# logger.set_level("DEBUG")
+
+
+class ResetConvLayoutPattern(OperationExporter):
+    """
+    Modify Conv inputs and outputs layout from NCHW to NHWC
+    And Update all variable's shape
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        info = ExporterPatternInfo()
+        if op.type in CONV_LAYOUT_OP_SET:
+            for var in op.inputs:
+                if var.is_parameter:
+                    continue
+
+                var_shape = var.shape
+                if len(var_shape) == 4:  # conv2d, NCHW -> NHWC
+                    perm = [0, 2, 3, 1]
+                elif len(var_shape) == 3:  # conv1d, NCW -> NWC
+                    perm = [0, 2, 1]
+
+                var_perm = info.get_var_permute(var.name)
+
+                if var_perm:
+                    if perm != var_perm:
+                        # There is already a permute, but it does not match the conv layout.
+                        # A transpose node needs to be inserted into the graph.
+                        inverse_perm = get_inverse_transpose(var_perm)
+                        new_perm = transpose_shape(inverse_perm, perm)
+                        insert_transpose_node(graph, var, op, new_perm)
+                else:
+                    info.add_var_permute(var.name, perm)
+
+            for var in op.outputs:
+                var_shape = var.shape
+                if len(var_shape) == 4:  # conv2d, NCHW -> NHWC
+                    perm = [0, 2, 3, 1]
+                else:  # conv1d, NCW -> NWC
+                    perm = [0, 2, 1]
+                info.add_var_permute(var.name, perm)
+
+        return op
+
+
+class RestoreOriginLayoutPattern(OperationExporter):
+    """
+    Restore original layout
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.type in OTHER_OP_SET:
+            return restore_origin_shape(op, graph)
+
+        return op
+
+
+class BypassPassiveLayoutPattern(OperationExporter):
+    """
+    Passive Node inherit transpose from upstream
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.type in PASSIVE_LAYOUT_OP_SET:
+            info = ExporterPatternInfo()
+            assert len(op.outputs) == 1
+            input1 = op.inputs[0]
+            output = op.outputs[0]
+            assert input1.shape == output.shape
+
+            var_perm = info.get_var_permute(input1.name)
+            if not var_perm:
+                var_perm = get_default_perm(input1)
+                info.add_var_permute(input1.name, var_perm)
+
+            info.add_var_permute(op.outputs[0].name, var_perm)
+        return op
+
+
+class BypassAddLikePattern(OperationExporter):
+    """
+    Add,Mul,Sub,Div:
+
+    two input and one output,
+    """
+
+    @staticmethod
+    def _choose_target_perm(perm1, perm2, ndim):
+        """Choose target perm, preferring NHWC layout over identity."""
+        if ndim == 4:
+            nhwc = [0, 2, 3, 1]
+        elif ndim == 3:
+            nhwc = [0, 2, 1]
+        else:
+            nhwc = None
+
+        # Prefer NHWC if exactly one side has it
+        nhwc1 = nhwc is not None and perm1 == nhwc
+        nhwc2 = nhwc is not None and perm2 == nhwc
+        if nhwc1 and not nhwc2:
+            return perm1
+        if nhwc2 and not nhwc1:
+            return perm2
+
+        # Prefer non-identity over identity
+        default = [i for i in range(ndim)]
+        if perm1 != default and perm2 == default:
+            return perm1
+        if perm2 != default and perm1 == default:
+            return perm2
+
+        return perm1
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.type in ADD_LIKE_OP_SET:
+            info = ExporterPatternInfo()
+            input1 = op.inputs[0]
+            input2 = op.inputs[1]
+            output = op.outputs[0]
+            input1_perm = info.get_var_permute(input1.name)
+            input2_perm = info.get_var_permute(input2.name)
+
+            # Normalize None perms to default identity before comparison
+            if not input1.is_parameter and input1_perm is None:
+                input1_perm = get_default_perm(input1)
+                info.add_var_permute(input1.name, input1_perm)
+            if not input2.is_parameter and input2_perm is None:
+                input2_perm = get_default_perm(input2)
+                info.add_var_permute(input2.name, input2_perm)
+
+            if not input1.is_parameter and not input2.is_parameter:
+                if input1_perm == input2_perm:
+                    info.add_var_permute(output.name, input1_perm)
+                else:
+                    # When inputs have different ranks (broadcasting),
+                    # fall back to restoring original shapes since a
+                    # transpose cannot bridge different numbers of dimensions.
+                    if len(input1_perm) != len(input2_perm):
+                        return restore_origin_shape(op, graph)
+
+                    target_perm = self._choose_target_perm(input1_perm, input2_perm, len(output.shape))
+                    if input1_perm != target_perm:
+                        inverse_perm = get_inverse_transpose(input1_perm)
+                        new_perm = transpose_shape(inverse_perm, target_perm)
+                        insert_transpose_node(graph, input1, op, new_perm)
+                    if input2_perm != target_perm:
+                        inverse_perm = get_inverse_transpose(input2_perm)
+                        new_perm = transpose_shape(inverse_perm, target_perm)
+                        insert_transpose_node(graph, input2, op, new_perm)
+                    info.add_var_permute(output.name, target_perm)
+            elif input2.is_parameter:
+                # Output inherits the non-parameter input's perm; the parameter is
+                # layout-agnostic. But when the parameter broadcasts the result to a
+                # higher rank than the activation input, the activation's perm no longer
+                # describes the output, so fall back to the original layout.
+                if input1_perm is not None and len(input1_perm) == len(output.shape):
+                    info.add_var_permute(output.name, input1_perm)
+                else:
+                    return restore_origin_shape(op, graph)
+            elif input1.is_parameter:
+                if input2_perm is not None and len(input2_perm) == len(output.shape):
+                    info.add_var_permute(output.name, input2_perm)
+                else:
+                    return restore_origin_shape(op, graph)
+
+        return op
+
+
+class AxisTransformPattern(OperationExporter):
+    """
+    Transform the axes of operator
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        info = ExporterPatternInfo()
+        input = op.inputs[0]
+
+        var_perm = info.get_var_permute(input.name)
+        if var_perm and var_perm != get_default_perm(input):
+            # There is already a permute, change axis accordingly
+            if op.type in SOFTMAX_LIKE_OP_SET or op.type in LP_NORM_OP_SET:
+                # Softmax, LogSoftmax, and LpNormalization default axis to -1;
+                # ONNX Split defaults to 0.
+                default_axis = 0 if op.type == 'Split' else -1
+                axis = (int(op.attributes.get("axis", default_axis)) + len(var_perm)) % len(var_perm)
+                new_axis = var_perm.index(axis)
+                op.attributes["axis"] = new_axis
+            elif op.type in REDUCE_OP_SET:
+                if len(op.inputs) > 1 and len(op.inputs[1].value) > 0:
+                    axes = op.inputs[1].value
+                    new_axes = []
+                    for i in range(axes.numel()):
+                        if axes[i] < 0:
+                            new_axes.append(var_perm.index(axes[i] + len(input.shape)))
+                        else:
+                            new_axes.append(var_perm.index(axes[i]))
+                    new_axes = sorted(new_axes)
+                    op.inputs[1].value = convert_any_to_torch_tensor(new_axes, dtype=torch.int64)
+        else:
+            var_perm = get_default_perm(input)
+            info.add_var_permute(input.name, var_perm)
+
+        out_var_perm = var_perm[:]
+        if op.type in REDUCE_OP_SET:
+            keepdims = op.attributes["keepdims"]
+            # The perm needs to be deleted.
+            if keepdims == 0:
+                if len(op.inputs) > 1 and len(op.inputs[1].value) > 0:
+                    reduce_axes_list = sorted(op.inputs[1].value.tolist(), reverse=True)
+                    # After the transformations above, the axes now match the current input.
+                    # Perm represents the current state of the input, not the permutation about to be transformed.
+                    for axis in reduce_axes_list:
+                        remove_axis = out_var_perm.pop(axis)
+                        for i in range(len(out_var_perm)):
+                            if out_var_perm[i] > remove_axis:
+                                out_var_perm[i] -= 1
+                    if len(out_var_perm) == 0:
+                        out_var_perm = [0]
+                else:
+                    noop_with_empty_axes = bool(op.attributes.get('noop_with_empty_axes', 0))
+                    if not noop_with_empty_axes:
+                        out_var_perm = [0]
+
+        for output in op.outputs:
+            info.add_var_permute(output.name, out_var_perm)
+
+        return op
+
+
+class ResetConcatPattern(OperationExporter):
+    """
+    Concat pattern with two input and one output,
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.type in ["Concat"]:
+            perm_dict = {}
+            info = ExporterPatternInfo()
+
+            rank = len(op.inputs[0].shape)
+            axis = int(op.attributes["axis"])
+            if axis < 0:
+                axis += rank
+            op.attributes["axis"] = axis
+
+            for var in op.inputs:
+                var_perm = info.get_var_permute(var.name)
+                perm_str = str(var_perm)
+                if perm_str not in perm_dict:
+                    perm_dict[perm_str] = var_perm
+
+            output_var = op.outputs[0]
+
+            if len(perm_dict) == 1:  # all input have same perm, output bypass
+                var_perm = list(perm_dict.values())[0]
+                if not var_perm:
+                    restore_origin_shape(op, graph)
+                else:
+                    axis = op.attributes["axis"]
+                    new_axis = var_perm.index(int(axis))
+                    op.attributes["axis"] = new_axis
+                    info.add_var_permute(output_var.name, var_perm)
+                    logger.debug(f"{op.name} update axes from {axis} to {new_axis}")
+            else:
+                logger.debug(f"transpose perm {perm_dict}")
+                restore_origin_shape(op, graph)
+        return op
+
+
+class ResetResizePattern(OperationExporter):
+    """
+    Reize Layout Pattern
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.type in ["Resize"]:
+            info = ExporterPatternInfo()
+            input_var = op.inputs[0]
+            input_shape_orig = input_var.shape
+            perm = None
+            if len(input_shape_orig) == 4:  # 2d, NCHW -> NHWC
+                perm = [0, 2, 3, 1]
+            elif len(input_shape_orig) == 3:  # 1d, NCW -> NWC
+                perm = [0, 2, 1]
+            else:
+                logger.error(f"Reize: do not support shape for {input_shape_orig}")
+
+            input_perm = info.get_var_permute(input_var.name)
+            if input_perm:
+                if perm != input_perm:
+                    # There is already a permute, but it does not match the Reize layout.
+                    # A transpose node needs to be inserted into the graph.
+                    inverse_perm = get_inverse_transpose(input_perm)
+                    new_perm = transpose_shape(inverse_perm, perm)
+                    insert_transpose_node(graph, input_var, op, new_perm)
+            else:
+                info.add_var_permute(input_var.name, perm)
+
+            # Get roi
+            roi_var = op.inputs[1]
+            if not roi_var.name or roi_var.value.numel() == 0:
+                roi_var = None
+
+            # Get scales
+            scales_var = op.inputs[2]
+            if not scales_var.name:
+                scales_var = None
+
+            # Get sizes
+            if len(op.inputs) > 3:
+                sizes_var = op.inputs[3]
+            else:
+                sizes_var = None
+
+            if scales_var is None and sizes_var is None:
+                raise ValueError("scales_var is None and sizes_var is None.")
+
+            rank = len(input_shape_orig)
+            axes = op.attributes.get("axes", None)
+
+            # Adjust roi, scales, and sizes to the same dimensions as input.
+            # But the data arrangement is still in NCHW or NCW format.
+            if axes is not None:
+                # Adjust roi parameters
+                if roi_var is not None:
+                    new_roi_value = ([0.0] * rank) + ([1.0] * rank)
+                    naxes = len(axes)
+                    for i, d in enumerate(axes):
+                        new_roi_value[d] = roi_var.value[i]
+                        new_roi_value[rank + d] = roi_var.value[naxes + i]
+                    roi_var.value = torch.tensor(new_roi_value).type(roi_var.dtype.to_torch())
+                    roi_var.shape = roi_var.value.shape
+
+                # Adjust scales parameters
+                if scales_var is not None:
+                    new_scales_value = [1.0] * rank
+                    for i, d in enumerate(axes):
+                        new_scales_value[d] = scales_var.value[i]
+                    scales_var.value = torch.tensor(new_scales_value).type(scales_var.dtype.to_torch())
+                    scales_var.shape = scales_var.value.shape
+
+                # Adjust sizes parameters
+                if sizes_var is not None:
+                    new_sizes_value = [input_shape_orig[i] for i in range(rank)]
+                    for i, d in enumerate(axes):
+                        new_sizes_value[d] = sizes_var.value[i]
+                    sizes_var.value = torch.tensor(new_sizes_value).type(sizes_var.dtype.to_torch())
+                    sizes_var.shape = sizes_var.value.shape
+
+            else:
+                axes = list(range(rank))
+
+            # Adjust scales and sizes according to keep_aspect_ratio_policy.
+            # This attribute describes how to interpret the sizes input with regard to keeping the original
+            # aspect ratio of the input, and it is not applicable when the scales input is used.
+            keep_aspect_ratio_policy = op.attributes.get("keep_aspect_ratio_policy", None)
+            if sizes_var is not None:
+                scale_factors = [sizes_var.value[i] / input_shape_orig[i] for i in range(rank)]
+                if keep_aspect_ratio_policy and keep_aspect_ratio_policy != "stretch":
+                    if keep_aspect_ratio_policy == "not_larger":
+                        scale = np.array(scale_factors)[axes].min()
+                    elif keep_aspect_ratio_policy == "not_smaller":
+                        scale = np.array(scale_factors)[axes].max()
+                    else:
+                        raise ValueError(f"Invalid keep_aspect_ratio_policy={keep_aspect_ratio_policy!r}")
+
+                    scale_factors = [scale if i in axes else 1.0 for i in range(rank)]
+
+                    def round_half_up(x: float) -> int:
+                        return int(x + 0.5)
+
+                    output_size = [
+                        round_half_up(scale * input_shape_orig[i]) if i in axes else input_shape_orig[i]
+                        for i in range(rank)
+                    ]
+                else:
+                    output_size = sizes_var.value.tolist()
+
+                if scales_var:
+                    scales_var.value = torch.tensor(scale_factors).type(dtype=DataType.to_torch(scales_var.dtype))
+            else:
+                output_size = (scales_var.value * torch.tensor(input_shape_orig)).type(torch.int64)  # type: ignore[union-attr]
+
+            if sizes_var:
+                sizes_var.value = torch.tensor(output_size).type(dtype=DataType.to_torch(sizes_var.dtype))
+
+            # Align the data arrangement of the parameters with that of the input.
+            # if perm:
+            #     if roi_var is not None:
+            #         roi_value_1 = torch.tensor(transpose_shape(roi_var.value[0:rank], perm)).type(dtype=DataType.to_torch(roi_var.dtype))
+            #         roi_value_2 = torch.tensor(transpose_shape(roi_var.value[rank:], perm)).type(dtype=DataType.to_torch(roi_var.dtype))
+            #         roi_var.value = torch.cat((roi_value_1, roi_value_2))
+            #         roi_var.shape = roi_var.value.shape
+            #     if scales_var is not None:
+            #         scales_var.value = torch.tensor(transpose_shape(scales_var.value, perm)).type(dtype=DataType.to_torch(scales_var.dtype))
+            #         scales_var.shape = scales_var.value.shape
+            #     if sizes_var is not None:
+            #         sizes_var.value = torch.tensor(transpose_shape(sizes_var.value, perm)).type(dtype=DataType.to_torch(sizes_var.dtype))
+            #         sizes_var.shape = sizes_var.value.shape
+
+            for var in op.inputs[1:]:
+                if var:
+                    info.add_var_permute(var.name, get_default_perm(var))
+            info.add_var_permute(op.outputs[0].name, perm)
+
+        return op
+
+
+class ResetSlicePattern(OperationExporter):
+    """
+    Slice Layout Pattern
+
+    Slice's `starts`/`ends`/`steps` only depend on `axes`, so a permuted
+    (e.g. NHWC) input layout can be kept as-is by remapping `axes` to the
+    permuted axis instead of unconditionally restoring the original layout
+    with `restore_origin_shape` (which would insert an extra Transpose before
+    and, if downstream also needs the permuted layout, after Slice as well).
+
+    This remap is only safe when `axes` is a constant (parameter) tensor. If
+    `axes` is omitted (implicit default `[0, ..., rank-1]`) or produced at
+    runtime, fall back to restoring the original layout.
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.type != "Slice":
+            return op
+
+        info = ExporterPatternInfo()
+        input_var = op.inputs[0]
+        var_perm = info.get_var_permute(input_var.name)
+
+        if not var_perm or var_perm == get_default_perm(input_var):
+            # Input is still in its canonical layout, nothing to remap.
+            info.add_var_permute(input_var.name, get_default_perm(input_var))
+            info.add_var_permute(op.outputs[0].name, get_default_perm(op.outputs[0]))
+            return op
+
+        axes_var = op.inputs[3] if op.num_of_input > 3 else None
+        if axes_var is None or not axes_var.is_parameter or axes_var.value is None:
+            # axes is implicit or computed at runtime, can not safely remap it.
+            return restore_origin_shape(op, graph)
+
+        rank = len(input_var.shape)
+        new_axes = [var_perm.index((int(axis) + rank) % rank) for axis in axes_var.value.tolist()]
+        axes_var.value = torch.tensor(new_axes, dtype=axes_var.value.dtype)
+
+        # Slice does not reorder dimensions, output keeps the input's layout.
+        info.add_var_permute(op.outputs[0].name, var_perm)
+        return op
+
+
+class FuseTransposeActivationPattern(OperationExporter):
+    """
+    Fuse Transpose -> Activation -> Transpose pattern.
+    Remove the first Transpose, fuse its perm into the second Transpose.
+    If the fused perm is identity, remove the second Transpose as well.
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        if op.name not in graph.operations:
+            return op
+
+        if op.type != "Transpose":
+            return op
+
+        downstream_ops = graph.get_downstream_operations(op)
+        if len(downstream_ops) != 1:
+            return op
+
+        activation_op = downstream_ops[0]
+        if activation_op.type not in ACTIVATION_OP_SET or activation_op.type == 'PRelu':
+            return op
+
+        activation_downstream = graph.get_downstream_operations(activation_op)
+        if len(activation_downstream) != 1 or activation_downstream[0].type != "Transpose":
+            return op
+
+        transpose2_op = activation_downstream[0]
+        if transpose2_op.name not in graph.operations:
+            return op
+
+        perm1 = op.attributes["perm"]
+        perm2 = transpose2_op.attributes["perm"]
+        fused_perm = transpose_shape(perm1, perm2)
+
+        # Remove the first Transpose, connecting its input to the Activation.
+        # Use remove_operation (not fuse_downstream_operation) to avoid
+        # destroying the input variable when it has other consumers.
+        graph.remove_operation(op, keep_coherence=True)
+
+        # Activation is element-wise; its output shape must match its (new) input shape.
+        for out_var in activation_op.outputs:
+            out_var.shape = activation_op.inputs[0].shape
+
+        transpose2_op.attributes["perm"] = fused_perm
+
+        if fused_perm == [i for i in range(len(fused_perm))]:
+            # Fused to identity, remove the second Transpose as well
+            graph.remove_operation(transpose2_op, keep_coherence=True)
+
+        return op
+
+
+class FuseTransposePattern(OperationExporter):
+    """
+    Fuse Transpose Pattern
+    """
+
+    def export(self, op: Operation, graph: BaseGraph, **kwargs) -> Operation:
+        # The FUSE_OP_PATTERNS may remove some ops.
+        if op.name not in graph.operations:
+            return op
+
+        if op.type == "Transpose":
+            downstream_transpose_op = None
+            perm = op.attributes["perm"]
+            while True:
+                downstream_op = graph.get_downstream_operations(op)
+                # the downstream op have only one op and this op is Transpose
+                if len(downstream_op) == 1 and downstream_op[0].type == "Transpose":
+                    downstream_transpose_op = downstream_op[0]
+                    perm = transpose_shape(perm, downstream_op[0].attributes["perm"])
+
+                    if isinstance(op, QuantableOperation):
+                        op_config = op.config
+                        downstream_config = downstream_transpose_op.config
+                        new_config = OperationQuantizationConfig(
+                            op_config.input_quantization_config,
+                            downstream_config.output_quantization_config,
+                        )
+                        op.config = new_config
+                    graph = fuse_downstream_operation(graph, downstream_transpose_op, keep_coherence=True)
+                    op.attributes["perm"] = perm
+                else:
+                    break
+
+            perm = op.attributes["perm"]
+            if perm == [i for i in range(len(perm))]:
+                # Check if this op's output is a graph output.
+                # If so, fuse with the previous operator to keep the output
+                # variable (graph output) unchanged.
+                if any(var.name in graph.outputs for var in op.outputs):
+                    # Use remove_operation (not fuse_downstream_operation) when the
+                    # input variable has other consumers (e.g., skip connections),
+                    # to avoid destroying those connections.
+                    if len(op.inputs[0].dest_ops) > 1:
+                        # Save the graph-output names before remove_operation
+                        # clears op.outputs.
+                        output_names_in_graph = [var.name for var in op.outputs if var.name in graph.outputs]
+                        input_var = op.inputs[0]
+                        graph.remove_operation(op, keep_coherence=True)
+                        # remove_operation handles graph-output update for
+                        # outputs[0] via remove_variable + mark_variable_as_graph_output.
+                        # Explicitly clean up any remaining stale output entries and
+                        # ensure the input variable is registered as a graph output.
+                        for name in output_names_in_graph:
+                            graph.outputs.pop(name, None)
+                        if input_var.name not in graph.outputs:
+                            graph.outputs[input_var.name] = input_var
+                    else:
+                        graph = fuse_downstream_operation(graph, op, keep_coherence=True)
+                else:
+                    # Removed redundant transpose
+                    graph.remove_operation(op, keep_coherence=True)
+        return op
+
+
+def print_vars(op: Operation):
+    logger.info(f"Op: {op.name}, {op.type}, {op.attributes}")
+    for var in op.inputs:
+        print("inputs:", var.name, var.shape)
+    for var in op.outputs:
+        print("outputs:", var.name, var.shape)
+
+
+def reset_graph_layout(graph: BaseGraph):
+    """
+    Reset layout from NCHW -> NHWC
+    """
+
+    layout_patterns = [
+        [CONV_LAYOUT_OP_SET, ResetConvLayoutPattern],
+        [PASSIVE_LAYOUT_OP_SET, BypassPassiveLayoutPattern],
+        [ADD_LIKE_OP_SET, BypassAddLikePattern],
+        [AXIS_TRANSFORM_OP_SET, AxisTransformPattern],
+        [["Concat"], ResetConcatPattern],
+        [["Resize"], ResetResizePattern],
+        [["Slice"], ResetSlicePattern],
+        [OTHER_OP_SET, RestoreOriginLayoutPattern],
+    ]
+
+    for op in graph.topological_sort():
+        flag = 1
+        for pattern in layout_patterns:
+            if op.type in pattern[0]:
+                pattern[1]().export(op, graph)
+                flag = 0
+                break
+        if flag:
+            logger.error(f"Can not reset {op.type}:{op.name} layout")
+
+    # fuse Transpose -> Activation -> Transpose
+    pattern = FuseTransposeActivationPattern()
+    for op in graph.topological_sort():
+        pattern.export(op, graph)
+
+    # fuse transpose op
+    pattern = FuseTransposePattern()
+    for op in graph.topological_sort():
+        pattern.export(op, graph)

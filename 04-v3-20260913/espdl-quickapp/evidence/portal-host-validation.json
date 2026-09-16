@@ -1,0 +1,38 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "repeat_pairing_cycles": 100,
+  "accept_faults": [
+    "EINTR",
+    "ECONNABORTED",
+    "EMFILE",
+    "ENOBUFS",
+    "ENOMEM",
+    "ENETDOWN",
+    "EBADF",
+    "EINVAL"
+  ],
+  "checks": [
+    "six-digit exchange, short code is not a bearer, reopen/refresh preserve browsers",
+    "five failed guesses trigger a recoverable 30-second cooldown",
+    "whole-volume browsing including dot directories, traversal still rejected",
+    "origin/host validation, AI/voice secret preservation, path safety, byte-exact files, staged install, malformed requests",
+    "empty/partial headers are multiplexed and released on absolute deadlines",
+    "interrupted transfers clean up; trickling requests have a total deadline",
+    "accept interruption/resource/network faults recover; invalid listeners automatically reopen",
+    "100 pairing/page cycles without descriptor/thread growth; diagnostics omit credentials",
+    "revoke and idle expiry invalidate old sessions and allow fresh pairing"
+  ],
+  "final_socket_counts_before_revoke": {
+    "listener": 3,
+    "running": 1,
+    "accepts": 587,
+    "closes": 587,
+    "active": 0,
+    "receives": 1321,
+    "errors": 7,
+    "error": 22,
+    "stage": 0
+  },
+  "fixture": "local host; no user credentials"
+}

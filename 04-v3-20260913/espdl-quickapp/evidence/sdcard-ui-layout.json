@@ -1,0 +1,22 @@
+[
+  {
+    "command": "desktop ui files",
+    "output": "desktop ui files\ndesktop: ui files ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "sleep 1",
+    "output": "sleep 1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui 'click:SD 卡'",
+    "output": "desktop ui 'click:SD 卡'\nclick SD 卡 -> 1\ndesktop: ui click:SD 卡 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "sleep 1",
+    "output": "sleep 1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui audit",
+    "output": "desktop ui audit\nUI_LAYOUT_BEGIN\n[{\"id\":1,\"parent\":0,\"type\":\"container\",\"x\":40,\"y\":44,\"w\":944,\"h\":512,\"scroll\":false,\"text\":\"\"},\n{\"id\":2,\"parent\":1,\"type\":\"label\",\"x\":65,\"y\":63,\"w\":824,\"h\":39,\"scroll\":true,\"text\":\"文件管理\"},\n{\"id\":3,\"parent\":1,\"type\":\"button\",\"x\":909,\"y\":59,\"w\":54,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":4,\"parent\":3,\"type\":\"label\",\"x\":928,\"y\":67,\"w\":17,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":5,\"parent\":1,\"type\":\"container\",\"x\":41,\"y\":45,\"w\":942,\"h\":510,\"scroll\":false,\"text\":\"\"},\n{\"id\":6,\"parent\":5,\"type\":\"label\",\"x\":65,\"y\":113,\"w\":850,\"h\":28,\"scroll\":true,\"text\":\"/sdcard/System Volume Information\"},\n{\"id\":7,\"parent\":5,\"type\":\"button\",\"x\":65,\"y\":149,\"w\":128,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":8,\"parent\":7,\"type\":\"label\",\"x\":77,\"y\":162,\"w\":104,\"h\":22,\"scroll\":true,\"text\":\"设备存储\"},\n{\"id\":9,\"parent\":5,\"type\":\"button\",\"x\":205,\"y\":149,\"w\":100,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":10,\"parent\":9,\"type\":\"label\",\"x\":217,\"y\":162,\"w\":76,\"h\":22,\"scroll\":true,\"text\":\"SD 卡\"},\n{\"id\":11,\"parent\":5,\"type\":\"button\",\"x\":321,\"y\":149,\"w\":64,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":12,\"parent\":11,\"type\":\"label\",\"x\":343,\"y\":160,\"w\":21,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":13,\"parent\":5,\"type\":\"button\",\"x\":391,\"y\":149,\"w\":64,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":14,\"parent\":13,\"type\":\"label\",\"x\":411,\"y\":160,\"w\":24,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":15,\"parent\":5,\"type\":\"button\",\"x\":461,\"y\":149,\"w\":130,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":16,\"parent\":15,\"type\":\"label\",\"x\":473,\"y\":162,\"w\":106,\"h\":22,\"scroll\":true,\"text\":\"新建目录\"},\n{\"id\":17,\"parent\":5,\"type\":\"label\",\"x\":611,\"y\":157,\"w\":304,\"h\":22,\"scroll\":true,\"text\":\"\"},\n{\"id\":18,\"parent\":5,\"type\":\"container\",\"x\":65,\"y\":201,\"w\":850,\"h\":250,\"scroll\":true,\"text\":\"\"},\n{\"id\":19,\"parent\":18,\"type\":\"button\",\"x\":73,\"y\":201,\"w\":820,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":20,\"parent\":19,\"type\":\"label\",\"x\":122,\"y\":214,\"w\":745,\"h\":22,\"scroll\":true,\"text\":\"IndexerVolumeGuid\"},\n{\"id\":21,\"parent\":19,\"type\":\"label\",\"x\":86,\"y\":214,\"w\":18,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":22,\"parent\":18,\"type\":\"button\",\"x\":73,\"y\":253,\"w\":820,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":23,\"parent\":22,\"type\":\"label\",\"x\":122,\"y\":266,\"w\":745,\"h\":22,\"scroll\":true,\"text\":\"WPSettings.dat\"},\n{\"id\":24,\"parent\":22,\"type\":\"label\",\"x\":86,\"y\":266,\"w\":18,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":25,\"parent\":5,\"type\":\"button\",\"x\":65,\"y\":469,\"w\":64,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":26,\"parent\":25,\"type\":\"label\",\"x\":90,\"y\":480,\"w\":15,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":27,\"parent\":5,\"type\":\"button\",\"x\":151,\"y\":469,\"w\":64,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":28,\"parent\":27,\"type\":\"label\",\"x\":176,\"y\":480,\"w\":15,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":29,\"parent\":5,\"type\":\"label\",\"x\":251,\"y\":483,\"w\":400,\"h\":22,\"scroll\":true,\"text\":\"第 1 页 · 可用 30834720 KiB\"}\n]\nUI_LAYOUT_END\nnsh> \u001b[K"
+  }
+]

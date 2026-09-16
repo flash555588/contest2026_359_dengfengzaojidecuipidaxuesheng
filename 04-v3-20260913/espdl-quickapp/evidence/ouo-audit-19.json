@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui ouo",
+    "output": "desktop ui ouo\n[qpk] Vela Mood Console initialized with 32 original states\n[qpk] started OuO (ouo 1.0.0) with QuickJS\ndesktop: ui ouo ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui audit",
+    "output": "desktop ui audit\nUI_LAYOUT_BEGIN\n[{\"id\":1,\"parent\":0,\"type\":\"container\",\"x\":0,\"y\":0,\"w\":1024,\"h\":600,\"scroll\":false,\"text\":\"\"},\n{\"id\":2,\"parent\":1,\"type\":\"button\",\"x\":13,\"y\":11,\"w\":52,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":3,\"parent\":2,\"type\":\"label\",\"x\":32,\"y\":19,\"w\":15,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":4,\"parent\":1,\"type\":\"label\",\"x\":79,\"y\":16,\"w\":59,\"h\":39,\"scroll\":true,\"text\":\"OuO\"},\n{\"id\":5,\"parent\":1,\"type\":\"container\",\"x\":1,\"y\":63,\"w\":1022,\"h\":536,\"scroll\":false,\"text\":\"\"},\n{\"id\":6,\"parent\":5,\"type\":\"container\",\"x\":1,\"y\":63,\"w\":1022,\"h\":536,\"scroll\":false,\"text\":\"\"},\n{\"id\":7,\"parent\":5,\"type\":\"container\",\"x\":346,\"y\":301,\"w\":38,\"h\":56,\"scroll\":false,\"text\":\"\"},\n{\"id\":8,\"parent\":5,\"type\":\"container\",\"x\":672,\"y\":301,\"w\":38,\"h\":56,\"scroll\":false,\"text\":\"\"}\n]\nUI_LAYOUT_END\nnsh> \u001b[K"
+  }
+]

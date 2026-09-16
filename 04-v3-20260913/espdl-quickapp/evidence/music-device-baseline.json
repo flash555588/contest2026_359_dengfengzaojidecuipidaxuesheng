@@ -1,0 +1,10 @@
+[
+  {
+    "command": "ls /dev/audio",
+    "output": "ls /dev/audio\n/dev/audio:\n pcm_in0\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui weather-status",
+    "output": "desktop ui weather-status\nweather state=3 valid=1 error=0 revision=3 AQI=14 temp=18 humidity=94 city=成都市\nnsh> \u001b[K"
+  }
+]

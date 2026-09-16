@@ -1,0 +1,10 @@
+[
+  {
+    "command": "ls /proc/fs/smartfs",
+    "output": "ls /proc/fs/smartfs\n/proc/fs/smartfs:\n smart0/\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /proc/fs/blocks",
+    "output": "cat /proc/fs/blocks\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        260        3836 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  }
+]

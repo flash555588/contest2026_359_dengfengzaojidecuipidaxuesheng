@@ -5,6 +5,8 @@ import hashlib
 import json
 import tarfile
 
+TLS_THREAD_CFLAGS = ['-DMBEDTLS_THREADING_C', '-DMBEDTLS_THREADING_PTHREAD']
+
 
 def prepare_tls(build_root, downloads):
     tls = build_root / 'standalone-tls'

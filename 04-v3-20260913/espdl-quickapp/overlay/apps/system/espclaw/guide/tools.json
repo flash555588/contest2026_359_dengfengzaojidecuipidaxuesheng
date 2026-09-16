@@ -1,0 +1,54 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "qpk_list_examples",
+      "description": "List the verified reference projects under /data/qpk/.examples, with file names, source hashes and verification limits. Read relevant examples before creating an app.",
+      "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "qpk_read_example",
+      "description": "Read a verified reference file from the actual qpk directory. Uses 1-based lines, at most 160 lines and 6144 bytes. Follow next_line until the needed code is complete. Cannot read user data or arbitrary paths.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "example": {"type": "string", "enum": ["hello", "game2048", "ouo"]},
+          "file": {"type": "string", "enum": ["README.md", "manifest.json", "app.js"]},
+          "start_line": {"type": "integer", "minimum": 1},
+          "max_lines": {"type": "integer", "minimum": 1, "maximum": 160}
+        },
+        "required": ["example", "file"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "qpk_read_draft",
+      "description": "Read the current durable draft, its complete JavaScript, revision and preview/install result. Always read it before editing; revision 0 means there is no draft. Chat history is not the source of truth for code.",
+      "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "qpk_write_draft",
+      "description": "Compile-check and persist a complete JavaScript app draft for user preview. Does not run or install code. Requires the revision last read. Submit full source, without Markdown fences. On success tell the user to tap 预览草稿; they can return with feedback and tap 保存应用 for the reviewed version.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "Display name, 1 to 47 UTF-8 bytes."},
+          "slug": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,19}$", "description": "App identifier; the installer assigns package ai.<slug>."},
+          "source": {"type": "string", "description": "Complete standalone UTF-8 app.js using documented QuickJS ui/prompt/system.storage APIs."},
+          "base_revision": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+        },
+        "required": ["name", "slug", "source", "base_revision"],
+        "additionalProperties": false
+      }
+    }
+  }
+]

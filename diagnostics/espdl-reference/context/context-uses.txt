@@ -1,0 +1,75 @@
+arch/risc-v/Kconfig:639:config ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/Kconfig:646:if ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/Kconfig:648:config ARCH_RISCV_INTXCPT_EXTREGS
+arch/risc-v/include/irq.h:260:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTREGS
+arch/risc-v/include/irq.h:261:#  define INT_XCPT_REGS     (REG_INT_CTX_NDX + 1 + CONFIG_ARCH_RISCV_INTXCPT_EXTREGS)
+arch/risc-v/src/bl808/bl808_irq_dispatch.c:49: * riscv_dispatch_irq
+arch/risc-v/src/bl808/bl808_irq_dispatch.c:52:void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+arch/risc-v/src/mpfs/mpfs_irq_dispatch.c:47: * riscv_dispatch_irq
+arch/risc-v/src/mpfs/mpfs_irq_dispatch.c:50:void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+arch/risc-v/src/hpm6000/hpm_irq_dispatch.c:48: * riscv_dispatch_irq
+arch/risc-v/src/hpm6000/hpm_irq_dispatch.c:51:void *riscv_dispatch_irq(uintreg_t vector, uintreg_t *regs)
+arch/risc-v/src/fe310/fe310_irq_dispatch.c:48: * riscv_dispatch_irq
+arch/risc-v/src/fe310/fe310_irq_dispatch.c:51:void *riscv_dispatch_irq(uintreg_t vector, uintreg_t *regs)
+arch/risc-v/src/jh7110/jh7110_irq_dispatch.c:49: * riscv_dispatch_irq
+arch/risc-v/src/jh7110/jh7110_irq_dispatch.c:52:void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+arch/risc-v/src/nuttsbi/sbi_mtrap.S:58:  save_ctx   sp
+arch/risc-v/src/nuttsbi/sbi_mtrap.S:99:  load_ctx   sp
+arch/risc-v/src/sg2000/sg2000_irq_dispatch.c:49: * riscv_dispatch_irq
+arch/risc-v/src/sg2000/sg2000_irq_dispatch.c:52:void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+arch/risc-v/src/esp32p4/Make.defs:29:ifeq ($(CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS),y)
+arch/risc-v/src/esp32p4/esp32p4_extctx.c:10:  memset(tcb->xcp.regs+REG_INT_CTX_NDX+1,0,CONFIG_ARCH_RISCV_INTXCPT_EXTREGS*4);
+arch/risc-v/src/esp32c3-legacy/esp32c3_irq.c:611:          regs = riscv_dispatch_irq((int)irq, regs);
+arch/risc-v/src/esp32c3-legacy/esp32c3_irq.c:626: * Name: riscv_dispatch_irq
+arch/risc-v/src/esp32c3-legacy/esp32c3_irq.c:640:IRAM_ATTR void *riscv_dispatch_irq(uintptr_t mcause, uintreg_t *regs)
+arch/risc-v/src/k230/k230_irq_dispatch.c:53: * riscv_dispatch_irq
+arch/risc-v/src/k230/k230_irq_dispatch.c:56:void *riscv_dispatch_irq(uintreg_t vector, uintreg_t *regs)
+arch/risc-v/src/k210/k210_irq_dispatch.c:50: * riscv_dispatch_irq
+arch/risc-v/src/k210/k210_irq_dispatch.c:53:void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+arch/risc-v/src/litex/litex_irq_dispatch.c:47: * riscv_dispatch_irq
+arch/risc-v/src/litex/litex_irq_dispatch.c:51:void *riscv_dispatch_irq(uintptr_t vector, uintreg_t *regs)
+arch/risc-v/src/litex/litex_irq_dispatch.c:80:void *riscv_dispatch_irq(uintptr_t vector, uintreg_t *regs)
+arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c:48:static void *riscv_dispatch_irq_ext(uintreg_t irq, uintreg_t *regs)
+arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c:61:static void *riscv_dispatch_irq_ext(uintreg_t irq, uintreg_t *regs)
+arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c:77:static void *riscv_dispatch_irq_ext(uintreg_t irq, uintreg_t *regs)
+arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c:100:          regs = riscv_dispatch_irq_ext(irq, regs);
+arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c:117:      regs = riscv_dispatch_irq_ext(irq, regs);
+arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c:128:void *riscv_dispatch_irq(uintreg_t vector, uintreg_t *regs)
+arch/risc-v/src/common/riscv_exception_common.S:45: * The riscv_extctx.S should be placed in the chip directory, for example:
+arch/risc-v/src/common/riscv_exception_common.S:46: *   arch/risc-v/src/qemu-rv/riscv_extctx.S
+arch/risc-v/src/common/riscv_exception_common.S:55:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_exception_common.S:56:#  include "riscv_extctx.S"
+arch/risc-v/src/common/riscv_exception_common.S:131:  save_ctx   sp
+arch/risc-v/src/common/riscv_exception_common.S:135:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_exception_common.S:239:  jal        x1, riscv_dispatch_irq
+arch/risc-v/src/common/riscv_exception_common.S:259:  jal        x1, riscv_dispatch_irq
+arch/risc-v/src/common/riscv_exception_common.S:318:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_exception_common.S:322:  load_ctx   sp
+arch/risc-v/src/common/riscv_switchcontext.c:68:      riscv_savecontext(rtcb);
+arch/risc-v/src/common/riscv_switchcontext.c:74:      riscv_restorecontext(tcb);
+arch/risc-v/src/common/riscv_smpcall.c:70:  riscv_savecontext(tcb);
+arch/risc-v/src/common/riscv_smpcall.c:73:  riscv_restorecontext(tcb);
+arch/risc-v/src/common/riscv_internal.h:244:static inline void riscv_savecontext(struct tcb_s *tcb)
+arch/risc-v/src/common/riscv_internal.h:259:static inline void riscv_restorecontext(struct tcb_s *tcb)
+arch/risc-v/src/common/riscv_internal.h:274:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_macros.S:43: * Name: save_ctx
+arch/risc-v/src/common/riscv_macros.S:53:.macro save_ctx in
+arch/risc-v/src/common/riscv_macros.S:186: * Name: load_ctx
+arch/risc-v/src/common/riscv_macros.S:196:.macro load_ctx out
+arch/risc-v/src/common/riscv_initialstate.c:182:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_saveusercontext.S:29:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_saveusercontext.S:31:#  include "riscv_extctx.S"
+arch/risc-v/src/common/riscv_saveusercontext.S:56:  save_ctx   a0
+arch/risc-v/src/common/riscv_saveusercontext.S:58:#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+arch/risc-v/src/common/riscv_swint.c:170:          riscv_restorecontext(tcb);
+arch/risc-v/src/common/riscv_swint.c:177:          riscv_savecontext(g_running_task);
+arch/risc-v/src/common/riscv_swint.c:178:          riscv_restorecontext(tcb);
+arch/risc-v/src/c906/c906_irq_dispatch.c:49: * riscv_dispatch_irq
+arch/risc-v/src/c906/c906_irq_dispatch.c:52:void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+arch/risc-v/src/bl602/bl602_irq_dispatch.c:41: * riscv_dispatch_irq
+arch/risc-v/src/bl602/bl602_irq_dispatch.c:44:void *riscv_dispatch_irq(uintptr_t vector, uintreg_t *regs)
+arch/risc-v/src/hpm6750/hpm6750_irq_dispatch.c:48: * riscv_dispatch_irq
+arch/risc-v/src/hpm6750/hpm6750_irq_dispatch.c:51:void *riscv_dispatch_irq(uintreg_t vector, uintreg_t *regs)
+arch/risc-v/src/common/espressif/esp_irq.c:570: * Name: riscv_dispatch_irq
+arch/risc-v/src/common/espressif/esp_irq.c:584:IRAM_ATTR void *riscv_dispatch_irq(uintreg_t mcause, uintreg_t *regs)
+arch/risc-v/src/common/supervisor/riscv_syscall.S:87:  save_ctx   sp                        /* save current context */

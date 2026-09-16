@@ -1,0 +1,13 @@
+{
+  "manual_pairing": true,
+  "leading_zero_and_grouped_input": true,
+  "reload_restores_session": true,
+  "repeated_qr_entries": 12,
+  "old_browser_preserved": true,
+  "expiry_and_network_recovery": true,
+  "rate_limit_recovers": true,
+  "real_fflate_install": true,
+  "large_source_and_172_files": true,
+  "page_errors": [],
+  "api": "deterministic local fixture"
+}

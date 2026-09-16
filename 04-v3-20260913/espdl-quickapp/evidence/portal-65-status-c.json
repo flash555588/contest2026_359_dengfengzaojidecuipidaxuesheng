@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui portal-status",
+    "output": "desktop ui portal-status\nportal listener=5 accepts=1 receives=82 fd=6 error=0 stage=2\ndesktop: ui portal-status ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001256  63.3%  20.0% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0000696  35.0%   0.0% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000704  36.3%   0.0% hpwork 0x4ff4b4c0 0x4ff4b50c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000720  37.1%   0.0% lpwork 0x4ff4b440 0x4ff4b48c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001552  25.7%   0.0% usbh_hub0 0x4ff66200\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680 0004336  13.2%   9.7% desktop\n    8     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024512 0003896  15.8%   0.0% weather 0x400af770 0\n    9     9 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016 0002112  52.5%   0.9% nsh\n   10    10 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004016 0002560  63.7%  19.2% c6net\n   12    12 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0008040 0002224  27.6%   0.0% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\n   14     6 001(0x00000003) 100 RR       pthread   - Running            0000000000000000 0049088 0002304   4.6%  50.2% desktop 0x400b75c2 0\nnsh> \u001b[K"
+  }
+]

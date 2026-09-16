@@ -1,0 +1,10 @@
+{
+  "upstream": "dc380d450835d42f92777121a0cd4fc67d7c3a8c",
+  "abi": "rv32imafc/ilp32f",
+  "portable_kernels": false,
+  "pie_context_protected": true,
+  "hardware_loop_context_protected": true,
+  "source_count": 122,
+  "archive_bytes": 4024344,
+  "archive_sha256": "3e5029d753474107098420983cffda9a0c85fac597f16dd70ddd42d9b7087ce3"
+}

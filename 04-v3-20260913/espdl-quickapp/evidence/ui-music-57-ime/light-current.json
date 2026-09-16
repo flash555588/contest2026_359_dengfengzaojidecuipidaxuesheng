@@ -1,0 +1,101 @@
+[
+  {
+    "id": 1,
+    "parent": 0,
+    "type": "container",
+    "x": 188,
+    "y": 8,
+    "w": 818,
+    "h": 482,
+    "scroll": false,
+    "text": ""
+  },
+  {
+    "id": 2,
+    "parent": 1,
+    "type": "label",
+    "x": 212,
+    "y": 28,
+    "w": 420,
+    "h": 39,
+    "scroll": true,
+    "text": "搜索音乐"
+  },
+  {
+    "id": 3,
+    "parent": 1,
+    "type": "button",
+    "x": 778,
+    "y": 26,
+    "w": 84,
+    "h": 44,
+    "scroll": false,
+    "text": ""
+  },
+  {
+    "id": 4,
+    "parent": 3,
+    "type": "label",
+    "x": 784,
+    "y": 37,
+    "w": 72,
+    "h": 22,
+    "scroll": true,
+    "text": "取消"
+  },
+  {
+    "id": 5,
+    "parent": 1,
+    "type": "button",
+    "x": 876,
+    "y": 26,
+    "w": 102,
+    "h": 44,
+    "scroll": false,
+    "text": ""
+  },
+  {
+    "id": 6,
+    "parent": 5,
+    "type": "label",
+    "x": 882,
+    "y": 37,
+    "w": 90,
+    "h": 22,
+    "scroll": true,
+    "text": "搜索"
+  },
+  {
+    "id": 7,
+    "parent": 1,
+    "type": "label",
+    "x": 212,
+    "y": 80,
+    "w": 756,
+    "h": 22,
+    "scroll": true,
+    "text": "输入拼音，点选候选字 · 空格选字 · 中 / EN 切换"
+  },
+  {
+    "id": 8,
+    "parent": 1,
+    "type": "input",
+    "x": 212,
+    "y": 116,
+    "w": 766,
+    "h": 50,
+    "scroll": true,
+    "text": "歌名、歌手，如：晴天"
+  },
+  {
+    "id": 9,
+    "parent": 1,
+    "type": "keyboard",
+    "x": 222,
+    "y": 476,
+    "w": 782,
+    "h": 240,
+    "scroll": true,
+    "text": ""
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "command": "desktop ui music-stop",
+    "output": "desktop ui music-stop\n[audio-state] amplifier request=0\n[audio-state] i2s stop tx=1/1 rx=0/0 stream=1\nnsh> \u001b[K[audio-state] codec stop mode=2 rate=44100 09=4c 0d=fa 0e=7f 12=02 14=00 31=60 32=00 37=08 44=50 45=01\n[audio-state] i2s stop tx=0/0 rx=0/0 stream=0\n[audio-state] codec reset mode=2 rate=48000 09=4c 0d=fa 0e=7f 12=02 14=00 31=60 32=ad 37=08 44=50 45=01\n[audio-state] codec reset mode=2 rate=48000 09=4c 0d=fa 0e=7f 12=02 14=00 31=60 32=ad 37=08 44=50 45=01\n[music] playback finished ret=0\n"
+  },
+  {
+    "command": "cat /proc/iobinfo",
+    "output": "cat /proc/iobinfo\n    ntotal     nfree     nwait nthrottle\n        24         1         0         0\nnsh> \u001b[K"
+  },
+  {
+    "command": "nslookup jkapi.com",
+    "output": "nslookup jkapi.com\n"
+  },
+  {
+    "command": "desktop ui music-search:晴天",
+    "output": ""
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": ""
+  }
+]

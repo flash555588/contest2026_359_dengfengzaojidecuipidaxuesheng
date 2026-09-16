@@ -1,0 +1,88 @@
+> capture "version"
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+> halt 2000
+
+g_flash_worker_sp
+> mdw 0x4ff5ef08 1
+0x4ff5ef08: 00000000
+g_flash_caller_sp
+> mdw 0x4ff5ef0c 1
+0x4ff5ef0c: 00000000
+g_flash_external_stack_ops
+> mdw 0x4ff5ef10 1
+0x4ff5ef10: 00000000
+g_first_fault
+> mdw 0x4ff61014 16
+0x4ff61014: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff61034: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+> targets
+TargetName         Type       Endian TapName            State       
+--  ------------------ ---------- ------ ------------------ ------------
+ 0* esp32p4.hp.cpu0    esp32p4    little esp32p4.tap1       halted
+ 1  esp32p4.hp.cpu1    esp32p4    little esp32p4.tap1       halted
+
+==== esp32p4.hp.cpu0 ====
+> targets esp32p4.hp.cpu0
+
+> reg sp force
+> reg ra force
+> reg dpc force
+> reg mepc force
+> reg mcause force
+> reg mtval force
+sp (/32): 0x4ffa8e70
+ra (/32): 0x40001e2e
+dpc (/32): 0x4ff477f6
+mepc (/32): 0x400309f6
+mcause (/32): 0x88000011
+mtval (/32): 0x00000000
+ra     0x40001e2e esp_intr_disable+0x1c
+mepc   0x400309f6 up_switch_context+0x4e
+mcause 0x88000011 __esp_start+0x380b4953
+mtval  -
+sp     0x4ffa8e70 __esp_start+0x5d7b2
+> mdw 0x4ffa8e70 28
+0x4ffa8e70: 00000804 00000010 00000000 4ff5eccc 00000000 00010001 00000001 00000000 
+0x4ffa8e90: 4ff5eccc 80006081 00000000 80006081 0000005d 00000802 00000001 4000228e 
+0x4ffa8eb0: 00000000 00000802 00000000 00000000 4ffa9078 4ffa8f4c ffc1ffff 00000000 
+0x4ffa8ed0: 00000000 00000001 00000002 00000000
+  0x4ffa8e70[4ff5eccc] -> 0x4ff5eccc __esp_start+0x1360e
+  0x4ffa8e90[4ff5eccc] -> 0x4ff5eccc __esp_start+0x1360e
+  0x4ffa8e90[4000228e] -> 0x4000228e esp_intr_alloc_intrstatus_bind+0x3c4
+  0x4ffa8eb0[4ffa9078] -> 0x4ffa9078 __esp_start+0x5d9ba
+  0x4ffa8eb0[4ffa8f4c] -> 0x4ffa8f4c __esp_start+0x5d88e
+
+==== esp32p4.hp.cpu1 ====
+> targets esp32p4.hp.cpu1
+
+> reg sp force
+> reg ra force
+> reg dpc force
+> reg mepc force
+> reg mcause force
+> reg mtval force
+sp (/32): 0x4ffa72b0
+ra (/32): 0x4ff40d48
+dpc (/32): 0x4ff40d58
+mepc (/32): 0x400309f6
+mcause (/32): 0x0800000b
+mtval (/32): 0x00000000
+ra     0x4ff40d48 spi_flash_disable_interrupts_caches_and_other_cpu+0x3e
+mepc   0x400309f6 up_switch_context+0x4e
+mcause 0x0800000b ?
+mtval  -
+sp     0x4ffa72b0 __esp_start+0x5bbf2
+> mdw 0x4ffa72b0 28
+0x4ffa72b0: 00000000 00000005 00000000 4ff42142 00000000 00000000 00000000 4ff47dca 
+0x4ffa72d0: 00000000 00000000 00000000 4ff5d680 00000000 00000000 00000000 00000000 
+0x4ffa72f0: 00000000 00000000 00000000 4ff48210 00000000 00000000 00000000 4ff5d680 
+0x4ffa7310: 00000000 00000000 00000000 00000000
+  0x4ffa72b0[4ff42142] -> 0x4ff42142 spi1_start+0xa
+  0x4ffa72b0[4ff47dca] -> 0x4ff47dca spiflash_start_core+0x26
+  0x4ffa72d0[4ff5d680] -> 0x4ff5d680 __esp_start+0x11fc2
+  0x4ffa72f0[4ff48210] -> 0x4ff48210 esp_flash_read+0xa8
+  0x4ffa72f0[4ff5d680] -> 0x4ff5d680 __esp_start+0x11fc2
+> targets esp32p4.hp.cpu0
+
+> resume
+

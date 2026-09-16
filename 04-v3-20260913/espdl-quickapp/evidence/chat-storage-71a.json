@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=1 configured=1 phase=1 turns=0 storage=-22 revision=3 last_state=-1 last_error=0 editor=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        174        3922 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /data/config",
+    "output": "ls /data/config\n/data/config:\n @2pportal/\n chat/\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /data/config/chat",
+    "output": "ls /data/config/chat\n/data/config/chat:\n history.tmp\n history.json\nnsh> \u001b[K"
+  }
+]

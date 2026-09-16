@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=3 error=0 search=0 search_error=-110 result=0 favorites=1 storage=0 position_ms=35866 volume=29 title=渡口 artist=蔡琴\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=panel return=home\nnsh> \u001b[K"
+  }
+]

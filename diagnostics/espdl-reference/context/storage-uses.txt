@@ -1,0 +1,3 @@
+arch/risc-v/src/common/espressif/Kconfig:4029:config ESPRESSIF_STORAGE_MTD_OFFSET
+boards/risc-v/esp32p4/common/src/esp_board_spiflash.c:118:                     "Did you run 'mksmartfs /dev/smart%d'?\n", smartn);
+boards/risc-v/esp32p4/common/src/esp_board_spiflash.c:282:  mtd = esp_spiflash_alloc_mtdpart(CONFIG_ESPRESSIF_STORAGE_MTD_OFFSET,

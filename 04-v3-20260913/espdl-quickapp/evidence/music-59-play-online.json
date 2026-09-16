@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop ui music",
+    "output": "desktop ui music\ndesktop: ui music ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-search:晴天",
+    "output": "desktop ui music-search:晴天\nnsh> \u001b[K[music] TLS verified TLSv1.3\n[music] search result=0\n"
+  },
+  {
+    "command": "desktop ui music-play-result",
+    "output": "desktop ui music-play-result\nnsh> \u001b[K[music] TLS verified TLSv1.3\n[music] TLS verified TLSv1.3\n[music] playback finished ret=-25\n"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=6 error=-25 search=0 search_error=0 result=1 favorites=0 storage=0 position_ms=0 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  }
+]
