@@ -1,6 +1,0 @@
-[
-  {"name":"devices","command":"ls -l /dev"},
-  {"name":"usb_devices","command":"ls -l /dev/usb"},
-  {"name":"mounts","command":"mount"},
-  {"name":"memory","command":"free"}
-]

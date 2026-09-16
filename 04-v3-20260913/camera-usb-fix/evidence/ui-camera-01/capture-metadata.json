@@ -1,9 +1,0 @@
-{
-  "firmware_sha256": "ffe1d6037eada61a092fe705e281ef484c14f502eba553852c6a9b8035e6fd68",
-  "theme": "dark",
-  "requested_pages": [
-    "camera"
-  ],
-  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
-  "input_values_in_layout_report": false
-}

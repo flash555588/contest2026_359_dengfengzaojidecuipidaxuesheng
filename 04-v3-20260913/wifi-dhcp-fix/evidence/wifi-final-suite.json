@@ -1,6 +1,0 @@
-[
-  {"name":"uptime_after_jtag","command":"cat /proc/uptime"},
-  {"name":"address_after_jtag","command":"ifconfig","expect":["10:bd:a3:89:58:74","inet addr:192\\.168\\.0\\.105"]},
-  {"name":"dns_from_dhcp","command":"c6probe dns"},
-  {"name":"final_tasks","command":"ps","expect":["desktop","c6net"]}
-]

@@ -1,0 +1,41 @@
+diff --git a/old/drivers/video/sc2336.c b/new/drivers/video/sc2336.c
+index 42354bc..8c7137b 100644
+--- a/old/drivers/video/sc2336.c
++++ b/new/drivers/video/sc2336.c
+@@ -64,7 +64,15 @@ struct sc2336_dev_s
+  * Private Data
+  ****************************************************************************/
+ 
+-/* Espressif esp_cam_sensor SC2336 1024x600 RAW8 configuration. */
++/* Register sequence adapted from Espressif's Apache-2.0 SC2336 driver:
++ *
++ *   esp-video-components commit
++ *   3620887638419f7afbe4aa3a909422c640b14061
++ *   esp_cam_sensor/sensors/sc2336/private_include/
++ *   sc2336_mipi_2lane_24Minput_1024x600_raw8_30fps.h
++ *
++ * This port retains only the fixed 1024x600 RAW8 mode used by this board.
++ */
+ 
+ static const struct sc2336_reg_s g_sc2336_regs[] =
+ {
+diff --git a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+index 81d0d9d..2664f85 100644
+--- a/old/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
++++ b/new/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+@@ -110,8 +110,13 @@ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+  * Private Data
+  ****************************************************************************/
+ 
+-/* Vendor sequence used by Espressif's EK79007 BSP. Sleep-out and display-on
+- * are issued separately after the framebuffer has been bound.
++/* Vendor sequence adapted from Espressif's Apache-2.0 EK79007 driver:
++ *
++ *   esp-iot-solution commit c8c4726501e13849b785f2cb9ae55ec1266b44dc
++ *   components/display/lcd/esp_lcd_ek79007/esp_lcd_ek79007.c
++ *
++ * Sleep-out and display-on are issued separately after the framebuffer has
++ * been bound.
+  */
+ 
+ static const struct ek79007_cmd_s g_ek79007_init[] =

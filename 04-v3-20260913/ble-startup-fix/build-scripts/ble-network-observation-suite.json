@@ -1,7 +1,0 @@
-[
-  {"name":"wifi_scan","command":"desktop ui wifi-scan","expect":["ready"]},
-  {"name":"scan_wait","command":"sleep 15","timeout":20},
-  {"name":"visible_access_points","command":"desktop ui audit","expect":["UI_LAYOUT_END"]},
-  {"name":"network","command":"ifconfig","expect":["bnep0.*RUNNING"]},
-  {"name":"return_bluetooth","command":"desktop ui bluetooth","expect":["ready"]}
-]

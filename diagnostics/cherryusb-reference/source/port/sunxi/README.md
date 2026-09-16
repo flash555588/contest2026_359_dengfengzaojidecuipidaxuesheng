@@ -1,1 +1,0 @@
-**You can get source from official sdk.**

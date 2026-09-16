@@ -1,6 +1,0 @@
-[
-  {"name":"open_camera","command":"desktop camera","expect":["requested"],"settle":3},
-  {"name":"inventory","command":"desktop cameras","expect":["busy=0 alive=0","CSI=0","HD Web Camera"]},
-  {"name":"photos","command":"ls -l /data/photos"},
-  {"name":"alive","command":"cat /proc/uptime"}
-]

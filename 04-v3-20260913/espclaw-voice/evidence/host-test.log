@@ -1,3 +1,0 @@
-PASS: WAV, binary multipart, UTF-8, transcript and 20000 malformed inputs
-PASS: Python WAV reader and MIME parser verified actual binary upload
-PASS: voice lifecycle, repeated requests, missing config, failure gating, cancellation at all stages

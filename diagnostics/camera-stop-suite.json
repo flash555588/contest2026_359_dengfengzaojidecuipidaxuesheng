@@ -1,4 +1,0 @@
-[
-  {"name":"stop","command":"desktop camera-stop","expect":["requested"],"settle":3},
-  {"name":"idle","command":"desktop cameras","expect":["busy=0 alive=0"]}
-]

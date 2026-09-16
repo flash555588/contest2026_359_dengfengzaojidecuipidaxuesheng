@@ -1,0 +1,2184 @@
+diff --git a/arch/risc-v/src/common/espressif/Kconfig b/arch/risc-v/src/common/espressif/Kconfig
+index ee7c506d..8adb921f 100644
+--- a/arch/risc-v/src/common/espressif/Kconfig
++++ b/arch/risc-v/src/common/espressif/Kconfig
+@@ -2165,14 +2165,20 @@ endif # ESPRESSIF_MIPI_DSI
+ config ESPRESSIF_MIPI_CSI
+ 	bool "MIPI CSI camera host"
+ 	depends on ARCH_CHIP_ESP32P4
+-	default n
++	depends on ESPRESSIF_SPIRAM
++	select ESPRESSIF_LDO
+ 	select DRIVERS_VIDEO
+ 	select VIDEO
+ 	select VIDEO_STREAM
++	select VIDEO_SC2336
++	select SCHED_LPWORK
+ 	---help---
+-		Enable the ESP32-P4 two-lane MIPI-CSI RAW8 capture path.  When
+-		MIPI-DSI is enabled, both peripherals share the DW-GDMA interrupt
+-		dispatcher; otherwise CSI installs its own interrupt handler.
++		Enable the ESP32-P4 two-lane MIPI-CSI path using the pinned
++		esp-hal-3rdparty camera controller and ISP.  The ISP converts RAW8
++		to RGB565 and CSI DMA writes each frame straight into the V4L2
++		USERPTR buffer, so no intermediate PSRAM copy is needed.  When
++		MIPI-DSI is enabled both peripherals share the DW-GDMA interrupt
++		dispatcher.
+ 
+ config ESPRESSIF_MIPI_CSI_BOOT_TEST
+ 	bool "Capture and verify one camera frame during bring-up"
+diff --git a/arch/risc-v/src/common/espressif/esp_mipi_csi.c b/arch/risc-v/src/common/espressif/esp_mipi_csi.c
+index 1e7ed17a..bb51b398 100644
+--- a/arch/risc-v/src/common/espressif/esp_mipi_csi.c
++++ b/arch/risc-v/src/common/espressif/esp_mipi_csi.c
+@@ -11,113 +11,117 @@
+ #include <nuttx/config.h>
+ 
+ #include <errno.h>
++#include <stdbool.h>
+ #include <stdint.h>
+ #include <string.h>
+-#include <sys/param.h>
+ #include <syslog.h>
+ #include <sys/time.h>
+ 
+ #include <nuttx/arch.h>
+-#include <nuttx/cache.h>
+-#include <nuttx/debug.h>
+ #include <nuttx/irq.h>
+-#include <nuttx/kmalloc.h>
+ #include <nuttx/spinlock.h>
+ #include <nuttx/video/imgdata.h>
++#include <nuttx/wqueue.h>
+ 
+-#include "esp_mipi_csi.h"
++#include "driver/isp_ccm.h"
++#include "driver/isp_color.h"
++#include "driver/isp_core.h"
++#include "driver/isp_demosaic.h"
+ #include "esp_attr.h"
+-#include "esp_private/esp_clk_tree_common.h"
+-#include "esp_irq.h"
+-#include "esp_private/periph_ctrl.h"
+-#include "hal/dw_gdma_hal.h"
+-#include "hal/dw_gdma_ll.h"
+-#include "hal/hal_utils.h"
+-#include "hal/isp_ll.h"
+-#include "hal/isp_types.h"
+-#include "hal/mipi_csi_hal.h"
+-#include "hal/mipi_csi_ll.h"
+-#include "soc/clk_tree_defs.h"
+-#include "soc/mipi_csi_bridge_reg.h"
++#include "esp_cam_ctlr.h"
++#include "esp_cam_ctlr_csi.h"
++#include "esp_heap_caps.h"
++#include "esp_mipi_csi.h"
+ 
+ /****************************************************************************
+  * Pre-processor Definitions
+  ****************************************************************************/
+ 
+-#define ESP_MIPI_CSI_WIDTH       1024
+-#define ESP_MIPI_CSI_HEIGHT      600
+-#define ESP_MIPI_CSI_BPP         8
+-#define ESP_MIPI_CSI_LANES       2
+-#define ESP_MIPI_CSI_LANE_MBPS   288
+-#define ESP_MIPI_CSI_DMA_CHAN    1
+-#define ESP_MIPI_CSI_DMA_ALIGN   64
+-#define ESP_MIPI_CSI_FRAME_SIZE  \
+-  (ESP_MIPI_CSI_WIDTH * ESP_MIPI_CSI_HEIGHT)
++#define CSI_WIDTH              1024
++#define CSI_HEIGHT             600
++#define CSI_FRAME_RATE         30
++#define CSI_DATA_LANES         2
++#define CSI_LANE_RATE_MBPS     288
++#define CSI_ISP_CLOCK_HZ       80000000
++#define CSI_DMA_ALIGNMENT      64
++#define CSI_FRAME_SIZE         (CSI_WIDTH * CSI_HEIGHT * sizeof(uint16_t))
+ 
+ /****************************************************************************
+  * Private Types
+  ****************************************************************************/
+ 
++/* Zero-copy capture: CSI DMA writes straight into the V4L2 USERPTR page.
++ * V4L2 hands the driver exactly one page at a time and supplies the next
++ * one from inside the completion callback, so the callback is invoked
++ * synchronously from the CSI "need new buffer" ISR.  When no page is
++ * pending the HAL falls back to its own backup buffer (frame dropped).
++ */
++
+ struct esp_mipi_csi_s
+ {
+   struct imgdata_s data;
+-  mipi_csi_hal_context_t hal;
+-  FAR dw_gdma_dev_t *dma;
+-  FAR isp_dev_t *isp;
+-  spinlock_t lock;
+-  FAR uint8_t *fb;
+-  uint32_t fb_size;
++  esp_cam_ctlr_handle_t controller;
++  isp_proc_handle_t isp;
++  FAR uint8_t *pending_buffer;     /* Page from set_buf, not yet in DMA */
++  FAR uint8_t *active_buffer;      /* Page currently written by CSI DMA */
+   imgdata_capture_t callback;
+   FAR void *callback_arg;
++  struct work_s stop_work;
++  spinlock_t lock;
++  uint32_t frames_completed;
++  uint32_t frames_delivered;
++  uint32_t frames_dropped;
++  uint32_t stop_deferred;
+   bool initialized;
++  bool controller_enabled;
++  bool isp_enabled;
+   bool capturing;
++  bool stop_pending;
+ };
+ 
+ /****************************************************************************
+  * Private Function Prototypes
+  ****************************************************************************/
+ 
+-static int esp_mipi_csi_init(FAR struct imgdata_s *data);
+-static int esp_mipi_csi_uninit(FAR struct imgdata_s *data);
+-static int esp_mipi_csi_set_buf(FAR struct imgdata_s *data,
+-                                uint8_t nr_datafmts,
+-                                FAR imgdata_format_t *datafmts,
+-                                FAR uint8_t *addr, uint32_t size);
+-static int esp_mipi_csi_validate(FAR struct imgdata_s *data,
+-                                 uint8_t nr_datafmts,
+-                                 FAR imgdata_format_t *datafmts,
+-                                 FAR imgdata_interval_t *interval);
+-static int esp_mipi_csi_start(FAR struct imgdata_s *data,
+-                              uint8_t nr_datafmts,
+-                              FAR imgdata_format_t *datafmts,
+-                              FAR imgdata_interval_t *interval,
+-                              imgdata_capture_t callback, FAR void *arg);
+-static int esp_mipi_csi_stop(FAR struct imgdata_s *data);
+-static FAR void *esp_mipi_csi_alloc(FAR struct imgdata_s *data,
+-                                    uint32_t align_size, uint32_t size);
+-static void esp_mipi_csi_free(FAR struct imgdata_s *data, FAR void *addr);
++static int csi_init(FAR struct imgdata_s *data);
++static int csi_uninit(FAR struct imgdata_s *data);
++static int csi_set_buf(FAR struct imgdata_s *data, uint8_t nr_datafmts,
++                       FAR imgdata_format_t *datafmts, FAR uint8_t *addr,
++                       uint32_t size);
++static int csi_validate(FAR struct imgdata_s *data, uint8_t nr_datafmts,
++                        FAR imgdata_format_t *datafmts,
++                        FAR imgdata_interval_t *interval);
++static int csi_start(FAR struct imgdata_s *data, uint8_t nr_datafmts,
++                     FAR imgdata_format_t *datafmts,
++                     FAR imgdata_interval_t *interval,
++                     imgdata_capture_t callback, FAR void *arg);
++static int csi_stop(FAR struct imgdata_s *data);
++static FAR void *csi_alloc(FAR struct imgdata_s *data, uint32_t align_size,
++                           uint32_t size);
++static void csi_free(FAR struct imgdata_s *data, FAR void *addr);
++static void csi_stop_worker(FAR void *arg);
+ 
+ /****************************************************************************
+  * Private Data
+  ****************************************************************************/
+ 
+-static const struct imgdata_ops_s g_esp_mipi_csi_ops =
++static const struct imgdata_ops_s g_csi_ops =
+ {
+-  .init = esp_mipi_csi_init,
+-  .uninit = esp_mipi_csi_uninit,
+-  .set_buf = esp_mipi_csi_set_buf,
+-  .validate_frame_setting = esp_mipi_csi_validate,
+-  .start_capture = esp_mipi_csi_start,
+-  .stop_capture = esp_mipi_csi_stop,
+-  .alloc = esp_mipi_csi_alloc,
+-  .free = esp_mipi_csi_free,
++  .init = csi_init,
++  .uninit = csi_uninit,
++  .set_buf = csi_set_buf,
++  .validate_frame_setting = csi_validate,
++  .start_capture = csi_start,
++  .stop_capture = csi_stop,
++  .alloc = csi_alloc,
++  .free = csi_free,
+ };
+ 
+-static struct esp_mipi_csi_s g_esp_mipi_csi =
++static struct esp_mipi_csi_s g_csi =
+ {
+   .data =
+   {
+-    .ops = &g_esp_mipi_csi_ops
++    .ops = &g_csi_ops,
+   },
+   .lock = SP_UNLOCKED,
+ };
+@@ -126,156 +130,205 @@ static struct esp_mipi_csi_s g_esp_mipi_csi =
+  * Private Functions
+  ****************************************************************************/
+ 
+-#ifndef CONFIG_ESPRESSIF_MIPI_DSI
+-static int IRAM_ATTR esp_mipi_csi_dma_irq(int irq, FAR void *context,
+-                                          FAR void *arg)
++static int csi_error(esp_err_t err)
+ {
+-  UNUSED(irq);
+-  UNUSED(context);
+-  UNUSED(arg);
+-  return esp_mipi_csi_dma_isr();
++  if (err == ESP_ERR_NO_MEM)
++    {
++      return -ENOMEM;
++    }
++
++  if (err == ESP_ERR_INVALID_ARG)
++    {
++      return -EINVAL;
++    }
++
++  if (err == ESP_ERR_INVALID_STATE)
++    {
++      return -EBUSY;
++    }
++
++  if (err == ESP_ERR_TIMEOUT)
++    {
++      return -ETIMEDOUT;
++    }
++
++  return -EIO;
+ }
+-#endif
+ 
+-static int esp_mipi_csi_isp_bypass_init(FAR struct esp_mipi_csi_s *priv)
++/* ESP32-P4 v1.0 has no ISP white-balance gain block, so red/blue gains go
++ * through the CCM diagonal instead; without them RAW output looks green.
++ */
++
++static esp_err_t csi_isp_pipeline_enable(FAR struct esp_mipi_csi_s *priv)
+ {
+-  hal_utils_clk_div_t clk_div;
++  esp_isp_demosaic_config_t demosaic;
++  esp_isp_ccm_config_t ccm;
++  esp_isp_color_config_t color;
+   esp_err_t err;
+ 
+-  priv->isp = ISP_LL_GET_HW(0);
+-  memset(&clk_div, 0, sizeof(clk_div));
+-  clk_div.integer = 2;
++  memset(&demosaic, 0, sizeof(demosaic));
++  demosaic.grad_ratio.integer = 1;
++  err = esp_isp_demosaic_configure(priv->isp, &demosaic);
++  if (err == ESP_OK)
++    {
++      err = esp_isp_demosaic_enable(priv->isp);
++    }
+ 
+-  err = esp_clk_tree_enable_src((soc_module_clk_t)ISP_CLK_SRC_DEFAULT,
+-                                true);
+   if (err != ESP_OK)
+     {
+-      verr("CSI: enable ISP clock source failed: %d\n", (int)err);
+-      priv->isp = NULL;
+-      return -EIO;
++      syslog(LOG_ERR, "CSI: ISP demosaic failed: %d\n", err);
++      return err;
+     }
+ 
+-  PERIPH_RCC_ATOMIC()
++  memset(&ccm, 0, sizeof(ccm));
++  ccm.saturation = true;
++  ccm.matrix[0][0] = 1.70f;
++  ccm.matrix[1][1] = 0.95f;
++  ccm.matrix[2][2] = 1.55f;
++  err = esp_isp_ccm_configure(priv->isp, &ccm);
++  if (err == ESP_OK)
+     {
+-      isp_ll_enable_module_clock(priv->isp, true);
+-      isp_ll_reset_module_clock(priv->isp);
+-      isp_ll_select_clk_source(priv->isp, ISP_CLK_SRC_DEFAULT);
+-      isp_ll_set_clock_div(priv->isp, &clk_div);
++      err = esp_isp_ccm_enable(priv->isp);
+     }
+ 
+-  isp_ll_init(priv->isp);
+-  isp_ll_clk_enable(priv->isp, true);
+-  isp_ll_set_input_data_source(priv->isp, ISP_INPUT_DATA_SOURCE_CSI);
+-  isp_ll_enable_line_start_packet_exist(priv->isp, false);
+-  isp_ll_enable_line_end_packet_exist(priv->isp, false);
+-  isp_ll_set_intput_data_h_pixel_num(priv->isp,
+-                                     ESP_MIPI_CSI_FRAME_SIZE /
+-                                     ESP_MIPI_CSI_HEIGHT / 4);
+-  isp_ll_set_intput_data_v_row_num(priv->isp, ESP_MIPI_CSI_HEIGHT);
+-  isp_ll_shadow_set_mode(priv->isp,
+-                         ISP_SHADOW_MODE_UPDATE_ONLY_NEXT_VSYNC);
+-  isp_ll_enable(priv->isp, false);
+-  return OK;
++  if (err != ESP_OK)
++    {
++      syslog(LOG_ERR, "CSI: ISP ccm failed: %d\n", err);
++      return err;
++    }
++
++  memset(&color, 0, sizeof(color));
++  color.color_contrast.val = 128;
++  color.color_saturation.val = 128;
++  color.color_hue = 0;
++  color.color_brightness = 0;
++  err = esp_isp_color_configure(priv->isp, &color);
++  if (err == ESP_OK)
++    {
++      err = esp_isp_color_enable(priv->isp);
++    }
++
++  if (err != ESP_OK)
++    {
++      syslog(LOG_ERR, "CSI: ISP color failed: %d\n", err);
++    }
++
++  return err;
+ }
+ 
+-static void esp_mipi_csi_dma_config(FAR struct esp_mipi_csi_s *priv)
++static void csi_isp_pipeline_disable(FAR struct esp_mipi_csi_s *priv)
+ {
+-  FAR dw_gdma_dev_t *dma = priv->dma;
+-  uint32_t block_items = ESP_MIPI_CSI_FRAME_SIZE / 8;
+-
+-  dw_gdma_ll_channel_enable(dma, ESP_MIPI_CSI_DMA_CHAN, false);
+-  dw_gdma_ll_channel_set_src_addr(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                  MIPI_CSI_BRG_MEM_BASE);
+-  dw_gdma_ll_channel_set_dst_addr(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                  (uint32_t)(uintptr_t)priv->fb);
+-  dw_gdma_ll_channel_set_trans_block_size(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                          block_items);
+-  dw_gdma_ll_channel_set_src_master_port(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                         MIPI_CSI_BRG_MEM_BASE);
+-  dw_gdma_ll_channel_set_dst_master_port(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                         (intptr_t)priv->fb);
+-  dw_gdma_ll_channel_set_src_trans_width(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                         DW_GDMA_TRANS_WIDTH_64);
+-  dw_gdma_ll_channel_set_dst_trans_width(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                         DW_GDMA_TRANS_WIDTH_64);
+-  dw_gdma_ll_channel_set_src_burst_items(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                         DW_GDMA_BURST_ITEMS_512);
+-  dw_gdma_ll_channel_set_dst_burst_items(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                         DW_GDMA_BURST_ITEMS_512);
+-  dw_gdma_ll_channel_set_src_burst_mode(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                        DW_GDMA_BURST_MODE_FIXED);
+-  dw_gdma_ll_channel_set_dst_burst_mode(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                        DW_GDMA_BURST_MODE_INCREMENT);
+-  dw_gdma_ll_channel_set_src_burst_len(dma, ESP_MIPI_CSI_DMA_CHAN, 16);
+-  dw_gdma_ll_channel_set_dst_burst_len(dma, ESP_MIPI_CSI_DMA_CHAN, 16);
+-  dw_gdma_ll_channel_set_block_markers(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                       true, true, true);
++  if (priv->isp == NULL)
++    {
++      return;
++    }
++
++  esp_isp_color_disable(priv->isp);
++  esp_isp_ccm_disable(priv->isp);
++  esp_isp_demosaic_disable(priv->isp);
+ }
+ 
+-static int esp_mipi_csi_dma_setup(FAR struct esp_mipi_csi_s *priv)
++static void csi_hw_stop(FAR struct esp_mipi_csi_s *priv)
+ {
+-  FAR dw_gdma_dev_t *dma = DW_GDMA_LL_GET_HW(0);
+-  int ret;
++  irqstate_t flags;
++  bool do_stop;
+ 
+-  PERIPH_RCC_ATOMIC()
+-    {
+-      dw_gdma_ll_enable_bus_clock(0, true);
+-#ifndef CONFIG_ESPRESSIF_MIPI_DSI
+-      dw_gdma_ll_reset_register(0);
+-#endif
+-    }
+-
+-  priv->dma = dma;
+-  dw_gdma_ll_channel_set_trans_flow(dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                    DW_GDMA_ROLE_PERIPH_CSI,
+-                                    DW_GDMA_ROLE_MEM,
+-                                    DW_GDMA_FLOW_CTRL_SRC);
+-  dw_gdma_ll_channel_set_src_multi_block_type(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_BLOCK_TRANSFER_CONTIGUOUS);
+-  dw_gdma_ll_channel_set_dst_multi_block_type(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_BLOCK_TRANSFER_CONTIGUOUS);
+-  dw_gdma_ll_channel_set_src_handshake_interface(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_HANDSHAKE_HW);
+-  dw_gdma_ll_channel_set_dst_handshake_interface(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_HANDSHAKE_HW);
+-  dw_gdma_ll_channel_set_src_handshake_periph(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, DW_GDMA_ROLE_PERIPH_CSI);
+-  dw_gdma_ll_channel_set_priority(dma, ESP_MIPI_CSI_DMA_CHAN, 1);
+-  dw_gdma_ll_channel_set_src_outstanding_limit(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, 5);
+-  dw_gdma_ll_channel_set_dst_outstanding_limit(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, 5);
+-  dw_gdma_ll_channel_set_src_periph_status_addr(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, MIPI_CSI_BRG_MEM_BASE);
+-  dw_gdma_ll_channel_enable_intr_generation(
+-    dma, ESP_MIPI_CSI_DMA_CHAN, UINT32_MAX, true);
+-  dw_gdma_ll_channel_enable_intr_propagation(
+-    dma, ESP_MIPI_CSI_DMA_CHAN,
+-    DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE, true);
+-  dw_gdma_ll_channel_clear_intr(dma, ESP_MIPI_CSI_DMA_CHAN, UINT32_MAX);
+-
+-#ifndef CONFIG_ESPRESSIF_MIPI_DSI
+-  ret = esp_setup_irq(DW_GDMA_INTR_SOURCE,
+-                      ESP_IRQ_PRIORITY_DEFAULT,
+-                      ESP_IRQ_TRIGGER_LEVEL,
+-                      esp_mipi_csi_dma_irq, priv);
+-  if (ret < 0)
+-    {
+-      verr("CSI: DW-GDMA IRQ setup failed: %d\n", ret);
+-      priv->dma = NULL;
+-      return ret;
+-    }
+-
+-  up_enable_irq(ESP_IRQ_DW_GDMA);
+-#endif
++  flags = spin_lock_irqsave(&priv->lock);
++  do_stop = priv->stop_pending;
++  priv->stop_pending = false;
++  spin_unlock_irqrestore(&priv->lock, flags);
+ 
+-  return OK;
++  if (do_stop)
++    {
++      esp_cam_ctlr_stop(priv->controller);
++    }
+ }
+ 
+-static int esp_mipi_csi_init(FAR struct imgdata_s *data)
++static void csi_stop_worker(FAR void *arg)
+ {
+-  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
+-  mipi_csi_hal_config_t config;
++  csi_hw_stop((FAR struct esp_mipi_csi_s *)arg);
++}
++
++static bool IRAM_ATTR csi_get_new_buffer(esp_cam_ctlr_handle_t handle,
++                                         FAR esp_cam_ctlr_trans_t *trans,
++                                         FAR void *arg)
++{
++  FAR struct esp_mipi_csi_s *priv = arg;
++  FAR uint8_t *done;
++  FAR void *callback_arg;
++  imgdata_capture_t callback;
++  struct timeval timestamp;
++  irqstate_t flags;
++
++  UNUSED(handle);
++
++  /* The previous transaction's DMA has completed when the HAL asks for a
++   * new buffer, so deliver it now.  V4L2 calls set_buf() for the next page
++   * from inside the callback, which is what lets the next frame start
++   * without a gap.
++   */
++
++  flags = spin_lock_irqsave(&priv->lock);
++  done = priv->active_buffer;
++  priv->active_buffer = NULL;
++  callback = priv->capturing ? priv->callback : NULL;
++  callback_arg = priv->callback_arg;
++  if (done != NULL)
++    {
++      priv->frames_completed++;
++      if (callback == NULL)
++        {
++          priv->frames_dropped++;
++        }
++    }
++
++  spin_unlock_irqrestore(&priv->lock, flags);
++
++  if (done != NULL && callback != NULL)
++    {
++      gettimeofday(&timestamp, NULL);
++      callback(0, CSI_FRAME_SIZE, &timestamp, callback_arg);
++      flags = spin_lock_irqsave(&priv->lock);
++      priv->frames_delivered++;
++      spin_unlock_irqrestore(&priv->lock, flags);
++    }
++
++  flags = spin_lock_irqsave(&priv->lock);
++  if (priv->capturing && priv->pending_buffer != NULL)
++    {
++      priv->active_buffer = priv->pending_buffer;
++      priv->pending_buffer = NULL;
++      trans->buffer = priv->active_buffer;
++      trans->buflen = CSI_FRAME_SIZE;
++    }
++  else if (priv->capturing)
++    {
++      priv->frames_dropped++;
++    }
++
++  spin_unlock_irqrestore(&priv->lock, flags);
++  return false;
++}
++
++static bool IRAM_ATTR csi_buffer_finished(esp_cam_ctlr_handle_t handle,
++                                          FAR esp_cam_ctlr_trans_t *trans,
++                                          FAR void *arg)
++{
++  /* Frames are delivered from csi_get_new_buffer; nothing left to do. */
++
++  UNUSED(handle);
++  UNUSED(trans);
++  UNUSED(arg);
++  return false;
++}
++
++static int csi_init(FAR struct imgdata_s *data)
++{
++  FAR struct esp_mipi_csi_s *priv =
++    (FAR struct esp_mipi_csi_s *)data;
++  esp_cam_ctlr_csi_config_t csi_config;
++  esp_cam_ctlr_evt_cbs_t callbacks;
++  esp_isp_processor_cfg_t isp_config;
+   esp_err_t err;
+ 
+   if (priv->initialized)
+@@ -283,95 +336,209 @@ static int esp_mipi_csi_init(FAR struct imgdata_s *data)
+       return OK;
+     }
+ 
+-  err = esp_clk_tree_enable_src(
+-          (soc_module_clk_t)MIPI_CSI_PHY_CLK_SRC_DEFAULT, true);
++  memset(&csi_config, 0, sizeof(csi_config));
++  csi_config.ctlr_id = 0;
++  csi_config.h_res = CSI_WIDTH;
++  csi_config.v_res = CSI_HEIGHT;
++  csi_config.lane_bit_rate_mbps = CSI_LANE_RATE_MBPS;
++  csi_config.input_data_color_type = CAM_CTLR_COLOR_RAW8;
++  csi_config.output_data_color_type = CAM_CTLR_COLOR_RAW8;
++  csi_config.data_lane_num = CSI_DATA_LANES;
++  csi_config.queue_items = 1;
++  err = esp_cam_new_csi_ctlr(&csi_config, &priv->controller);
++  if (err != ESP_OK)
++    {
++      syslog(LOG_ERR, "CSI: controller create failed: %d\n", err);
++      return csi_error(err);
++    }
++
++  memset(&callbacks, 0, sizeof(callbacks));
++  callbacks.on_get_new_trans = csi_get_new_buffer;
++  callbacks.on_trans_finished = csi_buffer_finished;
++  err = esp_cam_ctlr_register_event_callbacks(priv->controller, &callbacks,
++                                               priv);
+   if (err != ESP_OK)
+     {
+-      verr("CSI: enable PHY clock source failed: %d\n", (int)err);
+-      return -EIO;
++      syslog(LOG_ERR, "CSI: callback registration failed: %d\n", err);
++      goto fail;
+     }
+ 
+-  PERIPH_RCC_ATOMIC()
++  err = esp_cam_ctlr_enable(priv->controller);
++  if (err != ESP_OK)
+     {
+-      mipi_csi_ll_enable_host_bus_clock(0, true);
+-      mipi_csi_ll_reset_host_clock(0);
+-      mipi_csi_ll_enable_brg_module_clock(0, true);
+-      mipi_csi_ll_reset_brg_module_clock(0);
+-      mipi_csi_brg_ll_enable_clock(MIPI_CSI_BRG_LL_GET_HW(0), true);
+-      mipi_csi_ll_set_phy_clock_source(0,
+-                                       MIPI_CSI_PHY_CLK_SRC_DEFAULT);
+-      mipi_csi_ll_enable_phy_config_clock(0, false);
+-      mipi_csi_ll_enable_phy_config_clock(0, true);
++      syslog(LOG_ERR, "CSI: controller enable failed: %d\n", err);
++      goto fail;
+     }
+ 
+-  memset(&config, 0, sizeof(config));
+-  config.lanes_num = ESP_MIPI_CSI_LANES;
+-  config.frame_height = ESP_MIPI_CSI_WIDTH;
+-  config.frame_width = ESP_MIPI_CSI_HEIGHT;
+-  config.in_bpp = ESP_MIPI_CSI_BPP;
+-  config.out_bpp = ESP_MIPI_CSI_BPP;
+-  config.lane_bit_rate_mbps = ESP_MIPI_CSI_LANE_MBPS;
+-  mipi_csi_hal_init(&priv->hal, &config);
+-  mipi_csi_brg_ll_set_burst_len(priv->hal.bridge_dev, 512);
+-  mipi_csi_brg_ll_enable_color_conversion(priv->hal.bridge_dev, true);
+-  mipi_csi_brg_ll_set_color_mode_bypass(priv->hal.bridge_dev, true);
+-  if (esp_mipi_csi_isp_bypass_init(priv) < 0)
++  priv->controller_enabled = true;
++
++  memset(&isp_config, 0, sizeof(isp_config));
++  isp_config.clk_hz = CSI_ISP_CLOCK_HZ;
++  isp_config.input_data_source = ISP_INPUT_DATA_SOURCE_CSI;
++  isp_config.input_data_color_type = ISP_COLOR_RAW8;
++  isp_config.output_data_color_type = ISP_COLOR_RGB565;
++  isp_config.h_res = CSI_WIDTH;
++  isp_config.v_res = CSI_HEIGHT;
++  isp_config.bayer_order = COLOR_RAW_ELEMENT_ORDER_BGGR;
++  err = esp_isp_new_processor(&isp_config, &priv->isp);
++  if (err != ESP_OK)
+     {
+-      return -EIO;
++      syslog(LOG_ERR, "CSI: ISP create failed: %d\n", err);
++      goto fail;
+     }
+ 
+-  if (esp_mipi_csi_dma_setup(priv) < 0)
++  err = csi_isp_pipeline_enable(priv);
++  if (err != ESP_OK)
+     {
+-      return -EIO;
++      goto fail;
+     }
+ 
++  err = esp_isp_enable(priv->isp);
++  if (err != ESP_OK)
++    {
++      syslog(LOG_ERR, "CSI: ISP enable failed: %d\n", err);
++      goto fail;
++    }
++
++  priv->isp_enabled = true;
+   priv->initialized = true;
++  syslog(LOG_INFO,
++         "CSI: HAL ready, 1024x600 RAW8 to RGB565, direct USERPTR capture\n");
+   return OK;
++
++fail:
++  if (priv->isp != NULL)
++    {
++      if (priv->isp_enabled)
++        {
++          esp_isp_disable(priv->isp);
++          priv->isp_enabled = false;
++        }
++
++      csi_isp_pipeline_disable(priv);
++      esp_isp_del_processor(priv->isp);
++      priv->isp = NULL;
++    }
++
++  if (priv->controller != NULL)
++    {
++      if (priv->controller_enabled)
++        {
++          esp_cam_ctlr_disable(priv->controller);
++          priv->controller_enabled = false;
++        }
++
++      esp_cam_ctlr_del(priv->controller);
++      priv->controller = NULL;
++    }
++
++  return csi_error(err);
+ }
+ 
+-static int esp_mipi_csi_uninit(FAR struct imgdata_s *data)
++static int csi_uninit(FAR struct imgdata_s *data)
+ {
+-  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
++  FAR struct esp_mipi_csi_s *priv =
++    (FAR struct esp_mipi_csi_s *)data;
++  esp_err_t err;
++  int ret = OK;
++
++  if (!priv->initialized)
++    {
++      return OK;
++    }
++
++  csi_stop(data);
++  work_cancel_sync(LPWORK, &priv->stop_work);
++  csi_hw_stop(priv);
++
++  if (priv->isp_enabled)
++    {
++      err = esp_isp_disable(priv->isp);
++      if (err != ESP_OK && ret == OK)
++        {
++          ret = csi_error(err);
++        }
++
++      priv->isp_enabled = false;
++    }
++
++  if (priv->isp != NULL)
++    {
++      csi_isp_pipeline_disable(priv);
++      err = esp_isp_del_processor(priv->isp);
++      if (err != ESP_OK && ret == OK)
++        {
++          ret = csi_error(err);
++        }
++
++      priv->isp = NULL;
++    }
++
++  if (priv->controller_enabled)
++    {
++      err = esp_cam_ctlr_disable(priv->controller);
++      if (err != ESP_OK && ret == OK)
++        {
++          ret = csi_error(err);
++        }
++
++      priv->controller_enabled = false;
++    }
++
++  if (priv->controller != NULL)
++    {
++      err = esp_cam_ctlr_del(priv->controller);
++      if (err != ESP_OK && ret == OK)
++        {
++          ret = csi_error(err);
++        }
++
++      priv->controller = NULL;
++    }
+ 
+-  esp_mipi_csi_stop(data);
+   priv->initialized = false;
+-  return OK;
++  return ret;
+ }
+ 
+-static int esp_mipi_csi_set_buf(FAR struct imgdata_s *data,
+-                                uint8_t nr_datafmts,
+-                                FAR imgdata_format_t *datafmts,
+-                                FAR uint8_t *addr, uint32_t size)
++static int csi_set_buf(FAR struct imgdata_s *data, uint8_t nr_datafmts,
++                       FAR imgdata_format_t *datafmts, FAR uint8_t *addr,
++                       uint32_t size)
+ {
+-  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
++  FAR struct esp_mipi_csi_s *priv =
++    (FAR struct esp_mipi_csi_s *)data;
++  irqstate_t flags;
++  int ret;
+ 
+-  if (nr_datafmts != 1 || datafmts == NULL ||
+-      datafmts[0].width != ESP_MIPI_CSI_WIDTH ||
+-      datafmts[0].height != ESP_MIPI_CSI_HEIGHT ||
+-      datafmts[0].pixelformat != IMGDATA_PIX_FMT_SBGGR8 ||
+-      addr == NULL || size < ESP_MIPI_CSI_FRAME_SIZE)
++  ret = csi_validate(data, nr_datafmts, datafmts, NULL);
++  if (ret < 0 || addr == NULL || size < CSI_FRAME_SIZE ||
++      ((uintptr_t)addr & (CSI_DMA_ALIGNMENT - 1)) != 0)
+     {
+       return -EINVAL;
+     }
+ 
+-  priv->fb = addr;
+-  priv->fb_size = size;
+-  memset(priv->fb, 0, ESP_MIPI_CSI_FRAME_SIZE);
+-  esp_mipi_csi_dma_config(priv);
++  flags = spin_lock_irqsave(&priv->lock);
++  priv->pending_buffer = addr;
++  spin_unlock_irqrestore(&priv->lock, flags);
+   return OK;
+ }
+ 
+-static int esp_mipi_csi_validate(FAR struct imgdata_s *data,
+-                                 uint8_t nr_datafmts,
+-                                 FAR imgdata_format_t *datafmts,
+-                                 FAR imgdata_interval_t *interval)
++static int csi_validate(FAR struct imgdata_s *data, uint8_t nr_datafmts,
++                        FAR imgdata_format_t *datafmts,
++                        FAR imgdata_interval_t *interval)
+ {
++  UNUSED(data);
++
+   if (nr_datafmts != 1 || datafmts == NULL ||
+-      interval == NULL ||
+-      datafmts[0].width != ESP_MIPI_CSI_WIDTH ||
+-      datafmts[0].height != ESP_MIPI_CSI_HEIGHT ||
+-      datafmts[0].pixelformat != IMGDATA_PIX_FMT_SBGGR8 ||
+-      interval->numerator != 1 || interval->denominator != 30)
++      datafmts[0].width != CSI_WIDTH ||
++      datafmts[0].height != CSI_HEIGHT ||
++      datafmts[0].pixelformat != IMGDATA_PIX_FMT_RGB565)
++    {
++      return -EINVAL;
++    }
++
++  if (interval != NULL &&
++      (interval->numerator != 1 ||
++       interval->denominator != CSI_FRAME_RATE))
+     {
+       return -EINVAL;
+     }
+@@ -379,216 +546,145 @@ static int esp_mipi_csi_validate(FAR struct imgdata_s *data,
+   return OK;
+ }
+ 
+-static int esp_mipi_csi_start(FAR struct imgdata_s *data,
+-                              uint8_t nr_datafmts,
+-                              FAR imgdata_format_t *datafmts,
+-                              FAR imgdata_interval_t *interval,
+-                              imgdata_capture_t callback, FAR void *arg)
++static int csi_start(FAR struct imgdata_s *data, uint8_t nr_datafmts,
++                     FAR imgdata_format_t *datafmts,
++                     FAR imgdata_interval_t *interval,
++                     imgdata_capture_t callback, FAR void *arg)
+ {
+-  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
++  FAR struct esp_mipi_csi_s *priv =
++    (FAR struct esp_mipi_csi_s *)data;
+   irqstate_t flags;
++  esp_err_t err;
+ 
+-  if (!priv->initialized || priv->fb == NULL || callback == NULL)
++  if (!priv->initialized || callback == NULL ||
++      csi_validate(data, nr_datafmts, datafmts, interval) < 0)
+     {
+       return -EINVAL;
+     }
+ 
++  /* A stop requested from ISR context may still be pending; finish it
++   * here in task context before restarting the controller.
++   */
++
++  csi_hw_stop(priv);
++
+   flags = spin_lock_irqsave(&priv->lock);
+-  if (priv->capturing)
++  if (priv->capturing || priv->pending_buffer == NULL)
+     {
+       spin_unlock_irqrestore(&priv->lock, flags);
+       return -EBUSY;
+     }
+ 
++  priv->active_buffer = NULL;
+   priv->callback = callback;
+   priv->callback_arg = arg;
+   priv->capturing = true;
+-  esp_mipi_csi_dma_config(priv);
+-  dw_gdma_ll_channel_clear_intr(priv->dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                UINT32_MAX);
+-  dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, true);
+-  mipi_csi_brg_ll_enable(priv->hal.bridge_dev, true);
+   spin_unlock_irqrestore(&priv->lock, flags);
+-  return OK;
+-}
+ 
+-static int esp_mipi_csi_stop(FAR struct imgdata_s *data)
+-{
+-  FAR struct esp_mipi_csi_s *priv = (FAR struct esp_mipi_csi_s *)data;
+-  irqstate_t flags = spin_lock_irqsave(&priv->lock);
++  /* esp_cam_ctlr_start() pulls the first page through csi_get_new_buffer. */
+ 
+-  priv->capturing = false;
+-  mipi_csi_brg_ll_enable(priv->hal.bridge_dev, false);
+-  if (priv->dma != NULL)
++  err = esp_cam_ctlr_start(priv->controller);
++  if (err != ESP_OK)
+     {
+-      dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, false);
+-      dw_gdma_ll_channel_clear_intr(priv->dma, ESP_MIPI_CSI_DMA_CHAN,
+-                                    UINT32_MAX);
++      flags = spin_lock_irqsave(&priv->lock);
++      priv->capturing = false;
++      priv->callback = NULL;
++      priv->callback_arg = NULL;
++      priv->active_buffer = NULL;
++      spin_unlock_irqrestore(&priv->lock, flags);
++      return csi_error(err);
+     }
+ 
+-  priv->callback = NULL;
+-  priv->callback_arg = NULL;
+-  priv->fb = NULL;
+-  priv->fb_size = 0;
+-  spin_unlock_irqrestore(&priv->lock, flags);
+   return OK;
+ }
+ 
+-static FAR void *esp_mipi_csi_alloc(FAR struct imgdata_s *data,
+-                                    uint32_t align_size, uint32_t size)
+-{
+-  return kumm_memalign(MAX(align_size, ESP_MIPI_CSI_DMA_ALIGN), size);
+-}
+-
+-static void esp_mipi_csi_free(FAR struct imgdata_s *data, FAR void *addr)
+-{
+-  kumm_free(addr);
+-}
+-
+-/****************************************************************************
+- * Public Functions
+- ****************************************************************************/
+-
+-int esp_mipi_csi_dma_isr(void)
++static int csi_stop(FAR struct imgdata_s *data)
+ {
+-  FAR struct esp_mipi_csi_s *priv = &g_esp_mipi_csi;
+-  imgdata_capture_t callback;
+-  FAR void *callback_arg;
+-  struct timeval ts;
++  FAR struct esp_mipi_csi_s *priv =
++    (FAR struct esp_mipi_csi_s *)data;
+   irqstate_t flags;
+-  uint32_t status;
++  bool was_capturing;
+ 
+-  if (priv->dma == NULL)
+-    {
+-      return OK;
+-    }
+-
+-  status = dw_gdma_ll_channel_get_intr_status(priv->dma,
+-                                               ESP_MIPI_CSI_DMA_CHAN);
+-  if (status == 0)
+-    {
+-      return OK;
+-    }
+-
+-  dw_gdma_ll_channel_clear_intr(priv->dma, ESP_MIPI_CSI_DMA_CHAN, status);
+-  if ((status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) == 0)
++  flags = spin_lock_irqsave(&priv->lock);
++  was_capturing = priv->capturing;
++  priv->capturing = false;
++  priv->callback = NULL;
++  priv->callback_arg = NULL;
++  priv->pending_buffer = NULL;
++  priv->active_buffer = NULL;
++  if (was_capturing)
+     {
+-      return OK;
++      priv->stop_pending = true;
+     }
+ 
+-  flags = spin_lock_irqsave(&priv->lock);
+-  dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, false);
+-  mipi_csi_brg_ll_enable(priv->hal.bridge_dev, false);
+-  callback = priv->callback;
+-  callback_arg = priv->callback_arg;
+   spin_unlock_irqrestore(&priv->lock, flags);
+ 
+-  if (priv->fb != NULL)
++  if (!was_capturing)
+     {
+-      up_invalidate_dcache((uintptr_t)priv->fb,
+-                           (uintptr_t)priv->fb + ESP_MIPI_CSI_FRAME_SIZE);
++      return OK;
+     }
+ 
+-  if (callback != NULL)
+-    {
+-      gettimeofday(&ts, NULL);
+-      callback(0, ESP_MIPI_CSI_FRAME_SIZE, &ts, callback_arg);
+-    }
++  /* V4L2 calls stop_capture from the completion callback, which here runs
++   * inside the CSI HAL ISR; the HAL re-arms DMA after our callback, so the
++   * controller must be stopped later from task context.
++   */
+ 
+-  flags = spin_lock_irqsave(&priv->lock);
+-  if (priv->capturing && priv->fb != NULL)
++  if (up_interrupt_context())
+     {
+-      esp_mipi_csi_dma_config(priv);
+-      dw_gdma_ll_channel_enable(priv->dma, ESP_MIPI_CSI_DMA_CHAN, true);
+-      mipi_csi_brg_ll_enable(priv->hal.bridge_dev, true);
++      flags = spin_lock_irqsave(&priv->lock);
++      priv->stop_deferred++;
++      spin_unlock_irqrestore(&priv->lock, flags);
++      work_queue(LPWORK, &priv->stop_work, csi_stop_worker, priv, 0);
++      return OK;
+     }
+ 
+-  spin_unlock_irqrestore(&priv->lock, flags);
++  csi_hw_stop(priv);
+   return OK;
+ }
+ 
+-FAR struct imgdata_s *esp_mipi_csi_initialize(void)
++static FAR void *csi_alloc(FAR struct imgdata_s *data, uint32_t align_size,
++                           uint32_t size)
+ {
+-  return &g_esp_mipi_csi.data;
++  size_t alignment = align_size > CSI_DMA_ALIGNMENT ?
++                     align_size : CSI_DMA_ALIGNMENT;
++
++  UNUSED(data);
++  return heap_caps_aligned_calloc(alignment, 1, size,
++                                  MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+ }
+ 
+-void esp_mipi_csi_dump_status(void)
++static void csi_free(FAR struct imgdata_s *data, FAR void *addr)
+ {
+-  FAR struct esp_mipi_csi_s *priv = &g_esp_mipi_csi;
+-  uint32_t clock_hs_samples = 0;
+-  uint32_t all_stop_samples = 0;
+-  int i;
+-
+-  if (priv->dma == NULL)
+-    {
+-      syslog(LOG_INFO, "CSI: DMA is not initialized\n");
+-      return;
+-    }
+-
+-  syslog(LOG_INFO,
+-         "CSI: intr=0x%08lx amount=%lu fifo=%lu src=0x%08lx "
+-         "fb=%p active=%u\n",
+-         (unsigned long)dw_gdma_ll_channel_get_intr_status(
+-           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
+-         (unsigned long)dw_gdma_ll_channel_get_trans_amount(
+-           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
+-         (unsigned long)dw_gdma_ll_channel_get_fifo_remain(
+-           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
+-         (unsigned long)dw_gdma_ll_channel_get_src_periph_status(
+-           priv->dma, ESP_MIPI_CSI_DMA_CHAN),
+-         priv->fb, priv->capturing);
+-  syslog(LOG_INFO,
+-         "CSI: host ver=0x%08lx lanes=0x%08lx reset=0x%08lx "
+-         "shutdown=0x%08lx dphy_reset=0x%08lx\n",
+-         (unsigned long)priv->hal.host_dev->version.val,
+-         (unsigned long)priv->hal.host_dev->n_lanes.val,
+-         (unsigned long)priv->hal.host_dev->csi2_resetn.val,
+-         (unsigned long)priv->hal.host_dev->phy_shutdownz.val,
+-         (unsigned long)priv->hal.host_dev->dphy_rstz.val);
+-  syslog(LOG_INFO,
+-         "CSI: phy_rx=0x%08lx stop=0x%08lx main=0x%08lx "
+-         "phy_fatal=0x%08lx pkt_fatal=0x%08lx phy=0x%08lx\n",
+-         (unsigned long)priv->hal.host_dev->phy_rx.val,
+-         (unsigned long)priv->hal.host_dev->phy_stopstate.val,
+-         (unsigned long)priv->hal.host_dev->int_st_main.val,
+-         (unsigned long)priv->hal.host_dev->int_st_phy_fatal.val,
+-         (unsigned long)priv->hal.host_dev->int_st_pkt_fatal.val,
+-         (unsigned long)priv->hal.host_dev->int_st_phy.val);
+-  syslog(LOG_INFO,
+-         "CSI: bridge clk=0x%08lx en=0x%08lx frame=0x%08lx "
+-         "dtype=0x%08lx int=0x%08lx\n",
+-         (unsigned long)priv->hal.bridge_dev->host_ctrl.val,
+-         (unsigned long)priv->hal.bridge_dev->csi_en.val,
+-         (unsigned long)priv->hal.bridge_dev->frame_cfg.val,
+-         (unsigned long)priv->hal.bridge_dev->data_type_cfg.val,
+-         (unsigned long)priv->hal.bridge_dev->int_st.val);
+-  if (priv->isp != NULL)
+-    {
+-      syslog(LOG_INFO,
+-             "CSI: ISP cntl=0x%08lx clk=0x%08lx frame=0x%08lx\n",
+-             (unsigned long)priv->isp->cntl.val,
+-             (unsigned long)priv->isp->clk_en.val,
+-             (unsigned long)priv->isp->frame_cfg.val);
+-    }
++  UNUSED(data);
++  heap_caps_free(addr);
++}
+ 
+-  for (i = 0; i < 1000; i++)
+-    {
+-      if (priv->hal.host_dev->phy_rx.phy_rxclkactivehs != 0)
+-        {
+-          clock_hs_samples++;
+-        }
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
+ 
+-      if ((priv->hal.host_dev->phy_stopstate.val & 0x00010003) ==
+-          0x00010003)
+-        {
+-          all_stop_samples++;
+-        }
++FAR struct imgdata_s *esp_mipi_csi_initialize(void)
++{
++  return &g_csi.data;
++}
+ 
+-      up_udelay(100);
+-    }
++void esp_mipi_csi_dump_status(void)
++{
++  irqstate_t flags;
++  uint32_t completed;
++  uint32_t delivered;
++  uint32_t dropped;
++  uint32_t deferred;
++
++  flags = spin_lock_irqsave(&g_csi.lock);
++  completed = g_csi.frames_completed;
++  delivered = g_csi.frames_delivered;
++  dropped = g_csi.frames_dropped;
++  deferred = g_csi.stop_deferred;
++  spin_unlock_irqrestore(&g_csi.lock, flags);
+ 
+   syslog(LOG_INFO,
+-         "CSI: 100ms PHY samples clock_hs=%lu all_stop=%lu/1000\n",
+-         (unsigned long)clock_hs_samples,
+-         (unsigned long)all_stop_samples);
++         "CSI: completed=%lu delivered=%lu dropped=%lu stop_deferred=%lu\n",
++         (unsigned long)completed, (unsigned long)delivered,
++         (unsigned long)dropped, (unsigned long)deferred);
+ }
+diff --git a/arch/risc-v/src/common/espressif/esp_mipi_csi.h b/arch/risc-v/src/common/espressif/esp_mipi_csi.h
+index 9e35f8a0..59a13cba 100644
+--- a/arch/risc-v/src/common/espressif/esp_mipi_csi.h
++++ b/arch/risc-v/src/common/espressif/esp_mipi_csi.h
+@@ -29,7 +29,6 @@ extern "C"
+  ****************************************************************************/
+ 
+ FAR struct imgdata_s *esp_mipi_csi_initialize(void);
+-int esp_mipi_csi_dma_isr(void);
+ void esp_mipi_csi_dump_status(void);
+ 
+ #ifdef __cplusplus
+diff --git a/arch/risc-v/src/common/espressif/esp_mipi_dsi.c b/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+index 1661f16a..76f42b64 100644
+--- a/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
++++ b/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+@@ -28,13 +28,16 @@
+ 
+ #include <errno.h>
+ #include <debug.h>
++#include <semaphore.h>
+ #include <string.h>
+ #include <math.h>
++#include <time.h>
+ 
+ #include <nuttx/arch.h>
+ #include <nuttx/irq.h>
+ #include <nuttx/kmalloc.h>
+ #include <nuttx/mutex.h>
++#include <nuttx/semaphore.h>
+ #include <nuttx/spinlock.h>
+ #include <nuttx/video/mipi_dsi.h>
+ #include <nuttx/video/mipi_display.h>
+@@ -56,6 +59,7 @@
+ #include "soc/clk_tree_defs.h"
+ #include "soc/reg_base.h"
+ #include "esp_private/esp_clk_tree_common.h"
++#include "esp_private/dw_gdma.h"
+ 
+ #include "esp_mipi_dsi.h"
+ 
+@@ -75,10 +79,6 @@
+ 
+ #define ESP_MIPI_DSI_DMA_CHAN     0
+ 
+-#ifdef CONFIG_ESPRESSIF_MIPI_CSI
+-int esp_mipi_csi_dma_isr(void);
+-#endif
+-
+ #ifndef CONFIG_ESPRESSIF_MIPI_DSI_BUS
+ #  define CONFIG_ESPRESSIF_MIPI_DSI_BUS 0
+ #endif
+@@ -115,8 +115,8 @@ struct esp_mipi_dsi_priv_s
+   FAR void *fb;                         /* Bound framebuffer base, or NULL */
+   FAR dw_gdma_link_list_item_t *lli;    /* Cached LLI (CPU view) */
+   FAR dw_gdma_link_list_item_t *lli_nc; /* Non-cacheable LLI alias */
+-  esp_mipi_dsi_framebuffer_callback_t fb_callback;
+-  FAR void *fb_callback_arg;
++  FAR void *pending_fb;
++  sem_t fb_done;
+ 
+   size_t fb_size;                    /* Bound framebuffer size in bytes */
+   uint16_t dpi_h_res;                /* Active width from DPI config */
+@@ -185,12 +185,24 @@ static struct esp_mipi_dsi_priv_s g_esp_mipi_dsi =
+     },
+   .lock = NXMUTEX_INITIALIZER,
+   .dmalock = SP_UNLOCKED,
++  .fb_done = SEM_INITIALIZER(0),
+   .phy_pllref_clk_src = SOC_MOD_CLK_INVALID,
+   .phy_cfg_clk_src = SOC_MOD_CLK_INVALID,
+   .dpi_clk_src = SOC_MOD_CLK_INVALID,
+   .dma_cpuint = -ENOMEM,
+ };
+ 
++/****************************************************************************
++ * Public Data
++ ****************************************************************************/
++
++/* Bridge FIFO underrun events seen by the DMA ISR; readable from NSH with
++ * "xd <addr of g_esp_mipi_dsi_underruns> 8" for display glitch diagnosis.
++ */
++
++volatile uint32_t g_esp_mipi_dsi_underruns;
++volatile uint32_t g_esp_mipi_dsi_frames;
++
+ /****************************************************************************
+  * Private Functions
+  ****************************************************************************/
+@@ -253,12 +265,11 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv =
+     (FAR struct esp_mipi_dsi_priv_s *)arg;
+-  esp_mipi_dsi_framebuffer_callback_t callback = NULL;
+   FAR dw_gdma_dev_t *dev;
+-  FAR void *callback_arg = NULL;
+   FAR void *next_fb = NULL;
+   irqstate_t flags;
+   bool transfer_done;
++  bool frame_swapped;
+   uint32_t status;
+ 
+   UNUSED(irq);
+@@ -273,32 +284,40 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+   flags = spin_lock_irqsave(&priv->dmalock);
+   status = dw_gdma_ll_channel_get_intr_status(dev, ESP_MIPI_DSI_DMA_CHAN);
+   dw_gdma_ll_channel_clear_intr(dev, ESP_MIPI_DSI_DMA_CHAN, status);
++  if (priv->hal.bridge != NULL &&
++      (mipi_dsi_brg_ll_get_interrupt_status(priv->hal.bridge) &
++       MIPI_DSI_BRG_LL_EVENT_UNDERRUN) != 0)
++    {
++      mipi_dsi_brg_ll_clear_interrupt_status(priv->hal.bridge,
++                                             MIPI_DSI_BRG_LL_EVENT_UNDERRUN);
++      g_esp_mipi_dsi_underruns++;
++    }
++
+   transfer_done =
+     (status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) != 0 &&
+     priv->dma_enabled;
+ 
+   if (transfer_done)
+     {
+-      callback = priv->fb_callback;
+-      callback_arg = priv->fb_callback_arg;
++      g_esp_mipi_dsi_frames++;
++      next_fb = priv->pending_fb;
++      priv->pending_fb = NULL;
+     }
+ 
+-  spin_unlock_irqrestore(&priv->dmalock, flags);
++  frame_swapped = next_fb != NULL;
+ 
+-#ifdef CONFIG_ESPRESSIF_MIPI_CSI
+-  esp_mipi_csi_dma_isr();
+-#endif
++  spin_unlock_irqrestore(&priv->dmalock, flags);
+ 
+   if (!transfer_done)
+     {
++#ifdef CONFIG_ESPRESSIF_MIPI_CSI
++      /* CSI has its own status/error path.  Keep this shared ISR focused on
++       * the DSI channel and dispatch CSI only after DSI state is restored. */
++      dw_gdma_shared_isr();
++#endif
+       return OK;
+     }
+ 
+-  if (callback != NULL)
+-    {
+-      next_fb = callback(callback_arg);
+-    }
+-
+   flags = spin_lock_irqsave(&priv->dmalock);
+   if (priv->dma_enabled)
+     {
+@@ -315,6 +334,18 @@ static int IRAM_ATTR esp_mipi_dsi_dma_isr(int irq, FAR void *context,
+     }
+ 
+   spin_unlock_irqrestore(&priv->dmalock, flags);
++
++  if (frame_swapped)
++    {
++      nxsem_post(&priv->fb_done);
++    }
++
++#ifdef CONFIG_ESPRESSIF_MIPI_CSI
++  /* Re-arm the display channel before servicing CSI.  CSI completion is
++   * deferred to LPWORK, so this call only performs short register work. */
++  dw_gdma_shared_isr();
++#endif
++
+   return OK;
+ }
+ 
+@@ -369,7 +400,9 @@ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv)
+                                                  DW_GDMA_HANDSHAKE_HW);
+   dw_gdma_ll_channel_set_dst_handshake_periph(dev, ESP_MIPI_DSI_DMA_CHAN,
+                                               DW_GDMA_ROLE_PERIPH_DSI);
+-  dw_gdma_ll_channel_set_priority(dev, ESP_MIPI_DSI_DMA_CHAN, 1);
++  /* Display scanout is the only hard real-time DW-GDMA consumer. */
++
++  dw_gdma_ll_channel_set_priority(dev, ESP_MIPI_DSI_DMA_CHAN, 7);
+   dw_gdma_ll_channel_set_src_outstanding_limit(dev, ESP_MIPI_DSI_DMA_CHAN,
+                                                5);
+   dw_gdma_ll_channel_set_dst_outstanding_limit(dev, ESP_MIPI_DSI_DMA_CHAN,
+@@ -1489,6 +1522,7 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
+   FAR dw_gdma_link_list_item_t *lli_nc;
++  lcd_color_format_t input_fmt;
+   size_t expect;
+   uint32_t block_items;
+   int ret;
+@@ -1584,9 +1618,20 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ 
+   dw_gdma_ll_lli_set_block_markers(lli_nc, false, true, true);
+ 
+-  esp_cache_msync(fb, fb_size,
+-                  ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+-                  ESP_CACHE_MSYNC_FLAG_UNALIGNED);
++  ret = esp_mipi_dsi_flush_framebuffer(fb, fb_size);
++  if (ret < 0)
++    {
++      nxmutex_unlock(&priv->lock);
++      return ret;
++    }
++
++  /* ESP32-P4 revision 1.x shares the bridge input/output pixel type.  Keep
++   * the memory-side stream consistent with the bound framebuffer format.
++   * This is retained from the v1.0 Git-tree release implementation.
++   */
++
++  input_fmt = bpp == 16 ? LCD_COLOR_FMT_RGB565 : LCD_COLOR_FMT_RGB888;
++  mipi_dsi_brg_ll_set_input_color_format(priv->hal.bridge, input_fmt);
+ 
+   /* Bridge expects DW-GDMA as flow controller. */
+ 
+@@ -1612,31 +1657,50 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+ }
+ 
+ /****************************************************************************
+- * Name: esp_mipi_dsi_set_framebuffer_callback
++ * Name: esp_mipi_dsi_swap_framebuffer
+  *
+  * Description:
+- *   Register the interrupt-safe framebuffer selector used between completed
+- *   video frames.
++ *   Queue a framebuffer for the next completed-frame boundary and wait until
++ *   DW-GDMA has stopped reading the previous framebuffer.
+  *
+  ****************************************************************************/
+ 
+-int esp_mipi_dsi_set_framebuffer_callback(
+-      esp_mipi_dsi_framebuffer_callback_t callback, FAR void *arg)
++int esp_mipi_dsi_swap_framebuffer(FAR void *fb, uint32_t timeout_ms)
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
+   irqstate_t flags;
++  int ret;
++
++  if (fb == NULL || timeout_ms == 0)
++    {
++      return -EINVAL;
++    }
+ 
++  nxsem_reset(&priv->fb_done, 0);
+   flags = spin_lock_irqsave(&priv->dmalock);
+-  if (!priv->fb_bound)
++  if (!priv->fb_bound || !priv->dma_enabled)
+     {
+       spin_unlock_irqrestore(&priv->dmalock, flags);
+       return -EAGAIN;
+     }
+ 
+-  priv->fb_callback = callback;
+-  priv->fb_callback_arg = arg;
++  priv->pending_fb = fb;
+   spin_unlock_irqrestore(&priv->dmalock, flags);
+-  return OK;
++
++  ret = nxsem_tickwait_uninterruptible(&priv->fb_done,
++                                       MSEC2TICK(timeout_ms));
++  if (ret < 0)
++    {
++      flags = spin_lock_irqsave(&priv->dmalock);
++      if (priv->pending_fb == fb)
++        {
++          priv->pending_fb = NULL;
++        }
++
++      spin_unlock_irqrestore(&priv->dmalock, flags);
++    }
++
++  return ret;
+ }
+ 
+ /****************************************************************************
+@@ -1798,6 +1862,7 @@ int esp_mipi_dsi_video_stop(void)
+ 
+   flags = spin_lock_irqsave(&priv->dmalock);
+   priv->dma_enabled = false;
++  priv->pending_fb = NULL;
+   if (priv->dw_hal.dev != NULL)
+     {
+       dw_gdma_ll_channel_enable(priv->dw_hal.dev, ESP_MIPI_DSI_DMA_CHAN,
+diff --git a/arch/risc-v/src/common/espressif/esp_mipi_dsi.h b/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
+index 42decafc..6c08302c 100644
+--- a/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
++++ b/arch/risc-v/src/common/espressif/esp_mipi_dsi.h
+@@ -68,12 +68,6 @@ struct esp_mipi_dsi_dpi_config_s
+   uint8_t  format;              /* MIPI_DSI_FMT_RGB565 / RGB888 / ... */
+ };
+ 
+-/* Called at a completed video frame to select the next DMA framebuffer.
+- * The callback runs in interrupt context and must not block.
+- */
+-
+-typedef FAR void *(*esp_mipi_dsi_framebuffer_callback_t)(FAR void *arg);
+-
+ /****************************************************************************
+  * Public Function Prototypes
+  ****************************************************************************/
+@@ -176,24 +170,22 @@ int esp_mipi_dsi_bind_framebuffer(FAR void *fb, size_t fb_size,
+                                   uint8_t bpp);
+ 
+ /****************************************************************************
+- * Name: esp_mipi_dsi_set_framebuffer_callback
++ * Name: esp_mipi_dsi_swap_framebuffer
+  *
+  * Description:
+- *   Register an interrupt-safe callback that selects the framebuffer for
+- *   the next video frame.  A non-NULL returned address replaces the DW-GDMA
+- *   source at the completed-frame boundary.
++ *   Queue a framebuffer for the next completed-frame boundary and wait until
++ *   DW-GDMA has switched away from the previous framebuffer.
+  *
+  * Input Parameters:
+- *   callback - Non-blocking framebuffer selection callback, or NULL
+- *   arg      - Opaque callback argument
++ *   fb         - Framebuffer address for the next video frame
++ *   timeout_ms - Maximum time to wait for the completed-frame boundary
+  *
+  * Returned Value:
+  *   Zero (OK) on success; a negated errno value on failure.
+  *
+  ****************************************************************************/
+ 
+-int esp_mipi_dsi_set_framebuffer_callback(
+-      esp_mipi_dsi_framebuffer_callback_t callback, FAR void *arg);
++int esp_mipi_dsi_swap_framebuffer(FAR void *fb, uint32_t timeout_ms);
+ 
+ /****************************************************************************
+  * Name: esp_mipi_dsi_flush_framebuffer
+diff --git a/arch/risc-v/src/esp32p4/hal_esp32p4.mk b/arch/risc-v/src/esp32p4/hal_esp32p4.mk
+index 4b67ec80..4d3c1a29 100644
+--- a/arch/risc-v/src/esp32p4/hal_esp32p4.mk
++++ b/arch/risc-v/src/esp32p4/hal_esp32p4.mk
+@@ -166,6 +166,13 @@ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY
+ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_ana_cmpr$(DELIM)$(CHIP_SERIES)$(DELIM)include
+ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_dma$(DELIM)include
+ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_dma$(DELIM)src
++ifeq ($(CONFIG_ESPRESSIF_MIPI_CSI),y)
++INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_cam$(DELIM)include
++INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_cam$(DELIM)interface
++INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_cam$(DELIM)csi$(DELIM)include
++INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_cam$(DELIM)csi$(DELIM)src
++INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_isp$(DELIM)include
++endif
+ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_gpio$(DELIM)include
+ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_rmt$(DELIM)include
+ INCLUDES += $(INCDIR_PREFIX)$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_rmt$(DELIM)src
+@@ -430,6 +437,18 @@ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)uppe
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_dma$(DELIM)src$(DELIM)esp_dma_utils.c
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_dma$(DELIM)src$(DELIM)gdma_link.c
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_dma$(DELIM)src$(DELIM)gdma.c
++ifeq ($(CONFIG_ESPRESSIF_MIPI_CSI),y)
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_dma$(DELIM)src$(DELIM)dw_gdma.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_cam$(DELIM)esp_cam_ctlr.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_cam$(DELIM)csi$(DELIM)src$(DELIM)esp_cam_ctlr_csi.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_isp$(DELIM)src$(DELIM)isp_core.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_isp$(DELIM)src$(DELIM)isp_demosaic.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_isp$(DELIM)src$(DELIM)isp_ccm.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_isp$(DELIM)src$(DELIM)isp_color.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)esp_hw_support$(DELIM)mipi_csi_share_hw_ctrl.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)hal$(DELIM)color_hal.c
++CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)esp_hal_cam$(DELIM)isp_hal.c
++endif
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_gpio$(DELIM)src$(DELIM)gpio.c
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_gpio$(DELIM)src$(DELIM)rtc_io.c
+ CHIP_CSRCS += chip$(DELIM)$(ESP_HAL_3RDPARTY_REPO)$(DELIM)components$(DELIM)upper_hal_rmt$(DELIM)src$(DELIM)rmt_common.c
+diff --git a/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig b/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+index 782afcc7..0c6c77bf 100644
+--- a/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
++++ b/boards/risc-v/esp32p4/esp32p4-function-ev-board/configs/desktop-v1/defconfig
+@@ -4,7 +4,7 @@
+ # v1.0 uses the pre-v3 memory/linker layout and keeps UART0 available for
+ # diagnostics while desktop_main owns the LCD UI.
+ #
+-# CONFIG_ESPRESSIF_USBSERIAL is not set
++# CONFIG_ESPRESSIF_SPIRAM_MEMTEST is not set
+ # CONFIG_LV_BUILD_EXAMPLES is not set
+ # CONFIG_NSH_ARGCAT is not set
+ # CONFIG_NSH_CMDOPT_HEXDUMP is not set
+@@ -23,58 +23,68 @@ CONFIG_BOARDCTL_RESET=y
+ CONFIG_BOARD_LOOPSPERMSEC=15000
+ CONFIG_BUILTIN=y
+ CONFIG_DEBUG_FEATURES=y
+-CONFIG_DEV_CONSOLE=y
+ CONFIG_DEBUG_MM=y
+ CONFIG_ESP32P4_FUNCTION_EV_BOARD_LCD=y
+ CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN=y
+ CONFIG_ESP32P4_REV_MIN_100=y
+ CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+-CONFIG_ESPRESSIF_CPU_FREQ_90=y
+-CONFIG_ESPRESSIF_MIPI_CSI=y
+-CONFIG_ESPRESSIF_MIPI_CSI_BOOT_TEST=y
++CONFIG_ESPRESSIF_CPU_FREQ_180=y
++CONFIG_ESPRESSIF_EMAC=y
++CONFIG_ESPRESSIF_ETH_DMA_BUFFER_SIZE=512
++CONFIG_ESPRESSIF_ETH_NRXDESC=8
++CONFIG_ESPRESSIF_ETH_NTXDESC=8
++CONFIG_ESPRESSIF_FLASH_16M=y
+ CONFIG_ESPRESSIF_I2C0_SCLPIN=8
+ CONFIG_ESPRESSIF_I2C0_SDAPIN=7
++CONFIG_ESPRESSIF_MIPI_CSI=y
+ CONFIG_ESPRESSIF_SPIRAM=y
+-CONFIG_ESPRESSIF_SPIRAM_BOOT_INIT=y
+-# CONFIG_ESPRESSIF_SPIRAM_MEMTEST is not set
+ CONFIG_ESPRESSIF_SPIRAM_SPEED_80M=y
+-CONFIG_ESPRESSIF_SPIRAM_USER_HEAP=y
+ CONFIG_EXPERIMENTAL=y
+ CONFIG_FS_PROCFS=y
++CONFIG_FS_TMPFS=y
+ CONFIG_GRAPHICS_LVGL=y
++CONFIG_HA_PANEL=y
+ CONFIG_IDLETHREAD_STACKSIZE=2048
++CONFIG_INIT_ENTRYNAME="ha_panel_main"
+ CONFIG_INIT_ENTRYPOINT="desktop_main"
+ CONFIG_INIT_STACKSIZE=32768
+-CONFIG_INPUT=y
+ CONFIG_INPUT_GT9XX_X_INVERT_MAX=1024
+ CONFIG_INPUT_GT9XX_Y_INVERT_MAX=600
+ CONFIG_INTELHEX_BINARY=y
+ CONFIG_INTERPRETERS_QUICKJS=y
+-CONFIG_INTERPRETERS_QUICKJS_NONE=y
++CONFIG_LIBC_MEMFD_ERROR=y
+ CONFIG_LIBC_PERROR_STDOUT=y
+ CONFIG_LIBC_STRERROR=y
+ CONFIG_LIBM=y
+-CONFIG_LV_ATTRIBUTE_LARGE_CONST="const"
+ CONFIG_LV_FONT_MONTSERRAT_24=y
+ CONFIG_LV_FONT_MONTSERRAT_48=y
+ CONFIG_LV_USE_CLIB_MALLOC=y
+ CONFIG_LV_USE_CLIB_SPRINTF=y
+ CONFIG_LV_USE_CLIB_STRING=y
+ CONFIG_LV_USE_NUTTX=y
+-# CONFIG_LV_NUTTX_FBDEV_PARTIAL is not set
+-# CONFIG_LV_NUTTX_FBDEV_BUFFER_SIZE is not set
+ CONFIG_LV_USE_NUTTX_TOUCHSCREEN=y
+ CONFIG_LV_USE_TINY_TTF=y
+-CONFIG_MM_KERNEL_HEAP=y
+ CONFIG_MM_BACKTRACE=0
+ CONFIG_MM_DUMP_ON_FAILURE=y
++CONFIG_MM_KERNEL_HEAP=y
++CONFIG_MM_KERNEL_HEAPSIZE=131072
+ CONFIG_MM_REGIONS=3
+-CONFIG_NFILE_DESCRIPTORS_PER_BLOCK=8
+-CONFIG_NSH_ARCHINIT=y
++CONFIG_NETDB_DNSCLIENT=y
++CONFIG_NETDEV_LATEINIT=y
++CONFIG_NETDEV_PHY_IOCTL=y
++CONFIG_NETINIT_DHCPC=y
++CONFIG_NETINIT_DNS=y
++CONFIG_NETINIT_THREAD=y
++CONFIG_NETUTILS_DHCPC=y
++CONFIG_NET_ETH_PKTSIZE=1514
++CONFIG_NET_TCP=y
++CONFIG_NET_UDP=y
+ CONFIG_NSH_BUILTIN_APPS=y
+ CONFIG_NSH_FILEIOSIZE=512
+ CONFIG_NSH_READLINE=y
+ CONFIG_NSH_STRERROR=y
++CONFIG_NXCAMERA_LOOPTHREAD_STACKSIZE=8192
++CONFIG_NXCAMERA_MAINTHREAD_STACKSIZE=4096
+ CONFIG_PREALLOC_TIMERS=0
+ CONFIG_RR_INTERVAL=200
+ CONFIG_SCHED_BACKTRACE=y
+@@ -83,18 +93,7 @@ CONFIG_START_DAY=29
+ CONFIG_START_MONTH=11
+ CONFIG_START_YEAR=2019
+ CONFIG_SYSTEM_DESKTOP=y
+-CONFIG_SYSTEM_DESKTOP_STACKSIZE=32768
+ CONFIG_SYSTEM_DUMPSTACK=y
+ CONFIG_SYSTEM_NSH=y
++CONFIG_SYSTEM_NXCAMERA=y
+ CONFIG_UART0_SERIAL_CONSOLE=y
+-CONFIG_VIDEO=y
+-CONFIG_VIDEO_SC2336=y
+-CONFIG_VIDEO_STREAM=y
+-
+-CONFIG_MM_KERNEL_HEAPSIZE=32768
+-
+-# CONFIG_ESPRESSIF_FLASH_4M is not set
+-
+-CONFIG_ESPRESSIF_FLASH_16M=y
+-
+-CONFIG_FS_TMPFS=y
+diff --git a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c
+index 564769b1..ef3d7351 100644
+--- a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c
++++ b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_camera.c
+@@ -11,10 +11,10 @@
+ #include <nuttx/config.h>
+ 
+ #include <errno.h>
++#include <stdbool.h>
+ #include <stdint.h>
+ #include <syslog.h>
+ 
+-#include <nuttx/arch.h>
+ #include <nuttx/i2c/i2c_master.h>
+ #include <nuttx/kmalloc.h>
+ #include <nuttx/video/imgdata.h>
+@@ -30,12 +30,11 @@
+  * Pre-processor Definitions
+  ****************************************************************************/
+ 
+-#define CAMERA_I2C_PORT      0
+-#define CAMERA_DPHY_LDO_CHAN 3
+-#define CAMERA_DPHY_LDO_MV   2500
+-#define CAMERA_WIDTH         1024
+-#define CAMERA_HEIGHT        600
+-#define CAMERA_FRAME_SIZE (CAMERA_WIDTH * CAMERA_HEIGHT)
++#define CAMERA_I2C_PORT       0
++#define CAMERA_DPHY_LDO_CHAN  3
++#define CAMERA_DPHY_LDO_MV    2500
++#define CAMERA_WIDTH          1024
++#define CAMERA_HEIGHT         600
+ 
+ /****************************************************************************
+  * Private Data
+@@ -47,157 +46,7 @@ static struct esp_ldo_config_t g_camera_ldo =
+   .voltage_mv = CAMERA_DPHY_LDO_MV,
+ };
+ 
+-#ifdef CONFIG_ESPRESSIF_MIPI_CSI_BOOT_TEST
+-static volatile uint32_t g_camera_frame_size;
+-
+-/****************************************************************************
+- * Private Functions
+- ****************************************************************************/
+-
+-static int camera_frame_callback(uint8_t result, uint32_t size,
+-                                 FAR const struct timeval *ts,
+-                                 FAR void *arg)
+-{
+-  g_camera_frame_size = result == 0 ? size : 0;
+-  return OK;
+-}
+-
+-static int camera_boot_test(FAR struct imgsensor_s *sensor,
+-                            FAR struct imgdata_s *data)
+-{
+-  imgdata_format_t datafmt;
+-  imgsensor_format_t sensorfmt;
+-  imgdata_interval_t datainterval;
+-  imgsensor_interval_t sensorinterval;
+-  FAR uint8_t *buffer;
+-  uint32_t checksum = 2166136261u;
+-  uint32_t frame_size;
+-  uint8_t minimum = UINT8_MAX;
+-  uint8_t maximum = 0;
+-  int ret;
+-  int i;
+-
+-  datafmt.width = CAMERA_WIDTH;
+-  datafmt.height = CAMERA_HEIGHT;
+-  datafmt.pixelformat = IMGDATA_PIX_FMT_SBGGR8;
+-  sensorfmt.width = CAMERA_WIDTH;
+-  sensorfmt.height = CAMERA_HEIGHT;
+-  sensorfmt.pixelformat = IMGSENSOR_PIX_FMT_SBGGR8;
+-  datainterval.numerator = 1;
+-  datainterval.denominator = 30;
+-  sensorinterval.numerator = 1;
+-  sensorinterval.denominator = 30;
+-
+-  buffer = data->ops->alloc(data, 64, CAMERA_FRAME_SIZE);
+-  if (buffer == NULL)
+-    {
+-      return -ENOMEM;
+-    }
+-
+-  ret = IMGSENSOR_INIT(sensor);
+-  if (ret < 0)
+-    {
+-      goto free_buffer;
+-    }
+-
+-  ret = IMGDATA_INIT(data);
+-  if (ret < 0)
+-    {
+-      goto uninit_sensor;
+-    }
+-
+-  ret = IMGDATA_VALIDATE_FRAME_SETTING(data, 1, &datafmt,
+-                                       &datainterval);
+-  if (ret < 0)
+-    {
+-      goto uninit_data;
+-    }
+-
+-  ret = IMGSENSOR_VALIDATE_FRAME_SETTING(
+-          sensor, IMGSENSOR_STREAM_TYPE_VIDEO, 1, &sensorfmt,
+-          &sensorinterval);
+-  if (ret < 0)
+-    {
+-      goto uninit_data;
+-    }
+-
+-  ret = IMGDATA_SET_BUF(data, 1, &datafmt, buffer, CAMERA_FRAME_SIZE);
+-  if (ret < 0)
+-    {
+-      goto uninit_data;
+-    }
+-
+-  g_camera_frame_size = 0;
+-  ret = IMGDATA_START_CAPTURE(data, 1, &datafmt, &datainterval,
+-                              camera_frame_callback, NULL);
+-  if (ret < 0)
+-    {
+-      goto uninit_data;
+-    }
+-
+-  ret = IMGSENSOR_START_CAPTURE(sensor, IMGSENSOR_STREAM_TYPE_VIDEO,
+-                                1, &sensorfmt, &sensorinterval);
+-  if (ret < 0)
+-    {
+-      IMGDATA_STOP_CAPTURE(data);
+-      goto uninit_data;
+-    }
+-
+-  for (i = 0; i < 200 && g_camera_frame_size == 0; i++)
+-    {
+-      up_mdelay(10);
+-    }
+-
+-  if (g_camera_frame_size == 0)
+-    {
+-      esp_mipi_csi_dump_status();
+-    }
+-
+-  IMGDATA_STOP_CAPTURE(data);
+-  IMGSENSOR_STOP_CAPTURE(sensor, IMGSENSOR_STREAM_TYPE_VIDEO);
+-  frame_size = g_camera_frame_size;
+-  if (frame_size != CAMERA_FRAME_SIZE)
+-    {
+-      syslog(LOG_ERR, "Camera: first frame timeout or short frame: %lu\n",
+-             (unsigned long)frame_size);
+-      ret = -ETIMEDOUT;
+-      goto uninit_data;
+-    }
+-
+-  for (i = 0; i < frame_size; i++)
+-    {
+-      uint8_t value = buffer[i];
+-
+-      minimum = value < minimum ? value : minimum;
+-      maximum = value > maximum ? value : maximum;
+-      checksum = (checksum ^ value) * 16777619u;
+-    }
+-
+-  if (minimum == maximum)
+-    {
+-      syslog(LOG_ERR, "Camera: first frame is constant (0x%02x)\n",
+-             minimum);
+-      ret = -EIO;
+-    }
+-  else
+-    {
+-      syslog(LOG_INFO,
+-             "Camera: first frame OK, %lu bytes, range=%u..%u, "
+-             "fnv1a=0x%08lx\n",
+-             (unsigned long)frame_size, minimum, maximum,
+-             (unsigned long)checksum);
+-      ret = OK;
+-    }
+-
+-uninit_data:
+-  IMGDATA_UNINIT(data);
+-uninit_sensor:
+-  IMGSENSOR_UNINIT(sensor);
+-free_buffer:
+-  data->ops->free(data, buffer);
+-  return ret;
+-}
+-#endif
++static bool g_camera_registered;
+ 
+ /****************************************************************************
+  * Public Functions
+@@ -207,17 +56,20 @@ int board_camera_initialize(void)
+ {
+   FAR struct i2c_master_s *i2c;
+   FAR struct imgsensor_s *sensor;
++  FAR struct imgsensor_s *sensors[1];
+   FAR struct imgdata_s *data;
+   int ret;
+ 
+-  if (g_camera_ldo.handler == NULL)
++  if (g_camera_registered)
++    {
++      return OK;
++    }
++
++  ret = esp_ldo_channel_acquire(&g_camera_ldo);
++  if (ret < 0)
+     {
+-      ret = esp_ldo_channel_acquire(&g_camera_ldo);
+-      if (ret < 0)
+-        {
+-          syslog(LOG_ERR, "Camera: MIPI D-PHY LDO failed: %d\n", ret);
+-          return ret;
+-        }
++      syslog(LOG_ERR, "Camera: MIPI D-PHY LDO failed: %d\n", ret);
++      return ret;
+     }
+ 
+   i2c = esp_i2cbus_initialize(CAMERA_I2C_PORT);
+@@ -225,59 +77,52 @@ int board_camera_initialize(void)
+     {
+       syslog(LOG_ERR, "Camera: failed to acquire I2C%d\n",
+              CAMERA_I2C_PORT);
+-      return -ENODEV;
++      ret = -ENODEV;
++      goto release_ldo;
+     }
+ 
+   sensor = sc2336_initialize(i2c, CAMERA_WIDTH, CAMERA_HEIGHT);
+   if (sensor == NULL)
+     {
+       syslog(LOG_ERR, "Camera: failed to allocate SC2336 driver\n");
+-      return -ENOMEM;
++      ret = -ENOMEM;
++      goto release_i2c;
+     }
+ 
+   if (!IMGSENSOR_IS_AVAILABLE(sensor))
+     {
+       syslog(LOG_ERR, "Camera: SC2336 not detected on SCCB 0x30\n");
+-      kmm_free(sensor);
+-      return -ENODEV;
++      ret = -ENODEV;
++      goto free_sensor;
+     }
+ 
+   data = esp_mipi_csi_initialize();
+   if (data == NULL)
+     {
+       syslog(LOG_ERR, "Camera: failed to create MIPI-CSI data path\n");
+-      kmm_free(sensor);
+-      return -ENODEV;
+-    }
+-
+-#ifdef CONFIG_ESPRESSIF_MIPI_CSI_BOOT_TEST
+-  ret = camera_boot_test(sensor, data);
+-  if (ret < 0)
+-    {
+-      syslog(LOG_ERR, "Camera: boot capture test failed: %d\n", ret);
+-      kmm_free(sensor);
+-      return ret;
+-    }
+-#endif
+-
+-  imgdata_register(data);
+-  ret = imgsensor_register(sensor);
+-  if (ret < 0)
+-    {
+-      syslog(LOG_ERR, "Camera: imgsensor_register failed: %d\n", ret);
+-      kmm_free(sensor);
+-      return ret;
++      ret = -ENODEV;
++      goto free_sensor;
+     }
+ 
+-  ret = capture_initialize("/dev/video0");
++  sensors[0] = sensor;
++  ret = capture_register("/dev/video0", data, sensors, 1);
+   if (ret < 0)
+     {
+       syslog(LOG_ERR, "Camera: /dev/video0 registration failed: %d\n",
+              ret);
+-      return ret;
++      goto free_sensor;
+     }
+ 
++  g_camera_registered = true;
+   syslog(LOG_INFO,
+-         "Camera: SC2336 1024x600 BGGR8 registered at /dev/video0\n");
++         "Camera: SC2336 1024x600 RGB565 registered at /dev/video0\n");
+   return OK;
++
++free_sensor:
++  kmm_free(sensor);
++release_i2c:
++  esp_i2cbus_uninitialize(i2c);
++release_ldo:
++  esp_ldo_channel_release(&g_camera_ldo);
++  return ret;
+ }
+diff --git a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+index 5f55a713..a03c2cd4 100644
+--- a/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
++++ b/boards/risc-v/esp32p4/esp32p4-function-ev-board/src/esp32p4_lcd.c
+@@ -32,10 +32,8 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <syslog.h>
+-#include <time.h>
+ 
+ #include <nuttx/arch.h>
+-#include <nuttx/spinlock.h>
+ #include <nuttx/video/fb.h>
+ #include <nuttx/video/mipi_dsi.h>
+ 
+@@ -64,6 +62,7 @@ extern uintptr_t esp_psram_extram_vaddr_end(void);
+ #define LCD_BPP                    16
+ #define LCD_STRIDE                 (LCD_XRES * LCD_BPP / 8)
+ #define LCD_FB_SIZE                (LCD_STRIDE * LCD_YRES)
++#define LCD_FB_COUNT               3
+ 
+ #define LCD_GPIO_RST               27
+ #define LCD_GPIO_BL                26
+@@ -72,7 +71,7 @@ extern uintptr_t esp_psram_extram_vaddr_end(void);
+ #define LCD_DSI_RATE_MBPS          1000
+ #define LCD_DPHY_LDO_CHAN          3
+ #define LCD_DPHY_LDO_MV            2500
+-#define LCD_IRAM_ATTR              __attribute__((section(".iram1")))
++#define LCD_PAGEFLIP_TIMEOUT_MS    100
+ #ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+ #  define LCD_DPI_CLOCK_MHZ         48
+ #else
+@@ -101,7 +100,6 @@ static int lcd_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
+     !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
+ static int lcd_pandisplay(FAR struct fb_vtable_s *vtable,
+                           FAR struct fb_planeinfo_s *pinfo);
+-static FAR void *LCD_IRAM_ATTR lcd_next_framebuffer(FAR void *arg);
+ #endif
+ #ifdef CONFIG_FB_UPDATE
+ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+@@ -183,9 +181,10 @@ static struct esp_ldo_config_t g_mipi_ldo =
+ static FAR uint16_t *g_lcd_fb;
+ static bool g_lcd_fb_heap;
+ static bool g_lcd_ready;
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++#endif
+ #ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
+-static uintptr_t g_lcd_pending_fb;
+-static spinlock_t g_lcd_pending_lock = SP_UNLOCKED;
+ static bool g_lcd_previous_dirty;
+ static uint16_t g_lcd_previous_y1;
+ static uint16_t g_lcd_previous_y2;
+@@ -226,15 +225,16 @@ static int lcd_pandisplay(FAR struct fb_vtable_s *vtable,
+                           FAR struct fb_planeinfo_s *pinfo)
+ {
+   uintptr_t next_fb;
+-  irqstate_t flags;
+   int count;
++  int ret;
+ 
+   if (vtable != &g_lcd_vtable || pinfo == NULL)
+     {
+       return -EINVAL;
+     }
+ 
+-  if (pinfo->xoffset != 0 || pinfo->yoffset > LCD_YRES ||
++  if (pinfo->xoffset != 0 ||
++      pinfo->yoffset > LCD_YRES * (LCD_FB_COUNT - 1) ||
+       pinfo->yoffset % LCD_YRES != 0)
+     {
+       return -EINVAL;
+@@ -253,25 +253,23 @@ static int lcd_pandisplay(FAR struct fb_vtable_s *vtable,
+ 
+   next_fb = (uintptr_t)g_lcd_fb +
+             (size_t)pinfo->yoffset * LCD_STRIDE;
+-  flags = spin_lock_irqsave(&g_lcd_pending_lock);
+-  g_lcd_pending_fb = next_fb;
+-  spin_unlock_irqrestore(&g_lcd_pending_lock, flags);
+-  return OK;
+-}
+ 
+-static FAR void *LCD_IRAM_ATTR lcd_next_framebuffer(FAR void *arg)
+-{
+-  uintptr_t next_fb;
+-  irqstate_t flags;
++  /* Queue the page directly in the DSI driver.  The call returns only after
++   * the completed-frame ISR switches DW-GDMA to next_fb, so the camera may
++   * safely reuse the previous USERPTR page immediately afterwards.
++   */
+ 
+-  UNUSED(arg);
++  ret = esp_mipi_dsi_swap_framebuffer((FAR void *)next_fb,
++                                      LCD_PAGEFLIP_TIMEOUT_MS);
++  if (ret == OK)
++    {
++      g_lcd_plane.xoffset = pinfo->xoffset;
++      g_lcd_plane.yoffset = pinfo->yoffset;
++    }
+ 
+-  flags = spin_lock_irqsave(&g_lcd_pending_lock);
+-  next_fb = g_lcd_pending_fb;
+-  g_lcd_pending_fb = 0;
+-  spin_unlock_irqrestore(&g_lcd_pending_lock, flags);
+-  return (FAR void *)next_fb;
++  return ret;
+ }
++
+ #endif
+ 
+ #ifdef CONFIG_FB_UPDATE
+@@ -306,7 +304,7 @@ static int lcd_updatearea(FAR struct fb_vtable_s *vtable,
+       return OK;
+     }
+ 
+-  if (g_lcd_plane.yres_virtual == LCD_YRES * 2)
++  if (g_lcd_plane.yres_virtual >= LCD_YRES * 2)
+     {
+       uint16_t current_y1;
+       uint16_t current_y2;
+@@ -616,8 +614,8 @@ int up_fbinitialize(int display)
+       return -ENOMEM;
+     }
+ 
+-  g_lcd_plane.fblen = LCD_FB_SIZE * 2;
+-  g_lcd_plane.yres_virtual = LCD_YRES * 2;
++  g_lcd_plane.fblen = LCD_FB_SIZE * LCD_FB_COUNT;
++  g_lcd_plane.yres_virtual = LCD_YRES * LCD_FB_COUNT;
+ #elif defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3)
+   if (!esp_psram_is_initialized())
+     {
+@@ -675,12 +673,12 @@ int up_fbinitialize(int display)
+ 
+ #if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
+     !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
+-  ret = esp_mipi_dsi_set_framebuffer_callback(lcd_next_framebuffer, NULL);
+-  if (ret < 0)
+-    {
+-      syslog(LOG_ERR, "ERROR: LCD page-flip callback failed: %d\n", ret);
+-      goto errout_fb;
+-    }
++  g_lcd_plane.yoffset = LCD_YRES;
++#endif
++
++#if defined(CONFIG_ESP32P4_SELECTS_REV_LESS_V3) && \
++    !defined(CONFIG_LV_NUTTX_FBDEV_PARTIAL)
++  /* FBIOPAN_DISPLAY queues pages directly with the DSI driver. */
+ #endif
+ 
+   g_lcd_ready = true;
+diff --git a/drivers/video/sc2336.c b/drivers/video/sc2336.c
+index 51ad5525..9ddb5bc7 100644
+--- a/drivers/video/sc2336.c
++++ b/drivers/video/sc2336.c
+@@ -22,6 +22,7 @@
+ #include <nuttx/video/imgsensor.h>
+ #include <nuttx/video/sc2336.h>
+ #include <nuttx/video/video.h>
++#include <nuttx/wqueue.h>
+ 
+ /****************************************************************************
+  * Pre-processor Definitions
+@@ -55,6 +56,7 @@ struct sc2336_dev_s
+   struct imgsensor_s sensor;
+   FAR struct i2c_master_s *i2c;
+   struct v4l2_frmsizeenum frmsize;
++  struct work_s stop_work;
+   bool streaming;
+ };
+ 
+@@ -279,6 +281,18 @@ static int sc2336_read(FAR struct sc2336_dev_s *priv,
+   return I2C_TRANSFER(priv->i2c, msg, 2);
+ }
+ 
++static void sc2336_stop_worker(FAR void *arg)
++{
++  FAR struct sc2336_dev_s *priv = arg;
++  int ret;
++
++  ret = sc2336_write(priv, SC2336_REG_STREAM, 0x00);
++  if (ret < 0)
++    {
++      snerr("SC2336: deferred stream stop failed: %d\n", ret);
++    }
++}
++
+ static bool sc2336_is_available(FAR struct imgsensor_s *sensor)
+ {
+   FAR struct sc2336_dev_s *priv = (FAR struct sc2336_dev_s *)sensor;
+@@ -322,6 +336,7 @@ static int sc2336_uninit(FAR struct imgsensor_s *sensor)
+ {
+   FAR struct sc2336_dev_s *priv = (FAR struct sc2336_dev_s *)sensor;
+ 
++  work_cancel_sync(LPWORK, &priv->stop_work);
+   priv->streaming = false;
+   return sc2336_write(priv, SC2336_REG_STREAM, 0x00);
+ }
+@@ -340,7 +355,7 @@ static int sc2336_validate(FAR struct imgsensor_s *sensor,
+   if (nr_datafmts != 1 || datafmts == NULL ||
+       datafmts[0].width != SC2336_WIDTH ||
+       datafmts[0].height != SC2336_HEIGHT ||
+-      datafmts[0].pixelformat != IMGSENSOR_PIX_FMT_SBGGR8)
++      datafmts[0].pixelformat != IMGSENSOR_PIX_FMT_RGB565)
+     {
+       return -EINVAL;
+     }
+@@ -358,6 +373,13 @@ static int sc2336_start(FAR struct imgsensor_s *sensor,
+   uint8_t stream = 0;
+   int ret;
+ 
++  /* stop_capture() can only schedule the I2C stop because V4L2 invokes it
++   * while holding an IRQ-safe spin lock.  Serialize a new start with that
++   * deferred operation before touching the sensor.
++   */
++
++  work_cancel_sync(LPWORK, &priv->stop_work);
++
+   if (priv->streaming)
+     {
+       return -EBUSY;
+@@ -390,10 +412,18 @@ static int sc2336_stop(FAR struct imgsensor_s *sensor,
+                        imgsensor_stream_type_t type)
+ {
+   FAR struct sc2336_dev_s *priv = (FAR struct sc2336_dev_s *)sensor;
+-  int ret = sc2336_write(priv, SC2336_REG_STREAM, 0x00);
++  int ret;
++
++  /* v4l2_cap.c may call this operation with interrupts disabled.  ESP32-P4
++   * I2C transfers are interrupt driven, so performing the register write
++   * here can deadlock the entire camera path.  LPWORK runs with interrupts
++   * enabled and is the queue reserved for blocking bus transfers;
++   * sc2336_start() synchronizes with it before restarting.
++   */
+ 
+   priv->streaming = false;
+-  return ret;
++  ret = work_queue(LPWORK, &priv->stop_work, sc2336_stop_worker, priv, 0);
++  return ret == -EBUSY ? OK : ret;
+ }
+ 
+ static int sc2336_unsupported(FAR struct imgsensor_s *sensor,
+@@ -431,8 +461,8 @@ static const struct imgsensor_ops_s g_sc2336_ops =
+ 
+ static const struct v4l2_fmtdesc g_sc2336_fmtdesc =
+ {
+-  .pixelformat = V4L2_PIX_FMT_SBGGR8,
+-  .description = "8-bit Bayer BGGR",
++  .pixelformat = V4L2_PIX_FMT_RGB565,
++  .description = "RGB565 via ESP32-P4 ISP",
+ };
+ 
+ static const struct v4l2_frmivalenum g_sc2336_frmival =
+diff --git a/drivers/video/v4l2_cap.c b/drivers/video/v4l2_cap.c
+index 6f7bde84..e060c096 100644
+--- a/drivers/video/v4l2_cap.c
++++ b/drivers/video/v4l2_cap.c
+@@ -1273,6 +1273,14 @@ static void cleanup_resources(FAR capture_mng_t *cmng)
+       stop_capture(cmng, V4L2_BUF_TYPE_STILL_CAPTURE);
+     }
+ 
++  /* A lower-half completion callback may still be running after
++   * stop_capture() returns.  Drain both lower halves before releasing the
++   * V4L2 buffer heap so a deferred CSI copy cannot access freed memory.
++   */
++
++  IMGDATA_UNINIT(cmng->imgdata);
++  IMGSENSOR_UNINIT(cmng->imgsensor);
++
+   /* Clean up resource */
+ 
+   cleanup_streamresources(&cmng->capture_inf, cmng);
+@@ -3653,8 +3661,6 @@ static int capture_close(FAR struct file *filep)
+   if (--cmng->open_num == 0)
+     {
+       cleanup_resources(cmng);
+-      IMGSENSOR_UNINIT(cmng->imgsensor);
+-      IMGDATA_UNINIT(cmng->imgdata);
+ #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+       if (cmng->unlinked)
+         {

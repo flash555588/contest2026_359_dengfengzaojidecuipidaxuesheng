@@ -1,8 +1,0 @@
-[
-  {"name":"tasks_before","command":"ps","expect":["desktop"]},
-  {"name":"network_before","command":"ifconfig"},
-  {"name":"bluetooth_page","command":"desktop ui bluetooth","expect":["ready"]},
-  {"name":"settle","command":"sleep 2"},
-  {"name":"layout","command":"desktop ui audit","expect":["UI_LAYOUT_END"]},
-  {"name":"tasks_after","command":"ps","expect":["desktop"]}
-]

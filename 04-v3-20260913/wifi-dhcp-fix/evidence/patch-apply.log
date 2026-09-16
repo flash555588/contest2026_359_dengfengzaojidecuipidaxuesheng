@@ -1,6 +1,0 @@
-patching file nuttx/tools/espressif/Config.mk
-patching file nuttx/arch/risc-v/src/common/espressif/esp_start.c
-patching file nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/nuttx/src/platform/os.c
-patching file nuttx/arch/risc-v/src/esp32p4/esp-hal-3rdparty/components/upper_hal_dma/src/gdma.c
-patching file nuttx/tools/espressif/simple_boot_digest.py
-patching file nuttx/.config

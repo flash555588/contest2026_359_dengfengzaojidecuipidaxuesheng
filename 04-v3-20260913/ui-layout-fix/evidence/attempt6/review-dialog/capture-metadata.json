@@ -1,9 +1,0 @@
-{
-  "firmware_sha256": "293f629b28b8ae381ce97467f0d245dba7936c1d326e4fef5cf68c55dc37b7cf",
-  "theme": "light",
-  "requested_pages": [
-    "dialog"
-  ],
-  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
-  "input_values_in_layout_report": false
-}

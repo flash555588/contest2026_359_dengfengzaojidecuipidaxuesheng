@@ -1,0 +1,23 @@
+diff --git a/old/system/dsi_diag/CMakeLists.txt b/new/system/dsi_diag/CMakeLists.txt
+new file mode 100644
+--- /dev/null
++++ b/new/system/dsi_diag/CMakeLists.txt
+@@ -0,0 +1,18 @@
++# ##############################################################################
++# apps/system/dsi_diag/CMakeLists.txt
++#
++# SPDX-License-Identifier: Apache-2.0
++# ##############################################################################
++
++if(CONFIG_SYSTEM_DSI_DIAG)
++  nuttx_add_application(
++    NAME
++    dsi_diag
++    MODULE
++    ${CONFIG_SYSTEM_DSI_DIAG}
++    STACKSIZE
++    ${CONFIG_DEFAULT_TASK_STACKSIZE}
++    PRIORITY
++    SCHED_PRIORITY_DEFAULT
++    SRCS dsi_diag_main.c)
++endif()

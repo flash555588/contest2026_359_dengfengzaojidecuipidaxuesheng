@@ -1,8 +1,0 @@
-[
-  {"name":"remaining_test_files","command":"ls -la /data/.codex-sw-20260914-a3"},
-  {"name":"remove_saved_test_file","command":"rm /data/.codex-sw-20260914-a3/saved"},
-  {"name":"remove_test_directory","command":"rmdir /data/.codex-sw-20260914-a3"},
-  {"name":"cleanup_status","command":"echo $?","expect":["^0$"]},
-  {"name":"data_after_cleanup","command":"ls -la /data"},
-  {"name":"filesystem_capacity","command":"df -h"}
-]
