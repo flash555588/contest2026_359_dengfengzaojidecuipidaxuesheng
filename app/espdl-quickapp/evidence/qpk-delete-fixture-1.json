@@ -1,0 +1,50 @@
+[
+  {
+    "command": "ls /data/qpk/dtest",
+    "output": "ls /data/qpk/dtest\nnsh: ls: stat failed: No such file or directory\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /data/qpk/.data/dtest",
+    "output": "ls /data/qpk/.data/dtest\nnsh: ls: stat failed: No such file or directory\nnsh> \u001b[K"
+  },
+  {
+    "command": "mkdir /data/qpk/dtest",
+    "output": "mkdir /data/qpk/dtest\nnsh> \u001b[K"
+  },
+  {
+    "command": "mkdir /data/qpk/.data/dtest",
+    "output": "mkdir /data/qpk/.data/dtest\nnsh> \u001b[K"
+  },
+  {
+    "command": "echo '{\"name\":\"DeleteTest\",' > /data/qpk/dtest/manifest.json",
+    "output": "echo '{\"name\":\"DeleteTest\",' > /data/qpk/dtest/manifest.json\nnsh> \u001b[K"
+  },
+  {
+    "command": "echo '\"package\":\"dtest\"}' >> /data/qpk/dtest/manifest.json",
+    "output": "echo '\"package\":\"dtest\"}' >> /data/qpk/dtest/manifest.json\nnsh> \u001b[K"
+  },
+  {
+    "command": "echo 'ui.text(\"DeleteTest\",20,20,280);' > /data/qpk/dtest/app.js",
+    "output": "echo 'ui.text(\"DeleteTest\",20,20,280);' > /data/qpk/dtest/app.js\nnsh> \u001b[K"
+  },
+  {
+    "command": "echo 42 > /data/qpk/.data/dtest/score.txt",
+    "output": "echo 42 > /data/qpk/.data/dtest/score.txt\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /data/qpk/dtest/manifest.json",
+    "output": "cat /data/qpk/dtest/manifest.json\n{\"name\":\"DeleteTest\",\n\"package\":\"dtest\"}\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui apps",
+    "output": "desktop ui apps\ndesktop: ui apps ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui click:下一页",
+    "output": "desktop i click:下一�\nclick 下一页 -> 1\ndesktop: ui click:下一页 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui audit",
+    "output": "esktop i audit\nI_LAYOUT_BEGIN\n[{\"id\":1,\"parent\":0,\"type\":\"container\",\"x\":40,\"y\":44,\"w\":944,\"h\":512,\"scroll\":false,\"text\":\"\"},\n{\"id\":2,\"parent\":1,\"type\":\"label\",\"x\":65,\"y\":63,\"w\":824,\"h\":39,\"scroll\":true,\"text\":\"全部应用\"},\n{\"id\":3,\"parent\":1,\"type\":\"button\",\"x\":909,\"y\":59,\"w\":54,\"h\":42,\"scroll\":false,\"text\":\"\"},\n{\"id\":4,\"parent\":3,\"type\":\"label\",\"x\":928,\"y\":67,\"w\":17,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":5,\"parent\":1,\"type\":\"container\",\"x\":61,\"y\":125,\"w\":880,\"h\":336,\"scroll\":false,\"text\":\"\"},\n{\"id\":6,\"parent\":5,\"type\":\"container\",\"x\":65,\"y\":129,\"w\":276,\"h\":98,\"scroll\":false,\"text\":\"\"},\n{\"id\":7,\"parent\":6,\"type\":\"label\",\"x\":86,\"y\":150,\"w\":18,\"h\":27,\"scroll\":true,\"text\":\"\"},\n{\"id\":8,\"parent\":6,\"type\":\"label\",\"x\":128,\"y\":148,\"w\":198,\"h\":28,\"scroll\":true,\"text\":\"OX棋\"},\n{\"id\":9,\"parent\":6,\"type\":\"label\",\"x\":128,\"y\":187,\"w\":108,\"h\":22,\"scroll\":true,\"text\":\"快应用\"},\n{\"id\":10,\"parent\":6,\"type\":\"button\",\"x\":252,\"y\":180,\"w\":78,\"h\":40,\"scroll\":false,\"text\":\"\"},\n{\"id\":11,\"parent\":10,\"type\":\"label\",\"x\":264,\"y\":189,\"w\":54,\"h\":22,\"scroll\":true,\"text\":\"删除\"},\n{\"id\":12,\"parent\":1,\"type\":\"label\",\"x\":81,\"y\":495,\"w\":410,\"h\":22,\"scroll\":true,\"text\":\"10 个应用 · 2 / 2 页\"},\n{\"id\":13,\"parent\":1,\"type\":\"button\",\"x\":631,\"y\":479,\"w\":130,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":14,\"parent\":13,\"type\":\"label\",\"x\":643,\"y\":492,\"w\":106,\"h\":22,\"scroll\":true,\"text\":\"上一页\"},\n{\"id\":15,\"parent\":1,\"type\":\"button\",\"x\":775,\"y\":479,\"w\":130,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":16,\"parent\":15,\"type\":\"label\",\"x\":787,\"y\":492,\"w\":106,\"h\":22,\"scroll\":true,\"text\":\"下一页\"}\n]\nUI_LAYOUT_END\nnsh> \u001b[K"
+  }
+]

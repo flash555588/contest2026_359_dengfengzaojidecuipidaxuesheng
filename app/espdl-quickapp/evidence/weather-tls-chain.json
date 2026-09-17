@@ -1,0 +1,149 @@
+[
+  {
+    "subject": [
+      [
+        [
+          "commonName",
+          "uapis.cn"
+        ]
+      ]
+    ],
+    "issuer": [
+      [
+        [
+          "countryName",
+          "AT"
+        ]
+      ],
+      [
+        [
+          "organizationName",
+          "ZeroSSL GmbH"
+        ]
+      ],
+      [
+        [
+          "commonName",
+          "ZeroSSL RSA DV SSL CA 2"
+        ]
+      ]
+    ],
+    "version": 3,
+    "serialNumber": "4C42158649CA5AA9BF070B1BB36C90A9",
+    "notBefore": "Jun 21 00:00:00 2026 GMT",
+    "notAfter": "Sep 19 23:59:59 2026 GMT",
+    "subjectAltName": [
+      [
+        "DNS",
+        "uapis.cn"
+      ]
+    ],
+    "OCSP": [
+      "http://ocsp.sectigo.com"
+    ],
+    "caIssuers": [
+      "http://crt.sectigo.com/ZeroSSLRSADVSSLCA2.crt"
+    ]
+  },
+  {
+    "subject": [
+      [
+        [
+          "countryName",
+          "AT"
+        ]
+      ],
+      [
+        [
+          "organizationName",
+          "ZeroSSL GmbH"
+        ]
+      ],
+      [
+        [
+          "commonName",
+          "ZeroSSL RSA DV SSL CA 2"
+        ]
+      ]
+    ],
+    "issuer": [
+      [
+        [
+          "countryName",
+          "GB"
+        ]
+      ],
+      [
+        [
+          "organizationName",
+          "Sectigo Limited"
+        ]
+      ],
+      [
+        [
+          "commonName",
+          "Sectigo Public Server Authentication Root R46"
+        ]
+      ]
+    ],
+    "version": 3,
+    "serialNumber": "D0A908255F8E50E5F3396D1114702A37",
+    "notBefore": "Sep 24 00:00:00 2025 GMT",
+    "notAfter": "Sep 23 23:59:59 2035 GMT",
+    "OCSP": [
+      "http://ocsp.sectigo.com"
+    ],
+    "caIssuers": [
+      "http://crt.sectigo.com/SectigoPublicServerAuthenticationRootR46.p7c"
+    ],
+    "crlDistributionPoints": [
+      "http://crl.sectigo.com/SectigoPublicServerAuthenticationRootR46.crl"
+    ]
+  },
+  {
+    "subject": [
+      [
+        [
+          "countryName",
+          "GB"
+        ]
+      ],
+      [
+        [
+          "organizationName",
+          "Sectigo Limited"
+        ]
+      ],
+      [
+        [
+          "commonName",
+          "Sectigo Public Server Authentication Root R46"
+        ]
+      ]
+    ],
+    "issuer": [
+      [
+        [
+          "countryName",
+          "GB"
+        ]
+      ],
+      [
+        [
+          "organizationName",
+          "Sectigo Limited"
+        ]
+      ],
+      [
+        [
+          "commonName",
+          "Sectigo Public Server Authentication Root R46"
+        ]
+      ]
+    ],
+    "version": 3,
+    "serialNumber": "758DFD8BAE7C0700FAA925A7E1C7AD14",
+    "notBefore": "Mar 22 00:00:00 2021 GMT",
+    "notAfter": "Mar 21 23:59:59 2046 GMT"
+  }
+]

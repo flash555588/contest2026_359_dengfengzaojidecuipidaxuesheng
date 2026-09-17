@@ -1,0 +1,708 @@
+> capture "version"
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+> halt 2000
+
+> targets
+TargetName         Type       Endian TapName            State       
+--  ------------------ ---------- ------ ------------------ ------------
+ 0* esp32p4.hp.cpu0    esp32p4    little esp32p4.tap1       halted
+ 1  esp32p4.hp.cpu1    esp32p4    little esp32p4.tap1       halted
+
+==== esp32p4.hp.cpu0 ====
+> targets esp32p4.hp.cpu0
+
+> reg sp force
+> reg ra force
+> reg dpc force
+> reg mepc force
+> reg mcause force
+> reg mtval force
+sp (/32): 0x4838bf30
+ra (/32): 0x40022126
+dpc (/32): 0x40022146
+mepc (/32): 0x40022188
+mcause (/32): 0x88000014
+mtval (/32): 0x00000000
+ra     0x40022126 mm_malloc+0x1a8
+mepc   0x40022188 mm_malloc+0x20a
+mcause 0x88000014 __esp_start+0x380b53e4
+mtval  -
+sp     0x4838bf30 _etext+0x814dc54
+> mdw 0x4838bf30 192
+0x4838bf30: 437f0000 00000000 3f000000 446a4000 42be0000 00000000 00000000 00000000 
+0x4838bf50: 00000000 000000c0 4839d858 4838e1bc 4838bff8 4839d880 4838e1c8 40021272 
+0x4838bf70: 00000000 00000000 4838e1c8 4009951e 4fc1a588 4839d880 4838e198 40097782 
+0x4838bf90: 4002126a 4838e0c0 483930b8 40096f18 00000000 4008d00c 4838bff8 4838e1b4 
+0x4838bfb0: 4838e0c0 4838e198 00000000 4009718a 00000000 00000006 4838e170 00006682 
+0x4838bfd0: 00000000 4838e0c0 4838c070 40096194 00000000 00000000 ffffffff 00000000 
+0x4838bff0: ffffffff fffffc19 00006682 00000000 00000000 00000000 00000000 00000000 
+0x4838c010: 00000000 00000000 00000000 00000000 ffffffff 000000c0 00004e0d 4838e170 
+0x4838c030: 00000000 4838e170 4838c070 400913f6 80007881 00000016 22000000 00006682 
+0x4838c050: 00000032 4838c0a0 00000020 00000000 00006682 4839dcb0 00000000 40091506 
+0x4838c070: 00000000 00100010 00000010 0000fffe 00000008 00000000 00000daa 00000000 
+0x4838c090: 00000000 00000000 00000000 4009a7e4 00004e0d 4838e170 4839dcb6 00000001 
+0x4838c0b0: 00000000 00000000 00000000 00000000 ffffffff 00000006 00000003 00000006 
+0x4838c0d0: 00000000 00000001 48393008 00000002 00000000 4839dcb0 00000016 00000000 
+0x4838c0f0: 00000000 4839dcb0 000000e0 4838e170 00000000 00000016 4838c160 4009ab38 
+0x4838c110: 00000001 fffffc19 ffffffff 00000000 ffffffff 00000000 00000000 00000000 
+0x4838c130: 00000000 4838e170 48393008 400a4b5c 4140bc6b 3dcea1e0 00000000 000000e0 
+0x4838c150: 00000000 00000000 00000000 00000000 00000000 00000000 000002ef 00000222 
+0x4838c170: 000003ce 00000237 3f000000 446a4000 42be0000 00000023 48000000 40021f96 
+0x4838c190: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c1b0: 00000000 00000000 00000000 00000000 00000001 40245874 48393008 40021272 
+0x4838c1d0: 00000001 fffffc19 ffffffff 00000000 ffffffff 00000000 00000000 00000000 
+0x4838c1f0: 00000001 48392cf0 4ff6d680 4003a720 00000aca 4ff6d000 40245000 00000000 
+0x4838c210: 0000001b 00000000 00000000 00000000 00000000 00000002 40245000 00000001
+  0x4838bf30[437f0000] -> 0x437f0000 _etext+0x35b1d24
+  0x4838bf30[446a4000] -> 0x446a4000 _etext+0x4465d24
+  0x4838bf30[42be0000] -> 0x42be0000 _etext+0x29a1d24
+  0x4838bf50[4839d858] -> 0x4839d858 _etext+0x815f57c
+  0x4838bf50[4838e1bc] -> 0x4838e1bc _etext+0x814fee0
+  0x4838bf50[4838bff8] -> 0x4838bff8 _etext+0x814dd1c
+  0x4838bf50[4839d880] -> 0x4839d880 _etext+0x815f5a4
+  0x4838bf50[4838e1c8] -> 0x4838e1c8 _etext+0x814feec
+  0x4838bf50[40021272] -> 0x40021272 malloc+0x14
+  0x4838bf70[4838e1c8] -> 0x4838e1c8 _etext+0x814feec
+  0x4838bf70[4009951e] -> 0x4009951e lv_ll_ins_head+0x12
+  0x4838bf70[4fc1a588] -> 0x4fc1a588 _etext+0xf9dc2ac
+  0x4838bf70[4839d880] -> 0x4839d880 _etext+0x815f5a4
+  0x4838bf70[4838e198] -> 0x4838e198 _etext+0x814febc
+  0x4838bf70[40097782] -> 0x40097782 add_cb+0x4e
+  0x4838bf90[4002126a] -> 0x4002126a malloc+0xc
+  0x4838bf90[4838e0c0] -> 0x4838e0c0 _etext+0x814fde4
+  0x4838bf90[483930b8] -> 0x483930b8 _etext+0x8154ddc
+  0x4838bf90[40096f18] -> 0x40096f18 cache_add_internal_no_lock+0x1c
+  0x4838bf90[4008d00c] -> 0x4008d00c lv_display_send_event+0x1a
+  0x4838bf90[4838bff8] -> 0x4838bff8 _etext+0x814dd1c
+  0x4838bf90[4838e1b4] -> 0x4838e1b4 _etext+0x814fed8
+  0x4838bfb0[4838e0c0] -> 0x4838e0c0 _etext+0x814fde4
+  0x4838bfb0[4838e198] -> 0x4838e198 _etext+0x814febc
+  0x4838bfb0[4009718a] -> 0x4009718a lv_cache_acquire_or_create+0x6c
+  0x4838bfb0[4838e170] -> 0x4838e170 _etext+0x814fe94
+  0x4838bfd0[4838e0c0] -> 0x4838e0c0 _etext+0x814fde4
+  0x4838bfd0[4838c070] -> 0x4838c070 _etext+0x814dd94
+  0x4838bfd0[40096194] -> 0x40096194 ttf_get_glyph_dsc_cb+0x7e
+  0x4838c010[4838e170] -> 0x4838e170 _etext+0x814fe94
+  0x4838c030[4838e170] -> 0x4838e170 _etext+0x814fe94
+  0x4838c030[4838c070] -> 0x4838c070 _etext+0x814dd94
+  0x4838c030[400913f6] -> 0x400913f6 lv_font_get_glyph_dsc+0x46
+  0x4838c050[4838c0a0] -> 0x4838c0a0 _etext+0x814ddc4
+  0x4838c050[4839dcb0] -> 0x4839dcb0 _etext+0x815f9d4
+  0x4838c050[40091506] -> 0x40091506 lv_font_get_glyph_width+0x84
+  0x4838c090[4009a7e4] -> 0x4009a7e4 lv_text_get_next_line+0xea
+  0x4838c090[4838e170] -> 0x4838e170 _etext+0x814fe94
+  0x4838c090[4839dcb6] -> 0x4839dcb6 _etext+0x815f9da
+  0x4838c0d0[48393008] -> 0x48393008 _etext+0x8154d2c
+  0x4838c0d0[4839dcb0] -> 0x4839dcb0 _etext+0x815f9d4
+  0x4838c0f0[4839dcb0] -> 0x4839dcb0 _etext+0x815f9d4
+  0x4838c0f0[4838e170] -> 0x4838e170 _etext+0x814fe94
+  0x4838c0f0[4838c160] -> 0x4838c160 _etext+0x814de84
+  0x4838c0f0[4009ab38] -> 0x4009ab38 lv_text_get_size+0xb4
+  0x4838c130[4838e170] -> 0x4838e170 _etext+0x814fe94
+  0x4838c130[48393008] -> 0x48393008 _etext+0x8154d2c
+  0x4838c130[400a4b5c] -> 0x400a4b5c lv_label_refr_text+0x6e
+  0x4838c130[4140bc6b] -> 0x4140bc6b _etext+0x11cd98f
+  0x4838c170[446a4000] -> 0x446a4000 _etext+0x4465d24
+  0x4838c170[42be0000] -> 0x42be0000 _etext+0x29a1d24
+  0x4838c170[48000000] -> 0x48000000 _etext+0x7dc1d24
+  0x4838c170[40021f96] -> 0x40021f96 mm_malloc+0x18
+  0x4838c1b0[40245874] -> 0x40245874 _etext+0x7598
+  0x4838c1b0[48393008] -> 0x48393008 _etext+0x8154d2c
+  0x4838c1b0[40021272] -> 0x40021272 malloc+0x14
+  0x4838c1f0[48392cf0] -> 0x48392cf0 _etext+0x8154a14
+  0x4838c1f0[4ff6d680] -> 0x4ff6d680 __esp_start+0x22a50
+  0x4838c1f0[4003a720] -> 0x4003a720 glass_update+0x6a0
+  0x4838c1f0[4ff6d000] -> 0x4ff6d000 __esp_start+0x223d0
+  0x4838c1f0[40245000] -> 0x40245000 _etext+0x6d24
+  0x4838c210[40245000] -> 0x40245000 _etext+0x6d24
+
+==== esp32p4.hp.cpu1 ====
+> targets esp32p4.hp.cpu1
+
+> reg sp force
+> reg ra force
+> reg dpc force
+> reg mepc force
+> reg mcause force
+> reg mtval force
+sp (/32): 0x4ff83bb0
+ra (/32): 0x4ff4255e
+dpc (/32): 0x4ff42570
+mepc (/32): 0x4ff42570
+mcause (/32): 0x0800000b
+mtval (/32): 0x00000000
+ra     0x4ff4255e esp_cpu_wait_for_intr+0x8
+mepc   0x4ff42570 esp_cpu_wait_for_intr+0x1a
+mcause 0x0800000b ?
+mtval  -
+sp     0x4ff83bb0 __esp_start+0x38f80
+> mdw 0x4ff83bb0 192
+0x4ff83bb0: 4fc00d66 00000000 00000001 4000c684 00000000 00000000 00000001 4ff4153a 
+0x4ff83bd0: 00000000 00000000 00000000 4fc02940 00000000 00000000 7fffffff 00000004 
+0x4ff83bf0: 00000000 00000000 00000000 0003be40 00006fc8 00006d28 4ff83d70 00000000 
+0x4ff83c10: 00000000 4ffbfba8 00000000 00000000 0003be40 00000000 00000000 00000001 
+0x4ff83c30: 00000000 00000000 4ff83c40 00000000 00000000 00000000 4ff85270 4ff83c30 
+0x4ff83c50: 00000000 00000000 4ff83c60 4ff85270 00000000 00000000 4ff84a00 4ff83c50 
+0x4ff83c70: 00000000 00000000 4ff83c80 4ff84fb0 00000000 00000000 4ff83c90 4ff83c70 
+0x4ff83c90: 00000000 00000000 4ff83ca0 4ff83c80 00000000 00000000 4ff83cb0 4ff83c90 
+0x4ff83cb0: 00000000 00000000 4ff83cc0 4ff83ca0 00000000 00000000 4ff83cd0 4ff83cb0 
+0x4ff83cd0: 00000000 00000000 4ff83ce0 4ff83cc0 00000000 00000000 4ff83cf0 4ff83cd0 
+0x4ff83cf0: 00000000 00000000 4ff83d00 4ff83ce0 00000000 00000000 4ff8ab28 4ff83cf0 
+0x4ff83d10: 00000000 00000000 4ff83d20 4ff8ab28 00000000 00000000 4ff83d30 4ff83d10 
+0x4ff83d30: 00000000 00000000 4ff83d40 4ff83d20 00000000 00000000 4ff83d50 4ff83d30 
+0x4ff83d50: 00000000 00000000 00000000 4ff83d40 00000000 00000000 4ff83d80 00000000 
+0x4ff83d70: 9213bb98 00000009 123e1c33 00000021 402421b8 4ff83be8 00000000 00000000 
+0x4ff83d90: 00000000 00000001 19298d9e 00000021 402421b0 48000000 4ff83d80 00000000 
+0x4ff83db0: 00000000 00000001 7fd65331 00000049 4ff52428 4ff52514 4ff847d0 4ff848c0 
+0x4ff83dd0: 00000000 4ff85520 4ff8a8c0 00000000 4ff84b00 4ff84bf8 4ff84dd8 00000000 
+0x4ff83df0: 4ff850b0 00000000 00000000 00000000 1a7e1990 00000369 00000000 00000000 
+0x4ff83e10: 00000000 00000000 00000000 00000000 00000000 7fffffff 00000004 00000000 
+0x4ff83e30: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83e50: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83e70: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83e90: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+  0x4ff83bb0[4fc00d66] -> 0x4fc00d66 _etext+0xf9c2a8a
+  0x4ff83bb0[4000c684] -> 0x4000c684 nx_idle_trampoline+0x44
+  0x4ff83bb0[4ff4153a] -> 0x4ff4153a periph_rtc_mpll_acquire+0x0
+  0x4ff83bd0[4fc02940] -> 0x4fc02940 _etext+0xf9c4664
+  0x4ff83bf0[4ff83d70] -> 0x4ff83d70 __esp_start+0x39140
+  0x4ff83c10[4ffbfba8] -> 0x4ffbfba8 __esp_start+0x74f78
+  0x4ff83c30[4ff83c40] -> 0x4ff83c40 __esp_start+0x39010
+  0x4ff83c30[4ff85270] -> 0x4ff85270 __esp_start+0x3a640
+  0x4ff83c30[4ff83c30] -> 0x4ff83c30 __esp_start+0x39000
+  0x4ff83c50[4ff83c60] -> 0x4ff83c60 __esp_start+0x39030
+  0x4ff83c50[4ff85270] -> 0x4ff85270 __esp_start+0x3a640
+  0x4ff83c50[4ff84a00] -> 0x4ff84a00 __esp_start+0x39dd0
+  0x4ff83c50[4ff83c50] -> 0x4ff83c50 __esp_start+0x39020
+  0x4ff83c70[4ff83c80] -> 0x4ff83c80 __esp_start+0x39050
+  0x4ff83c70[4ff84fb0] -> 0x4ff84fb0 __esp_start+0x3a380
+  0x4ff83c70[4ff83c90] -> 0x4ff83c90 __esp_start+0x39060
+  0x4ff83c70[4ff83c70] -> 0x4ff83c70 __esp_start+0x39040
+  0x4ff83c90[4ff83ca0] -> 0x4ff83ca0 __esp_start+0x39070
+  0x4ff83c90[4ff83c80] -> 0x4ff83c80 __esp_start+0x39050
+  0x4ff83c90[4ff83cb0] -> 0x4ff83cb0 __esp_start+0x39080
+  0x4ff83c90[4ff83c90] -> 0x4ff83c90 __esp_start+0x39060
+  0x4ff83cb0[4ff83cc0] -> 0x4ff83cc0 __esp_start+0x39090
+  0x4ff83cb0[4ff83ca0] -> 0x4ff83ca0 __esp_start+0x39070
+  0x4ff83cb0[4ff83cd0] -> 0x4ff83cd0 __esp_start+0x390a0
+  0x4ff83cb0[4ff83cb0] -> 0x4ff83cb0 __esp_start+0x39080
+  0x4ff83cd0[4ff83ce0] -> 0x4ff83ce0 __esp_start+0x390b0
+  0x4ff83cd0[4ff83cc0] -> 0x4ff83cc0 __esp_start+0x39090
+  0x4ff83cd0[4ff83cf0] -> 0x4ff83cf0 __esp_start+0x390c0
+  0x4ff83cd0[4ff83cd0] -> 0x4ff83cd0 __esp_start+0x390a0
+  0x4ff83cf0[4ff83d00] -> 0x4ff83d00 __esp_start+0x390d0
+  0x4ff83cf0[4ff83ce0] -> 0x4ff83ce0 __esp_start+0x390b0
+  0x4ff83cf0[4ff8ab28] -> 0x4ff8ab28 __esp_start+0x3fef8
+  0x4ff83cf0[4ff83cf0] -> 0x4ff83cf0 __esp_start+0x390c0
+  0x4ff83d10[4ff83d20] -> 0x4ff83d20 __esp_start+0x390f0
+  0x4ff83d10[4ff8ab28] -> 0x4ff8ab28 __esp_start+0x3fef8
+  0x4ff83d10[4ff83d30] -> 0x4ff83d30 __esp_start+0x39100
+  0x4ff83d10[4ff83d10] -> 0x4ff83d10 __esp_start+0x390e0
+  0x4ff83d30[4ff83d40] -> 0x4ff83d40 __esp_start+0x39110
+  0x4ff83d30[4ff83d20] -> 0x4ff83d20 __esp_start+0x390f0
+  0x4ff83d30[4ff83d50] -> 0x4ff83d50 __esp_start+0x39120
+  0x4ff83d30[4ff83d30] -> 0x4ff83d30 __esp_start+0x39100
+  0x4ff83d50[4ff83d40] -> 0x4ff83d40 __esp_start+0x39110
+  0x4ff83d50[4ff83d80] -> 0x4ff83d80 __esp_start+0x39150
+  0x4ff83d70[402421b8] -> 0x402421b8 _etext+0x3edc
+  0x4ff83d70[4ff83be8] -> 0x4ff83be8 __esp_start+0x38fb8
+  0x4ff83d90[402421b0] -> 0x402421b0 _etext+0x3ed4
+  0x4ff83d90[48000000] -> 0x48000000 _etext+0x7dc1d24
+  0x4ff83d90[4ff83d80] -> 0x4ff83d80 __esp_start+0x39150
+  0x4ff83db0[4ff52428] -> 0x4ff52428 __esp_start+0x77f8
+  0x4ff83db0[4ff52514] -> 0x4ff52514 __esp_start+0x78e4
+  0x4ff83db0[4ff847d0] -> 0x4ff847d0 __esp_start+0x39ba0
+  0x4ff83db0[4ff848c0] -> 0x4ff848c0 __esp_start+0x39c90
+  0x4ff83dd0[4ff85520] -> 0x4ff85520 __esp_start+0x3a8f0
+  0x4ff83dd0[4ff8a8c0] -> 0x4ff8a8c0 __esp_start+0x3fc90
+  0x4ff83dd0[4ff84b00] -> 0x4ff84b00 __esp_start+0x39ed0
+  0x4ff83dd0[4ff84bf8] -> 0x4ff84bf8 __esp_start+0x39fc8
+  0x4ff83dd0[4ff84dd8] -> 0x4ff84dd8 __esp_start+0x3a1a8
+  0x4ff83df0[4ff850b0] -> 0x4ff850b0 __esp_start+0x3a480
+> targets esp32p4.hp.cpu0
+
+> read_memory 0x4ff5049c 32 2
+> read_memory 0x4ff50484 32 2
+running=[1341696192, 1341465876] count=16 table=0x4ff83dc0
+> read_memory 0x4ff83dc0 32 16
+> read_memory 0x4ff52428 32 54
+TCB=0x4ff52428 pid=0 name=b'CPU0 IDLE' stack=0x4ff82c28 size=1984 regs=0x4ff830d0 saved=0x0
+> read_memory 0x4ff52514 32 54
+TCB=0x4ff52514 pid=1 name=b'CPU1 IDLE' stack=0x4ff83428 size=1984 regs=0x0 saved=0x0
+> mdw 0x4ff52514 60
+0x4ff52514: 00000000 00000000 4ff54290 4ff847dc 00000000 00000000 00000000 00000000 
+0x4ff52534: 00000000 00000000 00000000 00000000 00000000 00000001 00000000 00000000 
+0x4ff52554: 4000c640 4000c640 00000004 00000001 00000003 00000022 00000000 00000000 
+0x4ff52574: 00000000 00000000 00000000 00000000 00000000 000007c0 4ff833e8 4ff83428 
+0x4ff52594: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff525b4: 00000000 00000000 00000000 00000079 00000000 00000000 31555043 4c444920 
+0x4ff525d4: 00000045 00000000 00000000 00000000 00000000 00000000 00000001 00000000 
+0x4ff525f4: 00000000 00000000 00000000 40003620
+> mdw 0x4ff83428 496
+0x4ff83428: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83448: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83468: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83488: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff834a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff834c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff834e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83508: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83528: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83548: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83568: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83588: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff835a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff835c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff835e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83608: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83628: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83648: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83668: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83688: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff836a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff836c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff836e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83708: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83728: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83748: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83768: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83788: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff837a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff837c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff837e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83808: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83828: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83848: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83868: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83888: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff838a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff838c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff838e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83908: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83928: deadbeef deadbeef 4002efc2 4ff42310 4ff83b70 deadbeef 00000000 4fc00d66 
+0x4ff83948: 00000004 4ffbef70 00000001 4ff50000 00000002 4ff52514 40027f40 40022d0a 
+0x4ff83968: 4ff83ba0 00000000 4ff42570 4ff4255e 4ff83bb0 4ffbef70 00000000 4fc00d66 
+0x4ff83988: 4ff41f8a 4ffbef70 00000001 00000000 00000000 00000001 4ff504c0 00000000 
+0x4ff839a8: 00000001 3ff06000 00000000 4ff504b0 00000000 00000000 00000000 00000000 
+0x4ff839c8: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff839e8: 00000000 00000000 80007881 00000000 00000000 00000000 80007881 deadbeef 
+0x4ff83a08: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83a28: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83a48: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83a68: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83a88: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4ff83aa8: 22000000 deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 00000000 
+0x4ff83ac8: deadbeef deadbeef deadbeef deadbeef 22000000 00000000 00000000 00000000 
+0x4ff83ae8: 22000000 00000000 00000000 00000000 22000000 00000000 00000000 00000000 
+0x4ff83b08: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83b28: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83b48: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83b68: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff83b88: 00000000 00000000 00000000 00000000 00000000 00000000 4fc00d66 00000000 
+0x4ff83ba8: 00000001 40022d0a 4fc00d66 00000000 00000001 4000c684 00000000 00000000 
+0x4ff83bc8: 00000001 4ff4153a 00000000 00000000 00000000 4fc02940 00000000 00000000
+> read_memory 0x4ff847d0 32 54
+TCB=0x4ff847d0 pid=2 name=b'hpwork' stack=0x4ff53b00 size=1936 regs=0x4ff53fd0 saved=0x0
+> read_memory 0x4ff848c0 32 54
+TCB=0x4ff848c0 pid=3 name=b'lpwork' stack=0x4ff53300 size=1936 regs=0x4ff537d0 saved=0x0
+> read_memory 0x4ff85520 32 54
+TCB=0x4ff85520 pid=5 name=b'usbh_hub0' stack=0x4ff85680 size=6032 regs=0x4ff86ad0 saved=0x0
+> read_memory 0x4ff8a8c0 32 54
+TCB=0x4ff8a8c0 pid=6 name=b'desktop' stack=0x48384618 size=32680 regs=0x0 saved=0x0
+> mdw 0x4ff8a8c0 60
+0x4ff8a8c0: 00000000 00000000 4ff8a9ac 00000000 00000000 00000000 00000000 00000000 
+0x4ff8a8e0: 00000000 00000000 00000000 00000000 00000000 00000006 00000064 00000064 
+0x4ff8a900: 400105d4 4003d0dc 00000004 00000000 00000003 00002208 00000000 00000001 
+0x4ff8a920: 00000000 00000000 4ff8a8c0 00000000 00000aca 00007fa8 483845c8 48384618 
+0x4ff8a940: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff8a960: 00000000 00000000 00000000 00000079 00000000 00000000 6b736564 00706f74 
+0x4ff8a980: 00000000 00000000 00000000 00000000 00000000 00000000 00000001 00000000 
+0x4ff8a9a0: 00000000 00000000 00000000 00000006
+> mdw 0x48384618 512
+0x48384618: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384638: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384658: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384678: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384698: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483846b8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483846d8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483846f8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384718: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384738: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384758: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384778: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384798: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483847b8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483847d8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483847f8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384818: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384838: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384858: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384878: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384898: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483848b8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483848d8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483848f8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384918: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384938: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384958: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384978: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384998: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483849b8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483849d8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483849f8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384a18: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384a38: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384a58: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384a78: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384a98: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384ab8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384ad8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384af8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384b18: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384b38: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384b58: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384b78: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384b98: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384bb8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384bd8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384bf8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384c18: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384c38: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384c58: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384c78: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384c98: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384cb8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384cd8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384cf8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384d18: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384d38: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384d58: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384d78: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384d98: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384db8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384dd8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x48384df8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef
+> mdw 0x4838bfc0 384
+0x4838bfc0: 00000000 00000006 4838e170 00006682 00000000 4838e0c0 4838c070 40096194 
+0x4838bfe0: 00000000 00000000 ffffffff 00000000 ffffffff fffffc19 00006682 00000000 
+0x4838c000: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c020: ffffffff 000000c0 00004e0d 4838e170 00000000 4838e170 4838c070 400913f6 
+0x4838c040: 80007881 00000016 22000000 00006682 00000032 4838c0a0 00000020 00000000 
+0x4838c060: 00006682 4839dcb0 00000000 40091506 00000000 00100010 00000010 0000fffe 
+0x4838c080: 00000008 00000000 00000daa 00000000 00000000 00000000 00000000 4009a7e4 
+0x4838c0a0: 00004e0d 4838e170 4839dcb6 00000001 00000000 00000000 00000000 00000000 
+0x4838c0c0: ffffffff 00000006 00000003 00000006 00000000 00000001 48393008 00000002 
+0x4838c0e0: 00000000 4839dcb0 00000016 00000000 00000000 4839dcb0 000000e0 4838e170 
+0x4838c100: 00000000 00000016 4838c160 4009ab38 00000001 fffffc19 ffffffff 00000000 
+0x4838c120: ffffffff 00000000 00000000 00000000 00000000 4838e170 48393008 400a4b5c 
+0x4838c140: 4140bc6b 3dcea1e0 00000000 000000e0 00000000 00000000 00000000 00000000 
+0x4838c160: 00000000 00000000 000002ef 00000222 000003ce 00000237 3f000000 446a4000 
+0x4838c180: 42be0000 00000023 48000000 40021f96 00000000 00000000 00000000 00000000 
+0x4838c1a0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c1c0: 00000001 40245874 48393008 40021272 00000001 fffffc19 ffffffff 00000000 
+0x4838c1e0: ffffffff 00000000 00000000 00000000 00000001 48392cf0 4ff6d680 4003a720 
+0x4838c200: 00000aca 4ff6d000 40245000 00000000 0000001b 00000000 00000000 00000000 
+0x4838c220: 00000000 00000002 40245000 00000001 40245000 00000003 00000004 4f969aa5 
+0x4838c240: 00000008 4ff8ab18 6aa9a6b4 0000001b 24f47300 00000024 0000000c 00000014 
+0x4838c260: 0000000f 00000008 0000007e 00000002 00000101 00000000 00000000 00000000 
+0x4838c280: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c2a0: 00000000 0f080c14 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c2c0: 00000000 00000000 00000002 00000001 4ff6d000 00000000 4ff64000 4ff50000 
+0x4838c2e0: 4ff4c000 4ff50000 4ff4c000 4003c55e 437f0000 00000000 0000000a 00010000 
+0x4838c300: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c320: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c340: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c360: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c380: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c3a0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c3c0: 00000000 00000000 00000000 00000000 00000000 00000004 00000000 00000000 
+0x4838c3e0: 00000002 ffffffb9 00000000 00000000 4ff6d000 48394b58 4ff6f014 00000001 
+0x4838c400: 40245000 4ff6d000 00000002 00010000 ffffffff 00000001 4838e088 4ff6f000 
+0x4838c420: 00006be4 48394b58 4ff6f014 4009adb0 4ff4c000 4ff50000 00000002 00000001 
+0x4838c440: 4ff6d000 00000000 4ff64000 00000001 4ff6d000 00000000 4ff64000 4ff50000 
+0x4838c460: 4ff4c000 4ff50000 4ff4c000 4003d93c 00000000 001d9620 00000000 00000000 
+0x4838c480: 00000001 00000000 00000000 00000000 00000000 00000000 00000000 40245cf4 
+0x4838c4a0: 40246284 00000000 4838ceb8 4838dfb0 00000000 00000007 00000000 00000000 
+0x4838c4c0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c4e0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c500: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c520: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c540: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c560: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4838c580: 00000000 00000000 00000000 00000000 00000000 4003d0dc 00000000 4001efce 
+0x4838c5a0: 00000000 00000000 00000000 40010632 00000000 00000000 00000000 00000000
+> read_memory 0x48384618 32 8170
+STACK WATERMARK size=32680 used=4224
+> read_memory 0x4ff84b00 32 54
+TCB=0x4ff84b00 pid=8 name=b'weather' stack=0x4839f650 size=24512 regs=0x483a51c0 saved=0x0
+> mdw 0x4ff84b00 60
+0x4ff84b00: 4ff84dd8 4ff850b0 4ff8a9ac 4ff8a8cc 00000000 00000000 00000000 00000000 
+0x4ff84b20: 00000000 00000000 00000000 00000000 00000000 00000008 00000064 00000064 
+0x4ff84b40: 4021c464 400ac65e 00000007 00000001 00000003 00002609 00000000 0000000c 
+0x4ff84b60: 4ff85110 4ff52f30 4ff84b00 4021d726 00001362 00005fc0 4839f610 4839f650 
+0x4ff84b80: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff84ba0: 00000000 00000000 00000000 00000000 00000000 483a51c0 74616577 00726568 
+0x4ff84bc0: 00000000 00000000 00000000 00000000 00000000 00000000 00000001 00000000 
+0x4ff84be0: 00000000 00000000 00000000 4001ed6c
+> mdw 0x483a51c0 40
+0x483a51c0: 4002efc2 4ff42310 483a5400 00000000 00000000 4fc1a588 00000004 ffffffff 
+0x483a51e0: 00000001 4ff50000 00000002 4ff84b00 00000001 4ff50404 80006081 00000000 
+0x483a5200: 00000000 4ff504b0 483a5478 4ff50000 80006089 4ff84b60 483a5470 4021d000 
+0x483a5220: 00001362 00000000 000003e8 00000001 00000000 00000000 4ff504c0 745889a3 
+0x483a5240: 80007801 4fc1a588 4ff41e4a ffffffff 0001d4c0 000155d6 00000002 00000000
+> mdw 0x4839f650 512
+0x4839f650: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f670: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f690: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f6b0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f6d0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f6f0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f710: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f730: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f750: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f770: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f790: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f7b0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f7d0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f7f0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f810: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f830: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f850: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f870: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f890: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f8b0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f8d0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f8f0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f910: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f930: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f950: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f970: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f990: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f9b0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f9d0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839f9f0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fa10: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fa30: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fa50: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fa70: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fa90: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fab0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fad0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839faf0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fb10: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fb30: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fb50: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fb70: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fb90: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fbb0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fbd0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fbf0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fc10: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fc30: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fc50: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fc70: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fc90: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fcb0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fcd0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fcf0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fd10: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fd30: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fd50: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fd70: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fd90: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fdb0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fdd0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fdf0: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fe10: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x4839fe30: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef
+> mdw 0x483a5010 384
+0x483a5010: 00000000 4fc1a588 4ff504c0 ffffffff 4ff4b0dc 00000000 00000000 00000069 
+0x483a5030: 00000001 00000016 4ff5202a 00000017 00000001 00000000 4ff4b124 00000032 
+0x483a5050: 4838447d 00000001 00000032 0000000d 0000000a 00000004 000003e8 00000000 
+0x483a5070: 00000000 00000000 4ff504c0 745889a3 80007881 0000000a 48384458 00000001 
+0x483a5090: 00000000 483a53f0 00001000 483a53f0 0000001e 4024b5ca 000003e8 00000000 
+0x483a50b0: 00000000 00000000 4ff504c0 745889a3 80007881 483a5328 00000000 00000000 
+0x483a50d0: 40020624 400204ac 483a5310 00000000 40021198 4002117c 483a5320 2921cef8 
+0x483a50f0: 00000000 4fc1a588 70000000 ffffffff 4838441c 483a5360 00000000 0000000a 
+0x483a5110: 483a5360 00000065 48384498 0000003f a0000000 0000000a 483a535f 00000001 
+0x483a5130: 00000000 483a5478 00001000 483a5478 0000001a 4024b493 000003e8 00000000 
+0x483a5150: 00000000 00000000 4ff504c0 745889a3 80007881 00000065 00000065 0000000a 
+0x483a5170: 483a5360 00000065 22000000 00000001 fa000000 00000003 00000004 ffffffff 
+0x483a5190: 00000000 00000000 4ff4c000 483a5474 00000001 4024b47b 000003e8 00000000 
+0x483a51b0: 00000000 00000000 00000000 00000000 4002efc2 4ff42310 483a5400 00000000 
+0x483a51d0: 00000000 4fc1a588 00000004 ffffffff 00000001 4ff50000 00000002 4ff84b00 
+0x483a51f0: 00000001 4ff50404 80006081 00000000 00000000 4ff504b0 483a5478 4ff50000 
+0x483a5210: 80006089 4ff84b60 483a5470 4021d000 00001362 00000000 000003e8 00000001 
+0x483a5230: 00000000 00000000 4ff504c0 745889a3 80007801 4fc1a588 4ff41e4a ffffffff 
+0x483a5250: 0001d4c0 000155d6 00000002 00000000 00000000 00000008 7fffffff 000dbba0 
+0x483a5270: 00000001 00000000 00000000 00000000 00000000 00004ca4 4ff4c000 ffffffb9 
+0x483a5290: 00000001 00000000 000003e8 00000000 00000000 00000000 4ff504c0 745889a3 
+0x483a52b0: 80007881 483a52f8 00000032 4000832a 00000000 00000000 00000000 4ff84748 
+0x483a52d0: 48384458 00000032 4838441c 40008358 00000000 00000000 4838441c 40008384 
+0x483a52f0: 4ff4c000 0000b220 4ff85278 00000701 483a5438 483a5438 4ff6f5c8 400ec864 
+0x483a5310: 483a535f 4ff85288 483a5438 400ec492 00000000 00000000 00000000 00000001 
+0x483a5330: 00000000 00000000 22000000 00004ca4 4ff4c000 0000b220 00000313 4ff4b330 
+0x483a5350: 483a5438 00000000 00000701 400ec80c 00000004 0000000a 4838441c 00000000 
+0x483a5370: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a5390: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a53b0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a53d0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a53f0: 4fc1a588 0000b220 00000000 00000000 483a547c 00000000 4ff85288 400091fe 
+0x483a5410: 00000000 4ff504b0 4ff84b00 4021da2a 40245325 40245325 00010002 00000000 
+0x483a5430: 00000000 00000000 00000001 00004ca4 4ff4c000 0000b9fa 00000000 00000000 
+0x483a5450: 00000000 000155d6 00000002 4021d4fa 00000000 000155d6 00000001 40225360 
+0x483a5470: 00000002 00000000 00000000 00000000 00000000 000155d6 0001d4c0 400ac6ea 
+0x483a5490: 00000000 00000000 00000000 00000004 00000000 6774857f 00000000 00000000 
+0x483a54b0: 0000001b 1e65fb80 00000004 00000000 01010101 00000000 00000004 00000000 
+0x483a54d0: 01010101 00000000 00000000 0000002f 245bdc80 00000000 00000000 00000000 
+0x483a54f0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a5510: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a5530: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a5550: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a5570: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a5590: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a55b0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483a55d0: 00000000 00000000 00000000 00000000 00000000 400ac65e 4001ed6c 4001ed76 
+0x483a55f0: 00000000 00000000 00000000 4021c4ac 00000000 00000000 00000000 00000000
+> read_memory 0x4839f650 32 6128
+STACK WATERMARK size=24512 used=4432
+> read_memory 0x4ff84bf8 32 54
+TCB=0x4ff84bf8 pid=9 name=b'nsh' stack=0x483a59d0 size=4016 regs=0x483a64b0 saved=0x0
+> read_memory 0x4ff84dd8 32 54
+TCB=0x4ff84dd8 pid=10 name=b'c6net' stack=0x483a7050 size=4016 regs=0x483a7cd0 saved=0x0
+> read_memory 0x4ff850b0 32 54
+TCB=0x4ff850b0 pid=12 name=b'NTP_daemon' stack=0x483aa408 size=8040 regs=0x483ac000 saved=0x0
+> mdw 0x4ff850b0 60
+0x4ff850b0: 4ff84b00 00000000 4ff8519c 00000000 00000000 00000000 00000000 00000000 
+0x4ff850d0: 00000000 00000000 00000000 00000000 00000000 0000000c 00000064 00000064 
+0x4ff850f0: 400105d4 400ac128 00000007 00000001 00000003 00002208 00000001 00000014 
+0x4ff85110: 4ff50530 4ff84b60 4ff850b0 4021d726 00001efa 00001f68 483aa378 483aa408 
+0x4ff85130: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff85150: 00000000 00000000 00000000 00000000 00000000 483ac000 5f50544e 6d656164 
+0x4ff85170: 00006e6f 00000000 00000000 00000000 00000000 00000000 00000001 00000000 
+0x4ff85190: 00000000 00000000 00000000 0000000c
+> mdw 0x483ac000 40
+0x483ac000: 4002efc2 4ff42310 483ac240 4ff790e8 00000000 00000000 00000004 00000000 
+0x483ac020: 00000001 4ff50000 00000002 4ff850b0 00000000 4ff50404 80006081 00000000 
+0x483ac040: 4ff84b60 4ff504ac 483ac2b8 4ff50000 80006089 4ff85110 483ac2b0 4021d000 
+0x483ac060: 00001efa 4ff4c000 00000003 ffffffff 00000000 00000000 00000000 00000000 
+0x483ac080: 80007801 4a3d70a3 83aa7e93 83aa7e93 4ff4b330 4ff85288 4ff85288 40008d5a
+> mdw 0x483aa408 512
+0x483aa408: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa428: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa448: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa468: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa488: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa4a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa4c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa4e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa508: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa528: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa548: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa568: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa588: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa5a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa5c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa5e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa608: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa628: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa648: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa668: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa688: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa6a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa6c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa6e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa708: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa728: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa748: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa768: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa788: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa7a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa7c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa7e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa808: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa828: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa848: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa868: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa888: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa8a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa8c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa8e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa908: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa928: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa948: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa968: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa988: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa9a8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa9c8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aa9e8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaa08: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaa28: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaa48: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaa68: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaa88: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaaa8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaac8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaae8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aab08: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aab28: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aab48: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aab68: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aab88: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aaba8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aabc8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef 
+0x483aabe8: deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef deadbeef
+> mdw 0x483abd70 384
+0x483abd70: 80007801 00000068 00000001 00000000 4ff504c0 00000000 4ff504c0 00000000 
+0x483abd90: 400f2b58 400eb2fa 483abfd0 00000000 00000000 4fc114ec 00000004 38007b00 
+0x483abdb0: 400eaea4 400ead52 483abff0 000001f4 00000000 400ead38 0000000f 38007b00 
+0x483abdd0: 00000000 4ff78d90 00000000 00000000 00000004 00000000 7fffffff 00000000 
+0x483abdf0: 80006089 00000001 ffffffff 00000000 483ac008 7fffffff 4ff78d90 00000008 
+0x483abe10: 00000004 00000005 00000001 483ac4c0 4ff504c0 00000000 4ff504c0 00000000 
+0x483abe30: 80007881 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483abe50: 00000000 00000000 00000000 00000000 00000000 00000000 22000000 00000000 
+0x483abe70: 400e8702 400e86f2 483ac0b0 00000000 00000000 00000000 40227db8 38007b00 
+0x483abe90: 00000000 483ac158 4ff85278 00000000 00000000 00000000 00000000 00000000 
+0x483abeb0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483abed0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483abef0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483abf10: 00000000 00000000 00000000 00000000 4fc1a588 00000000 22000000 00000000 
+0x483abf30: 00000000 00000000 00010002 00000000 00000000 483ac014 4ff850b0 4000ef58 
+0x483abf50: 00000000 00000000 00000000 00010001 00000000 00000000 00000000 4ff85110 
+0x483abf70: 80006089 483ac014 00010002 00000000 4ff78d98 80006089 00010001 00000000 
+0x483abf90: 00000000 00000000 00000000 00000000 4ff78da0 00001391 483ac014 400f2c24 
+0x483abfb0: 4ff78d90 4ff78d9c 483ac008 4ff78d98 4ff78d98 00000005 00000004 00000008 
+0x483abfd0: 4ff78d90 4ff78d9c 483ac008 4ff78d98 fffffff0 4ff78d90 00000000 400eaff4 
+0x483abff0: 00000004 4ff79104 4ff78d98 4ff78d9c 4002efc2 4ff42310 483ac240 4ff790e8 
+0x483ac010: 00000000 00000000 00000004 00000000 00000001 4ff50000 00000002 4ff850b0 
+0x483ac030: 00000000 4ff50404 80006081 00000000 4ff84b60 4ff504ac 483ac2b8 4ff50000 
+0x483ac050: 80006089 4ff85110 483ac2b0 4021d000 00001efa 4ff4c000 00000003 ffffffff 
+0x483ac070: 00000000 00000000 00000000 00000000 80007801 4a3d70a3 83aa7e93 83aa7e93 
+0x483ac090: 4ff4b330 4ff85288 4ff85288 40008d5a 00000008 4a3d70a3 83aa7e93 83aa7e93 
+0x483ac0b0: 483ac5e0 00000000 4ff85288 400091fe 00000005 00000000 40000000 ee53b4ac 
+0x483ac0d0: 483ac380 00000000 40000000 400abfbc deadbeef deadbeef deadbeef deadbeef 
+0x483ac0f0: deadbeef deadbeef 00000010 00000000 00000000 00000000 0000000f 00000008 
+0x483ac110: 0000007e 00000002 00000101 00000000 00000000 00000000 00000023 00000000 
+0x483ac130: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac150: 937eaa83 00000040 e9030224 4a000000 78060000 c4247a64 5eb253ee aea5cb85 
+0x483ac170: 937eaa83 00000040 22000000 73de319d acb453ee 75d5329d 7b000002 c7b8376a 
+0x483ac190: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac1b0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac1d0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac1f0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac210: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac230: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac250: 00000000 4ff504b0 4ff850b0 4021da2a 00000000 00000000 00010002 00000000 
+0x483ac270: 00000000 000002f8 483aa3b8 00000000 00000001 4ff504ac 4ff4be38 00000005 
+0x483ac290: 483ac680 483ac380 0000003c 4021d4fa 00000003 4ff4c000 483ac308 40225360 
+0x483ac2b0: 0000003c 00000000 00000013 11490c80 483ac680 483ac380 4ff4c000 400ac404 
+0x483ac2d0: 00000000 00000000 00000000 6aa93619 00000000 00000000 00000012 376eac80 
+0x483ac2f0: 00000012 376eac80 6aa9362c 25640334 00000013 11490c80 00000013 11490c80 
+0x483ac310: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x483ac330: 00000000 00000000 00000000 00000000 00000000 400ac128 00000000 4001efce 
+0x483ac350: 00000000 00000000 00000000 40010632 00000000 00000000 00000000 00000000
+> read_memory 0x483aa408 32 2010
+STACK WATERMARK size=8040 used=2224
+> resume
+

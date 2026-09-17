@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop ui qpk-preview",
+    "output": "desktop ui qpk-preview\ndesktop: ui qpk-preview ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui app-back",
+    "output": "desktop ui app-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-save",
+    "output": "desktop ui qpk-save\ndesktop: ui qpk-save ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-draft-status",
+    "output": "desktop ui qpk-draft-status\nqpk-draft loaded=1 busy=0 revision=6 previewed=0 saved=0 error=0 preview_active=0 name= package=\nqpk-save stage=0 elapsed_ms=0\nflash-stack ops=822 caller=4838baac worker=4ffacf0c\nnsh> \u001b[K"
+  }
+]

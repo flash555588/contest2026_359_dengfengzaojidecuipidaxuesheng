@@ -1,0 +1,10 @@
+[
+  {
+    "command": "espclaw status",
+    "output": "espclaw status\nESP-Claw 0.1.0: cleanup pending no; chat settings present (network not tested)\nnsh> \u001b[K"
+  },
+  {
+    "command": "date",
+    "output": "date\nnsh: date: command not found\nnsh> \u001b[K"
+  }
+]

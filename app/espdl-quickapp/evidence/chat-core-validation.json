@@ -1,0 +1,7 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "core": "production ESPClaw",
+  "http_peer": "deterministic local fixture; no external model request",
+  "output": "PASS: both real backends receive the full guide and four tool schemas; read verified qpk files, persist drafts, reject private paths and recover from a syntax error across tool rounds\nPASS: 192 KiB tool input compiles and persists through the real tool bridge\nPASS: real core and OpenAI/Anthropic backends, exact context roles, response decoding, CRLF normalization, HTTP/TLS errors, in-flight cancellation, core teardown/restart"
+}

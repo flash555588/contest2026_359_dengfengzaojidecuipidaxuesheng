@@ -1,0 +1,69 @@
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+DEPRECATED! use 'gdb memory_map', not 'gdb_memory_map'
+DEPRECATED! use 'gdb flash_program', not 'gdb_flash_program'
+Info : esp_usb_jtag: serial (E8:F6:0A:E3:A9:5F)
+Info : esp_usb_jtag: Device found. Base speed 24000KHz, div range 1 to 255
+Info : clock speed 4000 kHz
+Info : JTAG tap: esp32p4.tap0 tap/device found: 0x00012c25 (mfg: 0x612 (Espressif Systems), part: 0x0012, ver: 0x0)
+Info : JTAG tap: esp32p4.tap1 tap/device found: 0x00012c25 (mfg: 0x612 (Espressif Systems), part: 0x0012, ver: 0x0)
+Info : [esp32p4.hp.cpu0] datacount=1 progbufsize=2
+Info : [esp32p4.hp.cpu0] Core 0 made part of halt group 1.
+Info : [esp32p4.hp.cpu0] Examined RISC-V core; found 2 harts
+Info : [esp32p4.hp.cpu0]  XLEN=32, misa=0x40903127
+Info : [esp32p4.hp.cpu0] Examination succeed
+Info : [esp32p4.hp.cpu1] datacount=1 progbufsize=2
+Info : [esp32p4.hp.cpu1] Core 1 made part of halt group 1.
+Info : [esp32p4.hp.cpu1] Examined RISC-V core; found 2 harts
+Info : [esp32p4.hp.cpu1]  XLEN=32, misa=0x40903127
+Info : [esp32p4.hp.cpu1] Examination succeed
+Info : [esp32p4.hp.cpu0] gdb port disabled
+Info : [esp32p4.hp.cpu1] gdb port disabled
+Info : Listening on port 6671 for tcl connections
+Info : telnet server disabled
+Info : accepting 'tcl' connection on tcp/6671
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+Info : [esp32p4.hp.cpu0] Target halted, PC=0x4FF477F6, debug_reason=00000000
+Info : [esp32p4.hp.cpu1] Target halted, PC=0x4FF40D58, debug_reason=00000000
+Info : [esp32p4.hp.cpu1] Halt cause (11) - (ECALL from M mode)
+0x4ff5ef08: 00000000 
+0x4ff5ef0c: 00000000 
+0x4ff5ef10: 00000000 
+0x4ff61014: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ff61034: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+    TargetName         Type       Endian TapName            State       
+--  ------------------ ---------- ------ ------------------ ------------
+ 0* esp32p4.hp.cpu0    esp32p4    little esp32p4.tap1       halted
+ 1  esp32p4.hp.cpu1    esp32p4    little esp32p4.tap1       halted
+sp (/32): 0x4ffa8e70
+ra (/32): 0x40001e2e
+dpc (/32): 0x4ff477f6
+mepc (/32): 0x400309f6
+mcause (/32): 0x88000011
+mtval (/32): 0x00000000
+0x4ffa8e70: 00000804 00000010 00000000 4ff5eccc 00000000 00010001 00000001 00000000 
+0x4ffa8e90: 4ff5eccc 80006081 00000000 80006081 0000005d 00000802 00000001 4000228e 
+0x4ffa8eb0: 00000000 00000802 00000000 00000000 4ffa9078 4ffa8f4c ffc1ffff 00000000 
+0x4ffa8ed0: 00000000 00000001 00000002 00000000 
+sp (/32): 0x4ffa72b0
+ra (/32): 0x4ff40d48
+dpc (/32): 0x4ff40d58
+mepc (/32): 0x400309f6
+mcause (/32): 0x0800000b
+mtval (/32): 0x00000000
+0x4ffa72b0: 00000000 00000005 00000000 4ff42142 00000000 00000000 00000000 4ff47dca 
+0x4ffa72d0: 00000000 00000000 00000000 4ff5d680 00000000 00000000 00000000 00000000 
+0x4ffa72f0: 00000000 00000000 00000000 4ff48210 00000000 00000000 00000000 4ff5d680 
+0x4ffa7310: 00000000 00000000 00000000 00000000 
+Info : [esp32p4.hp.cpu0] Found 3 triggers
+Info : [esp32p4.hp.cpu0] Target halted, PC=0x4FF477F8, debug_reason=00000004
+Info : [esp32p4.hp.cpu1] Found 3 triggers
+Info : [esp32p4.hp.cpu1] Target halted, PC=0x4FF40D54, debug_reason=00000004
+Info : [esp32p4.hp.cpu1] Halt cause (11) - (ECALL from M mode)
+Info : accepting 'tcl' connection on tcp/6671
+Info : dropped 'tcl' connection
+shutdown command invoked

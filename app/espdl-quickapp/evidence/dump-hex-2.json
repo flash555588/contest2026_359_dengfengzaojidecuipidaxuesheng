@@ -1,0 +1,6 @@
+[
+  {
+    "command": "hexdump -s 44 -n 2048 value",
+    "output": "hexdump -s 44 -n 2048 value\nnsh: hexdump: too many arguments\nnsh> \u001b[K"
+  }
+]

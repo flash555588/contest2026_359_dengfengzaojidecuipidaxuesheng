@@ -1,0 +1,6 @@
+{
+  "twoModes": true,
+  "matchingFrameRender": true,
+  "cancelAndSwitch": true,
+  "disconnect": true
+}

@@ -1,0 +1,7 @@
+[
+  {
+    "command": "echo audio-state",
+    "output": "",
+    "error": "Write timeout"
+  }
+]

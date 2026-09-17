@@ -1,0 +1,22 @@
+[
+  {
+    "command": "desktop ui weather-status",
+    "output": "desktop ui weather-status\nweather state=4 valid=1 error=-113 revision=14 AQI=27 temp=21 humidity=85 city=成都市\nnsh> \u001b[K"
+  },
+  {
+    "command": "ping 1.1.1.1",
+    "output": "ping 1.1.1.1\nnsh: ping: command not found\nnsh> \u001b[K"
+  },
+  {
+    "command": "nslookup jkapi.com",
+    "output": "nslookup jkapi.com\nnsh: nslookup: getaddrinfo failed: Unknown error 1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-search:晴天",
+    "output": "desktop ui music-search:晴天\n[music] TLS/connect failed ret=-113 tls=0 verify=0\n[music] search result=-113\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui weather-status",
+    "output": "desktop ui weather-status\nweather state=4 valid=1 error=-113 revision=14 AQI=27 temp=21 humidity=85 city=成都市\nnsh> \u001b[K"
+  }
+]

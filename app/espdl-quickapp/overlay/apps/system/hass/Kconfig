@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+config SYSTEM_HASS
+  bool "Shared Home Assistant native service"
+  default n
+  depends on BUILD_FLAT && NET_TCP && !DISABLE_PTHREAD
+  help
+    Shared in-process API with per-client results, plus 'hass status'.
+    HTTP only. Not an IPC daemon or a credential vault.

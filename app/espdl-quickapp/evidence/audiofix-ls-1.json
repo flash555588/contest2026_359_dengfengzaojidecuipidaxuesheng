@@ -1,0 +1,14 @@
+[
+  {
+    "command": "ls /data",
+    "output": "ls /data\n/data:\n qpk/\n photos/\n glass-settings-0.bin\n glass-settings-1.bin\n files/\n config/\nnsh> \u001b[K[1[1Cr"
+  },
+  {
+    "command": "ls /data/qpk",
+    "output": "ls /data/qpk\n/data/qpk:\n .data/\n @2pmusic/\n pinyin/\n .draft/\n org.flash.pomodoro/\n org.flash.pomodoro.flip/\n .examples/\n ai.ox_game/\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /data/qpk/.data",
+    "output": "ls /data/qpk/.data\n/data/qpk/.data:\n @2pcom.example.hello/\n @2pcom.example.game2048/\n @2pouo/\n @2porg.flash.pomodoro/\n @2porg.flash.pomodoro.flip/\n @2ppreview.ox_game/\n @2ppreview.gomoku/\n @2ppreview.countdown/\n @2pcom.openvela.recorder/\nnsh> \u001b[K"
+  }
+]

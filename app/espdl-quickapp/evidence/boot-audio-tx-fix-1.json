@@ -1,0 +1,10 @@
+[
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        643        3453 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[Krpc: skipping SetConfig, using slave's stored config\nrpc: WifiConnect tx pb=10 tlv=22\nrpc: WifiConnect pb bytes: 08 01 10 9a 02 18 05 d2 11 00\nrpc: WifiConnect resp=0\nrpc: EVENT msg_id=773\nrpc: EVENT msg_id=775\nrpc: EVENT StaConnected\n[net] associated, requesting a lease\n[net] online 192.168.0.102\n[net] ntp start: 13\n[weather] HTTP 200 bytes=446 ret=0\n[weather] updated city=成都市 AQI=33 temp=25 humidity=64\n"
+  },
+  {
+    "command": "cat /proc/fs/smartfs/smart0/status",
+    "output": "cat /proc/fs/smartfs/smart0/status\nFormat version:    1\nName Len:          32\nTotal Sectors:     4096\nSector Size:       1024\nFormat Sector:     2296\nDir Sector:        893\nFree Sectors:      1417\nReleased Sectors:  2044\nUnused Sectors:    0\nBlock Erases:      818\nSectors Per Block: 4\nSector Utilization:100%\nUneven Wear Count: 0\nnsh> \u001b[K"
+  }
+]

@@ -1,0 +1,559 @@
+{
+  "firmware_sha256": "5bb687d32a041690e0041cb2656d19ea032af50c3a6d120bfb65c3b8ea47155e",
+  "cores": {
+    "0": {
+      "dpc": "dpc (/32): 0x4ff477f2",
+      "ra": "ra (/32): 0x40001e2e",
+      "sp": "sp (/32): 0x4ffa8e70",
+      "mepc": "mepc (/32): 0x400309f6",
+      "mcause": "mcause (/32): 0x88000011",
+      "mtval": "mtval (/32): 0x00000000"
+    },
+    "1": {
+      "dpc": "dpc (/32): 0x4ff40d54",
+      "ra": "ra (/32): 0x4ff40d48",
+      "sp": "sp (/32): 0x4ffa72b0",
+      "mepc": "mepc (/32): 0x400309f6",
+      "mcause": "mcause (/32): 0x0800000b",
+      "mtval": "mtval (/32): 0x00000000"
+    }
+  },
+  "first_fault": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "locks": {
+    "spinlock": [
+      65538
+    ],
+    "g_int_flags_count": [
+      256,
+      256
+    ],
+    "g_int_flags": [
+      2147508353,
+      2147508353
+    ],
+    "g_running_tasks": [
+      1341814608,
+      1341811680
+    ]
+  },
+  "tasks": [
+    {
+      "pid": 5,
+      "task_state": 4,
+      "cpu": 0,
+      "lockcount": 0,
+      "name": [
+        117,
+        115,
+        98,
+        104,
+        95,
+        104,
+        117,
+        98,
+        48,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "pid": 4,
+      "task_state": 4,
+      "cpu": 1,
+      "lockcount": 1,
+      "name": [
+        65,
+        112,
+        112,
+        66,
+        114,
+        105,
+        110,
+        103,
+        85,
+        112,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "i2s": {
+    "dev": {
+      "ops": 1076497384
+    },
+    "lock": {
+      "sem": {
+        "val": {
+          "semcount": 2147483647,
+          "mholder": 2147483647
+        },
+        "flags": 5,
+        "waitlist": {
+          "head": 0,
+          "tail": 0
+        }
+      }
+    },
+    "cpu": 0,
+    "slock": {
+      "lock": 0
+    },
+    "config": 1341441500,
+    "mclk_freq": 0,
+    "mclk_multiple": 0,
+    "channels": 0,
+    "rate": 0,
+    "data_width": 0,
+    "dma_channel_tx": 0,
+    "dma_channel_rx": 0,
+    "tx": {
+      "pend": {
+        "head": 0,
+        "tail": 0
+      },
+      "act": {
+        "head": 0,
+        "tail": 0
+      },
+      "done": {
+        "head": 0,
+        "tail": 0
+      },
+      "work": {
+        "node": {
+          "next": 0,
+          "prev": 0
+        },
+        "qtime": 0,
+        "worker": 0,
+        "arg": 0
+      },
+      "carry": {
+        "value": 0,
+        "bytes": 0
+      }
+    },
+    "tx_started": 0,
+    "rx": {
+      "pend": {
+        "head": 0,
+        "tail": 0
+      },
+      "act": {
+        "head": 0,
+        "tail": 0
+      },
+      "done": {
+        "head": 0,
+        "tail": 0
+      },
+      "work": {
+        "node": {
+          "next": 0,
+          "prev": 0
+        },
+        "qtime": 0,
+        "worker": 0,
+        "arg": 0
+      },
+      "carry": {
+        "value": 0,
+        "bytes": 0
+      }
+    },
+    "rx_started": 0,
+    "streaming": 0,
+    "bufsem": {
+      "val": {
+        "semcount": 0,
+        "mholder": 0
+      },
+      "flags": 0,
+      "waitlist": {
+        "head": 0,
+        "tail": 0
+      }
+    },
+    "bf_freelist": 0,
+    "containers": [
+      {
+        "flink": 0,
+        "dma_link": [
+          0,
+          0
+        ],
+        "callback": 0,
+        "timeout": 0,
+        "arg": 0,
+        "apb": 0,
+        "buf": 0,
+        "nbytes": 0,
+        "result": 0
+      },
+      {
+        "flink": 0,
+        "dma_link": [
+          0,
+          0
+        ],
+        "callback": 0,
+        "timeout": 0,
+        "arg": 0,
+        "apb": 0,
+        "buf": 0,
+        "nbytes": 0,
+        "result": 0
+      },
+      {
+        "flink": 0,
+        "dma_link": [
+          0,
+          0
+        ],
+        "callback": 0,
+        "timeout": 0,
+        "arg": 0,
+        "apb": 0,
+        "buf": 0,
+        "nbytes": 0,
+        "result": 0
+      },
+      {
+        "flink": 0,
+        "dma_link": [
+          0,
+          0
+        ],
+        "callback": 0,
+        "timeout": 0,
+        "arg": 0,
+        "apb": 0,
+        "buf": 0,
+        "nbytes": 0,
+        "result": 0
+      }
+    ]
+  },
+  "config": {
+    "port": 0,
+    "role": 0,
+    "data_width": 16,
+    "rate": 16000,
+    "total_slot": 2,
+    "tx_en": 1,
+    "rx_en": 1,
+    "mclk_pin": 13,
+    "tx_clk_src": 0,
+    "rx_clk_src": 0,
+    "bclk_pin": 12,
+    "ws_pin": 10,
+    "dout_pin": 9,
+    "din_pin": 11,
+    "audio_std_mode": 0,
+    "ws_pol": 0,
+    "ctx": 1341517520,
+    "clk_info": 1341539596
+  },
+  "context": {
+    "dev": 0
+  },
+  "registers": {
+    "reserved_000": [
+      0,
+      0,
+      0
+    ],
+    "int_raw": {
+      "rx_done_int_raw": 0,
+      "tx_done_int_raw": 0,
+      "rx_hung_int_raw": 0,
+      "tx_hung_int_raw": 0,
+      "reserved_4": 0,
+      "val": 0
+    },
+    "int_st": {
+      "rx_done_int_st": 0,
+      "tx_done_int_st": 0,
+      "rx_hung_int_st": 0,
+      "tx_hung_int_st": 0,
+      "reserved_4": 0,
+      "val": 0
+    },
+    "int_ena": {
+      "rx_done_int_ena": 0,
+      "tx_done_int_ena": 0,
+      "rx_hung_int_ena": 0,
+      "tx_hung_int_ena": 0,
+      "reserved_4": 0,
+      "val": 0
+    },
+    "int_clr": {
+      "rx_done_int_clr": 0,
+      "tx_done_int_clr": 0,
+      "rx_hung_int_clr": 0,
+      "tx_hung_int_clr": 0,
+      "reserved_4": 0,
+      "val": 0
+    },
+    "reserved_01c": 0,
+    "rx_conf": {
+      "rx_reset": 0,
+      "rx_fifo_reset": 0,
+      "rx_start": 0,
+      "rx_slave_mod": 0,
+      "rx_stop_mode": 0,
+      "rx_mono": 0,
+      "rx_big_endian": 0,
+      "rx_update": 0,
+      "rx_mono_fst_vld": 0,
+      "rx_pcm_conf": 0,
+      "rx_pcm_bypass": 0,
+      "rx_msb_shift": 0,
+      "reserved_14": 0,
+      "rx_left_align": 0,
+      "rx_24_fill_en": 0,
+      "rx_ws_idle_pol": 0,
+      "rx_bit_order": 0,
+      "rx_tdm_en": 0,
+      "rx_pdm_en": 0,
+      "rx_bck_div_num": 0,
+      "reserved_27": 0,
+      "val": 0
+    },
+    "tx_conf": {
+      "tx_reset": 0,
+      "tx_fifo_reset": 0,
+      "tx_start": 0,
+      "tx_slave_mod": 0,
+      "tx_stop_en": 0,
+      "tx_chan_equal": 0,
+      "tx_mono": 0,
+      "tx_big_endian": 0,
+      "tx_update": 0,
+      "tx_mono_fst_vld": 0,
+      "tx_pcm_conf": 0,
+      "tx_pcm_bypass": 0,
+      "tx_msb_shift": 0,
+      "tx_bck_no_dly": 0,
+      "tx_left_align": 0,
+      "tx_24_fill_en": 0,
+      "tx_ws_idle_pol": 0,
+      "tx_bit_order": 0,
+      "tx_tdm_en": 0,
+      "tx_pdm_en": 0,
+      "tx_bck_div_num": 0,
+      "tx_chan_mod": 0,
+      "sig_loopback": 0,
+      "reserved_31": 0,
+      "val": 0
+    },
+    "rx_conf1": {
+      "rx_tdm_ws_width": 0,
+      "reserved_9": 0,
+      "rx_bits_mod": 0,
+      "rx_half_sample_bits": 0,
+      "rx_tdm_chan_bits": 0,
+      "val": 0
+    },
+    "tx_conf1": {
+      "tx_tdm_ws_width": 0,
+      "reserved_9": 0,
+      "tx_bits_mod": 0,
+      "tx_half_sample_bits": 0,
+      "tx_tdm_chan_bits": 0,
+      "val": 0
+    },
+    "reserved_030": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "tx_pcm2pdm_conf": {
+      "reserved_0": 0,
+      "tx_pdm_sinc_osr2": 0,
+      "tx_pdm_prescale": 0,
+      "tx_pdm_hp_in_shift": 0,
+      "tx_pdm_lp_in_shift": 0,
+      "tx_pdm_sinc_in_shift": 0,
+      "tx_pdm_sigmadelta_in_shift": 0,
+      "tx_pdm_sigmadelta_dither2": 0,
+      "tx_pdm_sigmadelta_dither": 0,
+      "tx_pdm_dac_2out_en": 0,
+      "tx_pdm_dac_mode_en": 0,
+      "pcm2pdm_conv_en": 0,
+      "reserved_26": 0,
+      "val": 0
+    },
+    "tx_pcm2pdm_conf1": {
+      "tx_pdm_fp": 0,
+      "tx_pdm_fs": 0,
+      "tx_iir_hp_mult12_5": 0,
+      "tx_iir_hp_mult12_0": 0,
+      "reserved_26": 0,
+      "val": 0
+    },
+    "rx_pdm2pcm_conf": {
+      "reserved_0": 0,
+      "rx_pdm2pcm_en": 0,
+      "rx_pdm_sinc_dsr_16_en": 0,
+      "rx_pdm2pcm_amplify_num": 0,
+      "rx_pdm_hp_bypass": 0,
+      "rx_iir_hp_mult12_5": 0,
+      "rx_iir_hp_mult12_0": 0,
+      "val": 0
+    },
+    "reserved_04c": 0,
+    "rx_tdm_ctrl": {
+      "rx_tdm_pdm_chan0_en": 0,
+      "rx_tdm_pdm_chan1_en": 0,
+      "rx_tdm_pdm_chan2_en": 0,
+      "rx_tdm_pdm_chan3_en": 0,
+      "rx_tdm_pdm_chan4_en": 0,
+      "rx_tdm_pdm_chan5_en": 0,
+      "rx_tdm_pdm_chan6_en": 0,
+      "rx_tdm_pdm_chan7_en": 0,
+      "rx_tdm_chan8_en": 0,
+      "rx_tdm_chan9_en": 0,
+      "rx_tdm_chan10_en": 0,
+      "rx_tdm_chan11_en": 0,
+      "rx_tdm_chan12_en": 0,
+      "rx_tdm_chan13_en": 0,
+      "rx_tdm_chan14_en": 0,
+      "rx_tdm_chan15_en": 0,
+      "rx_tdm_tot_chan_num": 0,
+      "reserved_20": 0,
+      "val": 0
+    },
+    "tx_tdm_ctrl": {
+      "tx_tdm_chan0_en": 0,
+      "tx_tdm_chan1_en": 0,
+      "tx_tdm_chan2_en": 0,
+      "tx_tdm_chan3_en": 0,
+      "tx_tdm_chan4_en": 0,
+      "tx_tdm_chan5_en": 0,
+      "tx_tdm_chan6_en": 0,
+      "tx_tdm_chan7_en": 0,
+      "tx_tdm_chan8_en": 0,
+      "tx_tdm_chan9_en": 0,
+      "tx_tdm_chan10_en": 0,
+      "tx_tdm_chan11_en": 0,
+      "tx_tdm_chan12_en": 0,
+      "tx_tdm_chan13_en": 0,
+      "tx_tdm_chan14_en": 0,
+      "tx_tdm_chan15_en": 0,
+      "tx_tdm_tot_chan_num": 0,
+      "tx_tdm_skip_msk_en": 0,
+      "reserved_21": 0,
+      "val": 0
+    },
+    "rx_timing": {
+      "rx_sd_in_dm": 0,
+      "reserved_2": 0,
+      "rx_sd1_in_dm": 0,
+      "reserved_6": 0,
+      "rx_sd2_in_dm": 0,
+      "reserved_10": 0,
+      "rx_sd3_in_dm": 0,
+      "reserved_14": 0,
+      "rx_ws_out_dm": 0,
+      "reserved_18": 0,
+      "rx_bck_out_dm": 0,
+      "reserved_22": 0,
+      "rx_ws_in_dm": 0,
+      "reserved_26": 0,
+      "rx_bck_in_dm": 0,
+      "reserved_30": 0,
+      "val": 0
+    },
+    "tx_timing": {
+      "tx_sd_out_dm": 0,
+      "reserved_2": 0,
+      "tx_sd1_out_dm": 0,
+      "reserved_6": 0,
+      "tx_ws_out_dm": 0,
+      "reserved_18": 0,
+      "tx_bck_out_dm": 0,
+      "reserved_22": 0,
+      "tx_ws_in_dm": 0,
+      "reserved_26": 0,
+      "tx_bck_in_dm": 0,
+      "reserved_30": 0,
+      "val": 0
+    },
+    "lc_hung_conf": {
+      "lc_fifo_timeout": 0,
+      "lc_fifo_timeout_shift": 0,
+      "lc_fifo_timeout_ena": 0,
+      "reserved_12": 0,
+      "val": 0
+    },
+    "rx_eof_num": {
+      "rx_eof_num": 0,
+      "reserved_12": 0,
+      "val": 0
+    },
+    "conf_single_data": {
+      "single_data": 0,
+      "val": 0
+    },
+    "state": {
+      "tx_idle": 0,
+      "reserved_1": 0,
+      "val": 0
+    },
+    "etm_conf": {
+      "etm_tx_send_word_num": 0,
+      "etm_rx_receive_word_num": 0,
+      "reserved_20": 0,
+      "val": 0
+    },
+    "fifo_cnt": {
+      "tx_fifo_cnt": 0,
+      "tx_fifo_cnt_rst": 0,
+      "val": 0
+    },
+    "bck_cnt": {
+      "tx_bck_cnt": 0,
+      "tx_bck_cnt_rst": 0,
+      "val": 0
+    },
+    "clk_gate": {
+      "clk_en": 0,
+      "reserved_1": 0,
+      "val": 0
+    },
+    "date": {
+      "date": 0,
+      "reserved_28": 0,
+      "val": 0
+    }
+  },
+  "buffers": []
+}

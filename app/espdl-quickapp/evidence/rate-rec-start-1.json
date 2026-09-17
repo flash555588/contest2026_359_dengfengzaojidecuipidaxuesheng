@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui click:开始录音",
+    "output": "desktop ui click:开始录音\nclick 开始录音 -> 1\ndesktop: ui click:开始录音 ready\nnsh> \u001b[K"
+  }
+]

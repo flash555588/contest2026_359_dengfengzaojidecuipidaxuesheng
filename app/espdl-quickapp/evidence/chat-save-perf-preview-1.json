@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui qpk-preview",
+    "output": "desktop ui qpk-preview\n[qpk] started OX棋 (preview.ox_game draft) with QuickJS\ndesktop: ui qpk-preview ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-draft-status",
+    "output": "desktop ui qpk-draft-status\nqpk-draft loaded=1 busy=0 revision=2 previewed=2 saved=0 error=0 preview_active=1 name=OX棋 package=\nqpk-save stage=0 elapsed_ms=0\nflash-stack ops=306 caller=4838b7dc worker=4ffadacc\nnsh> \u001b[K"
+  }
+]

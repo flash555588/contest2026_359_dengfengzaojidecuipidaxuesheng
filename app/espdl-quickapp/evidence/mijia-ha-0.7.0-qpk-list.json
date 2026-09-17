@@ -1,0 +1,6 @@
+[
+  {
+    "command": "ls -la /data/qpk",
+    "output": "ls -la /data/qpk\nnsh: ls: argument invalid\nnsh> \u001b[K"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=3 error=0 search=0 search_error=0 result=1 favorites=0 storage=0 position_ms=0 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K[qpk] started Home Assistant (com.openvela.homeassistant 1.0.0) with QuickJS\n"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001288  64.9%   8.7% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0001984 0000696  35.0%  50.3% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000816  42.1%   0.0% hpwork 0x4ff4b4c0 0x4ff4b50c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000800  41.3%   0.0% lpwork 0x4ff4b440 0x4ff4b48c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001392  23.0%   0.0% usbh_hub0 0x4ff66140\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680 0006560  20.0%  13.9% desktop\n    8     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024504 0003896  15.8%   0.0% weather 0x400adce0 0\n    9     9 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004008 0002112  52.6%   0.7% nsh\n   10    10 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004008 0002560  63.8%  11.5% c6net\n   11     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032696 0006872  21.0%   0.0% music_search 0x400af9a8 0\n   12     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0049080 0020208  41.1%  10.3% music_player 0x400b2432 0\n   15    15 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0008048 0002224  27.6%   0.0% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\n   29     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032696 0004008  12.2%   4.2% music_net 0x400af8da 0x483c1a94\n   30     6 ---(0x00000003) 252 RR       pthread   - Waiting  MQ empty  0000000000000000 0001984 0000976  49.1%   0.0% es8311 0x4001575c 0x4ffa6ed8\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-toggle",
+    "output": "desktop ui music-toggle\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=2 error=0 search=0 search_error=0 result=1 favorites=0 storage=0 position_ms=0 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  }
+]

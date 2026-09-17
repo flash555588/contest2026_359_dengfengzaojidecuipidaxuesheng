@@ -1,0 +1,122 @@
+[
+  {
+    "command": "desktop ui home",
+    "output": "desktop ui home\ndesktop: ui home ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui ha",
+    "output": "desktop ui ha\n[qpk] started Home Assistant (com.openvela.homeassistant 1.0.0) with QuickJS\ndesktop: ui ha ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "esktop u navigation-status\nnavigation page=qapp return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui app-back",
+    "output": "desktop ui app-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui ha",
+    "output": "desktop ui ha\n[qpk] started Home Assistant (com.openvela.homeassistant 1.0.0) with QuickJS\ndesktop: ui ha ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui edge-back",
+    "output": "desktop ui edge-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui home",
+    "output": "desktop ui home\ndesktop: ui home ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui ouo",
+    "output": "desktop ui ouo\n[qpk] Vela Mood Console initialized with 32 original states\n[qpk] started OuO (ouo 1.0.0) with QuickJS\ndesktop: ui ouo ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=qapp return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui app-back",
+    "output": "desktop ui app-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui ouo",
+    "output": "desktop ui ouo\n[qpk] Vela Mood Console initialized with 32 original states\n[qpk] started OuO (ouo 1.0.0) with QuickJS\ndesktop: ui ou ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui edge-back",
+    "output": "desktop ui edge-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui home",
+    "output": "desktop ui home\ndesktop: ui home ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui hello",
+    "output": "desktop ui hello\n[qpk] hello QPK initialized\n[qpk] started 你好快应用 (com.example.hello 1.0.2) with QuickJS\ndesktop: ui hello ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=qapp return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui app-back",
+    "output": "desktop ui app-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui hello",
+    "output": "desktop ui hello\n[qpk] hello QPK initialized\n[qpk] started 你好快应用 (com.example.hello 1.0.2) with QuickJS\ndesktop: ui hello ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui edge-back",
+    "output": "desktop ui edge-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui home",
+    "output": "desktop ui home\ndesktop: ui home ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop camera",
+    "output": "desktop camera\ndesktop: camera diagnostic requested\nnsh> \u001b[K[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS\n"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=qapp return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui app-back",
+    "output": "desktop ui app-back\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui navigation-status",
+    "output": "desktop ui navigation-status\nnavigation page=home return=home\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui home",
+    "output": "desktop ui home\ndesktop: ui home ready\nnsh> \u001b[K"
+  }
+]

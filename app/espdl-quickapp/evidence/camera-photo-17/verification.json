@@ -1,0 +1,14 @@
+{
+  "shutter_saved": 49039,
+  "shutter_idle": 23319,
+  "corner_page_pixel": [
+    63423,
+    63423
+  ],
+  "saved_is_green": true,
+  "idle_differs_from_saved": true,
+  "photo_line": [
+    "nsh> desktop ui camera-photo",
+    "desktop: ui camera-photo ready"
+  ]
+}

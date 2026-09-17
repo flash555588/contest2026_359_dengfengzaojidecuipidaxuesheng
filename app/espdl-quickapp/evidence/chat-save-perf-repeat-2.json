@@ -1,0 +1,30 @@
+[
+  {
+    "command": "desktop ui chat",
+    "output": "desktop ui chat\ndesktop: ui chat ready\nnsh> \u001b[K[I/usbh_hub] New high-speed device on Bus 0, Hub 1, Port 1 connected\n[I/usbh_core] New device found,idVendor:05a3,idProduct:9331,bcdDevice:0104\n[I/usbh_core] The device has 1 bNumConfigurations\n[I/usbh_core] The device has 4 interfaces\n[I/usbh_core] Enumeration success, start loading class driver\n[E/usbh_core] Do not support Class:0x0e, Subclass:0x01, Protocl:0x00 on interface 0\n[I/usbh_core] Loading uvc class driver on interface 1\n[uvc] attached 0: HD Web Camera, 6 MJPEG resolutions\n[E/usbh_core] Do not support Class:0x01, Subclass:0x01, Protocl:0x00 on interface 2\n[E/usbh_core] Do not support Class:0x01, Subclass:0x02, Protocl:0x00 on interface 3\n"
+  },
+  {
+    "command": "desktop ui qpk-save",
+    "output": "desktop ui qpk-save\ndesktop: ui qpk-save ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-draft-status",
+    "output": "desktop ui qpk-draft-status\nqpk-draft loaded=1 busy=0 revision=2 previewed=0 saved=2 error=0 preview_active=0 name=OX棋 package=ai.ox_game\nqpk-save stage=0 elapsed_ms=0\nflash-stack ops=350 caller=48418c6c worker=4ffada1c\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-up",
+    "output": "desktop ui chat-scroll-up\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-down",
+    "output": "desktop ui chat-scroll-down\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-up",
+    "output": "desktop ui chat-scroll-up\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-down",
+    "output": "desktop ui chat-scroll-down\nnsh> \u001b[K"
+  }
+]

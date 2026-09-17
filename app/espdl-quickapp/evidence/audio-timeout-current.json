@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop hardware-test audio",
+    "output": "desktop hardware-test audio\nhardware-test: before user-free=29398520 kernel-free=70400 kernel-largest=69464\n[music] PCM opened rate=48000 mono volume=10\n[CPU0] i2s_rx_channel_stop: RX channel of port 0 was previously stopped\n[CPU1] i2s_rx_channel_stop: RX channel of port 0 was previously stopped\n[CPU0] i2s_tx_channel_stop: TX channel of port 0 was previously stopped\nhardware-test: audio.tone code=0 bytes=-1 file=-1 rate=-1 duration=-1 value=-1 peak=0 control=0\n"
+  }
+]

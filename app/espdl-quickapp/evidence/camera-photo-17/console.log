@@ -1,0 +1,14 @@
+desktop camera
+desktop: camera diagnostic requested
+nsh> [Kdesktop ui camera-start
+camra start clicked=1
+desktop: ui camera-start ready
+nsh> desktop ui camera-photo
+camera capture accepted=1
+desktop: ui camera-photo ready
+nsh> desktop camera
+desktop: camera diagnostic requested
+nsh> [Kdesktop ui camer[qpk] started 相机 (com.openvela.camera.preview 1.0.0) with QuickJS
+-stop
+desktop: unknown UI page or desktop not running
+nsh> [K

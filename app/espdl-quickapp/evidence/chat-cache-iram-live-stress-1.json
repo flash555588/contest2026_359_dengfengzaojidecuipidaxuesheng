@@ -1,0 +1,181 @@
+{
+  "firmware_sha256": "4b90e80765c630db939d9d80031fa2a083f67d773851838f8718d299fbe21de4",
+  "rounds": [
+    {
+      "round": 1,
+      "storage_host_ms": 634,
+      "storage_pass": true,
+      "scroll_render_ms": 20,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=44732 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=17453 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=117 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 2,
+      "storage_host_ms": 618,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=44966 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=18434 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=122 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 3,
+      "storage_host_ms": 618,
+      "storage_pass": true,
+      "scroll_render_ms": 30,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=45213 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=19515 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=127 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 4,
+      "storage_host_ms": 630,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=45490 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=20523 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=134 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 5,
+      "storage_host_ms": 618,
+      "storage_pass": true,
+      "scroll_render_ms": 30,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=45725 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=21106 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=139 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 6,
+      "storage_host_ms": 616,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=45984 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=21939 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=144 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 7,
+      "storage_host_ms": 632,
+      "storage_pass": true,
+      "scroll_render_ms": 20,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=46233 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=22915 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=149 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 8,
+      "storage_host_ms": 632,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=46487 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=23864 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=155 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 9,
+      "storage_host_ms": 632,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=46749 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=24941 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=160 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 10,
+      "storage_host_ms": 621,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=46997 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=26051 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=165 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 11,
+      "storage_host_ms": 620,
+      "storage_pass": true,
+      "scroll_render_ms": 30,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=47256 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=27271 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=171 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 12,
+      "storage_host_ms": 618,
+      "storage_pass": true,
+      "scroll_render_ms": 50,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=47505 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=28299 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=176 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 13,
+      "storage_host_ms": 618,
+      "storage_pass": true,
+      "scroll_render_ms": 30,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=47744 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=29212 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=181 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 14,
+      "storage_host_ms": 631,
+      "storage_pass": true,
+      "scroll_render_ms": 40,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=47980 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=30279 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=186 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 15,
+      "storage_host_ms": 633,
+      "storage_pass": true,
+      "scroll_render_ms": 30,
+      "scroll_y": -240,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=48224 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=31295 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=192 refresh_max_ms=30 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 16,
+      "storage_host_ms": 621,
+      "storage_pass": true,
+      "scroll_render_ms": 60,
+      "scroll_y": 0,
+      "status": [
+        "chat loaded=1 configured=1 phase=3 turns=1 storage=0 revision=48481 last_state=0 last_error=0 editor=0",
+        "chat-stream text_bytes=222 thinking_bytes=32314 thinking_tokens=110 tokens_known=1 rounds=4 rebuilds=2 updates=197 refresh_max_ms=30 draft_bytes=0"
+      ]
+    }
+  ]
+}

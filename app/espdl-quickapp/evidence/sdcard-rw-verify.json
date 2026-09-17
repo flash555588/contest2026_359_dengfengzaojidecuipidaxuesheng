@@ -1,0 +1,38 @@
+[
+  {
+    "command": "ls /dev",
+    "output": "ls /dev\n/dev:\n audio/\n console\n fb0\n input0\n mmcsd0\n null\n pwm0\n pwm1\n pwm2\n pwm3\n random\n smart0\n spi3\n ttyACM0\n ttyS0\n urandom\n uvc0\n uvc1\n uvc2\n uvc3\n uvcctl\n zero\nnsh> \u001b[K"
+  },
+  {
+    "command": "mount",
+    "output": "mount\n  /data type smartfs\n  /proc type procfs\n  /sdcard type vfat\n  /tmp type tmpfs\nnsh> \u001b[K"
+  },
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        678        3418 /data\n     0          0          0           0 /proc\n 16384    1927176          6     1927170 /sdcard\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls -l /sdcard",
+    "output": "ls -l /sdcard\n/sdcard:\n drw-rw-rw-           0 System Volume Information/\nnsh> \u001b[K"
+  },
+  {
+    "command": "echo SD_CARD_RW_OK_20260917 > /sdcard/.codex_sd_test.txt",
+    "output": "echo SD_CARD_RW_OK_20260917 > /sdcard/.codex_sd_test.txt\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /sdcard/.codex_sd_test.txt",
+    "output": "cat /sdcard/.codex_sd_test.txt\nSD_CARD_RW_OK_20260917\nnsh> \u001b[K"
+  },
+  {
+    "command": "rm /sdcard/.codex_sd_test.txt",
+    "output": "rm /sdcard/.codex_sd_test.txt\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls -l /sdcard",
+    "output": "ls -l /sdcard\n/sdcard:\n drw-rw-rw-           0 System Volume Information/\nnsh> \u001b[K"
+  },
+  {
+    "command": "ifconfig",
+    "output": "ifconfig\neth0\tLink encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500\n\tinet addr:192.168.0.102 DRaddr:192.168.0.1 Mask:255.255.255.0\n\nnsh> \u001b[K"
+  }
+]

@@ -1,0 +1,26 @@
+desktop ui current
+desktop: ui current ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":220,"y":0,"w":804,"h":600,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"label","x":246,"y":28,"w":430,"h":39,"scroll":true,"text":"写下你的想法"},
+{"id":3,"parent":1,"type":"container","x":792,"y":23,"w":88,"h":46,"scroll":false,"text":""},
+{"id":4,"parent":3,"type":"label","x":802,"y":35,"w":68,"h":22,"scroll":true,"text":"收起"},
+{"id":5,"parent":1,"type":"container","x":894,"y":23,"w":102,"h":46,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"label","x":904,"y":35,"w":82,"h":22,"scroll":true,"text":"发送"},
+{"id":7,"parent":1,"type":"input","x":246,"y":92,"w":752,"h":148,"scroll":true,"text":"输入问题，也可以换行补充细节"},
+{"id":8,"parent":1,"type":"label","x":248,"y":254,"w":556,"h":22,"scroll":true,"text":"中文 / English · 连续拼音选词 · 空格确认"},
+{"id":9,"parent":1,"type":"label","x":808,"y":254,"w":190,"h":22,"scroll":true,"text":"0 / 512"},
+{"id":10,"parent":1,"type":"keyboard","x":236,"y":340,"w":772,"h":244,"scroll":true,"text":""},
+{"id":11,"parent":1,"type":"container","x":236,"y":292,"w":772,"h":44,"scroll":false,"text":""},
+{"id":12,"parent":11,"type":"button","x":238,"y":294,"w":44,"h":40,"scroll":false,"text":""},
+{"id":13,"parent":12,"type":"label","x":240,"y":300,"w":40,"h":28,"scroll":true,"text":"中"},
+{"id":14,"parent":11,"type":"label","x":288,"y":304,"w":140,"h":28,"scroll":true,"text":"拼音"},
+{"id":15,"parent":11,"type":"button","x":934,"y":294,"w":34,"h":40,"scroll":false,"text":""},
+{"id":16,"parent":15,"type":"label","x":936,"y":301,"w":30,"h":27,"scroll":true,"text":""},
+{"id":17,"parent":11,"type":"button","x":970,"y":294,"w":34,"h":40,"scroll":false,"text":""},
+{"id":18,"parent":17,"type":"label","x":972,"y":301,"w":30,"h":27,"scroll":true,"text":""}
+]
+UI_LAYOUT_END
+nsh> 

@@ -1,0 +1,14 @@
+[
+  {
+    "command": "cat /proc/fs/smartfs/smart0/status",
+    "output": "cat /proc/fs/smartfs/smart0/status\nFormat version:    1\nName Len:          32\nTotal Sectors:     4096\nSector Size:       1024\nFormat Sector:     216\nDir Sector:        498\nFree Sectors:      692\nReleased Sectors:  3042\nUnused Sectors:    0\nBlock Erases:      455\nSectors Per Block: 4\nSector Utilization:100%\nUneven Wear Count: 0\nnsh> \u001b[K"
+  },
+  {
+    "command": "dd if=/dev/zero of=/data/c5.bin bs=512 count=8",
+    "output": "dd if=/dev/zero of=/data/c5.bin bs=512 count=8\n[sPfoensh: dd: outfd open failed: No space left on device\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /proc/fs/smartfs/smart0/status",
+    "output": "cat /proc/fs/smartfs/smart0/status\nFormat version:    1\nName Len:          32\nTotal Sectors:     4096\nSector Size:       1024\nFormat Sector:     216\nDir Sector:        498\nFree Sectors:      692\nReleased Sectors:  3042\nUnused Sectors:    0\nBlock Erases:      455\nSectors Per Block: 4\nSector Utilization:100%\nUneven Wear Count: 0\nnsh> \u001b[K"
+  }
+]

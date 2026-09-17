@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=1 configured=1 phase=3 turns=2 storage=0 revision=4106 last_state=0 last_error=0 editor=0\nchat-stream text_bytes=1639 thinking_bytes=13733 thinking_tokens=0 tokens_known=0 rounds=1 rebuilds=3 updates=87 refresh_max_ms=340 draft_bytes=0\nnsh> \u001b[K"
+  }
+]

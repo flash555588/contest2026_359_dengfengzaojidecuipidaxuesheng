@@ -1,0 +1,10 @@
+[
+  {
+    "command": "cd /data/qpk/.data/@2pcom.openvela.recorder",
+    "output": "cd /data/qpk/.data/@2pcom.openvela.recorder\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls",
+    "output": ""
+  }
+]

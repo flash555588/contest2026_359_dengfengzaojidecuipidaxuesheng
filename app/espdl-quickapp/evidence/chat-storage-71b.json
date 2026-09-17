@@ -1,0 +1,14 @@
+[
+  {
+    "command": "ls -l /data/config/chat",
+    "output": "ls -l /data/config/chat\n/data/config/chat:\n -rwS--S---         160 history.tmp\n -rwS--S---           0 history.json\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=1 configured=1 phase=1 turns=0 storage=-22 revision=3 last_state=-1 last_error=0 editor=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "help",
+    "output": "help\nhelp usage:  help [-v] [<cmd>]\n\n    .            cmp          fdinfo       mkdir        rm           umount       \n    [            dirname      free         mkrd         rmdir        unset        \n    ?            dd           memdump      mksmartfs    set          uptime       \n    alias        df           help         mount        sleep        usleep       \n    unalias      dmesg        hexdump      mv           source       watch        \n    arp          echo         ifconfig     nslookup     test         wget         \n    basename     env          ifdown       pidof        top          xd           \n    break        exec         ifup         printf       time         wait         \n    cat          exit         kill         ps           true         \n    cd           expr         pkill        pwd          truncate     \n    cp           false        ls           reboot       uname        \n\nBuiltin Apps:\n    c6ble        desktop      espclaw      nsh          sh           \n    c6probe      dumpstack    ha_panel     nxcamera     \nnsh> \u001b[K"
+  }
+]
