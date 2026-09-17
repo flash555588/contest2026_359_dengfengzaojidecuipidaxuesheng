@@ -28,11 +28,14 @@
 #endif
 
 #include "qpk_runtime.h"
+#include "qpk_security.h"
 #include "qpk_storage.h"
 #include "qpk_limits.h"
 #include "glass_qpk_builder.h"
 #include "glass_portal.h"
 #include "glass_dashboard.h"
+#include "pet_engine.h"
+#include "pet_lvgl.h"
 
 #define QPK_DIR       CONFIG_SYSTEM_DESKTOP_QPK_DIR
 #define NAME_MAXLEN   48
@@ -349,6 +352,7 @@ static bool qpk_probe(const char *dirpath, struct qpk_entry_s *entry)
   cJSON_Delete(manifest);
   return entry->name[0] != '\0' &&
          qpk_path_component_valid(entry->package) &&
+         !qpk_reserved_package(entry->package) &&
          (entry->entry[0] == '\0' ||
           qpk_path_component_valid(entry->entry));
 }
@@ -1142,6 +1146,26 @@ static void launch_builtin_recorder_qapp(lv_event_t *e)
   if (!card) { show_toast("页面内存不足"); return; }
   int ret = qpk_runtime_launch(card, "录音机", "com.openvela.recorder", "1.0.0",
                                "builtin:/recorder/app.js", source, length,
+                               zh_font, show_toast, qpk_show_dialog);
+  if (!ret) qapp_page_commit(card);
+  else lv_obj_delete(lv_obj_get_parent(card));
+}
+
+static void launch_builtin_dafeiyu_qapp(lv_event_t *e)
+{
+  LV_UNUSED(e);
+  extern const char *dafeiyu_get_app_js(unsigned int *len);
+  unsigned int length;
+  const char *source = dafeiyu_get_app_js(&length);
+  lv_obj_t *card = qapp_page_prepare("大肥鱼桌宠");
+  if (!card || source == NULL || length == 0)
+    {
+      show_toast("页面内存不足");
+      return;
+    }
+
+  int ret = qpk_runtime_launch(card, "大肥鱼桌宠", "org.flash.dafeiyu", "1.0.1",
+                               "builtin:/dafeiyu/app.js", source, length,
                                zh_font, show_toast, qpk_show_dialog);
   if (!ret) qapp_page_commit(card);
   else lv_obj_delete(lv_obj_get_parent(card));

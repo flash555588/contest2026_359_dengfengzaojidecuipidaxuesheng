@@ -33,11 +33,14 @@
 #include <quickjs.h>
 
 #include "qpk_runtime.h"
+#include "qpk_security.h"
+#include "qpk_error_text.h"
 #include "glass_ime.h"
 #include "qpk_storage.h"
 #include "qpk_limits.h"
 #include "glass_portal.h"
 #include "qpk_homeassistant.h"
+#include "qpk_pet.h"
 #include "glass_dashboard.h"
 
 #define QPK_STACK_LIMIT   (16 * 1024)
@@ -170,6 +173,8 @@ struct qpk_runtime_s
   lv_obj_t *root;
   lv_obj_t **widgets;
   uint8_t *widget_types;
+  uint64_t *widget_generations;
+  uint64_t widget_serial;
   int widget_capacity;
   int widget_hint;
   struct qpk_event_s *events;
@@ -185,6 +190,7 @@ struct qpk_runtime_s
   qpk_message_cb_t dialog_cb;
   char name[48];
   char package[48];
+  bool ha_config_access;
   char version[24];
   char error[160];
   uint64_t deadline_ms;
@@ -528,20 +534,17 @@ static void qpk_deadline_end(void)
 static void qpk_show_error(const char *prefix)
 {
   JSValue exception;
-  JSValue stack;
   const char *message;
   const char *trace;
 
   exception = JS_GetException(g_qpk.context);
-  message = JS_ToCString(g_qpk.context, exception);
+  message = qpk_exception_text(g_qpk.context, exception, "message");
   snprintf(g_qpk.error, sizeof(g_qpk.error), "%s%s%s",
            prefix ? prefix : "JavaScript 错误",
            message ? ": " : "", message ? message : "未知异常");
   strlcpy(g_qpk_last_error, g_qpk.error, sizeof(g_qpk_last_error));
-  stack = JS_GetPropertyStr(g_qpk.context, exception, "stack");
-  trace = JS_IsUndefined(stack) ? NULL :
-          JS_ToCString(g_qpk.context, stack);
-  printf("[qpk] %s\n", trace ? trace : g_qpk.error);
+  trace = qpk_exception_text(g_qpk.context, exception, "stack");
+  printf("[qpk] %.512s\n", trace ? trace : g_qpk.error);
   if (g_qpk.toast_cb != NULL)
     {
       g_qpk.toast_cb(g_qpk.error);
@@ -552,13 +555,13 @@ static void qpk_show_error(const char *prefix)
       JS_FreeCString(g_qpk.context, trace);
     }
 
-  JS_FreeValue(g_qpk.context, stack);
   if (message != NULL)
     {
       JS_FreeCString(g_qpk.context, message);
     }
 
   JS_FreeValue(g_qpk.context, exception);
+  JS_FreeValue(g_qpk.context, JS_GetException(g_qpk.context));
 }
 
 static int qpk_run_jobs(void)
@@ -661,24 +664,40 @@ static void qpk_widget_deleted(lv_event_t *event)
 
 static int qpk_add_widget(lv_obj_t *object, enum qpk_widget_type_e type)
 {
+  if (g_qpk.widget_serial == UINT64_MAX) return 0;
   int i = g_qpk.widget_hint;
   while (i < g_qpk.widget_capacity && g_qpk.widgets[i]) i++;
   if (i == g_qpk.widget_capacity) {
-    if (i > INT_MAX / 2 || (size_t)i > SIZE_MAX / (2 * sizeof(*g_qpk.widgets))) return 0;
+    if (i > INT_MAX / 2 || (size_t)i > SIZE_MAX / (2 * sizeof(*g_qpk.widgets)) ||
+        (size_t)i > SIZE_MAX / (2 * sizeof(*g_qpk.widget_generations))) return 0;
     int capacity = i ? i * 2 : 32;
     lv_obj_t **widgets = calloc(capacity, sizeof(*widgets));
     uint8_t *types = calloc(capacity, sizeof(*types));
-    if (!widgets || !types) { free(widgets); free(types); return 0; }
+    uint64_t *generations = calloc(capacity, sizeof(*generations));
+    if (!widgets || !types || !generations) {
+      free(widgets); free(types); free(generations); return 0;
+    }
     if (i) {
       memcpy(widgets, g_qpk.widgets, i * sizeof(*widgets));
       memcpy(types, g_qpk.widget_types, i * sizeof(*types));
+      memcpy(generations, g_qpk.widget_generations, i * sizeof(*generations));
     }
     free(g_qpk.widgets); free(g_qpk.widget_types);
+    free(g_qpk.widget_generations);
     g_qpk.widgets = widgets; g_qpk.widget_types = types; g_qpk.widget_capacity = capacity;
+    g_qpk.widget_generations = generations;
   }
   if (!lv_obj_add_event_cb(object, qpk_widget_deleted, LV_EVENT_DELETE, (void *)(uintptr_t)(i + 1))) return 0;
   g_qpk.widgets[i] = object; g_qpk.widget_types[i] = type; g_qpk.widget_hint = i + 1;
+  g_qpk.widget_generations[i] = ++g_qpk.widget_serial;
   return i + 1;
+}
+
+static bool qpk_widget_current(int handle, uint64_t generation)
+{
+  return handle > 0 && handle <= g_qpk.widget_capacity &&
+         g_qpk.widgets[handle - 1] != NULL &&
+         g_qpk.widget_generations[handle - 1] == generation;
 }
 
 static int qpk_arg_int(JSContext *context, int argc,
@@ -1170,6 +1189,7 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
     return JS_ThrowRangeError(context, "invalid widget handle");
   if (argc < 2 || !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(context, "style must be an object");
+  uint64_t generation = g_qpk.widget_generations[handle - 1];
   for (unsigned i = 0; i < 9; i++)
     {
       JSValue value = JS_GetPropertyStr(context, argv[1], names[i]);
@@ -1181,6 +1201,8 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
       if (present[i] && (values[i] < 0 || values[i] > limits[i]))
         return JS_ThrowRangeError(context, "invalid style %s", names[i]);
     }
+  if (!qpk_widget_current(handle, generation))
+    return JS_ThrowRangeError(context, "widget changed during style conversion");
   lv_obj_t *obj = g_qpk.widgets[handle - 1];
   lv_obj_t *label = g_qpk.widget_types[handle - 1] == QPK_WIDGET_LABEL ? obj :
     g_qpk.widget_types[handle - 1] == QPK_WIDGET_BUTTON ? lv_obj_get_child(obj, 0) : NULL;
@@ -1258,9 +1280,13 @@ static JSValue js_ui_set_pos(JSContext *context, JSValueConst this_value,
       return JS_ThrowRangeError(context, "invalid widget handle");
     }
 
-  lv_obj_set_pos(g_qpk.widgets[handle - 1],
-                 qpk_arg_int(context, argc, argv, 1, 0),
-                 qpk_arg_int(context, argc, argv, 2, 0));
+  uint64_t generation = g_qpk.widget_generations[handle - 1];
+  int32_t x = 0, y = 0;
+  if ((argc > 1 && JS_ToInt32(context, &x, argv[1]) < 0) ||
+      (argc > 2 && JS_ToInt32(context, &y, argv[2]) < 0)) return JS_EXCEPTION;
+  if (!qpk_widget_current(handle, generation))
+    return JS_ThrowRangeError(context, "widget changed during position conversion");
+  lv_obj_set_pos(g_qpk.widgets[handle - 1], x, y);
   return JS_UNDEFINED;
 }
 
@@ -1277,9 +1303,13 @@ static JSValue js_ui_set_size(JSContext *context, JSValueConst this_value,
       return JS_ThrowRangeError(context, "invalid widget handle");
     }
 
-  lv_obj_set_size(g_qpk.widgets[handle - 1],
-                  qpk_arg_int(context, argc, argv, 1, 0),
-                  qpk_arg_int(context, argc, argv, 2, 0));
+  uint64_t generation = g_qpk.widget_generations[handle - 1];
+  int32_t width = 0, height = 0;
+  if ((argc > 1 && JS_ToInt32(context, &width, argv[1]) < 0) ||
+      (argc > 2 && JS_ToInt32(context, &height, argv[2]) < 0)) return JS_EXCEPTION;
+  if (!qpk_widget_current(handle, generation))
+    return JS_ThrowRangeError(context, "widget changed during size conversion");
+  lv_obj_set_size(g_qpk.widgets[handle - 1], width, height);
   return JS_UNDEFINED;
 }
 
@@ -1771,7 +1801,7 @@ static JSValue js_storage_get(JSContext *context, JSValueConst this_value,
     }
   ret = qpk_storage_read(QPK_STORAGE_ROOT, g_qpk.package, key,
                          buffer, QPK_STORAGE_VALUE_MAX + 1, &length);
-  if(!strcmp(g_qpk.package,"com.openvela.homeassistant") &&
+  if(g_qpk.ha_config_access &&
      (!strcmp(key,"ha_url")||!strcmp(key,"ha_token"))) {
     ret=portal_ha_value(key,buffer,QPK_STORAGE_VALUE_MAX+1);
     if(!ret) length=strlen(buffer);
@@ -1803,7 +1833,7 @@ static JSValue js_storage_set(JSContext *context, JSValueConst this_value,
       return JS_EXCEPTION;
     }
   ret = qpk_storage_write(QPK_STORAGE_ROOT, g_qpk.package, key, value, length);
-  if(!ret&&!strcmp(g_qpk.package,"com.openvela.homeassistant") &&
+  if(!ret&&g_qpk.ha_config_access &&
      (!strcmp(key,"ha_url")||!strcmp(key,"ha_token"))) ret=portal_ha_set(key,value);
   JS_FreeCString(context, key);
   JS_FreeCString(context, value);
@@ -3530,6 +3560,7 @@ static void qpk_install_api(JSContext *context)
     JS_SetPropertyStr(context, homeassistant, "poll",
                       JS_NewCFunction(context, js_ha_poll, "poll", 0));
     JS_SetPropertyStr(context, system, "homeAssistant", homeassistant);
+    qpk_pet_bind(context, system);
     JS_SetPropertyStr(context, global, "system", system);
   }
 
@@ -3574,6 +3605,9 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
       return -EINVAL;
     }
 
+  if (!qpk_launch_identity_valid(package, filename, sizeof(g_qpk.package)))
+    return -EACCES;
+
   qpk_runtime_stop();
   g_qpk_last_error[0] = 0;
   memset(&g_qpk, 0, sizeof(g_qpk));
@@ -3604,6 +3638,7 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   g_qpk.card_color = background;
   strlcpy(g_qpk.name, name ? name : "Quick App", sizeof(g_qpk.name));
   strlcpy(g_qpk.package, package ? package : "", sizeof(g_qpk.package));
+  g_qpk.ha_config_access = qpk_builtin_ha_origin(package, filename);
   strlcpy(g_qpk.version, version ? version : "", sizeof(g_qpk.version));
 
   g_qpk.runtime = JS_NewRuntime();
@@ -3729,6 +3764,7 @@ void qpk_runtime_stop(void)
   while (g_qpk.events) { struct qpk_event_s *next = g_qpk.events->next; free(g_qpk.events); g_qpk.events = next; }
   while (g_qpk.timers) { struct qpk_timer_s *next = g_qpk.timers->next; free(g_qpk.timers); g_qpk.timers = next; }
   free(g_qpk.widgets); free(g_qpk.widget_types);
+  free(g_qpk.widget_generations);
   memset(&g_qpk, 0, sizeof(g_qpk));
 }
 

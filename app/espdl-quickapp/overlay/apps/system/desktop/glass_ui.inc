@@ -1114,11 +1114,11 @@ static void glass_apps_render(void)
   if (card == NULL) return;
   g_desktop.apps_page = true;
   lv_obj_t *grid = glass_box(card, 20, 80, 880, 336, theme_card(), 0);
-  const char *names[] = {"ESPClaw AI 助手", "相机", "录音机", "智能家居", "OuO", "2048", "你好快应用", "ESP-DL 离线识别"};
+  const char *names[] = {"ESPClaw AI 助手", "相机", "录音机", "智能家居", "OuO", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
   const char *symbols[] = {LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_EYE_OPEN,
-                           LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN};
+                           LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, LV_SYMBOL_PLAY};
   lv_event_cb_t callbacks[] = {glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, launch_builtin_homeassistant_qapp,
-    launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp};
+    launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp, launch_builtin_dafeiyu_qapp};
   const int builtin_count=sizeof(names)/sizeof(names[0]);
   const int total = builtin_count + g_desktop.nqpk;
   const int pages = (total + 8) / 9;
@@ -1449,6 +1449,37 @@ static void glass_edge_back_create(void)
     }
 }
 
+static int pet_fill_weather(char *buf, size_t size)
+{
+  struct glass_weather_snapshot weather;
+
+  if (buf == NULL || size == 0)
+    {
+      return -1;
+    }
+
+  glass_weather_get(&weather);
+  if (weather.valid && weather.state == WEATHER_READY)
+    {
+      snprintf(buf, size, "%s今天%d°，%s",
+               weather.data.location[0] ? weather.data.location : "这里",
+               weather.data.temperature,
+               weather.data.condition[0] ? weather.data.condition : "不明");
+      return 0;
+    }
+
+  if (weather.state == WEATHER_FETCHING ||
+      weather.state == WEATHER_WAIT_NET ||
+      weather.state == WEATHER_WAIT_TIME)
+    {
+      snprintf(buf, size, "天气还在路上，先摸会鱼");
+      return 0;
+    }
+
+  snprintf(buf, size, "今天适合摸鱼，别问温度。");
+  return 0;
+}
+
 static void desktop_ui_create(void)
 {
   size_t size = (size_t)(g_desktop_font_end - g_desktop_font_start);
@@ -1494,4 +1525,11 @@ static void desktop_ui_create(void)
   glass_rebuild();
   glass_edge_back_create();
   g_glass.timer = lv_timer_create(glass_update, 1000, NULL);
+  pet_engine_init(lv_obj_get_width(g_desktop.screen),
+                  lv_obj_get_height(g_desktop.screen));
+  pet_engine_set_weather_cb(pet_fill_weather);
+  if (pet_lvgl_create(g_desktop.screen, zh_font(16)) < 0)
+    {
+      printf("desktop: pet overlay skipped\n");
+    }
 }

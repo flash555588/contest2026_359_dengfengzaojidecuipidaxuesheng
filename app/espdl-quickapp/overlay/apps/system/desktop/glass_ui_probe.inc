@@ -351,6 +351,8 @@ static void desktop_ui_probe_service(void)
         qpk_show_dialog("提示\n中文内容应清晰显示，正文与确认按钮保持独立间距。\n较长的内容可以在正文区域滚动查看。");
       else if (!strcmp(command, "2048")) launch_builtin_2048_qapp(NULL);
       else if (!strcmp(command, "ouo")) launch_builtin_ouo_qapp(NULL);
+      else if (!strcmp(command, "dafeiyu") || !strcmp(command, "pet"))
+        launch_builtin_dafeiyu_qapp(NULL);
       else if (!strcmp(command, "recorder")) launch_builtin_recorder_qapp(NULL);
       else if (!strcmp(command, "ha")) launch_builtin_homeassistant_qapp(NULL);
       else if (!strcmp(command, "ha-settings") || !strcmp(command, "ha-address") ||
@@ -387,7 +389,7 @@ static int desktop_ui_probe_request(const char *command)
     "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",
-    "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder"};
+    "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet"};
   /* click:<label> presses one visible control by its label, which is how the
    * file manager's list rows are verified. */
   bool found = (!strncmp(command, "click:", 6) && command[6] != '\0') ||

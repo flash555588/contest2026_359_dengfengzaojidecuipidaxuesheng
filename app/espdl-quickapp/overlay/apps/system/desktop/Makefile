@@ -45,6 +45,7 @@ CSRCS += glass_music_parse.c glass_music_http.c glass_music_service.c glass_musi
 CSRCS += glass_pinyin_resource.c
 CSRCS += glass_portal_config.c glass_portal_files.c glass_portal_http.c glass_portal_resource.c
 CSRCS += glass_chat_service.c glass_chat_store.c
+CSRCS += pet_engine.c qpk_pet.c pet_lvgl.c dafeiyu_resource.c
 CXXSRCS += glass_pinyin.cpp $(wildcard music_vendor/googlepinyin/src/*.cpp)
 CXXEXT = .cpp
 CXXFLAGS += -std=gnu++11

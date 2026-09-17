@@ -9,6 +9,11 @@
 同一固件中的 ESPClaw 触屏聊天、服务配置及共用 HTTPS 说明见 [CHAT.md](CHAT.md)。
 内置录音机、GPIO／I²C／SPI／UART／PWM／舵机／音频／BLE 快应用接口与 AI 参考见 [HARDWARE.md](HARDWARE.md)。
 
+大肥鱼桌宠 1.0.1 的原生浮层、`system.pet` API 和快应用源码已接入当前 overlay，
+说明与许可证见 [dafeiyu/README.md](overlay/apps/system/desktop/dafeiyu/README.md)。
+桌宠仅通过宿主 C/JS 测试；本次尚未构建新固件，也未烧录实板。下文固件和实板证据
+均属于接入桌宠之前的版本。
+
 面向 ESP32-P4 Function-EV-Board 的内置快应用，使用 USB MJPEG 相机和本地 ESP-DL 模型。仅提供两个模式：
 
 - **人脸跟随**：连续采集、MSR/MNP 两阶段人脸检测、跨帧几何关联、目标框和中心偏移提示。短暂丢失时不切到远处另一张脸，连续三次丢失后重新选取目标。当前是画面内跟踪；没有人脸身份注册/比对，也没有连接云台或舵机。
