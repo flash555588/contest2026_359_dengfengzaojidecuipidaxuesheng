@@ -1,0 +1,6 @@
+[
+  {
+    "command": "help",
+    "output": "help\nhelp usage:  help [-v] [<cmd>]\n\n    .            cmp          fdinfo       mkdir        rm           umount       \n    [            dirname      free         mkrd         rmdir        unset        \n    ?            dd           memdump      mksmartfs    set          uptime       \n    alias        df           help         mount        sleep        usleep       \n    unalias      dmesg        hexdump      mv           source       watch        \n    arp          echo         ifconfig     nslookup     test         wget         \n    basename     env          ifdown       pidof        top          xd           \n    break        exec         ifup         printf       time         wait         \n    cat          exit         kill         ps           true         \n    cd           expr         pkill        pwd          truncate     \n    cp           false        ls           reboot       uname        \n\nBuiltin Apps:\n    c6ble        desktop      espclaw      nsh          sh           \n    c6probe      dumpstack    ha_panel     nxcamera     \nnsh> \u001b[K"
+  }
+]

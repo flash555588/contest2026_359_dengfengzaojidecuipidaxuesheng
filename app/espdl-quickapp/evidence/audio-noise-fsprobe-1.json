@@ -1,0 +1,10 @@
+[
+  {
+    "command": "dd if=/dev/zero of=/data/probe.bin bs=1024 count=64",
+    "output": "dd if=/dev/zero of=/data/probe.bin bs=1024 count=64\nnsh: dd: outfd open failed: No space left on device\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /data/probe.bin",
+    "output": "ls /data/probe.bin\nnsh: ls: stat failed: No such file or directory\nnsh> \u001b[K"
+  }
+]

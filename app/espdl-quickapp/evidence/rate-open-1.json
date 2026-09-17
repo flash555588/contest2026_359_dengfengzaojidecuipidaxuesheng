@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui recorder",
+    "output": "desktop ui recorder\n[qpk] started 录音机 (com.openvela.recorder 1.0.0) with QuickJS\ndesktop: ui recorder ready\nnsh> \u001b[K"
+  }
+]

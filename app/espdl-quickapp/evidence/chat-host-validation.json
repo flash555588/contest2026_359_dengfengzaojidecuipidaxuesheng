@@ -1,0 +1,32 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "backend": "controllable host fixture; no external AI requests",
+  "tests": [
+    {
+      "case": "run",
+      "passed": true,
+      "output": "PASS: live content/reasoning/token updates arrive before completion, and a disconnect preserves partial output\nPASS: full long reply archive survives reload and UTF-8 pagination reconstructs all bytes\nPASS: UTF-8, configuration gate, multi-turn roles, no duplicate retry, cancellation, late-reply isolation, clear, history bounds, alternating save failure/recovery"
+    },
+    {
+      "case": "reload",
+      "passed": true,
+      "output": "PASS: conversation survives process restart"
+    },
+    {
+      "case": "interrupt",
+      "passed": true,
+      "output": "Wrote interrupted-request fixture"
+    },
+    {
+      "case": "recover",
+      "passed": true,
+      "output": "PASS: interrupted request is retryable after reboot"
+    },
+    {
+      "case": "torn_save_recovery",
+      "passed": true,
+      "output": "PASS: actual zero-byte/interrupted-staging recovery, partial writes, committed clear, damaged-file preservation and recovery without restart"
+    }
+  ]
+}

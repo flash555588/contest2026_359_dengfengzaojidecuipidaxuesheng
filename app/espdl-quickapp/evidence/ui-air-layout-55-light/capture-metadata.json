@@ -1,0 +1,10 @@
+{
+  "firmware_sha256": "2359195f384b55279cb1048645ef2cde182d214bcd35632fd1a30c10cb9c3ea1",
+  "theme": "light",
+  "requested_pages": [
+    "home",
+    "weather"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

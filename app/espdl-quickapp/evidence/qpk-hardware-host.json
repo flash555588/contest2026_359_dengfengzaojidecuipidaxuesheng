@@ -1,0 +1,13 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "quickjs": "production firmware sources",
+  "physical_io": "mocked",
+  "result": "PASS: real QuickJS API registration, async result/error propagation, audio stop/cancel, GPIO during recording, consumed results, repeated exit with active/queued jobs and synchronous diagnostic cleanup",
+  "sources": {
+    "qpk_hardware.h": "1de3a420394423b27855f2ba4ee9d2823c2e79aed0cbee506fbc3118bbb51657",
+    "qpk_hardware.c": "f79f9e7b1176a3feaa9f202693126b87adedfdef2ef12685c854fbb9ce2d6fe2",
+    "qpk_hardware_js.inc": "9f4d58918a2768e232eeaa5b9413bb876b52578f0f7eede26f12d7e381c656e5",
+    "recorder/app.js": "88d04da5c5ad5622df13418d5f056fbeb35e6628195018cd3a60441dfdf5ed51"
+  }
+}

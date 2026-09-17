@@ -1,0 +1,6 @@
+{
+  "service_tracker_sanitizers": true,
+  "mjpeg_four_scales_sanitizers": true,
+  "sha256_vectors_and_models": 16,
+  "hardware_tested": false
+}

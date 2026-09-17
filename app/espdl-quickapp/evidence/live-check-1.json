@@ -1,0 +1,6 @@
+[
+  {
+    "command": "ls /data/qpk/.data",
+    "output": "ls /data/qpk/.data\n/data/qpk/.data:\n @2pcom.example.hello/\n @2pcom.example.game2048/\n @2pouo/\n @2porg.flash.pomodoro/\n @2porg.flash.pomodoro.flip/\n @2ppreview.ox_game/\n @2ppreview.gomoku/\n @2ppreview.countdown/\n @2pcom.openvela.recorder/\nnsh> \u001b[K"
+  }
+]

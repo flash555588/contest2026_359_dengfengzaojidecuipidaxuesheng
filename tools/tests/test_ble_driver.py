@@ -1,4 +1,5 @@
 """Run the real bt_driver adapter against a transport double, without radio IO."""
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -102,8 +103,11 @@ int main(void) {
  return 0;
 }
 ''')
+        sanitizers = [] if os.environ.get('C6_TEST_NO_SANITIZER') else [
+            '-fsanitize=address,undefined'
+        ]
         subprocess.run(['cc', '-std=gnu11', '-Wall', '-Wextra', '-Werror',
-                        '-pthread', '-fsanitize=address,undefined',
+                        '-pthread', *sanitizers,
                         '-I', str(root), '-I', str(TOOLS / 'c6'),
                         str(TOOLS / 'c6/ble_driver.c'), str(test),
                         '-o', str(root / 'test')], check=True)

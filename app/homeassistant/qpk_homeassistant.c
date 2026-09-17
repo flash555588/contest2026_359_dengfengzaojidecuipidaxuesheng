@@ -131,43 +131,32 @@ static bool ha_component_valid(const char *text, bool dot)
 static int ha_parse_url(const char *url, char *host, size_t host_size,
                         int *port)
 {
-  const char *start;
-  const char *end;
-  const char *colon;
-  size_t length;
+  (void)host;
+  (void)host_size;
+  (void)port;
 
-  if (url == NULL || strncmp(url, "http://", 7) != 0)
-    {
-      return -EPROTONOSUPPORT;
-    }
-
-  start = url + 7;
-  end = strchr(start, '/');
-  if (end == NULL)
-    {
-      end = start + strlen(start);
-    }
-
-  colon = memchr(start, ':', end - start);
-  length = (colon == NULL ? end : colon) - start;
-  if (length == 0 || length >= host_size)
+  if (url == NULL)
     {
       return -EINVAL;
     }
 
-  memcpy(host, start, length);
-  host[length] = '\0';
-  for (length = 0; host[length] != '\0'; length++)
+  /* A Home Assistant long-lived token must never cross a plaintext
+   * connection.  This target does not yet provision a trust store or TLS
+   * transport, so fail closed instead of pretending that a raw socket is
+   * HTTPS-capable.
+   */
+
+  if (strncmp(url, "http://", 7) == 0)
     {
-      if (!isalnum((unsigned char)host[length]) && host[length] != '.' &&
-          host[length] != '-' && host[length] != '_')
-        {
-          return -EINVAL;
-        }
+      return -EACCES;
     }
 
-  *port = colon == NULL ? 8123 : atoi(colon + 1);
-  return *port > 0 && *port <= 65535 ? OK : -EINVAL;
+  if (strncmp(url, "https://", 8) == 0)
+    {
+      return -EOPNOTSUPP;
+    }
+
+  return -EPROTONOSUPPORT;
 }
 
 static int ha_send_all(int fd, const char *data, size_t length)

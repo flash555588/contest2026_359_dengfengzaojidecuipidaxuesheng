@@ -1,0 +1,8 @@
+Public Mozilla root certificates distributed by certifi, copied from the local
+Python certifi installation on 2026-09-16. This file contains public trust roots,
+not application credentials. See chat-root-ca-LICENSE (Mozilla Public License
+2.0) and the source annotations in chat_root_ca.pem.
+
+Upstream: https://github.com/certifi/python-certifi
+Update chat_root_ca.pem and rebuild with diagnostics/prepare_chat.py when the
+trusted-root policy changes. TLS checks the certificate chain and hostname.

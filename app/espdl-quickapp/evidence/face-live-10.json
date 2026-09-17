@@ -1,0 +1,26 @@
+[
+  {
+    "command": "desktop ui espdl",
+    "output": "desktop ui espdl\n[qpk] started ESP-DL 离线识别 (org.openvela.espdl 0.1.0) with QuickJS\ndesktop: ui espdl ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-start",
+    "output": "desktop ui espdl-start\nespdl start clicked=1\ndesktop: ui espdl-start ready\nnsh> \u001b[K[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1\n"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=2 mode=1 busy=1 stage=1 error=0 frame=22 count=0 ms=160 track=0 target=-1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=2 mode=1 busy=1 stage=1 error=0 frame=47 count=0 ms=180 track=0 target=-1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-stop",
+    "output": "desktop ui espdl-stop\nespdl stop clicked=1\ndesktop: ui espdl-stop ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=2 mode=1 busy=0 stage=5 error=-125 frame=72 count=0 ms=180 track=0 target=-1\nnsh> \u001b[K"
+  }
+]

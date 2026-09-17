@@ -1,0 +1,14 @@
+[
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=1 configured=1 phase=1 turns=0 storage=-22 revision=3 last_state=-1 last_error=0 editor=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls -l /data/config/chat",
+    "output": "ls -l /data/config/chat\n/data/config/chat:\n -rwS--S---         160 history.tmp\n -rwS--S---           0 history.json\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui weather-status",
+    "output": "desktop ui weather-status\nweather state=3 valid=1 error=0 revision=2 AQI=13 temp=17 humidity=98 city=成都市\nnsh> \u001b[K"
+  }
+]

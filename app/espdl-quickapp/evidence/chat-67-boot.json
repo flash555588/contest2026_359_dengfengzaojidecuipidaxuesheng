@@ -1,0 +1,11 @@
+[
+  {
+    "command": "reset",
+    "output": "ESP-ROM:esp32p4-eco7-20260109\nBuild:Jan  9 2026\nrst:0x17 (CHIP_USB_UART_RESET),boot:0xc (SPI_FAST_FLASH_BOOT)\nSPI mode:DIO, clock div:1\nload:0x30100000,len:0x68\nload:0x4ff40000,len:0xb018\nload:0x4ff4b080,len:0x211ec\nentry 0x4ff4abce\n"
+  },
+  {
+    "command": "desktop ui chat",
+    "output": "",
+    "error": "Write timeout"
+  }
+]

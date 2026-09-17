@@ -4,6 +4,17 @@
 
 当前已在 ESP32-P4 revision v1.0 实板上完成 Simple Boot、稳定 NuttShell、32 MiB PSRAM 系统堆、MIPI-DSI/DW-GDMA framebuffer、`/dev/fb0`、GT911 `/dev/input0`、LVGL 桌面与 QuickJS 快应用运行时 bring-up。串口与实物已验证完整 1024×600 首帧更新、连续 DMA 帧计数、全屏 LVGL 桌面、触摸设备打开及 **GT911 实际点击/拖动坐标**（LVGL 输出 `TOUCH: pressed x=... y=...`，坐标方向正确）。2026-08-30 的最终 v1.0 固件还通过了重新烧录、镜像 SHA-256 校验和真实断电冷启动，OuO/QuickJS 自动启动并进入 NSH。剩余验收项为 v3.2 芯片实板回归；v3.2 配置已完成构建，但不得烧入 v1.0 芯片。
 
+## 当前应用快照
+
+2026-09-17 的 ESP32-P4 v3 应用成果统一放在
+[`app/espdl-quickapp`](app/espdl-quickapp/README.md)。该目录包含 ESP-DL 人脸跟随与物体分类、
+ESPClaw 触屏聊天和 AI 快应用生成、中文音乐、录音机、天气、设备门户、硬件 API、模型、
+主机测试及实板证据。它是当前开发快照，不替代下方已经固定并通过大赛自检的 v1.x
+可复现基线；外部 AI 服务、第三方音乐服务和未连接的外设仍以各自文档中的验证边界为准。
+
+旧源码集合不再重复放进当前目录树。完整导出仍可从 Git 提交 `170a792` 和 `ff5c6bd`
+读取，版本用途与取回方法见 [版本历史说明](docs/HISTORY.md)。
+
 ## 适配亮点
 
 - 针对 ESP32-P4 revision v1.0 增加 `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` 启动路径，并将 CPU 定档在实测稳定的 CPLL 90 MHz。
@@ -35,9 +46,11 @@
 ## 目录结构
 
 ```text
+app/espdl-quickapp/               当前 v3 应用 overlay、模型、测试与验证证据
 board/esp32p4-function-ev-board/  板级配置、启动、LCD、触摸与桌面代码
 board/esp32p4-common/             ESP32-P4 公共板级支持 overlay
 chip/esp32p4/                     ESP32-P4 架构和 Espressif 驱动 overlay
+docs/                             作品说明、验证证据与历史索引
 firmware/esp32p4-nsh/             可烧录固件与启动日志
 firmware/esp32p4-desktop-v1/      2026-08-30 最终 v1.0 桌面固件与测试报告
 firmware/esp32p4-sc2336-camera-v1.0/  2026-08-30 SC2336 RAW8 取帧固件与测试报告
@@ -65,6 +78,9 @@ repo sync -c -j8
 当前构建流程在 WSL 中执行。仓内脚本会把 overlay 同步到 openvela 工作树并构建 ESP32-P4 NSH 配置：
 
 ```bash
+# 可选；默认使用 ~/vela-p4
+export OPENVELA_ROOT=/path/to/vela-p4
+
 # revision v1.x
 python tools/wsl_build_p4_nsh.py nsh
 python tools/wsl_copy_firmware.py --variant v1.x
@@ -97,8 +113,8 @@ make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
 
 ```powershell
 # 先用 esptool chip-id 或启动日志确认 revision，再选择对应镜像
-powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7
-powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7
+powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7 -Transport uart-bridge
+powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7 -Transport uart-bridge
 ```
 
 脚本默认以 460800 波特率将镜像烧录到 `0x2000`。ESP32-P4 Simple Boot 镜像不能写到 `0x0`；v3.2 镜像也不能用于本仓当前实测的 v1.0 芯片。
@@ -136,4 +152,4 @@ python tools\p4_serial_smoke.py --port COM7 --seconds 16 `
 
 ## 当前状态与后续工作
 
-当前提交是可复现的阶段性基线：双 revision 构建通过；v1.0 实板已验证稳定 NSH、32 MiB PSRAM、DW-GDMA 连续整帧、24 MHz 全屏 LVGL framebuffer 更新、GT911 实际点击/拖动坐标、OuO/QuickJS 自动启动，并通过连续复位与真实断电冷启动回归。剩余验收项为 v3.2 芯片上的对应实板回归。
+当前大赛基线支持双 revision 构建；v1.0 实板已验证稳定 NSH、32 MiB PSRAM、DW-GDMA 连续整帧、24 MHz 全屏 LVGL framebuffer 更新、GT911 实际点击/拖动坐标、OuO/QuickJS 自动启动，并通过连续复位与真实断电冷启动回归。最新 v3 应用快照及其独立验证边界见 `app/espdl-quickapp/`。剩余工作是把该快照收敛为新的可复现补丁集，并完成所有外部服务和外接硬件的最终实板验收。

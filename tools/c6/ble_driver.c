@@ -32,11 +32,16 @@ static int receive_packet(void *arg, uint8_t type,
 static int open_driver(struct bt_driver_s *driver)
 {
   struct c6_ble_driver_s *priv = (struct c6_ble_driver_s *)driver;
-  if (priv->opened) return 0;
-  int ret = priv->transport.start(priv->transport.context, receive_packet, priv);
-  if (ret < 0) return ret;
-  priv->opened = true;
-  return 0;
+  int ret = pthread_mutex_lock(&priv->txlock);
+  if (ret) return -ret;
+  if (!priv->opened)
+    {
+      ret = priv->transport.start(priv->transport.context, receive_packet,
+                                  priv);
+      if (ret >= 0) priv->opened = true;
+    }
+  pthread_mutex_unlock(&priv->txlock);
+  return ret;
 }
 
 static int send_packet(struct bt_driver_s *driver, enum bt_buf_type_e type,
@@ -50,6 +55,11 @@ static int send_packet(struct bt_driver_s *driver, enum bt_buf_type_e type,
   else return -EPROTONOSUPPORT;
   int ret = pthread_mutex_lock(&priv->txlock);
   if (ret) return -ret;
+  if (!priv->opened)
+    {
+      pthread_mutex_unlock(&priv->txlock);
+      return -ENOTCONN;
+    }
   int packed = c6_h4_pack(h4, data, length, priv->tx, sizeof(priv->tx));
   if (packed < 0) ret = packed;
   else
@@ -65,9 +75,13 @@ static int send_packet(struct bt_driver_s *driver, enum bt_buf_type_e type,
 static void close_driver(struct bt_driver_s *driver)
 {
   struct c6_ble_driver_s *priv = (struct c6_ble_driver_s *)driver;
-  if (!priv->opened) return;
-  priv->transport.stop(priv->transport.context);
-  priv->opened = false;
+  if (pthread_mutex_lock(&priv->txlock) != 0) return;
+  if (priv->opened)
+    {
+      priv->transport.stop(priv->transport.context);
+      priv->opened = false;
+    }
+  pthread_mutex_unlock(&priv->txlock);
 }
 
 struct bt_driver_s *c6_ble_driver_create(const struct c6_ble_transport *transport)

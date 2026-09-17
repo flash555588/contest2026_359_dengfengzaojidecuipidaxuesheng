@@ -1,0 +1,6 @@
+[
+  {
+    "command": "echo alive",
+    "output": "echo alive\nalive\nnsh> \u001b[K"
+  }
+]

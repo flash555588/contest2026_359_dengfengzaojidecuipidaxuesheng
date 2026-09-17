@@ -1,0 +1,9 @@
+desktop ui current
+desktop: ui current ready
+nsh> [K
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"label","x":390,"y":514,"w":244,"h":52,"scroll":true,"text":"应用和应用数据已删除"}
+]
+UI_LAYOUT_END
+nsh> 

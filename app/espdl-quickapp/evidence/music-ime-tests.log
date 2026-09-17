@@ -1,0 +1,10 @@
+[ime] Google Pinyin dictionary=1068442 loaded=1
+de -> 的 (9 candidates)
+wo -> 我 (44 candidates)
+shi -> 是 (145 candidates)
+nihao -> 你好 (62 candidates)
+zhongguo -> 中国 (47 candidates)
+yinyue -> 音乐 (107 candidates)
+woxihuanyinyue -> 我喜欢音乐 (45 candidates)
+PASS: frequency-ranked characters, words, sentence and partial candidate selection
+PASS: real LVGL pointer taps, 2s holds, repeated intentional taps, Chinese phrase, EN/numeric mode changes and 20 teardown cycles

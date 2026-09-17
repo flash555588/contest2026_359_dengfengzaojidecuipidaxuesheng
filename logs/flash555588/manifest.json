@@ -191,6 +191,54 @@
       "file_path": "logs/flash555588/2026-08-21/opencode__ses_fdb58c380ffe5sVbJvU0APIQ9z.jsonl",
       "collection_mode": "backfill-sqlite",
       "health": "ok"
+    },
+    {
+      "session_id": "agent-ad03651480407f5d1",
+      "tool": "claude-code",
+      "started_at": "2026-08-15T16:53:58.550Z",
+      "last_event_at": "2026-08-15T17:02:29.876Z",
+      "event_count": 51,
+      "raw_event_count": 52,
+      "file_path": "logs/flash555588/2026-08-31/claude-code__agent-ad03651480407f5d1.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "claude-opus-5"
+    },
+    {
+      "session_id": "agent-a4ec847bce83285f3",
+      "tool": "claude-code",
+      "started_at": "2026-08-15T16:54:11.473Z",
+      "last_event_at": "2026-08-15T17:08:48.949Z",
+      "event_count": 96,
+      "raw_event_count": 97,
+      "file_path": "logs/flash555588/2026-08-31/claude-code__agent-a4ec847bce83285f3.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "claude-opus-5"
+    },
+    {
+      "session_id": "agent-a616b12c05147998d",
+      "tool": "claude-code",
+      "started_at": "2026-08-15T16:54:28.244Z",
+      "last_event_at": "2026-08-15T17:11:53.357Z",
+      "event_count": 98,
+      "raw_event_count": 99,
+      "file_path": "logs/flash555588/2026-08-31/claude-code__agent-a616b12c05147998d.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "claude-opus-5"
+    },
+    {
+      "session_id": "agent-acf45078a235698ad",
+      "tool": "claude-code",
+      "started_at": "2026-08-24T01:21:39.651Z",
+      "last_event_at": "2026-08-24T01:31:44.332Z",
+      "event_count": 75,
+      "raw_event_count": 76,
+      "file_path": "logs/flash555588/2026-08-31/claude-code__agent-acf45078a235698ad.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "claude-opus-5"
     }
   ]
 }

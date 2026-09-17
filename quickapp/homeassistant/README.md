@@ -25,7 +25,7 @@ OpenVela QPK 桌面应用：Lovelace 风格家页面，通过 REST 连接局域�
 ## 连接真实 HA
 
 1. 在 HA 个人资料创建长期访问令牌
-2. 设备端保存地址 `http://homeassistant.local:8123` 与令牌
+2. 设备端只接受 HTTPS 地址与令牌；当前固件尚未配置 TLS 信任库时会拒绝请求，绝不回退到明文 HTTP
 3. 同步后按 entity_id 注册槽位
 
 不要把令牌写进仓库。

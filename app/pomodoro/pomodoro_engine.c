@@ -28,7 +28,14 @@ struct pomodoro_engine_s
   char dialog[64];
 };
 
-static struct pomodoro_engine_s g_pomodoro;
+static struct pomodoro_engine_s g_pomodoro =
+{
+  .phase = POMODORO_WORK,
+  .remaining_ms = WORK_MIN * 60000,
+  .work_min = WORK_MIN,
+  .short_min = SHORT_MIN,
+  .long_min = LONG_MIN,
+};
 
 static int clamp_int(int value, int min, int max)
 {

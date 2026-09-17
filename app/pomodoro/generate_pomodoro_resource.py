@@ -5,9 +5,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-ENGINE = ROOT / "pomodoro" / "engine.js"
-FACE = ROOT / "pomodoro" / "face.js"
-SOURCE = ROOT / "pomodoro" / "app.js"
+QUICKAPP = ROOT.parents[1] / "quickapp" / "pomodoro"
+ENGINE = QUICKAPP / "engine.js"
+FACE = QUICKAPP / "face.js"
+SOURCE = QUICKAPP / "app.js"
 OUTPUT = ROOT / "pomodoro_resource.c"
 
 

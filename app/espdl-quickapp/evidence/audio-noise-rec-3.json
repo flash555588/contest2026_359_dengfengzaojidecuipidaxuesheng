@@ -1,0 +1,14 @@
+[
+  {
+    "command": "desktop ui click:停止并保存",
+    "output": "desktop ui click:停止并保存\nclick 停止并保存 -> 0\ndesktop: ui click:停止并保存 ready\nnsh> \u001b[K[0 t[]i \n[music] PCM opened rate=16000 mono volume=40\n["
+  },
+  {
+    "command": "cd /data/qpk/.data/@2pcom.openvela.recorder",
+    "output": "0  [U wtoscd /data/qpk/.data/@2pcom.openvela.recorder\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls",
+    "output": "ls\n/data/qpk/.data/@2pcom.openvela.recorder:\n kaudio_rec_000001/\nnsh> \u001b[K[0 [2 "
+  }
+]
