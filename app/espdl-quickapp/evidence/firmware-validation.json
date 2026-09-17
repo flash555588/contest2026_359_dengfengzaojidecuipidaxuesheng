@@ -1,8 +1,8 @@
 {
-  "bytes": 7008732,
-  "sha256": "4d11fd860de7130a6cdd3e27ebeb8f83143d05304fc53aa95f690dfbdb429a4d",
+  "bytes": 7010100,
+  "sha256": "4800ce48dfa4431c4df0272ffd324fd5042ac216b0f0ecd40150a4f40972309c",
   "flash_start": 8192,
-  "flash_end": 7016924,
+  "flash_end": 7018292,
   "program_limit": 8388608,
   "models_start": 8388608,
   "models_limit": 12582912,
@@ -59,7 +59,7 @@
     "pet_sprites_unload": true
   },
   "single_float_abi": true,
-  "internal_startup_end": 1341811988,
+  "internal_startup_end": 1341812884,
   "internal_startup_limit": 1341915136,
   "cache_critical_iram": {
     "esp_cache_suspend_ext_mem_cache": 1341435720,

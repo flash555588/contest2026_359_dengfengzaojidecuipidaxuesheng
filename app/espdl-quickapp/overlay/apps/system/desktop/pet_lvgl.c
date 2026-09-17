@@ -8,13 +8,17 @@
  ****************************************************************************/
 
 #include "pet_lvgl.h"
+#include "glass_chat.h"
+#include "glass_voice.h"
 #include "pet_engine.h"
 #include "pet_sprites.h"
 
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define BUBBLE_H  36
+#define BUBBLE_GAP 16
 #define DOUBLE_CLICK_MS 300
 #define PET_SPRITE_PATH "/sdcard/dafeiyu/dafeiyu.lvbin"
 #define BODY_BLUE 0x3d9ad1
@@ -22,6 +26,15 @@
 #define BELLY     0xf4ead6
 #define BLUSH     0xf3a6b5
 #define INK       0x243040
+
+enum pet_voice_stage_e
+{
+  PET_VOICE_IDLE = 0,
+  PET_VOICE_RECORDING,
+  PET_VOICE_FINISHING,
+  PET_VOICE_QUEUEING,
+  PET_VOICE_WAITING
+};
 
 struct pet_ui_s
 {
@@ -40,11 +53,21 @@ struct pet_ui_s
   lv_obj_t *sprite;
   lv_image_dsc_t sprite_dsc;
   struct pet_sprite_bundle_s sprites;
+  char bubble_text[64];
+  int bubble_width;
+  int bubble_offset;
   int sprite_view;
   int sprite_size;
   const lv_font_t *font_zh;
   lv_timer_t *timer;
   lv_timer_t *click_timer;
+  lv_timer_t *voice_timer;
+  struct chat_snapshot *voice_chat;
+  enum pet_voice_stage_e voice_stage;
+  uint32_t voice_revision;
+  uint32_t voice_turn_id;
+  unsigned voice_queue_ticks;
+  char voice_text[768];
   int press_x;
   int press_y;
   bool dragging;
@@ -54,7 +77,7 @@ struct pet_ui_s
 
 static struct pet_ui_s g_ui;
 
-static void layout_parts(const struct pet_state_s *state);
+static void layout_parts(const struct pet_state_s *state, int top_offset);
 
 static void set_blobs_hidden(bool hidden)
 {
@@ -118,7 +141,7 @@ static enum pet_sprite_view_e pet_sprite_view(const struct pet_state_s *state)
   return PET_SPRITE_DOWN;
 }
 
-static void layout_sprite(const struct pet_state_s *state)
+static void layout_sprite(const struct pet_state_s *state, int top_offset)
 {
   enum pet_sprite_view_e view = pet_sprite_view(state);
   unsigned size_index = pet_size_index(state);
@@ -129,13 +152,13 @@ static void layout_sprite(const struct pet_state_s *state)
     {
       lv_obj_add_flag(g_ui.sprite, LV_OBJ_FLAG_HIDDEN);
       set_blobs_hidden(false);
-      layout_parts(state);
+      layout_parts(state, top_offset);
       return;
     }
 
   set_blobs_hidden(true);
   lv_obj_remove_flag(g_ui.sprite, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_set_size(g_ui.root, state->w, state->h + BUBBLE_H);
+  lv_obj_set_size(g_ui.root, state->w, state->h + top_offset);
   if (g_ui.sprite_view != (int)view || g_ui.sprite_size != (int)size_index)
     {
       if (g_ui.sprite_dsc.data != NULL)
@@ -155,7 +178,7 @@ static void layout_sprite(const struct pet_state_s *state)
       g_ui.sprite_size = size_index;
     }
 
-  lv_obj_set_pos(g_ui.sprite, (state->w - image->width) / 2, BUBBLE_H);
+  lv_obj_set_pos(g_ui.sprite, (state->w - image->width) / 2, top_offset);
 }
 
 static lv_obj_t *make_blob(lv_obj_t *parent, uint32_t color, int radius)
@@ -177,19 +200,19 @@ static lv_obj_t *make_blob(lv_obj_t *parent, uint32_t color, int radius)
   return obj;
 }
 
-static void layout_parts(const struct pet_state_s *state)
+static void layout_parts(const struct pet_state_s *state, int top_offset)
 {
   int w = state->w;
   int h = state->h;
   int body_w = (w * 78) / 100;
   int body_h = (h * 70) / 100;
   int body_x = (w - body_w) / 2;
-  int body_y = BUBBLE_H + (h - body_h) / 2;
+  int body_y = top_offset + (h - body_h) / 2;
   bool side = state->dir == PET_LEFT || state->dir == PET_RIGHT;
   bool back = state->dir == PET_UP;
   int face = state->facing;
 
-  lv_obj_set_size(g_ui.root, w, h + BUBBLE_H);
+  lv_obj_set_size(g_ui.root, w, h + top_offset);
   lv_obj_set_size(g_ui.body, body_w, body_h);
   lv_obj_set_pos(g_ui.body, body_x, body_y);
   lv_obj_set_size(g_ui.belly, (body_w * 62) / 100, (body_h * 42) / 100);
@@ -274,6 +297,283 @@ static void layout_parts(const struct pet_state_s *state)
     }
 }
 
+static void pet_voice_say(const char *prefix, const char *text, bool inner)
+{
+  char line[64] = "";
+  size_t used = 0;
+
+  if (prefix != NULL)
+    {
+      used = glass_chat_copy_utf8(line, sizeof(line), prefix);
+    }
+
+  if (text != NULL && used + 1 < sizeof(line))
+    {
+      glass_chat_copy_utf8(line + used, sizeof(line) - used, text);
+    }
+
+  if (line[0] != '\0')
+    {
+      pet_engine_say(line, inner);
+      pet_lvgl_sync();
+    }
+}
+
+static void pet_voice_reset(void)
+{
+  if (g_ui.voice_timer != NULL)
+    {
+      lv_timer_delete(g_ui.voice_timer);
+      g_ui.voice_timer = NULL;
+    }
+
+  free(g_ui.voice_chat);
+  g_ui.voice_chat = NULL;
+  g_ui.voice_stage = PET_VOICE_IDLE;
+  g_ui.voice_revision = 0;
+  g_ui.voice_turn_id = 0;
+  g_ui.voice_queue_ticks = 0;
+  g_ui.voice_text[0] = '\0';
+}
+
+static void pet_voice_fail(const char *message)
+{
+  pet_voice_reset();
+  pet_voice_say(message, NULL, true);
+}
+
+static const char *pet_voice_error(enum glass_voice_error error)
+{
+  switch (error)
+    {
+      case GLASS_VOICE_ERROR_CONFIG:
+        return "请先配置语音识别";
+      case GLASS_VOICE_ERROR_AUTH:
+        return "语音识别凭据无效";
+      case GLASS_VOICE_ERROR_AUDIO:
+        return "麦克风暂时不可用";
+      case GLASS_VOICE_ERROR_EMPTY:
+        return "没有听清，请再试一次";
+      default:
+        return "语音识别失败";
+    }
+}
+
+static const struct chat_turn *pet_voice_turn(void)
+{
+  unsigned i;
+
+  if (g_ui.voice_chat == NULL)
+    {
+      return NULL;
+    }
+
+  for (i = 0; i < g_ui.voice_chat->count; i++)
+    {
+      if (g_ui.voice_chat->turns[i].id == g_ui.voice_turn_id)
+        {
+          return &g_ui.voice_chat->turns[i];
+        }
+    }
+
+  return NULL;
+}
+
+static void pet_voice_poll(lv_timer_t *timer)
+{
+  struct glass_voice_snapshot voice;
+  bool chat_changed;
+
+  LV_UNUSED(timer);
+  if (g_ui.voice_stage == PET_VOICE_RECORDING ||
+      g_ui.voice_stage == PET_VOICE_FINISHING)
+    {
+      glass_voice_get(&voice);
+      if (voice.revision != g_ui.voice_revision)
+        {
+          g_ui.voice_revision = voice.revision;
+          if (voice.phase == GLASS_VOICE_CONNECTING)
+            {
+              pet_voice_say("正在连接语音...", NULL, true);
+            }
+          else if (voice.phase == GLASS_VOICE_LISTENING)
+            {
+              pet_voice_say(voice.text[0] != '\0' ? "正在听：" :
+                            "请说话，松开发送", voice.text, true);
+            }
+          else if (voice.phase == GLASS_VOICE_FINISHING)
+            {
+              pet_voice_say("正在识别...", NULL, true);
+            }
+          else if (voice.phase == GLASS_VOICE_DONE)
+            {
+              if (voice.text[0] == '\0')
+                {
+                  pet_voice_fail("没有听清，请再试一次");
+                  return;
+                }
+
+              glass_chat_copy_utf8(g_ui.voice_text,
+                                   sizeof(g_ui.voice_text), voice.text);
+              g_ui.voice_stage = PET_VOICE_QUEUEING;
+              g_ui.voice_queue_ticks = 0;
+              pet_voice_say("正在思考：", g_ui.voice_text, true);
+            }
+          else if (voice.phase == GLASS_VOICE_ERROR)
+            {
+              pet_voice_fail(pet_voice_error(voice.error));
+              return;
+            }
+        }
+    }
+
+  if (g_ui.voice_stage != PET_VOICE_QUEUEING &&
+      g_ui.voice_stage != PET_VOICE_WAITING)
+    {
+      return;
+    }
+
+  chat_changed = glass_chat_get(g_ui.voice_chat);
+  if (g_ui.voice_stage == PET_VOICE_QUEUEING)
+    {
+      int ret;
+
+      if (!g_ui.voice_chat->loaded)
+        {
+          if (++g_ui.voice_queue_ticks >= 100)
+            {
+              pet_voice_fail("AI 服务加载超时");
+            }
+
+          return;
+        }
+
+      if (!g_ui.voice_chat->configured)
+        {
+          pet_voice_fail("请先配置 AI 服务");
+          return;
+        }
+
+      if (g_ui.voice_chat->phase != CHAT_IDLE)
+        {
+          pet_voice_fail("AI 正在处理上一条消息");
+          return;
+        }
+
+      ret = glass_chat_send(g_ui.voice_text);
+      if (ret < 0)
+        {
+          pet_voice_fail(ret == -ENOKEY ? "请先配置 AI 服务" :
+                         ret == -EBUSY ? "AI 正在处理上一条消息" :
+                         "语音消息发送失败");
+          return;
+        }
+
+      glass_chat_get(g_ui.voice_chat);
+      if (g_ui.voice_chat->count == 0)
+        {
+          pet_voice_fail("语音消息发送失败");
+          return;
+        }
+
+      g_ui.voice_turn_id =
+        g_ui.voice_chat->turns[g_ui.voice_chat->count - 1].id;
+      g_ui.voice_stage = PET_VOICE_WAITING;
+      return;
+    }
+
+  if (chat_changed)
+    {
+      const struct chat_turn *turn = pet_voice_turn();
+
+      if (turn == NULL)
+        {
+          pet_voice_fail("没有找到本轮 AI 回复");
+        }
+      else if (turn->state == CHAT_WAITING)
+        {
+          if (turn->reply[0] != '\0')
+            {
+              pet_voice_say(NULL, turn->reply, false);
+            }
+        }
+      else if (turn->state == CHAT_DONE)
+        {
+          pet_voice_say(NULL, turn->reply[0] != '\0' ? turn->reply :
+                        "AI 没有返回文字", false);
+          pet_voice_reset();
+        }
+      else if (turn->state == CHAT_CANCELLED)
+        {
+          pet_voice_fail("AI 回复已取消");
+        }
+      else
+        {
+          pet_voice_fail(turn->error == CHAT_ERROR_AUTH ?
+                         "AI 服务认证失败" :
+                         turn->error == CHAT_ERROR_TIMEOUT ?
+                         "AI 回复超时" : "AI 回复失败");
+        }
+    }
+}
+
+static void pet_voice_begin(void)
+{
+  struct glass_voice_snapshot voice;
+  int ret;
+
+  if (g_ui.voice_stage != PET_VOICE_IDLE)
+    {
+      pet_voice_say("上一轮语音还在处理中", NULL, true);
+      return;
+    }
+
+  g_ui.voice_chat = calloc(1, sizeof(*g_ui.voice_chat));
+  if (g_ui.voice_chat == NULL)
+    {
+      pet_voice_say("可用内存不足", NULL, true);
+      return;
+    }
+
+  ret = glass_chat_start();
+  if (ret < 0)
+    {
+      pet_voice_fail("AI 服务启动失败");
+      return;
+    }
+
+  ret = glass_voice_start();
+  if (ret < 0)
+    {
+      pet_voice_fail(ret == -EBUSY ? "语音服务正在使用中" :
+                     "语音服务启动失败");
+      return;
+    }
+
+  glass_voice_get(&voice);
+  g_ui.voice_revision = voice.revision;
+  g_ui.voice_stage = PET_VOICE_RECORDING;
+  g_ui.voice_timer = lv_timer_create(pet_voice_poll, 120, NULL);
+  if (g_ui.voice_timer == NULL)
+    {
+      glass_voice_stop();
+      pet_voice_fail("可用内存不足");
+      return;
+    }
+
+  pet_voice_say("请说话，松开发送", NULL, true);
+}
+
+static void pet_voice_release(void)
+{
+  if (g_ui.voice_stage == PET_VOICE_RECORDING)
+    {
+      glass_voice_stop();
+      g_ui.voice_stage = PET_VOICE_FINISHING;
+      pet_voice_say("正在识别...", NULL, true);
+    }
+}
+
 static int pointer_xy(lv_event_t *e, int *x, int *y)
 {
   lv_indev_t *indev = lv_event_get_indev(e);
@@ -318,6 +618,11 @@ static void pet_event_cb(lv_event_t *e)
     }
   else if (code == LV_EVENT_PRESSING)
     {
+      if (g_ui.voice_stage == PET_VOICE_RECORDING)
+        {
+          return;
+        }
+
       if (pointer_xy(e, &x, &y) < 0)
         {
           return;
@@ -342,8 +647,23 @@ static void pet_event_cb(lv_event_t *e)
           pet_lvgl_sync();
         }
     }
-  else if (code == LV_EVENT_RELEASED)
+  else if (code == LV_EVENT_LONG_PRESSED)
     {
+      if (!g_ui.dragging)
+        {
+          g_ui.press_moved = true;
+          if (g_ui.click_timer != NULL)
+            {
+              lv_timer_delete(g_ui.click_timer);
+              g_ui.click_timer = NULL;
+            }
+
+          pet_voice_begin();
+        }
+    }
+  else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
+    {
+      pet_voice_release();
       if (g_ui.dragging)
         {
           pet_engine_drag_end();
@@ -379,7 +699,11 @@ static void pet_event_cb(lv_event_t *e)
 static void pet_timer_cb(lv_timer_t *timer)
 {
   LV_UNUSED(timer);
-  pet_engine_tick(50);
+  if (g_ui.voice_stage == PET_VOICE_IDLE)
+    {
+      pet_engine_tick(50);
+    }
+
   pet_lvgl_sync();
 }
 
@@ -489,6 +813,7 @@ int pet_lvgl_create(lv_obj_t *parent, const lv_font_t *font_zh)
 void pet_lvgl_sync(void)
 {
   struct pet_state_s state;
+  int top_offset = 0;
   int jump;
 
   if (!g_ui.open || g_ui.root == NULL)
@@ -504,33 +829,58 @@ void pet_lvgl_sync(void)
     }
 
   lv_obj_remove_flag(g_ui.root, LV_OBJ_FLAG_HIDDEN);
-  if (g_ui.sprites.storage != NULL)
-    {
-      layout_sprite(&state);
-    }
-  else
-    {
-      layout_parts(&state);
-    }
-  jump = state.jump_t > 0 ? (state.jump_t / 30) : 0;
-  lv_obj_set_pos(g_ui.root, state.x, state.y - BUBBLE_H - jump);
   if (state.bubble[0] != '\0')
     {
-      lv_label_set_text(g_ui.bubble, state.bubble);
+      if (g_ui.bubble_width != state.w ||
+          strcmp(g_ui.bubble_text, state.bubble) != 0)
+        {
+          lv_obj_set_width(g_ui.bubble, state.w);
+          lv_label_set_text(g_ui.bubble, state.bubble);
+          lv_obj_update_layout(g_ui.bubble);
+          g_ui.bubble_width = state.w;
+          g_ui.bubble_offset = lv_obj_get_height(g_ui.bubble) + BUBBLE_GAP;
+          snprintf(g_ui.bubble_text, sizeof(g_ui.bubble_text), "%s",
+                   state.bubble);
+        }
+
       lv_obj_set_style_text_color(g_ui.bubble,
                                   lv_color_hex(state.bubble_inner ?
                                                0x7d7d8a : INK), 0);
       lv_obj_remove_flag(g_ui.bubble, LV_OBJ_FLAG_HIDDEN);
-      lv_obj_align(g_ui.bubble, LV_ALIGN_TOP_MID, 0, 0);
+      top_offset = g_ui.bubble_offset;
     }
   else
     {
       lv_obj_add_flag(g_ui.bubble, LV_OBJ_FLAG_HIDDEN);
     }
+
+  if (g_ui.sprites.storage != NULL)
+    {
+      layout_sprite(&state, top_offset);
+    }
+  else
+    {
+      layout_parts(&state, top_offset);
+    }
+
+  jump = state.jump_t > 0 ? (state.jump_t / 30) : 0;
+  lv_obj_set_pos(g_ui.root, state.x, state.y - top_offset - jump);
+  if (top_offset > 0)
+    {
+      lv_obj_align(g_ui.bubble, LV_ALIGN_TOP_MID, 0, 0);
+    }
 }
 
 void pet_lvgl_destroy(void)
 {
+  if (g_ui.voice_stage == PET_VOICE_RECORDING ||
+      g_ui.voice_stage == PET_VOICE_FINISHING)
+    {
+      glass_voice_stop();
+    }
+
+  pet_voice_reset();
+
   if (g_ui.click_timer != NULL)
     {
       lv_timer_delete(g_ui.click_timer);
