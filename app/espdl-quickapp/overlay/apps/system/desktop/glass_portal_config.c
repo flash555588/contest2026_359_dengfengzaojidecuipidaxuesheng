@@ -163,11 +163,14 @@ int portal_music_key(char *out,size_t capacity)
 /* Overrides are read on app launch, without returning credentials to HTTP. */
 int portal_ha_value(const char *key,char *out,size_t capacity)
 {
+  if(!out||!capacity) return -EINVAL;
+  out[0]='\0';
   if(strcmp(key,"ha_url")&&strcmp(key,"ha_token")) return -ENOENT;
   pthread_mutex_lock(&config_lock); cJSON *o=defaults("homeassistant");
   cJSON *v=cJSON_GetObjectItemCaseSensitive(o,!strcmp(key,"ha_url")?"url":"token");
   int ret=cJSON_IsString(v)?0:-ENOENT;
-  if(!ret) snprintf(out,capacity,"%s",v->valuestring);
+  if(!ret&&strlen(v->valuestring)>=capacity) ret=-ENOSPC;
+  if(!ret) strcpy(out,v->valuestring);
   cJSON_Delete(o); pthread_mutex_unlock(&config_lock); return ret;
 }
 int portal_ha_set(const char *key,const char *value)
@@ -175,6 +178,15 @@ int portal_ha_set(const char *key,const char *value)
   if(strcmp(key,"ha_url")&&strcmp(key,"ha_token")) return -ENOENT;
   cJSON *patch=cJSON_CreateObject(); if(!patch) return -ENOMEM;
   cJSON_AddStringToObject(patch,!strcmp(key,"ha_url")?"url":"token",value);
+  int ret=portal_config_save("homeassistant",patch); cJSON_Delete(patch); return ret;
+}
+int portal_ha_save(const char *url,const char *token)
+{
+  if(!url||!token||strlen(url)>1024||strlen(token)>2048) return -EINVAL;
+  cJSON *patch=cJSON_CreateObject(); if(!patch) return -ENOMEM;
+  if(!cJSON_AddStringToObject(patch,"url",url)||
+     !cJSON_AddStringToObject(patch,"token",token))
+    { cJSON_Delete(patch); return -ENOMEM; }
   int ret=portal_config_save("homeassistant",patch); cJSON_Delete(patch); return ret;
 }
 void portal_desktop_publish(const uint8_t values[4])

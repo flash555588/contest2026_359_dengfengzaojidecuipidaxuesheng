@@ -19,6 +19,7 @@ int portal_voice_load(struct portal_voice_config *out);
 int portal_music_key(char *out,size_t capacity);
 int portal_ha_value(const char *key,char *out,size_t capacity);
 int portal_ha_set(const char *key,const char *value);
+int portal_ha_save(const char *url,const char *token);
 int portal_safe_path(const char *root,const char *relative,char *out,size_t cap,bool parents);
 cJSON *portal_config_get(const char *section);
 int portal_config_save(const char *section,const cJSON *patch);

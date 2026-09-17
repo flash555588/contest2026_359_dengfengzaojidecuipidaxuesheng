@@ -358,18 +358,18 @@ static void desktop_ui_probe_service(void)
       else if (!strcmp(command, "dafeiyu") || !strcmp(command, "pet"))
         launch_builtin_dafeiyu_qapp(NULL);
       else if (!strcmp(command, "recorder")) launch_builtin_recorder_qapp(NULL);
-      else if (!strcmp(command, "ha")) launch_builtin_homeassistant_qapp(NULL);
-      else if (!strcmp(command, "ha-settings") || !strcmp(command, "ha-address") ||
-               !strcmp(command, "ha-advanced"))
+      else if (!strcmp(command, "ha")) glass_homeassistant(NULL);
+      else if (!strcmp(command, "ha-settings") || !strcmp(command, "ha-address"))
+        {
+          glass_portal_show(glass_homeassistant);
+        }
+      else if (!strcmp(command, "ha-advanced"))
         {
           launch_builtin_homeassistant_qapp(NULL);
           lv_obj_update_layout(g_desktop.screen);
           desktop_ui_probe_click(g_desktop.current_card, "设置");
           lv_obj_update_layout(g_desktop.screen);
-          if (!strcmp(command, "ha-address"))
-            desktop_ui_probe_click(g_desktop.current_card, "地址");
-          if (!strcmp(command, "ha-advanced"))
-            desktop_ui_probe_click(g_desktop.current_card, "高级服务");
+          desktop_ui_probe_click(g_desktop.current_card, "高级服务");
         }
       else if (!strcmp(command, "dropdown"))
         { glass_settings(NULL); lv_dropdown_open(g_glass.widget_dropdown); }

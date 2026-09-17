@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -15,6 +16,7 @@ extern void board_music_amplifier(bool enabled);
  * session exclusively owned until STOP, buffer release, and MQ teardown have
  * all completed; RESERVE alone cannot serialize the surrounding teardown. */
 static pthread_mutex_t g_pcm_session_lock = PTHREAD_MUTEX_INITIALIZER;
+static atomic_bool g_pcm_session_active;
 
 int music_pcm_session_lock(void)
 {
@@ -25,12 +27,23 @@ int music_pcm_session_lock(void)
     }
   while (ret == EINTR);
 
+  if (ret == 0)
+    {
+      atomic_store(&g_pcm_session_active, true);
+    }
+
   return ret ? -ret : 0;
 }
 
 void music_pcm_session_unlock(void)
 {
+  atomic_store(&g_pcm_session_active, false);
   pthread_mutex_unlock(&g_pcm_session_lock);
+}
+
+bool music_pcm_session_active(void)
+{
+  return atomic_load(&g_pcm_session_active);
 }
 
 static int pcm_message(struct music_pcm *pcm)

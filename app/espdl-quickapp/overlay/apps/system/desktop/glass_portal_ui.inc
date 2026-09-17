@@ -49,7 +49,9 @@ static void glass_portal_show(lv_event_cb_t back)
   lv_obj_add_event_cb(card,portal_page_deleted,LV_EVENT_DELETE,NULL);
   /* panel_card adds its close button as child 1. Replace it with one return. */
   lv_obj_delete(lv_obj_get_child(card,1));
-  glass_button(card,back==glass_settings?"返回设置":"返回聊天",760,14,160,theme_surface(),portal_go_back,NULL);
+  const char *back_text=back==glass_settings?"返回设置":
+    back==glass_homeassistant?"返回家居":"返回聊天";
+  glass_button(card,back_text,760,14,160,theme_surface(),portal_go_back,NULL);
   struct in_addr address; char code[PORTAL_CODE_LENGTH+1],url[96],display[64],ip[INET_ADDRSTRLEN];
   if(netlib_get_ipv4addr("eth0",&address)<0||!address.s_addr) {
     glass_text(card,"请先连接 Wi-Fi，再打开扫码配置",52,160,800,28,theme_primary()); return;

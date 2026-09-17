@@ -9,6 +9,7 @@
 #include <nuttx/config.h>
 
 #include <dirent.h>
+#include <errno.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -33,6 +34,10 @@
 #include "qpk_limits.h"
 #include "glass_qpk_builder.h"
 #include "glass_portal.h"
+#ifdef CONFIG_SYSTEM_HASS
+#include "hass_portal.h"
+#include "hass_service.h"
+#endif
 #include "glass_dashboard.h"
 #include "pet_engine.h"
 #include "pet_lvgl.h"
@@ -138,9 +143,9 @@ static const struct builtin_qpk_s g_builtin_homeassistant_qpk =
 {
   .manifest =
     {
-      .name = "Home Assistant",
+      .name = "米家 HA",
       .package = "com.openvela.homeassistant",
-      .version = "1.0.0",
+      .version = "0.7.0",
       .entry = "builtin:/homeassistant/app.js",
     },
   .kind = "智能家居",
@@ -1172,6 +1177,7 @@ static void launch_builtin_dafeiyu_qapp(lv_event_t *e)
 }
 
 static void glass_homeassistant_enter(lv_obj_t *card);
+static void glass_homeassistant(lv_event_t *e);
 
 static void launch_builtin_homeassistant_qapp(lv_event_t *e)
 {

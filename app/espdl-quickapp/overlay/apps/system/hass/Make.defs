@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+ifeq ($(CONFIG_SYSTEM_HASS),y)
+CONFIGURED_APPS += $(APPDIR)/system/hass
+endif

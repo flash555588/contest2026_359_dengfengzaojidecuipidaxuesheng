@@ -6,7 +6,7 @@
 #include <nuttx/audio/audio.h>
 #define MUSIC_PCM_BUFFERS 4
 /* The I2S bus runs two 16-bit slots per frame, so one frame is four bytes. */
-#define MUSIC_PCM_FRAMES 576
+#define MUSIC_PCM_FRAMES 1152
 struct music_pcm {
   int fd;
   mqd_t mq;
@@ -23,3 +23,4 @@ int music_pcm_drain(struct music_pcm *pcm);
 void music_pcm_close(struct music_pcm *pcm);
 int music_pcm_session_lock(void);
 void music_pcm_session_unlock(void);
+bool music_pcm_session_active(void);

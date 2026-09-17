@@ -51,4 +51,9 @@ CXXEXT = .cpp
 CXXFLAGS += -std=gnu++11
 glass_music_service.c_CFLAGS += -O2
 
+ifeq ($(CONFIG_SYSTEM_HASS),y)
+CSRCS += hass_qjs.c hass_portal.c
+CFLAGS += -I$(APPDIR)/system/hass
+endif
+
 include $(APPDIR)/Application.mk

@@ -1,8 +1,8 @@
 {
-  "bytes": 7010100,
-  "sha256": "4800ce48dfa4431c4df0272ffd324fd5042ac216b0f0ecd40150a4f40972309c",
+  "bytes": 7028888,
+  "sha256": "6d3139f33c3ac95458620d3b9937eb2e380c0371541fb68263a9fb38654c59cf",
   "flash_start": 8192,
-  "flash_end": 7018292,
+  "flash_end": 7037080,
   "program_limit": 8388608,
   "models_start": 8388608,
   "models_limit": 12582912,
@@ -56,10 +56,17 @@
     "glass_ble_connect": true,
     "pet_sprites_load": true,
     "pet_sprites_get": true,
-    "pet_sprites_unload": true
+    "pet_sprites_unload": true,
+    "homeassistant_get_app_js": true,
+    "hass_open": true,
+    "hass_configure": true,
+    "hass_get": true,
+    "hass_control": true,
+    "hass_qjs_install": true,
+    "hass_portal_bootstrap": true
   },
   "single_float_abi": true,
-  "internal_startup_end": 1341812884,
+  "internal_startup_end": 1341829908,
   "internal_startup_limit": 1341915136,
   "cache_critical_iram": {
     "esp_cache_suspend_ext_mem_cache": 1341435720,

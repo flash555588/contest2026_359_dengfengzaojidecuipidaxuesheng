@@ -9,6 +9,7 @@
 
 #include "pet_lvgl.h"
 #include "glass_chat.h"
+#include "glass_music_pcm.h"
 #include "glass_voice.h"
 #include "pet_engine.h"
 #include "pet_sprites.h"
@@ -20,6 +21,8 @@
 
 #define BUBBLE_GAP 16
 #define DOUBLE_CLICK_MS 300
+#define PET_TICK_MS 50
+#define PET_AUDIO_RENDER_MS 100
 #define PET_SPRITE_PATH "/sdcard/dafeiyu/dafeiyu.lvbin"
 #define BODY_BLUE 0x3d9ad1
 #define BODY_DEEP 0x2b6f9c
@@ -56,8 +59,16 @@ struct pet_ui_s
   char bubble_text[64];
   int bubble_width;
   int bubble_offset;
+  bool bubble_inner;
+  bool bubble_inner_valid;
   int sprite_view;
   int sprite_size;
+  struct pet_state_s rendered;
+  int rendered_top_offset;
+  int rendered_root_x;
+  int rendered_root_y;
+  unsigned render_elapsed_ms;
+  bool rendered_valid;
   const lv_font_t *font_zh;
   lv_timer_t *timer;
   lv_timer_t *click_timer;
@@ -701,10 +712,15 @@ static void pet_timer_cb(lv_timer_t *timer)
   LV_UNUSED(timer);
   if (g_ui.voice_stage == PET_VOICE_IDLE)
     {
-      pet_engine_tick(50);
+      pet_engine_tick(PET_TICK_MS);
     }
 
-  pet_lvgl_sync();
+  g_ui.render_elapsed_ms += PET_TICK_MS;
+  if (!music_pcm_session_active() ||
+      g_ui.render_elapsed_ms >= PET_AUDIO_RENDER_MS)
+    {
+      pet_lvgl_sync();
+    }
 }
 
 int pet_lvgl_create(lv_obj_t *parent, const lv_font_t *font_zh)
@@ -798,7 +814,7 @@ int pet_lvgl_create(lv_obj_t *parent, const lv_font_t *font_zh)
       }
   }
 
-  g_ui.timer = lv_timer_create(pet_timer_cb, 50, NULL);
+  g_ui.timer = lv_timer_create(pet_timer_cb, PET_TICK_MS, NULL);
   if (g_ui.timer == NULL)
     {
       pet_lvgl_destroy();
@@ -815,21 +831,40 @@ void pet_lvgl_sync(void)
   struct pet_state_s state;
   int top_offset = 0;
   int jump;
+  int root_y;
+  bool was_visible;
+  bool bubble_visible;
+  bool bubble_was_visible;
+  bool layout_changed;
 
   if (!g_ui.open || g_ui.root == NULL)
     {
       return;
     }
 
+  g_ui.render_elapsed_ms = 0;
   pet_engine_get(&state);
+  was_visible = g_ui.rendered_valid && g_ui.rendered.visible;
   if (!state.visible)
     {
-      lv_obj_add_flag(g_ui.root, LV_OBJ_FLAG_HIDDEN);
+      if (!g_ui.rendered_valid || was_visible)
+        {
+          lv_obj_add_flag(g_ui.root, LV_OBJ_FLAG_HIDDEN);
+        }
+
+      g_ui.rendered = state;
+      g_ui.rendered_valid = true;
       return;
     }
 
-  lv_obj_remove_flag(g_ui.root, LV_OBJ_FLAG_HIDDEN);
-  if (state.bubble[0] != '\0')
+  if (!was_visible)
+    {
+      lv_obj_remove_flag(g_ui.root, LV_OBJ_FLAG_HIDDEN);
+    }
+
+  bubble_visible = state.bubble[0] != '\0';
+  bubble_was_visible = was_visible && g_ui.rendered.bubble[0] != '\0';
+  if (bubble_visible)
     {
       if (g_ui.bubble_width != state.w ||
           strcmp(g_ui.bubble_text, state.bubble) != 0)
@@ -843,32 +878,61 @@ void pet_lvgl_sync(void)
                    state.bubble);
         }
 
-      lv_obj_set_style_text_color(g_ui.bubble,
-                                  lv_color_hex(state.bubble_inner ?
-                                               0x7d7d8a : INK), 0);
-      lv_obj_remove_flag(g_ui.bubble, LV_OBJ_FLAG_HIDDEN);
+      if (!g_ui.bubble_inner_valid ||
+          g_ui.bubble_inner != state.bubble_inner)
+        {
+          lv_obj_set_style_text_color(g_ui.bubble,
+                                      lv_color_hex(state.bubble_inner ?
+                                                   0x7d7d8a : INK), 0);
+          g_ui.bubble_inner = state.bubble_inner;
+          g_ui.bubble_inner_valid = true;
+        }
+
+      if (!bubble_was_visible)
+        {
+          lv_obj_remove_flag(g_ui.bubble, LV_OBJ_FLAG_HIDDEN);
+        }
+
       top_offset = g_ui.bubble_offset;
     }
-  else
+  else if (bubble_was_visible || !g_ui.rendered_valid)
     {
       lv_obj_add_flag(g_ui.bubble, LV_OBJ_FLAG_HIDDEN);
     }
 
-  if (g_ui.sprites.storage != NULL)
+  layout_changed = !g_ui.rendered_valid || !was_visible ||
+                   state.w != g_ui.rendered.w ||
+                   state.h != g_ui.rendered.h ||
+                   state.dir != g_ui.rendered.dir ||
+                   state.facing != g_ui.rendered.facing ||
+                   top_offset != g_ui.rendered_top_offset;
+  if (layout_changed && g_ui.sprites.storage != NULL)
     {
       layout_sprite(&state, top_offset);
     }
-  else
+  else if (layout_changed)
     {
       layout_parts(&state, top_offset);
     }
 
   jump = state.jump_t > 0 ? (state.jump_t / 30) : 0;
-  lv_obj_set_pos(g_ui.root, state.x, state.y - top_offset - jump);
-  if (top_offset > 0)
+  root_y = state.y - top_offset - jump;
+  if (!g_ui.rendered_valid || !was_visible ||
+      state.x != g_ui.rendered_root_x || root_y != g_ui.rendered_root_y)
+    {
+      lv_obj_set_pos(g_ui.root, state.x, root_y);
+      g_ui.rendered_root_x = state.x;
+      g_ui.rendered_root_y = root_y;
+    }
+
+  if (top_offset > 0 && (layout_changed || !bubble_was_visible))
     {
       lv_obj_align(g_ui.bubble, LV_ALIGN_TOP_MID, 0, 0);
     }
+
+  g_ui.rendered = state;
+  g_ui.rendered_top_offset = top_offset;
+  g_ui.rendered_valid = true;
 }
 
 void pet_lvgl_destroy(void)

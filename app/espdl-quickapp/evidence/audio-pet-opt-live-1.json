@@ -1,0 +1,22 @@
+[
+  {
+    "command": "desktop ui pet",
+    "output": "desktop ui pet\n[qpk] started 大肥鱼桌宠 (org.flash.dafeiyu 1.0.1) with QuickJS\ndesktop: ui pet ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-search:晴天",
+    "output": "desktop ui music-search:晴天\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-play-result",
+    "output": "desktop ui music-play-result\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=0 error=0 search=1 search_error=0 result=0 favorites=0 storage=0 position_ms=0 volume=40 title= artist=\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=0 error=0 search=1 search_error=0 result=0 favorites=0 storage=0 position_ms=0 volume=40 title= artist=\nnsh> \u001b[K"
+  }
+]

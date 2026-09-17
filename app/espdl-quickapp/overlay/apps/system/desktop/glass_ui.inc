@@ -1020,6 +1020,14 @@ static void glass_settings(lv_event_t *e)
 }
 
 #include "glass_music_ui.inc"
+#ifdef CONFIG_SYSTEM_HASS
+#include "glass_hass_ui.inc"
+#else
+static void glass_homeassistant(lv_event_t *e)
+{
+  launch_builtin_homeassistant_qapp(e);
+}
+#endif
 #include "glass_chat_ui.inc"
 
 static void glass_music(lv_event_t *e)
@@ -1117,7 +1125,7 @@ static void glass_apps_render(void)
   const char *names[] = {"ESPClaw AI 助手", "相机", "录音机", "智能家居", "OuO", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
   const char *symbols[] = {LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_EYE_OPEN,
                            LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, LV_SYMBOL_PLAY};
-  lv_event_cb_t callbacks[] = {glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, launch_builtin_homeassistant_qapp,
+  lv_event_cb_t callbacks[] = {glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass_homeassistant,
     launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp, launch_builtin_dafeiyu_qapp};
   const int builtin_count=sizeof(names)/sizeof(names[0]);
   const int total = builtin_count + g_desktop.nqpk;
@@ -1304,7 +1312,7 @@ static void glass_rebuild(void)
   g_glass.devices = glass_number(card, "-- / --", 21, 52, 266, false, primary);
   g_glass.sync = glass_text(card, "尚未同步 · 点击连接 Home Assistant",
                             22, 137, 264, 16, secondary);
-  glass_clickable(card, launch_builtin_homeassistant_qapp, NULL);
+  glass_clickable(card, glass_homeassistant, NULL);
 
   card = glass_card(root, 728, 404, 268, 172, theme_card());
   g_glass.home_cards[3] = card;
@@ -1347,7 +1355,7 @@ static void glass_rebuild(void)
   const char *symbols[] = {LV_SYMBOL_IMAGE, LV_SYMBOL_HOME, LV_SYMBOL_EDIT, LV_SYMBOL_AUDIO,
                            LV_SYMBOL_EYE_OPEN, LV_SYMBOL_LIST};
   const char *dock_names[] = {"相机", "家居", "AI", "音乐", "OuO", "应用"};
-  lv_event_cb_t callbacks[] = {launch_builtin_camera_qapp, launch_builtin_homeassistant_qapp,
+  lv_event_cb_t callbacks[] = {launch_builtin_camera_qapp, glass_homeassistant,
     glass_chat_open, glass_music, launch_builtin_ouo_qapp, qpk_clicked};
   for (int i = 0; i < 6; i++)
     {
@@ -1500,6 +1508,12 @@ static void desktop_ui_create(void)
     }
   glass_wallpaper_load();
   portal_desktop_publish(preferences);
+#ifdef CONFIG_SYSTEM_HASS
+  int hass_bootstrap = hass_portal_bootstrap();
+  if (hass_bootstrap < 0)
+    printf("desktop: HA service configuration unavailable (%d)\n",
+           -hass_bootstrap);
+#endif
   g_desktop.font16 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
     16, LV_FONT_KERNING_NORMAL, DESKTOP_FONT_CACHE_GLYPHS);
   g_desktop.font20 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,

@@ -40,6 +40,11 @@
 #include "qpk_limits.h"
 #include "glass_portal.h"
 #include "qpk_homeassistant.h"
+#ifdef CONFIG_SYSTEM_HASS
+#include "hass_qjs.h"
+#include "hass_service.h"
+#include "hass_ui_auth.h"
+#endif
 #include "qpk_pet.h"
 #include "glass_dashboard.h"
 
@@ -191,6 +196,9 @@ struct qpk_runtime_s
   char name[48];
   char package[48];
   bool ha_config_access;
+#ifdef CONFIG_SYSTEM_HASS
+  unsigned hass_grants;
+#endif
   char version[24];
   char error[160];
   uint64_t deadline_ms;
@@ -3560,6 +3568,17 @@ static void qpk_install_api(JSContext *context)
     JS_SetPropertyStr(context, homeassistant, "poll",
                       JS_NewCFunction(context, js_ha_poll, "poll", 0));
     JS_SetPropertyStr(context, system, "homeAssistant", homeassistant);
+#ifdef CONFIG_SYSTEM_HASS
+    if (g_qpk.hass_grants != 0 &&
+        hass_qjs_install(context, system, g_qpk.hass_grants) < 0)
+      {
+        JSValue unavailable = JS_NewObject(context);
+        JS_SetPropertyStr(context, unavailable, "apiVersion",
+                          JS_NewInt32(context, 0));
+        JS_SetPropertyStr(context, system, "homeAssistantService",
+                          unavailable);
+      }
+#endif
     qpk_pet_bind(context, system);
     JS_SetPropertyStr(context, global, "system", system);
   }
@@ -3639,6 +3658,9 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   strlcpy(g_qpk.name, name ? name : "Quick App", sizeof(g_qpk.name));
   strlcpy(g_qpk.package, package ? package : "", sizeof(g_qpk.package));
   g_qpk.ha_config_access = qpk_builtin_ha_origin(package, filename);
+#ifdef CONFIG_SYSTEM_HASS
+  g_qpk.hass_grants = hass_ui_grants(package, source, source_len);
+#endif
   strlcpy(g_qpk.version, version ? version : "", sizeof(g_qpk.version));
 
   g_qpk.runtime = JS_NewRuntime();
