@@ -1,0 +1,42 @@
+[
+  {
+    "command": "desktop ui music-play-result",
+    "output": "desktop ui music-play-result\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=3 error=0 search=0 search_error=-113 result=0 favorites=1 storage=0 position_ms=4623 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001336  67.3%  13.3% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0001984 0000696  35.0%  50.6% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000816  42.1%   0.0% hpwork 0x4ff4c680 0x4ff4c6cc\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000752  38.8%   0.0% lpwork 0x4ff4c600 0x4ff4c64c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001344  22.2%   0.0% usbh_hub0 0x4ff67bb4\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680 0004224  12.9%   9.5% desktop\n    7     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0004000 0000944  23.6%   0.0% flash-stack\n    9     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024512 0003944  16.0%   0.0% weather 0x400b6f1e 0\n   10    10 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016 0002112  52.5%   0.4% nsh\n   11    11 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004016 0002528  62.9%   9.6% c6net\n   15    15 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0008040 0002224  27.6%   0.0% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\n   36     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032696 0007600  23.2%   0.0% music_search 0x400b87a8 0\n   40     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0049088 0020224  41.1%  11.3% music_player 0x400bb22e 0\n   61     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032704 0004008  12.2%   4.6% music_net 0x400b8618 0x483d6504\n   76     6 ---(0x00000003) 252 RR       pthread   - Waiting  MQ empty  0000000000000000 0001984 0001072  54.0%   0.0% es8311 0x4001693a 0x4ffad0c8\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=3 error=0 search=0 search_error=-113 result=0 favorites=1 storage=0 position_ms=4623 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001336  67.3%  13.3% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0001984 0000696  35.0%  50.1% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000816  42.1%   0.0% hpwork 0x4ff4c680 0x4ff4c6cc\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000752  38.8%   0.0% lpwork 0x4ff4c600 0x4ff4c64c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001344  22.2%   0.0% usbh_hub0 0x4ff67bb4\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680 0004224  12.9%   9.9% desktop\n    7     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0004000 0000944  23.6%   0.0% flash-stack\n    9     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024512 0003944  16.0%   0.0% weather 0x400b6f1e 0\n   10    10 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016 0002112  52.5%   1.0% nsh\n   11    11 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004016 0002528  62.9%   9.7% c6net\n   15    15 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0008040 0002224  27.6%   0.0% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\n   36     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032696 0007600  23.2%   0.0% music_search 0x400b87a8 0\n   40     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0049088 0020224  41.1%  10.9% music_player 0x400bb22e 0\n   61     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032704 0004008  12.2%   5.2% music_net 0x400b8618 0x483d6504\n   76     6 ---(0x00000003) 252 RR       pthread   - Waiting  MQ empty  0000000000000000 0001984 0001072  54.0%   0.0% es8311 0x4001693a 0x4ffad0c8\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-search:青花瓷",
+    "output": "desktop ui music-search:青花瓷\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=3 error=0 search=1 search_error=0 result=0 favorites=1 storage=0 position_ms=4623 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-play-result",
+    "output": "desktop ui music-play-result\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=3 error=0 search=1 search_error=0 result=0 favorites=1 storage=0 position_ms=4623 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001336  67.3%  13.1% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0001984 0000696  35.0%  50.6% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000816  42.1%   0.0% hpwork 0x4ff4c680 0x4ff4c6cc\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000752  38.8%   0.0% lpwork 0x4ff4c600 0x4ff4c64c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001344  22.2%   0.0% usbh_hub0 0x4ff67bb4\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680 0004224  12.9%   9.7% desktop\n    7     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0004000 0000944  23.6%   0.0% flash-stack\n    9     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024512 0003944  16.0%   0.0% weather 0x400b6f1e 0\n   10    10 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016 0002112  52.5%   0.8% nsh\n   11    11 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004016 0002528  62.9%   9.5% c6net\n   15    15 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0008040 0002224  27.6%   0.0% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\n   36     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032696 0007600  23.2%   0.0% music_search 0x400b87a8 0\n   40     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0049088 0020224  41.1%  11.4% music_player 0x400bb22e 0\n   61     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0032704 0004008  12.2%   4.3% music_net 0x400b8618 0x483d6504\n   76     6 ---(0x00000003) 252 RR       pthread   - Waiting  MQ empty  0000000000000000 0001984 0001072  54.0%   0.0% es8311 0x4001693a 0x4ffad0c8\nnsh> \u001b[K"
+  }
+]

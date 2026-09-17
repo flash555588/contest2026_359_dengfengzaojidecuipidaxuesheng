@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=0 configured=0 phase=0 turns=0 storage=0 revision=1 last_state=-1 last_error=0 editor=0\nchat-stream text_bytes=0 thinking_bytes=0 thinking_tokens=0 tokens_known=0 rounds=0 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-draft-status",
+    "output": "desktop ui qpk-draft-status\nqpk-draft loaded=0 busy=0 revision=0 previewed=0 saved=0 error=0 preview_active=0 name= package=\nqpk-save stage=0 elapsed_ms=0\nflash-stack ops=268 caller=4838baac worker=4ffadeac\nnsh> \u001b[K"
+  }
+]

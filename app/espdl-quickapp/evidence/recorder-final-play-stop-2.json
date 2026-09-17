@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui click:播放",
+    "output": "desktop ui click:播放\nclick 播放 -> 1\ndesktop: ui click:播放 ready\nnsh> \u001b[K[music] PCM opened rate=16000 mono volume=40\n"
+  },
+  {
+    "command": "desktop ui click:停止播放",
+    "output": "desktop ui click:停止播放\n[0e[0r0soclick 停止播放 -> 1\ndesktop: ui click:停止播放 ready\nnsh> \u001b[K"
+  }
+]

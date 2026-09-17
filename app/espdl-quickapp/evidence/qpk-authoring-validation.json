@@ -1,0 +1,31 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "quickjs": "production firmware sources",
+  "external_ai_tested": false,
+  "hardware_tested": false,
+  "guide_sha256": "5c2287cb1bc19f88fbc9b8b8de8fa653d2f380f58aff2ec0b9e21d2e01bbc801",
+  "hardware_guide_sha256": "a045d911a2100d332a4b871d1e5d7607d51ce0de8508de3ca61779d1eb30c538",
+  "embedded_guide_sha256": "e4df6c986367185735fcc046d5cbf5788ab175b24b6281bb0df0883f4f8665d7",
+  "examples": {
+    "hello": "5afb533340f6a57f8b27af13177d326f6497e62ab8fbde904793a0b7f87db16b",
+    "game2048": "aef46fb6f70d4160a843a0e2a890c8b40b337dfbf3c3e9061c74e84d5bb8b2f8",
+    "ouo": "72ec0ffb36e5fcceb9d482b9c8b8760587e81ebcd31afe32ca54b8ba50aa4b0a"
+  },
+  "checks": [
+    "Complete hardware API reference is returned to AI; every hardware JavaScript snippet compiles with production QuickJS",
+    "All three pinned projects read from actual qpk files, UTF-8 pagination and source SHA-256; paths and bounds restricted",
+    "Changed examples and symlinks refused without overwriting files or returning private data",
+    "Pinned scripts compile with the firmware QuickJS; compile-only never executes app code",
+    "Complete guide counter compiles; syntax errors, stale revisions, cancellation, NUL, size/name/slug/schema bounds preserve draft",
+    "Process restart, partial newer snapshot recovery, SHA-256 and repair preserve last valid snapshot",
+    "Save requires current successful preview, creates a valid independent package, survives reboot, is idempotent and never overwrites a different installed app",
+    "Async discard survives restart, rejects stale/cancelled generation, allows a new idea, preserves installed apps/user files and retains the draft on storage failure",
+    "Async uninstall removes nested app assets and all three storage layouts, protects built-ins/private paths/symlinks and preserves overlapping package storage prefixes",
+    "Two corrupt draft copies are reported and preserved, never silently reset",
+    "Previous firmware tombstone migrates to visible revision zero; subsequent writes/discards remain durable and restart at version one",
+    "Installation succeeds with 80 existing applications; no fixed application-count limit",
+    "2 MiB UTF-8 script compiles, survives restart and installs without truncation",
+    "Hello, 2048, OuO and the guide counter pass behavior tests with explicit UI fixtures"
+  ]
+}

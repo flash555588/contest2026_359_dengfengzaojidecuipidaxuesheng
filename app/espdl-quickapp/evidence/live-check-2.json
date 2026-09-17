@@ -1,0 +1,6 @@
+[
+  {
+    "command": "ls /data/qpk/.data/@2pcom.openvela.recorder",
+    "output": "ls /data/qpk/.data/@2pcom.openvela.recorder\n/data/qpk/.data/@2pcom.openvela.recorder:\n kaudio_rec_000001/\nnsh> \u001b[K"
+  }
+]

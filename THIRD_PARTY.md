@@ -80,6 +80,16 @@ upstream projects.
 - License: Apache License 2.0, as declared by `ouo/LICENSE`.
 - Copyright: Vela Mood Console contributors.
 
+## Dafeiyu desktop pet
+
+- Source: `https://github.com/1190fasheqi/dafeiyu-pet`.
+- Upstream license: MIT; the original license text is retained at
+  `app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/LICENSE.upstream`.
+- Integration: the local dialogue and behavior are adapted for the native
+  LVGL overlay and Quick App API; newly written device-side code declares
+  Apache-2.0. The pet source has host tests but no new firmware or board
+  validation yet.
+
 ## Release obligations
 
 Before submission, run a license/SPDX scan over the materialized NuttX and apps

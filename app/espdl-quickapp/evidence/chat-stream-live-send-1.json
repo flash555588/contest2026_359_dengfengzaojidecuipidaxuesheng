@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop ui chat-input",
+    "output": "desktop ui chat-input\n[ime] Google Pinyin dictionary=1068442 loaded=1\ndesktop: ui chat-input ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-type:详写50条快应用布局建议。",
+    "output": "desktop ui chat-type:详写50条快应�布局建议。\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-send",
+    "output": "esktop ui chat-send\n[1:  z[Uz[ r[Ucxn[Uxpet[coxdesktop: ui chat-send ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop i chat-status\nchat loded=1 configured=1 phase=3 turns=2 storage=0 revision=6 last_state=0 last_error=0 editor=0\nchat-stream text_bytes=0 thinking_bytes=0 thinking_tokens=0 tokens_known=0 rounds=1 rebuilds=3 updates=1 refresh_max_ms=340 draft_bytes=0\nnsh> \u001b[K"
+  }
+]

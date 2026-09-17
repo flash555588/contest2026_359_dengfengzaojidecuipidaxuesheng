@@ -1,0 +1,6 @@
+[
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        260        3836 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  }
+]

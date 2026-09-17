@@ -1,0 +1,10 @@
+[
+  {
+    "command": "ls /dev",
+    "output": "ls /dev\n/dev:\n audio/\n console\n fb0\n input0\n null\n pwm0\n pwm1\n pwm2\n pwm3\n random\n smart0\n ttyACM0\n ttyS0\n urandom\n uvc0\n uvc1\n uvc2\n uvc3\n uvcctl\n zero\nnsh> \u001b[K"
+  },
+  {
+    "command": "mount",
+    "output": "mount\n  /data type smartfs\n  /proc type procfs\n  /tmp type tmpfs\nnsh> \u001b[K"
+  }
+]

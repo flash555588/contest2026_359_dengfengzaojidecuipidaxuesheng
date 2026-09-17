@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui music-play-result",
+    "output": "desktop ui music-play-result\ndesktop: unknown UI page or desktop not running\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\ndesktop: unknown UI page or desktop not running\nnsh> \u001b[K"
+  }
+]

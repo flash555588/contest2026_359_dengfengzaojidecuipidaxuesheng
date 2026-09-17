@@ -1,0 +1,33 @@
+{
+  "upstream": "espressif/esp-dl",
+  "revision": "dc380d450835d42f92777121a0cd4fc67d7c3a8c",
+  "flash_base": 8388608,
+  "flash_limit": 12582912,
+  "weight_layout": "esp32p4-simd",
+  "sd_directory": "/sdcard/espdl",
+  "records": [
+    {
+      "id": "imagenet",
+      "file": "imagenet_cls_mobilenetv2_s8_v1.espdl",
+      "bytes": 3611584,
+      "offset": 0,
+      "sha256": "04ecb03fa36b5dadf012e51aa2b8f5ac85ff8b48dc61a501152199d9de429b82"
+    },
+    {
+      "id": "face_msr",
+      "file": "human_face_detect_msr_s8_v1.espdl",
+      "bytes": 61248,
+      "offset": 3612672,
+      "sha256": "2bbaaf17f39ce9ee547abf5ffdc6d8fcd1844009a0d26878d7bfb33451f16211"
+    },
+    {
+      "id": "face_mnp",
+      "file": "human_face_detect_mnp_s8_v1.espdl",
+      "bytes": 129968,
+      "offset": 3674112,
+      "sha256": "5b7fedcff59dbe69d1935d6d206bf371fc18b5dd9176320ef69c9f05ee83af55"
+    }
+  ],
+  "bundle_bytes": 3804080,
+  "bundle_sha256": "93f04d09a0e38d30053431caf91b9e481239ce6c628147f42b8c285edd5be0f0"
+}

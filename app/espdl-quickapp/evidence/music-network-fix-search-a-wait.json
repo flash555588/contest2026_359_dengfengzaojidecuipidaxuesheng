@@ -1,0 +1,18 @@
+[
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=0 error=0 search=1 search_error=0 result=0 favorites=0 storage=0 position_ms=0 volume=40 title= artist=\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001336  67.3%  19.9% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Running            0000000000000000 0001984 0000696  35.0%  50.3% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000704  36.3%   0.0% hpwork 0x4ff4c680 0x4ff4c6cc\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000720  37.1%   0.0% lpwork 0x4ff4c600 0x4ff4c64c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001344  22.2%   0.0% usbh_hub0 0x4ff67bb4\n    6     6 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0032680 0004224  12.9%   9.3% desktop\n    7     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0004000 0000944  23.6%   0.0% flash-stack\n    9     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024512 0003944  16.0%   0.0% weather 0x400b6f1e 0\n   10    10 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016 0002176  54.1%   0.7% nsh\n   11    11 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004016 0002608  64.9%  19.4% c6net\n   14    14 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0008040 0002224  27.6%   0.0% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\nnsh> \u001b[K"
+  },
+  {
+    "command": "nslookup jkapi.com",
+    "output": "nslookup jkapi.com\nHost: jkapi.com Addr: 110.42.10.72\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /proc/iobinfo",
+    "output": ""
+  }
+]

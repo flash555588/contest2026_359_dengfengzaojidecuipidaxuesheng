@@ -1,0 +1,18 @@
+[
+  {
+    "command": "reset",
+    "output": "ESP-ROM:esp32p4-eco7-20260109\nBuild:Jan  9 2026\nrst:0x17 (CHIP_USB_UART_RESET),boot:0xc (SPI_FAST_FLASH_BOOT)\nSPI mode:DIO, clock div:1\nload:0x30100000,len:0x68\nload:0x4ff40000,len:0xb018\nload:0x4ff4b080,len:0x524c\nentry 0x4ff4abce\n*** Booting NuttX ***\nI (23) boot: chip revision: v3.2\nI (24) boot: efuse block revision: v1.2\nI (24) boot.esp32p4: SPI Speed      : 80MHz\nI (24) boot.esp32p4: SPI Mode       : DIO\nI (27) boot.esp32p4: SPI Flash Size : 16MB\nI (31) boot: Enabling RNG early entropy source...\ntcm: lma 0x00002020 vma 0x30100000 len 0x68     (104)\ndram: lma 0x00002090 vma 0x4ff40000 len 0xb018   (45080)\ndram: lma 0x0000d0b0 vma 0x4ff4b080 len 0x524c   (21068)\npadd: lma 0x00012328 vma 0x00000000 len 0xdcf0   (56560)\nimap: lma 0x00020020 vma 0x40200020 len 0x29c4b4 (2737332)\npadd: lma 0x002bc4dc vma 0x00000000 len 0x3b1c   (15132)\nimap: lma 0x002c0000 vma 0x40000000 len 0x1ff844 (2095172)\ntotal segments stored 7\nI (76) hex_psram: vendor id    : 0x0d (AP)\nI (77) hex_psram: Latency      : 0x01 (Fixed)\nI (81) hex_psram: DriveStr.    : 0x00 (25 Ohm)\nI (85) hex_psram: dev id       : 0x03 (generation 4)\nI (90) hex_psram: density      : 0x07 (256 Mbit)\nI (94) hex_psram: good-die     : 0x06 (Pass)\nI (98) hex_psram: SRF          : 0x02 (Slow Refresh)\nI (103) hex_psram: BurstType    : 0x00 ( Wrap)\nI (107) hex_psram: BurstLen     : 0x03 (2048 Byte)\nI (111) hex_psram: BitMode      : 0x01 (X16 Mode)\nI (116) hex_psram: Readlatency  : 0x04 (14 cycles@Fixed)\nI (121) hex_psram: DriveStrength: 0x00 (1/1)\nI (125) MSPI Timing: Enter psram timing tuning\nI (289) esp_psram: Found 32MB PSRAM device\nI (289) esp_psram: Speed: 200MHz\nI (300) hex_psram: psram CS IO is dedicated\nABCDV1: soc startup begin\nI (302) cpu_start: Pro cpu start user code\nI (303) cpu_start: cpu freq: 400000000 Hz\nI (303) esp_psram: Adding pool of 32768K of PSRAM memory to heap allocator\nW (310) spi_flash: Detected GigaDevice flash chip but using generic driver. For optimal functionality, enable `SPI_FLASH_SUPPORT_GD_CHIP` in menuconfig\nI (323) spi_flash: detected chip: generic\nI (327) spi_flash: flash io: dio\nV1: soc startup end\n[0[1[]b\nNuttShell (NSH)\nnsh> \u001b[K\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl",
+    "output": "desktop ui espdl\n[qpk] started ESP-DL 离线识别 (org.openvela.espdl 0.1.0) with QuickJS\ndesktop: ui espdl ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-start",
+    "output": "desktop ui espdl-start\nespdl start clicked=1\ndesktop: ui espdl-start ready\nnsh> \u001b[K[uvc] HD Web Camera MJPEG 640x480 interval=333333 payload=1024 alt=1\n[espdl] perf frames=30 wall=5360 capture=150 infer=23 publish=4 faces=0\n"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=1 mode=1 busy=1 stage=1 error=0 frame=49 count=0 ms=180 track=0 target=-1\nnsh> \u001b[K[espdl] perf frames=30 wall=5380 capture=152 infer=23 publish=3 faces=0\n[espdl] perf frames=30 wall=5380 capture=152 infer=22 publish=3 faces=0\n"
+  }
+]

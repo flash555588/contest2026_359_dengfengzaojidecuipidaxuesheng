@@ -1,0 +1,17 @@
+{
+  "kind": "native-source-not-firmware",
+  "hardware_tested": false,
+  "ipc": false,
+  "tls": false,
+  "files": {
+    "CMakeLists.txt": "5ae11a1eaed0d5ab8ddbebb9c00141e008fb6c35e80823640f0bf34f96761d0a",
+    "hass_main.c": "e6edcee4580c21fb125c1f20dd55c7aca38cf8dba87e70f1702a9c04401359f8",
+    "hass_service.c": "63d2ca5d4144656f0d58fb9d2021bb98b8562aba58c8df364ea1ac2cbf58030a",
+    "hass_service.h": "02ba101a865d816812df64469427ef48023d6fa09196e469b8fcfe3a2943aca7",
+    "Kconfig": "f9d3bd8e4b40978541763cf97c70ed2086913b9cb51eadc4bf21c529647f5a16",
+    "Make.defs": "4ba56a0996b5fcec5c97d5bf04f4996b679957c708afb9f49cf58605a5c90a90",
+    "Makefile": "e2b2e93b0a58787f22c46ac7fae589eff8cbce11907e33a5aac1364fb553aa2b",
+    "hass_transport.c": "ca371bd66d32d2d33fad69347093810de1846bdab39c9a3d44c95e062aafcc87",
+    "hass_transport.h": "3e0c45fbabaf9a014fa678ef9c92a78760202eec152ea977b72344b05fa49c90"
+  }
+}

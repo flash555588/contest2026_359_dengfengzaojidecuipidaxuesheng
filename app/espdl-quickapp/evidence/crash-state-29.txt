@@ -1,0 +1,40 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+up_mdelay (milliseconds=milliseconds@entry=250) at common/riscv_mdelay.c:51
+warning: 51	common/riscv_mdelay.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x4002F000, debug_reason=00000000
+[esp32p4.hp.cpu0] Halt cause (7) - (PMP Store access fault)
+[esp32p4.hp.cpu1] Target halted, PC=0x4000C5B0, debug_reason=00000000
+$1 = true
+$2 = {fbmem = 0x480001c0, fblen = 3686400, stride = 2048, display = 0 '\000', bpp = 16 '\020', xres_virtual = 1024, yres_virtual = 1800, xoffset = 0, yoffset = 600}
+$3 = {host = {bus = 0, ops = 0x4023155c <g_esp_mipi_dsi_ops>}, hal = {host = 0x500a0000, bridge = 0x500a0800, lane_bit_rate_mbps = 1000, expect_dpi_clock_freq_mhz = 52, real_dpi_clock_freq_mhz = 48}, dw_hal = {dev = 0x50081000}, lock = {sem = {val = {semcount = 2147483647, mholder = 2147483647}, flags = 5, waitlist = {head = 0x0, tail = 0x0}}}, dmalock = {lock = 0}, device = 0x4ff81eb8, fb = 0x4812c1c0, lli = 0x4ff81f80, lli_nc = 0x8ff81f80, pending_fb = 0x0, fb_done = {val = {semcount = 0, mholder = 0}, flags = 0, waitlist = {head = 0x0, tail = 0x0}}, fb_size = 1228800, dpi_h_res = 1024, dpi_v_res = 600, phy_pllref_clk_src = SOC_MOD_CLK_XTAL, phy_cfg_clk_src = SOC_MOD_CLK_PLL_F20M, dpi_clk_src = SOC_MOD_CLK_PLL_F240M, dma_cpuint = 4, num_data_lanes = 2 '\002', fb_bpp = 16 '\020', lane_bit_rate_mbps = 1000, initialized = true, dpi_configured = true, fb_bound = true, dma_enabled = true, video_running = true}
+$4 = OSINIT_PANIC
+$5 = {source = 22 '\026', irq = 39 '\'', cpuint = 5, last_sof = 1891, connected = true, host_active = true, drop_tx = false, tx_wdog = {node = {next = 0x0, prev = 0x0}, arg = 1341436124, func = 0x0, expired = 1895}}
+$6 = (struct mm_heap_s *) 0x4ff814e0
+TASK 0 "CPU0 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_ASSIGNED
+TASK 1 "CPU1 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_ASSIGNED
+TASK 2 "hpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 3 "lpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 5 "usbh_hub0", '\000' <repeats 22 times> state TSTATE_WAIT_MQNOTEMPTY
+TASK 6 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SIG
+TASK 7 "desktop", '\000' <repeats 24 times> state TSTATE_TASK_RUNNING
+TASK 8 "nsh", '\000' <repeats 28 times> state TSTATE_WAIT_SEM
+TASK 9 "c6net", '\000' <repeats 26 times> state TSTATE_WAIT_SIG
+TASK 10 "desktop", '\000' <repeats 24 times> state TSTATE_TASK_RUNNING
+$7 = 16
+$8 = "desktop", '\000' <repeats 24 times>
+$9 = "desktop", '\000' <repeats 24 times>
+  Id   Target Id         Frame 
+* 1    Remote target     up_mdelay (milliseconds=milliseconds@entry=250) at common/riscv_mdelay.c:51
+
+Thread 1 (Remote target):
+UNAVAILABLE thread apply all bt No registers.
+g_last_regs {{0 <repeats 140 times>}, {0 <repeats 140 times>}}
+g_running_tasks[0]->xcp UNAVAILABLE g_running_tasks[0]->xcp Cannot access memory at address 0xb0
+g_running_tasks[1]->xcp UNAVAILABLE g_running_tasks[1]->xcp Cannot access memory at address 0xb0
+'qpk_espdl_service.c'::g_dl_result {request = 0, frame = 0, stage = QPK_DL_IDLE, mode = QPK_DL_CLASSIFY, busy = false, preview = false, error = 0, elapsed_ms = 0, count = 0, track = {state = QPK_DL_SEARCHING, id = 0, target = 0, offset_x = 0, offset_y = 0}, items = {{label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}, {label = '\000' <repeats 95 times>, score = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0}}}
+Cannot access memory at address 0xb4
+Python Exception <class 'gdb.error'>: "monitor" command not supported by this target.
+C:\Users\wenji\Desktop\新建文件夹 (2)\v3-sources-20260914\v3-sources-20260914\diagnostics\inspect-running.gdb:58: Error in sourced command file:
+Error occurred in Python: "monitor" command not supported by this target.

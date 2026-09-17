@@ -1,0 +1,123 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x4002f006 in up_mdelay (milliseconds=milliseconds@entry=250) at common/riscv_mdelay.c:51
+warning: 51	common/riscv_mdelay.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x4002F006, debug_reason=00000000
+[esp32p4.hp.cpu0] Halt cause (5) - (PMP Load access fault)
+[esp32p4.hp.cpu1] Target halted, PC=0x4000C5AC, debug_reason=00000000
+$1 = true
+$2 = {fbmem = 0x480001c0, fblen = 3686400, stride = 2048, display = 0 '\000', bpp = 16 '\020', xres_virtual = 1024, yres_virtual = 1800, xoffset = 0, yoffset = 0}
+$3 = {host = {bus = 0, ops = 0x40200f0c <g_esp_mipi_dsi_ops>}, hal = {host = 0x500a0000, bridge = 0x500a0800, lane_bit_rate_mbps = 1000, expect_dpi_clock_freq_mhz = 52, real_dpi_clock_freq_mhz = 48}, dw_hal = {dev = 0x50081000}, lock = {sem = {val = {semcount = 2147483647, mholder = 2147483647}, flags = 5, waitlist = {head = 0x0, tail = 0x0}}}, dmalock = {lock = 0}, device = 0x4ff818f8, fb = 0x480001c0, lli = 0x4ff819c0, lli_nc = 0x8ff819c0, pending_fb = 0x0, fb_done = {val = {semcount = 0, mholder = 0}, flags = 0, waitlist = {head = 0x0, tail = 0x0}}, fb_size = 1228800, dpi_h_res = 1024, dpi_v_res = 600, phy_pllref_clk_src = SOC_MOD_CLK_XTAL, phy_cfg_clk_src = SOC_MOD_CLK_PLL_F20M, dpi_clk_src = SOC_MOD_CLK_PLL_F240M, dma_cpuint = 4, num_data_lanes = 2 '\002', fb_bpp = 16 '\020', lane_bit_rate_mbps = 1000, initialized = true, dpi_configured = true, fb_bound = true, dma_enabled = true, video_running = true}
+$4 = OSINIT_PANIC
+$5 = {source = 22 '\026', irq = 39 '\'', cpuint = 5, last_sof = 1857, connected = true, host_active = false, drop_tx = false, tx_wdog = {node = {next = 0x0, prev = 0x0}, arg = 0, func = 0x0, expired = 0}}
+$6 = (struct mm_heap_s *) 0x4ff80f20
+TASK 0 "CPU0 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_ASSIGNED
+TASK 1 "CPU1 IDLE", '\000' <repeats 22 times> state TSTATE_TASK_RUNNING
+TASK 2 "hpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 3 "lpwork", '\000' <repeats 25 times> state TSTATE_WAIT_SEM
+TASK 5 "usbh_hub0", '\000' <repeats 22 times> state TSTATE_WAIT_MQNOTEMPTY
+TASK 6 "desktop", '\000' <repeats 24 times> state TSTATE_WAIT_SIG
+TASK 7 "nsh", '\000' <repeats 28 times> state TSTATE_WAIT_SEM
+TASK 8 "desktop", '\000' <repeats 24 times> state TSTATE_TASK_RUNNING
+$7 = 16
+$8 = "desktop", '\000' <repeats 24 times>
+$9 = "CPU1 IDLE", '\000' <repeats 22 times>
+  Id   Target Id         Frame 
+* 1    Remote target     0x4002f006 in up_mdelay (milliseconds=milliseconds@entry=250) at common/riscv_mdelay.c:51
+
+Thread 1 (Remote target):
+#0  0x4002f006 in up_mdelay (milliseconds=milliseconds@entry=250) at common/riscv_mdelay.c:51
+#1  0x4000ca9c in reset_board () at misc/assert.c:877
+#2  _assert (filename=filename@entry=0x0, linenum=linenum@entry=0, msg=msg@entry=0x401e0d8c "panic", regs=<optimized out>, regs@entry=0x4840fe98, irq=irq@entry=true) at misc/assert.c:985
+#3  0x400036a4 in riscv_exception (mcause=<optimized out>, regs=0x4840fe98, args=<optimized out>) at common/riscv_exception.c:131
+#4  0x4ff42016 in irq_dispatch (irq=irq@entry=5, context=context@entry=0x4840fe98) at irq/irq_dispatch.c:173
+#5  0x4ff4236a in riscv_doirq_top (irq=5, regs=0x4840fe98) at common/riscv_doirq.c:132
+#6  riscv_doirq (irq=5, regs=0x4840fe98) at common/riscv_doirq.c:189
+#7  0x4ff4023e in exception_common ()
+#8  0x00000000 in ?? ()
+Backtrace stopped: previous frame inner to this frame (corrupt stack?)
+g_last_regs {{1073792864, 1073792864, 1341462120, 0, 0, 1341462464, 671088640, 1, 5, 1341464576, 1341465792, 0, 2147514497, 1341457028, 0, 1341457180, 1341457216, 16, 1341660824, 1075711372, 0, 1341465792, 1341456384, 0, 6, 1, 560, 2, 0, 1, 7, 18, 2147514497, 0 <repeats 61 times>, 570425344, 0 <repeats 22 times>, 1124007936, 1056964608, 1056964608, 1134493696, 1056964608, 1065353216, 0 <repeats 15 times>, 1, 11}, {1341400172, 1341400154, 1341656816, 2147508225, 0, 1337986406, 1341398384, 1341910896, 1, 0, 0, 1, 1341457216, 0, 1, 1072717824, 0, 1341457200, 0 <repeats 14 times>, 22657, 1341656528, 1341656528, 1073745826, 0, 0, 0, 536870912, 0, 0, 65538, 0, 14465, 0, 0, 1, 1075841696, 1341656592, 1341656592, 1073745826, 0, 0, 0, 184028796, 0, 1341656700, 1341656592, 1073862206, 4294967292, 32, 1341656728, 10, 0, 0, 1341656568, 1075547852, 0, 0, 1341656728, 1341656816, 0, 1341656816, 0, 29, 4294967292, 10, 570425344, 1073874428, 0, 0, 1341656632, 167772179, 0, 0, 1341656728, 1073871372, 0, 0, 0, 0, 0, 0, 570425344, 0 <repeats 43 times>, 1, 1073883914}}
+g_running_tasks[0]->xcp {saved_regs = 0x0, regs = 0x4840fe98}
+g_running_tasks[1]->xcp {saved_regs = 0x0, regs = 0x4ff80cc0}
+UNAVAILABLE 'qpk_espdl_service.c'::g_result No symbol "g_result" in specified context.
+mepc (/32): 0x4019b004
+mcause (/32): 0x38000005
+mtval (/32): 0x552db500
+sp (/32): 0x4ff51658
+ra (/32): 0x4000ca9c
+0x4ff524c0 <g_last_regs>:	0x4000c760	0x4000c760	0x4ff51668	0x00000000
+0x4ff524d0 <g_last_regs+16>:	0x00000000	0x4ff517c0	0x28000000	0x00000001
+0x4ff524e0 <g_last_regs+32>:	0x00000005	0x4ff52000	0x4ff524c0	0x00000000
+0x4ff524f0 <g_last_regs+48>:	0x80007881	0x4ff50284	0x00000000	0x4ff5031c
+0x4ff52500 <g_last_regs+64>:	0x4ff50340	0x00000010	0x4ff81e98	0x401e0d8c
+0x4ff52510 <g_last_regs+80>:	0x00000000	0x4ff524c0	0x4ff50000	0x00000000
+0x4ff52520 <g_last_regs+96>:	0x00000006	0x00000001	0x00000230	0x00000002
+0x4ff52530 <g_last_regs+112>:	0x00000000	0x00000001	0x00000007	0x00000012
+0x4ff52540 <g_last_regs+128>:	0x80007881
+_assert + 124 in section .flash.text
+_flash_rodata_dummy_start + 51040 in section .flash_rodata_dummy
+_assert + 124 in section .flash.text
+_flash_rodata_dummy_start + 51040 in section .flash_rodata_dummy
+0x4ff51668 <g_intstackalloc+3752>:	0x4ff87c80	0x400af0e8	0x4ff516a0	0x0a000026
+0x4ff51678 <g_intstackalloc+3768>:	0x00000000	0x00000002	0x4ff81e98	0x4ff524c0
+0x4ff51688 <g_intstackalloc+3784>:	0x401e0d8c	0x00000000	0x00000000	0x7474754e
+0x4ff51698 <g_intstackalloc+3800>:	0x00000058	0x4ff5032c	0x00000035	0x4ff50284
+0x4ff516a8 <g_intstackalloc+3816>:	0x4ff50034	0x401e0d6c	0x00000005	0x400204ce
+0x4ff516b8 <g_intstackalloc+3832>:	0x00000000	0x00010001	0x00000002	0x00000002
+0x4ff516c8 <g_intstackalloc+3848>:	0x302e3000	0x0c00302e	0x00000000	0x4844d9a0
+0x4ff516d8 <g_intstackalloc+3864>:	0x00000005	0x6464032c	0x63623239	0x642d3466
+0x4ff516e8 <g_intstackalloc+3880>:	0x79747269	0x70655320	0x20353120	0x36323032
+0x4ff516f8 <g_intstackalloc+3896>:	0x3a343120	0x333a3332	0x00000035	0x400205d2
+0x4ff51708 <g_intstackalloc+3912>:	0x40020584	0x80007881	0x736972fe	0x00762d63
+0x4ff51718 <g_intstackalloc+3928>:	0x401ff000	0x4840fe98	0x00000005	0x400193a4
+0x4ff51728 <g_intstackalloc+3944>:	0x00000007	0x0000003d	0x00010001	0x00000002
+0x4ff51738 <g_intstackalloc+3960>:	0x00000000	0x0cea4b15	0x00000000	0x4844d9a0
+0x4ff51748 <g_intstackalloc+3976>:	0x00000005	0x4ff5032c	0x00000000	0x4ff50284
+0x4ff51758 <g_intstackalloc+3992>:	0x401ff000	0x4840fe98	0x00000005	0x400036a4
+0x4ff51768 <g_intstackalloc+4008>:	0x00000000	0x00000005	0x4ff5032c	0x4ff42016
+0x4ff51778 <g_intstackalloc+4024>:	0x00000000	0x00000000	0x00000000	0x4840fe98
+0x4ff51788 <g_intstackalloc+4040>:	0x00000000	0x4ff5031c	0x4840fe98	0x4ff4236a
+0x4ff51798 <g_intstackalloc+4056>:	0x00000000	0x00000001	0x00000010	0x484100c8
+mepc (/32): 0x4ff4246c
+mcause (/32): 0xb8000010
+mtval (/32): 0x00000000
+sp (/32): 0x4ff50f08
+ra (/32): 0x4000c598
+0x4ff526f0 <g_last_regs+560>:	0x4ff4246c	0x4ff4245a	0x4ff80ef0	0x80006001
+0x4ff52700 <g_last_regs+576>:	0x00000000	0x4fc00d66	0x4ff41d70	0x4ffbef70
+0x4ff52710 <g_last_regs+592>:	0x00000001	0x00000000	0x00000000	0x00000001
+0x4ff52720 <g_last_regs+608>:	0x4ff50340	0x00000000	0x00000001	0x3ff06000
+0x4ff52730 <g_last_regs+624>:	0x00000000	0x4ff50330	0x00000000	0x00000000
+0x4ff52740 <g_last_regs+640>:	0x00000000	0x00000000	0x00000000	0x00000000
+0x4ff52750 <g_last_regs+656>:	0x00000000	0x00000000	0x00000000	0x00000000
+0x4ff52760 <g_last_regs+672>:	0x00000000	0x00000000	0x00000000	0x00000000
+0x4ff52770 <g_last_regs+688>:	0x00005881
+esp_cpu_wait_for_intr + 26 in section .iram0.text
+esp_cpu_wait_for_intr + 8 in section .iram0.text
+0x4ff80ef0:	0x00000000	0x00000000	0x00000001	0x4000c474
+0x4ff80f00:	0x00000000	0x00000000	0x00000001	0x4ff41436
+0x4ff80f10:	0x00000000	0x00000000	0x00000000	0x4fc02940
+0x4ff80f20:	0x7fffffff	0x00000004	0x00000000	0x00000000
+0x4ff80f30:	0x00000000	0x0003eb08	0x00007900	0x00006d28
+0x4ff80f40:	0x4ff810a8	0x00000000	0x00000000	0x4ffbfba8
+0x4ff80f50:	0x00000000	0x00000000	0x0003eb08	0x00000000
+0x4ff80f60:	0x00000000	0x00000001	0x00000000	0x00000000
+0x4ff80f70:	0x4ff80f78	0x00000000	0x00000000	0x00000000
+0x4ff80f80:	0x4ff80f88	0x4ff80f68	0x00000000	0x00000000
+0x4ff80f90:	0x4ff81fb0	0x4ff80f78	0x00000000	0x00000000
+0x4ff80fa0:	0x4ff80fa8	0x4ff81fb0	0x00000000	0x00000000
+0x4ff80fb0:	0x4ff82400	0x4ff80f98	0x00000000	0x00000000
+0x4ff80fc0:	0x4ff80fc8	0x4ff82400	0x00000000	0x00000000
+0x4ff80fd0:	0x4ff80fd8	0x4ff80fb8	0x00000000	0x00000000
+0x4ff80fe0:	0x4ff80fe8	0x4ff80fc8	0x00000000	0x00000000
+0x4ff80ff0:	0x4ff80ff8	0x4ff80fd8	0x00000000	0x00000000
+0x4ff81000:	0x4ff81008	0x4ff80fe8	0x00000000	0x00000000
+0x4ff81010:	0x4ff81018	0x4ff80ff8	0x00000000	0x00000000
+0x4ff81020:	0x4ff81028	0x4ff81008	0x00000000	0x00000000
+[esp32p4.hp.cpu0] Found 3 triggers
+[esp32p4.hp.cpu0] Target halted, PC=0x4002EFF2, debug_reason=00000004
+[esp32p4.hp.cpu0] Halt cause (5) - (PMP Load access fault)
+[esp32p4.hp.cpu1] Found 3 triggers
+[esp32p4.hp.cpu1] Target halted, PC=0x4000C5AC, debug_reason=00000004
+[Inferior 1 (Remote target) detached]

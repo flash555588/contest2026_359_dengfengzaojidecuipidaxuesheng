@@ -1,0 +1,14 @@
+[
+  {
+    "command": "free",
+    "output": "free\nnsh: free: Could not open /proc/meminfo (is procfs mounted?)\nnsh: free: open failed: Out of memory\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=0 configured=0 phase=0 turns=0 storage=0 revision=1 last_state=-1 last_error=0 editor=0\nchat-stream text_bytes=0 thinking_bytes=0 thinking_tokens=0 tokens_known=0 rounds=0 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /dev/audio",
+    "output": "ls /dev/audio\n/dev/audio:\n pcm_in0\nnsh> \u001b[K"
+  }
+]

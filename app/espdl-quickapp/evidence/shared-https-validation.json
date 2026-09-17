@@ -1,0 +1,56 @@
+{
+  "production_sources_asan_ubsan": true,
+  "tls": "real mbedTLS from the firmware source, local OpenSSL TLS 1.2/1.3 peers",
+  "external_ai_tested": false,
+  "requests": [
+    [
+      "TLSv1.3",
+      "/v1/chat/completions"
+    ],
+    [
+      "TLSv1.3",
+      "/v1/chat/completions"
+    ],
+    [
+      "TLSv1.3",
+      "/v1/messages"
+    ],
+    [
+      "TLSv1.3",
+      "/v1/messages"
+    ],
+    [
+      "TLSv1.3",
+      "/401"
+    ],
+    [
+      "TLSv1.3",
+      "/429"
+    ],
+    [
+      "TLSv1.3",
+      "/redirect"
+    ],
+    [
+      "TLSv1.3",
+      "/gzip"
+    ],
+    [
+      "TLSv1.3",
+      "/oversize"
+    ],
+    [
+      "TLSv1.3",
+      "/chunked"
+    ],
+    [
+      "TLSv1.3",
+      "/sse"
+    ],
+    [
+      "TLSv1.3",
+      "/sse-broken"
+    ]
+  ],
+  "output": "PASS: TLS 1.3 HTTP response, session tickets=2\nPASS: TLS 1.2 HTTP response, session tickets=0\nPASS: certificate/hostname rejection, protocol error classification, timeout and cancellation\n[thinking] 先检查连接。你好，HTTPS 已连接。\nOK\n你好，HTTPS 已连接。\nOK\nPASS: production config -> CLI/touch bridge -> both real backends -> real HTTPS; aliases rejected\nPASS: HTTP errors, redirects/compression, large responses and chunked responses\nPASS: real TLS streaming lasts beyond the inactivity timeout while data arrives; partial disconnect rejected after delivering progress\nPASS: concurrent HTTPS and chat, 20 reconnects; no socket growth"
+}

@@ -1,0 +1,2 @@
+PASS: JSON bounds, invalid/truncated/deep input, UTF-8 query escaping, 10000 malformed responses
+PASS: real MP3 decoded rate=44100 channels=2 frames=288000 energy=6621352698868

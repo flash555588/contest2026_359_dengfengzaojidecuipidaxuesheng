@@ -1,0 +1,391 @@
+{
+  "firmware_sha256": "b07815d27a30f8373fc971a813c57d8ebcc9e83662076a01546762ad18c042b1",
+  "i2s": {
+    "dev": {
+      "ops": 1076500040
+    },
+    "lock": {
+      "sem": {
+        "val": {
+          "semcount": 2147483647,
+          "mholder": 2147483647
+        },
+        "flags": 5,
+        "waitlist": {
+          "head": 0,
+          "tail": 0
+        }
+      }
+    },
+    "cpu": 0,
+    "slock": {
+      "lock": 0
+    },
+    "config": 1341441500,
+    "mclk_freq": 6144000,
+    "mclk_multiple": 384,
+    "channels": 2,
+    "rate": 16000,
+    "data_width": 16,
+    "dma_channel_tx": 1341835160,
+    "dma_channel_rx": 1341835456,
+    "tx": {
+      "pend": {
+        "head": 0,
+        "tail": 0
+      },
+      "act": {
+        "head": 0,
+        "tail": 0
+      },
+      "done": {
+        "head": 0,
+        "tail": 0
+      },
+      "work": {
+        "node": {
+          "next": 0,
+          "prev": 0
+        },
+        "qtime": 1149,
+        "worker": 0,
+        "arg": 1341441148
+      },
+      "carry": {
+        "value": 0,
+        "bytes": 0
+      }
+    },
+    "tx_started": 1,
+    "rx": {
+      "pend": {
+        "head": 1341441460,
+        "tail": 1341441460
+      },
+      "act": {
+        "head": 1341441420,
+        "tail": 1341441420
+      },
+      "done": {
+        "head": 0,
+        "tail": 0
+      },
+      "work": {
+        "node": {
+          "next": 0,
+          "prev": 0
+        },
+        "qtime": 0,
+        "worker": 0,
+        "arg": 0
+      },
+      "carry": {
+        "value": 0,
+        "bytes": 0
+      }
+    },
+    "rx_started": 1,
+    "streaming": 1,
+    "bufsem": {
+      "val": {
+        "semcount": 2,
+        "mholder": 2
+      },
+      "flags": 0,
+      "waitlist": {
+        "head": 0,
+        "tail": 0
+      }
+    },
+    "bf_freelist": 1341441380,
+    "containers": [
+      {
+        "flink": 0,
+        "dma_link": [
+          0,
+          0
+        ],
+        "callback": 0,
+        "timeout": 0,
+        "arg": 0,
+        "apb": 0,
+        "buf": 0,
+        "nbytes": 0,
+        "result": 0
+      },
+      {
+        "flink": 1341441340,
+        "dma_link": [
+          0,
+          0
+        ],
+        "callback": 0,
+        "timeout": 0,
+        "arg": 0,
+        "apb": 0,
+        "buf": 0,
+        "nbytes": 0,
+        "result": 0
+      },
+      {
+        "flink": 0,
+        "dma_link": [
+          1341842496,
+          1341842624
+        ],
+        "callback": 1073830912,
+        "timeout": 14,
+        "arg": 1341835592,
+        "apb": 1211911160,
+        "buf": 1341842752,
+        "nbytes": 2048,
+        "result": -16
+      },
+      {
+        "flink": 0,
+        "dma_link": [
+          1341844864,
+          1341844992
+        ],
+        "callback": 1073830912,
+        "timeout": 14,
+        "arg": 1341835592,
+        "apb": 1211911312,
+        "buf": 1341845120,
+        "nbytes": 2048,
+        "result": -16
+      }
+    ]
+  },
+  "config": {
+    "port": 0,
+    "role": 0,
+    "data_width": 16,
+    "rate": 16000,
+    "total_slot": 2,
+    "tx_en": 1,
+    "rx_en": 1,
+    "mclk_pin": 13,
+    "tx_clk_src": 0,
+    "rx_clk_src": 0,
+    "bclk_pin": 12,
+    "ws_pin": 10,
+    "dout_pin": 9,
+    "din_pin": 11,
+    "audio_std_mode": 0,
+    "ws_pol": 0,
+    "ctx": 1341517520,
+    "clk_info": 1341539596
+  },
+  "context": {
+    "dev": 1342988288
+  },
+  "registers": {
+    "reserved_000": [
+      0,
+      0,
+      0
+    ],
+    "int_raw": {
+      "val": 10
+    },
+    "int_st": {
+      "val": 0
+    },
+    "int_ena": {
+      "val": 0
+    },
+    "int_clr": {
+      "val": 0
+    },
+    "reserved_01c": 0,
+    "rx_conf": {
+      "val": 23606284
+    },
+    "tx_conf": {
+      "val": 1097363988
+    },
+    "rx_conf1": {
+      "val": 2021376015
+    },
+    "tx_conf1": {
+      "val": 2021376015
+    },
+    "reserved_030": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "tx_pcm2pdm_conf": {
+      "val": 4890628
+    },
+    "tx_pcm2pdm_conf1": {
+      "val": 66552768
+    },
+    "rx_pdm2pcm_conf": {
+      "val": 4162846720
+    },
+    "reserved_04c": 0,
+    "rx_tdm_ctrl": {
+      "val": 65539
+    },
+    "tx_tdm_ctrl": {
+      "val": 65539
+    },
+    "rx_timing": {
+      "val": 0
+    },
+    "tx_timing": {
+      "val": 0
+    },
+    "lc_hung_conf": {
+      "val": 2064
+    },
+    "rx_eof_num": {
+      "val": 2048
+    },
+    "conf_single_data": {
+      "val": 0
+    },
+    "state": {
+      "val": 1
+    },
+    "etm_conf": {
+      "val": 65600
+    },
+    "fifo_cnt": {
+      "val": 5760
+    },
+    "bck_cnt": {
+      "val": 92169
+    },
+    "clk_gate": {
+      "val": 0
+    },
+    "date": {
+      "val": 36713024
+    }
+  },
+  "buffers": [
+    {
+      "direction": "rx",
+      "queue": "act",
+      "address": 1341441420,
+      "buffer": {
+        "flink": 0,
+        "dma_link": [
+          1341842496,
+          1341842624
+        ],
+        "callback": 1073830912,
+        "timeout": 14,
+        "arg": 1341835592,
+        "apb": 1211911160,
+        "buf": 1341842752,
+        "nbytes": 2048,
+        "result": -16
+      },
+      "descriptor": [
+        2147485696,
+        1341842752,
+        0
+      ]
+    },
+    {
+      "direction": "rx",
+      "queue": "pend",
+      "address": 1341441460,
+      "buffer": {
+        "flink": 0,
+        "dma_link": [
+          1341844864,
+          1341844992
+        ],
+        "callback": 1073830912,
+        "timeout": 14,
+        "arg": 1341835592,
+        "apb": 1211911312,
+        "buf": 1341845120,
+        "nbytes": 2048,
+        "result": -16
+      },
+      "descriptor": [
+        2147485696,
+        1341845120,
+        0
+      ]
+    }
+  ],
+  "codec": {
+    "dev": {
+      "ops": 1076494432,
+      "upper": 1074953444,
+      "priv": 1341835744
+    },
+    "lower": 1341517232,
+    "i2c": 1341441060,
+    "i2s": 1341441148,
+    "pendq": {
+      "head": 0,
+      "tail": 0
+    },
+    "doneq": {
+      "head": 0,
+      "tail": 0
+    },
+    "mq": {
+      "f_oflags": 7,
+      "f_refs": 0,
+      "f_pos": 0,
+      "f_inode": 1341841888,
+      "f_priv": 0
+    },
+    "mqname": [
+      47,
+      114,
+      101,
+      103,
+      99,
+      111,
+      110,
+      102,
+      105,
+      103,
+      47,
+      52,
+      70,
+      70,
+      65,
+      67
+    ],
+    "threadid": 20,
+    "pendlock": {
+      "sem": {
+        "val": {
+          "semcount": 2147483647,
+          "mholder": 2147483647
+        },
+        "flags": 4,
+        "waitlist": {
+          "head": 0,
+          "tail": 0
+        }
+      }
+    },
+    "samprate": 16000,
+    "volume_out": 400,
+    "volume_in": 1000,
+    "bpsamp": 16,
+    "inflight": 2,
+    "running": 1,
+    "paused": 0,
+    "mute": 0,
+    "terminating": 1,
+    "reserved": 1,
+    "result": 0,
+    "audio_mode": 1,
+    "mic_gain": 0,
+    "mclk": 6144000
+  }
+}

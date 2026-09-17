@@ -1,0 +1,6 @@
+[
+  {
+    "command": "ls /data/qpk/dtest",
+    "output": "ls /data/qpk/dtest\nnsh: ls: stat failed: No such file or directory\nnsh> \u001b[K"
+  }
+]

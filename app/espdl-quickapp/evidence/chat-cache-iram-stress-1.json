@@ -1,0 +1,113 @@
+{
+  "firmware_sha256": "4b90e80765c630db939d9d80031fa2a083f67d773851838f8718d299fbe21de4",
+  "rounds": [
+    {
+      "round": 1,
+      "storage_host_ms": 620,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 2,
+      "storage_host_ms": 620,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 3,
+      "storage_host_ms": 623,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 4,
+      "storage_host_ms": 614,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 5,
+      "storage_host_ms": 618,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 6,
+      "storage_host_ms": 619,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 7,
+      "storage_host_ms": 615,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 8,
+      "storage_host_ms": 621,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 9,
+      "storage_host_ms": 617,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 10,
+      "storage_host_ms": 619,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 11,
+      "storage_host_ms": 619,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    },
+    {
+      "round": 12,
+      "storage_host_ms": 619,
+      "storage_pass": true,
+      "status": [
+        "chat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=12475 last_state=1 last_error=0 editor=0",
+        "chat-stream text_bytes=1489 thinking_bytes=43472 thinking_tokens=48 tokens_known=1 rounds=4 rebuilds=0 updates=0 refresh_max_ms=0 draft_bytes=0"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "command": "espclaw status",
+    "output": "espclaw status\nESP-Claw 0.1.0: cleanup pending no; chat settings missing or invalid (network not tested)\nnsh> \u001b[K"
+  },
+  {
+    "command": "ifconfig",
+    "output": "ifconfig\neth0\tLink encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500\n\tinet addr:192.168.0.102 DRaddr:192.168.0.1 Mask:255.255.255.0\n\nnsh> \u001b[K"
+  }
+]

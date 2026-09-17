@@ -1,0 +1,46 @@
+{
+  "examples": [
+    {
+      "id": "hello",
+      "name": "你好快应用",
+      "purpose": "启动计数、本包存储、按钮、提示、定时更新标签。",
+      "path": "/data/qpk/.examples/hello",
+      "files": [
+        "README.md",
+        "manifest.json",
+        "app.js"
+      ],
+      "source_sha256": "5afb533340f6a57f8b27af13177d326f6497e62ab8fbde904793a0b7f87db16b",
+      "origin": "desktop_main.c: g_hello_qpk_js",
+      "verification": "ui-layout-fix/evidence/review-light/light-hello.json 与 review-dark/dark-hello.json；espdl-quickapp/evidence/ui-before-13/light-hello.json 保留了后续版页面记录。这些是对应旧固件的界面验证，不能代替新应用验收。"
+    },
+    {
+      "id": "game2048",
+      "name": "2048",
+      "purpose": "4×4 网格、控件复用、数字、手势、合并算法、最高分。",
+      "path": "/data/qpk/.examples/game2048",
+      "files": [
+        "README.md",
+        "manifest.json",
+        "app.js"
+      ],
+      "source_sha256": "aef46fb6f70d4160a843a0e2a890c8b40b337dfbf3c3e9061c74e84d5bb8b2f8",
+      "origin": "desktop_main.c: g_2048_qpk_js",
+      "verification": "ui-layout-fix/evidence/review-light/light-2048.json 和 review-dark/dark-2048.json 是已有页面审计。游戏边界和连续操作由本次宿主测试另行验证，不能将页面截图当作全部玩法通过。"
+    },
+    {
+      "id": "ouo",
+      "name": "OuO",
+      "purpose": "表情状态、触摸三参数回调、动画、有限定时器。",
+      "path": "/data/qpk/.examples/ouo",
+      "files": [
+        "README.md",
+        "manifest.json",
+        "app.js"
+      ],
+      "source_sha256": "72ec0ffb36e5fcceb9d482b9c8b8760587e81ebcd31afe32ca54b8ba50aa4b0a",
+      "origin": "desktop/ouo/app.js",
+      "verification": "espdl-quickapp/tests/test_ouo_app.js 覆盖状态、定时器、触摸和帧工作量；evidence/ouo-touch-boot.json 等为实板专项记录。聆听、充电等文案只是表情状态。"
+    }
+  ]
+}

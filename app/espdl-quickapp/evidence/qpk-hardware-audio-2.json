@@ -1,0 +1,11 @@
+[
+  {
+    "command": "reset",
+    "output": "ESP-ROM:esp32p4-eco7-20260109\nBuild:Jan  9 2026\nrst:0x17 (CHIP_USB_UART_RESET),boot:0xc (SPI_FAST_FLASH_BOOT)\nSPI mode:DIO, clock div:1\nload:0x30100000,len:0x68\nload:0x4ff40000,len:0xbaa4\nload:0x4ff4bb00,len:0x13188\nentry 0x4ff4b65c\n*** Booting NuttX ***\nI (32) boot: chip revision: v3.2\nI (33) boot: efuse block revision: v1.2\nI (33) boot.esp32p4: SPI Speed      : 80MHz\nI (33) boot.esp32p4: SPI Mode       : DIO\nI (36) boot.esp32p4: SPI Flash Size : 16MB\nI (40) boot: Enabling RNG early entropy source...\ntcm: lma 0x00002020 vma 0x30100000 len 0x68     (104)\ndram: lma 0x00002090 vma 0x4ff40000 len 0xbaa4   (47780)\ndram: lma 0x0000db3c vma 0x4ff4bb00 len 0x13188  (78216)\npadd: lma 0x00020cf8 vma 0x00000000 len 0xf320   (62240)\nimap: lma 0x00030020 vma 0x40270020 len 0x3fdb18 (4184856)\npadd: lma 0x0042db40 vma 0x00000000 len 0x24b8   (9400)\nimap: lma 0x00430000 vma 0x40000000 len 0x262d74 (2502004)\ntotal segments stored 7\nI (85) hex_psram: vendor id    : 0x0d (AP)\nI (86) hex_psram: Latency      : 0x01 (Fixed)\nI (90) hex_psram: DriveStr.    : 0x00 (25 Ohm)\nI (94) hex_psram: dev id       : 0x03 (generation 4)\nI (98) hex_psram: density      : 0x07 (256 Mbit)\nI (103) hex_psram: good-die     : 0x06 (Pass)\nI (107) hex_psram: SRF          : 0x02 (Slow Refresh)\nI (112) hex_psram: BurstType    : 0x00 ( Wrap)\nI (116) hex_psram: BurstLen     : 0x03 (2048 Byte)\nI (120) hex_psram: BitMode      : 0x01 (X16 Mode)\nI (125) hex_psram: Readlatency  : 0x04 (14 cycles@Fixed)\nI (130) hex_psram: DriveStrength: 0x00 (1/1)\nI (134) MSPI Timing: Enter psram timing tuning\nI (298) esp_psram: Found 32MB PSRAM device\nI (299) esp_psram: Speed: 200MHz\nI (310) hex_psram: psram CS IO is dedicated\nABCDV1: soc startup begin\nI (312) cpu_start: Pro cpu start user code\nI (312) cpu_start: cpu freq: 400000000 Hz\nI (313) esp_psram: Adding pool of 32768K of PSRAM memory to heap allocator\nW (320) spi_flash: Detected GigaDevice flash chip but using generic driver. For optimal functionality, enable `SPI_FLASH_SUPPORT_GD_CHIP` in menuconfig\nI (333) spi_flash: detected chip: generic\nI (336) spi_flash: flash io: dio\nV1: soc startup end\n[0[t"
+  },
+  {
+    "command": "desktop hardware-test audio &",
+    "output": "",
+    "error": "Write timeout"
+  }
+]

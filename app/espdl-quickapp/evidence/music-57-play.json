@@ -1,0 +1,26 @@
+[
+  {
+    "command": "reset",
+    "output": "ESP-ROM:esp32p4-eco7-20260109\nBuild:Jan  9 2026\nrst:0x17 (CHIP_USB_UART_RESET),boot:0xc (SPI_FAST_FLASH_BOOT)\nSPI mode:DIO, clock div:1\nload:0x30100000,len:0x68\nload:0x4ff40000,len:0xb018\nload:0x4ff4b080,len:0x12c44\nentry 0x4ff4abce\n*** Booting NuttX ***\nI (32) boot: chip revision: v3.2\nI (32) boot: efuse block revision: v1.2\nI (32) boot.esp32p4: SPI Speed      : 80MHz\nI (33) boot.esp32p4: SPI Mode       : DIO\nI (35) boot.esp32p4: SPI Flash Size : 16MB\nI (39) boot: Enabling RNG early entropy source...\ntcm: lma 0x00002020 vma 0x30100000 len 0x68     (104)\ndram: lma 0x00002090 vma 0x4ff40000 len 0xb018   (45080)\ndram: lma 0x0000d0b0 vma 0x4ff4b080 len 0x12c44  (76868)\npadd: lma 0x0001fd28 vma 0x00000000 len 0x2f0    (752)\nimap: lma 0x00020020 vma 0x40250020 len 0x2a05ac (2753964)\npadd: lma 0x002c05d4 vma 0x00000000 len 0xfa24   (64036)\nimap: lma 0x002d0000 vma 0x40000000 len 0x2450e0 (2380000)\ntotal segments stored 7\nI (84) hex_psram: vendor id    : 0x0d (AP)\nI (85) hex_psram: Latency      : 0x01 (Fixed)\nI (89) hex_psram: DriveStr.    : 0x00 (25 Ohm)\nI (93) hex_psram: dev id       : 0x03 (generation 4)\nI (98) hex_psram: density      : 0x07 (256 Mbit)\nI (102) hex_psram: good-die     : 0x06 (Pass)\nI (106) hex_psram: SRF          : 0x02 (Slow Refresh)\nI (111) hex_psram: BurstType    : 0x00 ( Wrap)\nI (115) hex_psram: BurstLen     : 0x03 (2048 Byte)\nI (120) hex_psram: BitMode      : 0x01 (X16 Mode)\nI (124) hex_psram: Readlatency  : 0x04 (14 cycles@Fixed)\nI (129) hex_psram: DriveStrength: 0x00 (1/1)\nI (133) MSPI Timing: Enter psram timing tuning\nI (298) esp_psram: Found 32MB PSRAM device\nI (298) esp_psram: Speed: 200MHz\nI (310) hex_psram: psram CS IO is dedicated\nABCDV1: soc startup begin\nI (311) cpu_start: Pro cpu start user code\nI (312) cpu_start: cpu freq: 400000000 Hz\nI (312) esp_psram: Adding pool of 32768K of PSRAM memory to heap allocator\nW (319) spi_flash: Detected GigaDevice flash chip but using generic driver. For optimal functionality, enable `SPI_FLASH_SUPPORT_GD_CHIP` in menuconfig\nI (332) spi_flash: detected chip: generic\nI (336) spi_flash: flash io: dio\nV1: soc startup end\n[0[1[C[mf\nNuttShell (NSH)\nnsh> \u001b[K\nnsh> \u001b[Krpc: WifiInit tx pb=50 tlv=62\nrpc: WifiInit pb bytes: 08 01 10 96 02 18 01 b2 11 28 0a 26 08 0a 10 20 18 01 28 20 40 01 48 01 58 01 68 06 78 f0 05 80 01 20 98 01 07 a0 01 cf fe bc f9 01 a8 01 01 b0 01 05\nrpc: EVENT msg_id=769\nrpc: WifiInit resp=0\nrpc: SetMode tx pb=12 tlv=24\nrpc: SetMode pb bytes: 08 01 10 84 02 18 02 a2 10 02 08 01\nrpc: SetMode(1) resp=0\nrpc: WifiStart tx pb=10 tlv=22\nrpc: WifiStart pb bytes: 08 01 10 98 02 18 03 c2 11 00\nrpc: WifiStart resp=0\nrpc: GetMacAddress tx pb=10 tlv=22\nrpc: GetMacAddress pb bytes: 08 01 10 81 02 18 04 8a 10 00\nrpc: EVENT msg_id=773\nrpc: EVENT msg_id=773\n"
+  },
+  {
+    "command": "desktop ui music",
+    "output": "desktop ui music\ndesktop: ui music ready\nnsh> \u001b[Krpc: skipping SetConfig, using slave's stored config\nrpc: WifiConnect tx pb=10 tlv=22\nrpc: WifiConnect pb bytes: 08 01 10 9a 02 18 05 d2 11 00\nrpc: WifiConnect resp=0\nrpc: EVENT msg_id=773\nrpc: EVENT msg_id=775\nrpc: EVENT StaConnected\n[net] associated, requesting a lease\n[net] online 192.168.0.102\n[net] ntp start: 15\n"
+  },
+  {
+    "command": "desktop ui music-search:晴天",
+    "output": "desktop ui music-search:晴天\ndesktop: ui music ready\nnsh> \u001b[K[weather] TLS verified TLSv1.3\n[weather] HTTP 200 bytes=449 ret=0\n[weather] updated city=成都市 AQI=14 temp=18 humidity=96\n[music] TLS verified TLSv1.3\n[music] search result=0\n["
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "music] TLS verified TLSv1.3\ndesktop ui music-status\nmusic state=1 error=0 search=0 search_error=0 result=1 favorites=0 storage=0 position_ms=0 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K[music] playback finished ret=-7\n"
+  },
+  {
+    "command": "desktop ui music-play-result",
+    "output": "desktop ui music-play-result\nmusic state=1 error=0 search=0 search_error=0 result=1 favorites=0 storage=0 position_ms=0 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K[music] TLS verified TLSv1.3\n[music] playback finished ret=-7\n"
+  },
+  {
+    "command": "desktop ui music-status",
+    "output": "desktop ui music-status\nmusic state=6 error=-7 search=0 search_error=0 result=1 favorites=0 storage=0 position_ms=0 volume=40 title=晴天 artist=周杰伦\nnsh> \u001b[K"
+  }
+]

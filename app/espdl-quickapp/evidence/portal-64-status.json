@@ -1,0 +1,14 @@
+[
+  {
+    "command": "ifconfig",
+    "output": "ifconfig\neth0\tLink encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500\n\tinet addr:192.168.0.102 DRaddr:192.168.0.1 Mask:255.255.255.0\n\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui portal",
+    "output": "desktop ui portal\ndesktop: ui portal ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "ps",
+    "output": "ps\n  PID GROUP CPU(AFFINITY)   PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK            STACK    USED FILLED    CPU COMMAND\n    0     0 000(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0001256  63.3%   8.5% CPU0 IDLE\n    1     0 001(0x00000003)   0 FIFO     Kthread   - Assigned           0000000000000000 0001984 0000696  35.0%   0.0% CPU1 IDLE\n    2     0 ---(0x00000003) 224 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000704  36.3%   0.0% hpwork 0x4ff4b4c0 0x4ff4b50c\n    3     0 ---(0x00000003) 100 RR       Kthread   - Waiting  Semaphore 0000000000000000 0001936 0000720  37.1%   0.0% lpwork 0x4ff4b440 0x4ff4b48c\n    5     0 ---(0x00000003) 174 RR       Kthread   - Waiting  MQ empty  0000000000000000 0006032 0001344  22.2%   0.0% usbh_hub0 0x4ff66200\n    6     6 ---(0x00000003) 100 RR       Task      - Ready              0000000000000000 0032680 0004640  14.1%  33.7% desktop\n    8     6 ---(0x00000003) 100 RR       pthread   - Waiting  Signal    0000000000000000 0024512 0003896  15.8%   0.0% weather 0x400af754 0\n    9     9 000(0x00000003) 100 RR       Task      - Running            0000000000000000 0004016 0002112  52.5%   0.7% nsh\n   10    10 ---(0x00000003) 100 RR       Task      - Waiting  Signal    0000000000000000 0004016 0002512  62.5%   7.8% c6net\n   12    12 ---(0x00000003) 100 RR       Task      - Ready              0000000000000000 0008040 0002224  27.6%   0.2% NTP_daemon ntp.aliyun.com;ntp.tencent.com;cn.pool.ntp.org\n   13     6 001(0x00000003) 100 RR       pthread   - Running            0000000000000000 0032704 0010224  31.2%  50.3% desktop 0x400b75ba 0\n   14     6 ---(0x00000003) 100 RR       pthread   - Waiting  Semaphore 0000000000000000 0008128 0001664  20.4%   0.0% desktop 0x400bb212 0x4ff88744\nnsh> \u001b[K"
+  }
+]

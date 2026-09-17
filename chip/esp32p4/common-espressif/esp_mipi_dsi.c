@@ -79,7 +79,7 @@
  * Apart from bounding the interrupt-off time, this avoids depending on a
  * single ROM cache operation spanning a framebuffer larger than L2 cache. */
 
-#define ESP_MIPI_DSI_CACHE_CHUNK  0x20000
+#define ESP_MIPI_DSI_CACHE_CHUNK  0x4000
 
 #ifndef CONFIG_ESPRESSIF_MIPI_DSI_BUS
 #  define CONFIG_ESPRESSIF_MIPI_DSI_BUS 0
@@ -380,9 +380,9 @@ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv)
  * Name: esp_mipi_dsi_cache_writeback
  *
  * Description:
- *   Write a dirty framebuffer range back in bounded chunks.  ESP-IDF uses
- *   0x20000 as the ESP32-P4 C2M chunk size; a 1024x600 RGB565 framebuffer is
- *   substantially larger than the 256 KiB L2 cache.
+ *   Write a dirty framebuffer range back in bounded chunks.  Cache writeback
+ *   masks interrupts, so keep each operation short enough for continuous I2S
+ *   playback while LVGL updates a moving object.
  ****************************************************************************/
 
 static int esp_mipi_dsi_cache_writeback(FAR void *addr, size_t len)

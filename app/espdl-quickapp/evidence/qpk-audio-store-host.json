@@ -1,0 +1,10 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "result": "PASS: WAV header/length metadata, long clip keys, persistent list, corrupt/temp files, symlink and shared-prefix isolation, cancellation, scoped cleanup",
+  "sources": {
+    "qpk_audio_store.c": "4fc316404850773e4ebbc349f73cf770c2f17c744a940d35570c6bdac53fc4e1",
+    "qpk_audio_store.h": "575224c4bbe94b255c7791388754766abd1a983c84afbe76ce6fb4ed5fe13bb2",
+    "qpk_storage.c": "a6093697ba520f9243511228d375cb25997b26a362b807555a673efc1e09230a"
+  }
+}

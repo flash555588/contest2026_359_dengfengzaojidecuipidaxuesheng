@@ -1,0 +1,27 @@
+{
+  "bytes": 4969752,
+  "sha256": "31d09c2ba16d80742d24520df89e7e76868f0a97c13831e5770a0f39bf0b097d",
+  "flash_start": 8192,
+  "flash_end": 4977944,
+  "program_limit": 8388608,
+  "models_start": 8388608,
+  "models_limit": 12582912,
+  "data_start": 12582912,
+  "data_bytes": 4194304,
+  "fits_program_partition": true,
+  "symbols": {
+    "qpk_dl_backend_run": true,
+    "qpk_dl_track_update": true,
+    "qpk_dl_start": true,
+    "espdl_get_app_js": true,
+    "riscv_fpuconfig": true,
+    "riscv_savefpu": true,
+    "riscv_restorefpu": true,
+    "dl::Model::build": true,
+    "dl_esp32p4_s8_conv2d_11cn": true,
+    "dl_esp32p4_s8_depthwise_conv2d": true,
+    "riscv_initial_extctx_state": true
+  },
+  "single_float_abi": true,
+  "hardware_tested": false
+}

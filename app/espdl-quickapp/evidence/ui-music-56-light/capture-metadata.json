@@ -1,0 +1,9 @@
+{
+  "firmware_sha256": "84f48d999c8c051e6e1ccd0112e51be55a6ce9a5bf6f3303d07c25810c8cecea",
+  "theme": "light",
+  "requested_pages": [
+    "music"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

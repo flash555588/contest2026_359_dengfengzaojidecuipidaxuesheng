@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui qpk-yield",
+    "output": "desktop ui qpk-yield\ndesktop: unknown UI page or desktop not running\nnsh> \u001b[Krpc: skipping SetConfig, using slave's stored config\nrpc: WifiConnect tx pb=10 tlv=22\nrpc: WifiConnect pb bytes: 08 01 10 9a 02 18 05 d2 11 00\nrpc: WifiConnect resp=0\nrpc: EVENT msg_id=773\nrpc: EVENT msg_id=775\nrpc: EVENT StaConnected\n[net] associated, requesting a lease\n[net] online 192.168.0.102\n[net] ntp start: 14\n"
+  },
+  {
+    "command": "desktop ui qpk-capacity-status",
+    "output": "desktop ui qpk-capacity-status\nqpk-resources widgets=0 error=\ndesktop: ui qpk-capacity-status ready\nnsh> \u001b[K[weather] HTTP 200 bytes=461 ret=0\n[weather] updated city=成都市 AQI=34 temp=24 humidity=66\n"
+  }
+]
