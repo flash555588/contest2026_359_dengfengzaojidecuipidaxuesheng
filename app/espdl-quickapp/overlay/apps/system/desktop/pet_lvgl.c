@@ -9,11 +9,14 @@
 
 #include "pet_lvgl.h"
 #include "pet_engine.h"
+#include "pet_sprites.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #define BUBBLE_H  36
 #define DOUBLE_CLICK_MS 300
+#define PET_SPRITE_PATH "/sdcard/dafeiyu/dafeiyu.lvbin"
 #define BODY_BLUE 0x3d9ad1
 #define BODY_DEEP 0x2b6f9c
 #define BELLY     0xf4ead6
@@ -34,6 +37,11 @@ struct pet_ui_s
   lv_obj_t *blush_l;
   lv_obj_t *blush_r;
   lv_obj_t *mouth;
+  lv_obj_t *sprite;
+  lv_image_dsc_t sprite_dsc;
+  struct pet_sprite_bundle_s sprites;
+  int sprite_view;
+  int sprite_size;
   const lv_font_t *font_zh;
   lv_timer_t *timer;
   lv_timer_t *click_timer;
@@ -45,6 +53,110 @@ struct pet_ui_s
 };
 
 static struct pet_ui_s g_ui;
+
+static void layout_parts(const struct pet_state_s *state);
+
+static void set_blobs_hidden(bool hidden)
+{
+  lv_obj_t *objects[] =
+    {
+      g_ui.body, g_ui.belly, g_ui.tail, g_ui.eye_l, g_ui.eye_r,
+      g_ui.pupil_l, g_ui.pupil_r, g_ui.blush_l, g_ui.blush_r, g_ui.mouth
+    };
+  unsigned i;
+
+  for (i = 0; i < sizeof(objects) / sizeof(objects[0]); i++)
+    {
+      if (objects[i] == NULL)
+        {
+          continue;
+        }
+
+      if (hidden)
+        {
+          lv_obj_add_flag(objects[i], LV_OBJ_FLAG_HIDDEN);
+        }
+      else
+        {
+          lv_obj_remove_flag(objects[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
+static unsigned pet_size_index(const struct pet_state_s *state)
+{
+  if (strcmp(state->size_id, "small") == 0)
+    {
+      return 0;
+    }
+
+  if (strcmp(state->size_id, "large") == 0)
+    {
+      return 2;
+    }
+
+  return 1;
+}
+
+static enum pet_sprite_view_e pet_sprite_view(const struct pet_state_s *state)
+{
+  if (state->dir == PET_UP)
+    {
+      return PET_SPRITE_UP;
+    }
+
+  if (state->dir == PET_LEFT)
+    {
+      return PET_SPRITE_LEFT;
+    }
+
+  if (state->dir == PET_RIGHT)
+    {
+      return PET_SPRITE_RIGHT;
+    }
+
+  return PET_SPRITE_DOWN;
+}
+
+static void layout_sprite(const struct pet_state_s *state)
+{
+  enum pet_sprite_view_e view = pet_sprite_view(state);
+  unsigned size_index = pet_size_index(state);
+  const struct pet_sprite_image_s *image =
+    pet_sprites_get(&g_ui.sprites, view, size_index);
+
+  if (image == NULL)
+    {
+      lv_obj_add_flag(g_ui.sprite, LV_OBJ_FLAG_HIDDEN);
+      set_blobs_hidden(false);
+      layout_parts(state);
+      return;
+    }
+
+  set_blobs_hidden(true);
+  lv_obj_remove_flag(g_ui.sprite, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_size(g_ui.root, state->w, state->h + BUBBLE_H);
+  if (g_ui.sprite_view != (int)view || g_ui.sprite_size != (int)size_index)
+    {
+      if (g_ui.sprite_dsc.data != NULL)
+        {
+          lv_image_cache_drop(&g_ui.sprite_dsc);
+        }
+      memset(&g_ui.sprite_dsc, 0, sizeof(g_ui.sprite_dsc));
+      g_ui.sprite_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+      g_ui.sprite_dsc.header.cf = LV_COLOR_FORMAT_RGB565A8;
+      g_ui.sprite_dsc.header.w = image->width;
+      g_ui.sprite_dsc.header.h = image->height;
+      g_ui.sprite_dsc.header.stride = image->width * 2u;
+      g_ui.sprite_dsc.data_size = image->data_size;
+      g_ui.sprite_dsc.data = image->data;
+      lv_image_set_src(g_ui.sprite, &g_ui.sprite_dsc);
+      g_ui.sprite_view = view;
+      g_ui.sprite_size = size_index;
+    }
+
+  lv_obj_set_pos(g_ui.sprite, (state->w - image->width) / 2, BUBBLE_H);
+}
 
 static lv_obj_t *make_blob(lv_obj_t *parent, uint32_t color, int radius)
 {
@@ -331,14 +443,36 @@ int pet_lvgl_create(lv_obj_t *parent, const lv_font_t *font_zh)
   g_ui.blush_l = make_blob(g_ui.root, BLUSH, 4);
   g_ui.blush_r = make_blob(g_ui.root, BLUSH, 4);
   g_ui.mouth = make_blob(g_ui.root, 0xd46a7a, 4);
+  g_ui.sprite = lv_image_create(g_ui.root);
   if (g_ui.bubble == NULL || g_ui.body == NULL || g_ui.belly == NULL ||
       g_ui.tail == NULL || g_ui.eye_l == NULL || g_ui.eye_r == NULL ||
       g_ui.pupil_l == NULL || g_ui.pupil_r == NULL ||
-      g_ui.blush_l == NULL || g_ui.blush_r == NULL || g_ui.mouth == NULL)
+      g_ui.blush_l == NULL || g_ui.blush_r == NULL || g_ui.mouth == NULL ||
+      g_ui.sprite == NULL)
     {
       pet_lvgl_destroy();
       return -1;
     }
+
+  lv_obj_remove_flag(g_ui.sprite, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_flag(g_ui.sprite, LV_OBJ_FLAG_HIDDEN);
+  g_ui.sprite_view = -1;
+  g_ui.sprite_size = -1;
+  {
+    char error[96];
+    int ret = pet_sprites_load(PET_SPRITE_PATH, &g_ui.sprites,
+                               error, sizeof(error));
+    if (ret == 0)
+      {
+        printf("desktop: pet sprites loaded from %s (%lu bytes)\n",
+               PET_SPRITE_PATH, (unsigned long)g_ui.sprites.storage_size);
+      }
+    else
+      {
+        printf("desktop: pet sprites unavailable (%s); using fallback\n",
+               error);
+      }
+  }
 
   g_ui.timer = lv_timer_create(pet_timer_cb, 50, NULL);
   if (g_ui.timer == NULL)
@@ -370,7 +504,14 @@ void pet_lvgl_sync(void)
     }
 
   lv_obj_remove_flag(g_ui.root, LV_OBJ_FLAG_HIDDEN);
-  layout_parts(&state);
+  if (g_ui.sprites.storage != NULL)
+    {
+      layout_sprite(&state);
+    }
+  else
+    {
+      layout_parts(&state);
+    }
   jump = state.jump_t > 0 ? (state.jump_t / 30) : 0;
   lv_obj_set_pos(g_ui.root, state.x, state.y - BUBBLE_H - jump);
   if (state.bubble[0] != '\0')
@@ -404,9 +545,15 @@ void pet_lvgl_destroy(void)
 
   if (g_ui.root != NULL)
     {
+      if (g_ui.sprite_dsc.data != NULL)
+        {
+          lv_image_cache_drop(&g_ui.sprite_dsc);
+        }
       lv_obj_delete(g_ui.root);
       g_ui.root = NULL;
     }
+
+  pet_sprites_unload(&g_ui.sprites);
 
   memset(&g_ui, 0, sizeof(g_ui));
 }
@@ -414,4 +561,14 @@ void pet_lvgl_destroy(void)
 bool pet_lvgl_is_open(void)
 {
   return g_ui.open && g_ui.root != NULL;
+}
+
+bool pet_lvgl_uses_sd_sprites(void)
+{
+  return g_ui.sprites.storage != NULL;
+}
+
+size_t pet_lvgl_sprite_bytes(void)
+{
+  return g_ui.sprites.storage_size;
 }

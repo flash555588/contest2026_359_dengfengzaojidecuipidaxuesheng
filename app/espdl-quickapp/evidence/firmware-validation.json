@@ -1,8 +1,8 @@
 {
-  "bytes": 7007108,
-  "sha256": "bb39378421ff46e4bfdb1df5649d9b93997d02ec493cf30e46cc6c5ae5a1d53d",
+  "bytes": 7008732,
+  "sha256": "4d11fd860de7130a6cdd3e27ebeb8f83143d05304fc53aa95f690dfbdb429a4d",
   "flash_start": 8192,
-  "flash_end": 7015300,
+  "flash_end": 7016924,
   "program_limit": 8388608,
   "models_start": 8388608,
   "models_limit": 12582912,
@@ -53,10 +53,13 @@
     "esp_i2cbus_initialize": true,
     "esp_spibus_initialize": true,
     "esp_ledc_init": true,
-    "glass_ble_connect": true
+    "glass_ble_connect": true,
+    "pet_sprites_load": true,
+    "pet_sprites_get": true,
+    "pet_sprites_unload": true
   },
   "single_float_abi": true,
-  "internal_startup_end": 1341811796,
+  "internal_startup_end": 1341811988,
   "internal_startup_limit": 1341915136,
   "cache_critical_iram": {
     "esp_cache_suspend_ext_mem_cache": 1341435720,

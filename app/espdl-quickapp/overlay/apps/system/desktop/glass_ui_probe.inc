@@ -181,6 +181,10 @@ static void desktop_ui_probe_service(void)
         weather.data.aqi, weather.data.temperature, weather.data.humidity, weather.data.location);
     }
   else if (!strcmp(command, "weather-refresh")) glass_weather_refresh();
+  else if (!strcmp(command, "pet-status"))
+    desktop_ui_probe_print("pet source=%s bytes=%lu open=%d\n",
+      pet_lvgl_uses_sd_sprites() ? "sd" : "fallback",
+      (unsigned long)pet_lvgl_sprite_bytes(), pet_lvgl_is_open());
   else if (!strcmp(command, "music-status"))
     {
       struct music_snapshot *s = malloc(sizeof(*s));
@@ -389,7 +393,7 @@ static int desktop_ui_probe_request(const char *command)
     "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",
-    "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet"};
+    "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet", "pet-status"};
   /* click:<label> presses one visible control by its label, which is how the
    * file manager's list rows are verified. */
   bool found = (!strncmp(command, "click:", 6) && command[6] != '\0') ||
