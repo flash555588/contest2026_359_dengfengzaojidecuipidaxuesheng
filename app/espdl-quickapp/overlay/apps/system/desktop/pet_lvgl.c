@@ -13,6 +13,7 @@
 #include <string.h>
 
 #define BUBBLE_H  36
+#define DOUBLE_CLICK_MS 300
 #define BODY_BLUE 0x3d9ad1
 #define BODY_DEEP 0x2b6f9c
 #define BELLY     0xf4ead6
@@ -35,6 +36,7 @@ struct pet_ui_s
   lv_obj_t *mouth;
   const lv_font_t *font_zh;
   lv_timer_t *timer;
+  lv_timer_t *click_timer;
   int press_x;
   int press_y;
   bool dragging;
@@ -176,6 +178,14 @@ static int pointer_xy(lv_event_t *e, int *x, int *y)
   return 0;
 }
 
+static void pet_click_cb(lv_timer_t *timer)
+{
+  g_ui.click_timer = NULL;
+  lv_timer_delete(timer);
+  pet_engine_poke();
+  pet_lvgl_sync();
+}
+
 static void pet_event_cb(lv_event_t *e)
 {
   lv_event_code_t code = lv_event_get_code(e);
@@ -233,14 +243,24 @@ static void pet_event_cb(lv_event_t *e)
     {
       if (!g_ui.press_moved)
         {
-          pet_engine_poke();
-          pet_lvgl_sync();
+          if (g_ui.click_timer != NULL)
+            {
+              lv_timer_delete(g_ui.click_timer);
+              g_ui.click_timer = NULL;
+              pet_engine_feed("fish");
+              pet_lvgl_sync();
+            }
+          else
+            {
+              g_ui.click_timer = lv_timer_create(pet_click_cb,
+                                                 DOUBLE_CLICK_MS, NULL);
+              if (g_ui.click_timer == NULL)
+                {
+                  pet_engine_poke();
+                  pet_lvgl_sync();
+                }
+            }
         }
-    }
-  else if (code == LV_EVENT_DOUBLE_CLICKED)
-    {
-      pet_engine_feed("fish");
-      pet_lvgl_sync();
     }
 }
 
@@ -370,6 +390,12 @@ void pet_lvgl_sync(void)
 
 void pet_lvgl_destroy(void)
 {
+  if (g_ui.click_timer != NULL)
+    {
+      lv_timer_delete(g_ui.click_timer);
+      g_ui.click_timer = NULL;
+    }
+
   if (g_ui.timer != NULL)
     {
       lv_timer_delete(g_ui.timer);

@@ -1,8 +1,8 @@
 {
-  "bytes": 6998380,
-  "sha256": "5091042840f53d14999f6881faed2d7a1abea2d13fa020753b268ac2a9c8cf68",
+  "bytes": 7007108,
+  "sha256": "bb39378421ff46e4bfdb1df5649d9b93997d02ec493cf30e46cc6c5ae5a1d53d",
   "flash_start": 8192,
-  "flash_end": 7006572,
+  "flash_end": 7015300,
   "program_limit": 8388608,
   "models_start": 8388608,
   "models_limit": 12582912,
@@ -56,7 +56,7 @@
     "glass_ble_connect": true
   },
   "single_float_abi": true,
-  "internal_startup_end": 1341811348,
+  "internal_startup_end": 1341811796,
   "internal_startup_limit": 1341915136,
   "cache_critical_iram": {
     "esp_cache_suspend_ext_mem_cache": 1341435720,

@@ -11,8 +11,10 @@
 
 大肥鱼桌宠 1.0.1 的原生浮层、`system.pet` API 和快应用源码已接入当前 overlay，
 说明与许可证见 [dafeiyu/README.md](overlay/apps/system/desktop/dafeiyu/README.md)。
-桌宠仅通过宿主 C/JS 测试；本次尚未构建新固件，也未烧录实板。下文固件和实板证据
-均属于接入桌宠之前的版本。
+桌宠通过宿主 C/JS 测试；2026-09-17 的新固件已编译并烧录到目标 ESP32-P4。
+串口确认 NuttX 启动、`desktop ui pet ready`，以及内置快应用通过 QuickJS 启动。
+烧录只更新 `0x2000` 程序区，保留模型与 `/data`；单击、双击和拖拽尚未逐项实测。
+设备启动时报告 SC2336 相机未检测到，不能据此认定相机功能已验证。
 
 面向 ESP32-P4 Function-EV-Board 的内置快应用，使用 USB MJPEG 相机和本地 ESP-DL 模型。仅提供两个模式：
 
