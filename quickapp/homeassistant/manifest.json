@@ -1,0 +1,11 @@
+{
+  "package": "com.openvela.homeassistant",
+  "name": "米家 HA",
+  "versionName": "0.7.0",
+  "versionCode": 7,
+  "minPlatformVersion": 1,
+  "features": ["homeAssistantService", "homeAssistant", "storage"],
+  "router": {
+    "entry": "app.js"
+  }
+}

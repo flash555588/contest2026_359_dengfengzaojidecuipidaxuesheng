@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui click:停止并保存",
+    "output": "dsktop ui click:停止�保存\nclick 停止并保存 -> 1\ndesktop: ui click:停止并保存 ready\nnsh> \u001b[K[CirC [_rpiaa"
+  }
+]

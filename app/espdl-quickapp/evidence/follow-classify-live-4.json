@@ -1,0 +1,30 @@
+[
+  {
+    "command": "desktop ui espdl",
+    "output": "desktop ui espdl\n[qpk] started ESP-DL 离线识别 (org.openvela.espdl 0.1.0) with QuickJS\ndesktop: ui espdl ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-start",
+    "output": "desktop ui espdl-start\nespdl start clicked=1\ndesktop: ui espdl-start ready\nnsh> \u001b[K[E/USB] timeout ch=0 ep=00 state=3 hcchar=a0908040 size=40080040 int=00000010 mask=00000002\n[uvc] control type=01 req=0b value=0001 size=0 result=-14\n[uvc] stream start failed: -5\n"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=2 mode=1 busy=0 stage=6 error=-5 frame=0 count=0 ms=0 track=0 target=-1\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-stop",
+    "output": "desktop ui espdl-stop\nespdl sop clicked=1\ndesktop: ui espdl-stop ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-classify",
+    "output": "desktop ui espdl-classify\nespdl mode clicked=1\ndesktop: ui espdl-classify ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui espdl-photo",
+    "output": "desktop ui espdl-photo\nespdl classify clicked=1\ndesktop: ui espdl-photo ready\nnsh> \u001b[K[E/USB] timeout ch=0 ep=00 state=2 hcchar=a0900040 size=c008001a int=00000010 mask=00000002\n[uvc] control type=21 req=01 value=0100 size=26 result=-14\n[uvc] stream start failed: -5\n"
+  },
+  {
+    "command": "desktop espdl",
+    "output": "desktop espdl\nespdl request=3 mode=0 busy=1 stage=2 error=0 frame=0 count=0 ms=0 track=0 target=-1\nnsh> \u001b[K[E/USB] timeout ch=0 ep=00 state=3 hcchar=80908040 size=40080040 int=00000010 mask=00000002\n[uvc] control type=01 req=0b value=0000 size=0 result=-14\n"
+  }
+]

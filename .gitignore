@@ -1,49 +1,30 @@
-# Local publication checkouts
-/github-publish/
-
-# Generated build outputs and debug memory captures
-**/__pycache__/
-*.pyc
+# Build artifacts
+build/
+out/
 *.o
 *.a
 *.elf
+*.hex
 *.map
-*.exe
-*.bin
-*.partial
-*.rgb565
-*.rle565
 
-# Device-local configuration and captured media
-**/.env
-**/.env.*
-**/music_credentials.h
-**/evidence/music-sample.mp3
-**/espclaw/voice.json
-**/espclaw/ca.pem
-**/evidence/**/*.png
-**/evidence/**/*.jpg
-**/evidence/**/*.jpeg
-**/evidence/**/*.gif
-/diagnostics/*.png
-/diagnostics/*.html
-/diagnostics/*.log
-/diagnostics/*.txt
-/diagnostics/github-*
+# Local Cursor skill junctions (skills live in sibling ../.claude/)
+.cursor/skills/
 
-# Local publishing utilities and their reports
-/diagnostics/*github*.py
-/diagnostics/*publish*.py
-/diagnostics/*local_mirror*.py
-/diagnostics/scan_source_archives.py
+# Collector identity (local only)
+.env
 
-# Large source archives restored from the committed parts
-/01-v3.2-pinned/nuttx-cd61ccdd.tar.gz
-/02-v3plus/desktop-build-source.tar.gz
-/03-early-v3/reference-source-current.tar.gz
-/04-v3-20260913/current-build-tree-source.tar.gz
-/diagnostics/cherryusb-reference/source.tar.gz
+# NuttX ELF without extension (firmware staging)
+firmware/**/nuttx
 
-# Private device backups, never part of source delivery
-/diagnostics/private/
-/diagnostics/qpk-authoring-baseline/
+# Build dependency files
+.depend
+Make.dep
+
+# Log template placeholder
+logs/your-github-login/
+
+# Python bytecode
+__pycache__/
+
+# Configure-generated board link; its target is local-workspace specific
+board/esp32p4-common/board

@@ -1,0 +1,14 @@
+[
+  {
+    "command": "ifconfig",
+    "output": "ifconfig\neth0\tLink encap:Ethernet HWaddr 10:bd:a3:89:58:74 at RUNNING mtu 1500\n\tinet addr:192.168.0.102 DRaddr:192.168.0.1 Mask:255.255.255.0\n\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui portal",
+    "output": "desktop ui portal\ndeskto: ui portal ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui tree",
+    "output": "desktop ui tree\ndesktop: unknown UI page or desktop not running\nnsh> \u001b[K"
+  }
+]

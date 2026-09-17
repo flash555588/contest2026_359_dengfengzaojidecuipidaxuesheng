@@ -1,0 +1,23 @@
+desktop ui current
+desktop: ui current ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":40,"y":44,"w":944,"h":512,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"label","x":65,"y":63,"w":824,"h":39,"scroll":true,"text":"扫码配置"},
+{"id":3,"parent":1,"type":"button","x":801,"y":59,"w":160,"h":48,"scroll":false,"text":""},
+{"id":4,"parent":3,"type":"label","x":813,"y":72,"w":136,"h":22,"scroll":true,"text":"返回设置"},
+{"id":5,"parent":1,"type":"container","x":85,"y":137,"w":328,"h":328,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"container","x":105,"y":157,"w":288,"h":288,"scroll":true,"text":""},
+{"id":7,"parent":1,"type":"label","x":455,"y":149,"w":490,"h":39,"scroll":true,"text":"把设置，交给大屏幕"},
+{"id":8,"parent":1,"type":"label","x":455,"y":202,"w":470,"h":28,"scroll":true,"text":"扫描二维码，在手机或电脑上配置设备"},
+{"id":9,"parent":1,"type":"label","x":455,"y":255,"w":470,"h":56,"scroll":true,"text":"AI 助手 · 音乐 · 智能家居 · 桌面外观\u000a上传下载文件，安装快应用"},
+{"id":10,"parent":1,"type":"label","x":455,"y":343,"w":470,"h":56,"scroll":true,"text":"连接有效期 14:27\u000a手机与设备请连接同一个 Wi-Fi"},
+{"id":11,"parent":1,"type":"label","x":85,"y":483,"w":360,"h":22,"scroll":true,"text":"http://192.168.0.102:8080"},
+{"id":12,"parent":1,"type":"button","x":455,"y":442,"w":212,"h":48,"scroll":false,"text":""},
+{"id":13,"parent":12,"type":"label","x":467,"y":455,"w":188,"h":22,"scroll":true,"text":"刷新二维码"},
+{"id":14,"parent":1,"type":"button","x":691,"y":442,"w":212,"h":48,"scroll":false,"text":""},
+{"id":15,"parent":14,"type":"label","x":703,"y":455,"w":188,"h":22,"scroll":true,"text":"关闭连接"}
+]
+UI_LAYOUT_END
+nsh> 

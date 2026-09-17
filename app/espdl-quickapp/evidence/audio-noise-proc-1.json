@@ -1,0 +1,14 @@
+[
+  {
+    "command": "ls /proc/fs",
+    "output": "ls /proc/fs\n/proc/fs:\n blocks\n mount\n smartfs\n usage\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /proc",
+    "output": "ls /proc\n/proc:\n 0/\n 1/\n 2/\n 3/\n 5/\n 6/\n 7/\n 9/\n 10/\n 11/\n 24/\n 221/\n 222/\n cpuinfo\n cpuload\n fs/\n iobinfo\n memdump\n meminfo\n net/\n partitions\n self/\n tcbinfo\n uptime\n version\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /proc/mtd",
+    "output": "cat /proc/mtd\nnsh: cat: Could not open /proc/mtd (is procfs mounted?)\nnsh: cat: open failed: No such file or directory\nnsh> \u001b[K"
+  }
+]

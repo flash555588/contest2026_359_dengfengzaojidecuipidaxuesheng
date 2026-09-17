@@ -1,0 +1,9 @@
+{
+  "firmware_sha256": "c4ba98351c5283c54ae4c9ac9ff241efde0921dceef667360475016ae4805100",
+  "theme": "light",
+  "requested_pages": [
+    "portal"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "command": "ls /data/qpk/.data/@2pcom.openvela.recorder/kaudio_rec_000001",
+    "output": "ls /data/qpk/.data/@2pcom.openvela.recorder/kaudio_rec_000001\n/data/qpk/.data/@2pcom.openvela.recorder/kaudio_rec_000001:\n value\nnsh> \u001b[K"
+  },
+  {
+    "command": "ls /data/qpk/.data/@2pcom.openvela.recorder/kaudio_rec_000004",
+    "output": "ls /data/qpk/.data/@2pcom.openvela.recorder/kaudio_rec_000004\n/data/qpk/.data/@2pcom.openvela.recorder/kaudio_rec_000004:\nnsh> \u001b[K"
+  }
+]

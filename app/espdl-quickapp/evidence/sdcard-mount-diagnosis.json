@@ -1,0 +1,22 @@
+[
+  {
+    "command": "ls -l /dev/mmcsd0",
+    "output": "ls -l /dev/mmcsd0\n[CPU0] mmcsd_sendcmd: ERROR: Failed: i=9 response=ff\n[CPU0] mmcsd_getcardinfo: ERROR: CMD9/10 failed: R1=ffffffff\n[CPU0] mmcsd_geometry: ERROR: mmcsd_getcsd returned -5\n[CPU0] mmcsd_sendcmd: ERROR: Failed: i=9 response=ff\n[CPU0] mmcsd_getcardinfo: ERROR: CMD9/10 failed: R1=ffffffff\n[CPU0] mmcsd_geometry: ERROR: mmcsd_getcsd returned -5\n brw-rw-rw-           0 /dev/mmcsd0\nnsh> \u001b[K"
+  },
+  {
+    "command": "mount -t vfat /dev/mmcsd0 /sdcard",
+    "output": "mount -t vfat /dev/mmcsd0 /sdcard\n[CPU0] mmcsd_sendcmd: ERROR: Failed: i=9 response=ff\n[CPU0] mmcsd_sendcmd: ERROR: Failed: i=9 response=ff\n[CPU0] mmcsd_mediainitialize: ERROR: Send CMD0 failed: R1=ffffffff\n[CPU0] nx_mount: ERROR: Bind method failed: -19\nnsh: mount: mount failed: No such device\nnsh> \u001b[K"
+  },
+  {
+    "command": "mount",
+    "output": "mount\n  /data type smartfs\n  /proc type procfs\n  /tmp type tmpfs\nnsh> \u001b[K"
+  },
+  {
+    "command": "dd if=/dev/mmcsd0 of=/tmp/sd0 bs=512 count=1",
+    "output": "dd if=/dev/mmcsd0 of=/tmp/sd0 bs=512 count=1\n[CPU0] mmcsd_sendcmd: ERROR: Failed: i=9 response=ff\n[CPU0] mmcsd_sendcmd: ERROR: Failed: i=9 response=ff\n[CPU0] mmcsd_mediainitialize: ERROR: Send CMD0 failed: R1=ffffffff\n[CPU0] open_blockdriver: ERROR: /dev/mmcsd0 driver open failed\n[CPU0] bchlib_setup: ERROR: Failed to open driver /dev/mmcsd0: 5\n[CPU0] bchdev_register: ERROR: bchlib_setup failed: 5\n[CPU0] block_proxy: ERROR: bchdev_register(/dev/mmcsd0, /dev/tmpc000001) failed: -5\nnsh: dd: infd open failed: I/O error\nnsh> \u001b[K"
+  },
+  {
+    "command": "hexdump /tmp/sd0",
+    "output": "hexdump /tmp/sd0\nnsh: hexdump: open failed: No such file or directory\nnsh> \u001b[K"
+  }
+]

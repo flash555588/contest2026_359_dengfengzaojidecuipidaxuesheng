@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui click:播放",
+    "output": "desktop ui click:播放\nclick 播放 -> 1\ndesktop: ui click:播放 ready\nnsh> \u001b[K["
+  }
+]

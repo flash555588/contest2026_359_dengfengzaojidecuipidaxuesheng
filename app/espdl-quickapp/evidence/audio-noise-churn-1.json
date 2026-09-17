@@ -1,0 +1,42 @@
+[
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        269        3827 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  },
+  {
+    "command": "dd if=/dev/zero of=/data/c1.bin bs=512 count=200",
+    "output": "dd if=/dev/zero of=/data/c1.bin bs=512 count=200\nnsh: dd: write failed: No space left on device\nnsh> \u001b[K"
+  },
+  {
+    "command": "rm /data/c1.bin",
+    "output": "rm /data/c1.bin\n"
+  },
+  {
+    "command": "dd if=/dev/zero of=/data/c2.bin bs=512 count=200",
+    "output": "nsh> \u001b[Kdd if=/dev/zero of=/data/c2.bin bs=512 count=200\nnsh> \u001b[K"
+  },
+  {
+    "command": "rm /data/c2.bin",
+    "output": "rm /data/c2.bin\nnsh> \u001b[K"
+  },
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        269        3827 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  },
+  {
+    "command": "dd if=/dev/zero of=/data/c3.bin bs=512 count=200",
+    "output": "dd if=/dev/zero of=/data/c3.bin bs=512 count=200\nnsh> \u001b[K"
+  },
+  {
+    "command": "rm /data/c3.bin",
+    "output": "rm /data/c3.bin\nnsh> \u001b[K"
+  },
+  {
+    "command": "dd if=/dev/zero of=/data/c4.bin bs=512 count=200",
+    "output": "dd if=/dev/zero of=/data/c4.bin bs=512 count=200\nnsh> \u001b[K"
+  },
+  {
+    "command": "df",
+    "output": "df\n  Block    Number\n  Size     Blocks       Used   Available Mounted on\n  1024       4096        370        3726 /data\n     0          0          0           0 /proc\n   512          1          1           0 /tmp\nnsh> \u001b[K"
+  }
+]

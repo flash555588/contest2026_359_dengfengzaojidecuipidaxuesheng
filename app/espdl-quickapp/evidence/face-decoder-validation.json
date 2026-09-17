@@ -1,0 +1,98 @@
+[
+  {
+    "source": [
+      320,
+      240
+    ],
+    "output": [
+      320,
+      240
+    ],
+    "mean_absolute_error": 3.807087673611111,
+    "maximum_error": 20
+  },
+  {
+    "source": [
+      320,
+      240
+    ],
+    "output": [
+      160,
+      120
+    ],
+    "mean_absolute_error": 4.179375,
+    "maximum_error": 14
+  },
+  {
+    "source": [
+      320,
+      240
+    ],
+    "output": [
+      80,
+      60
+    ],
+    "mean_absolute_error": 4.182361111111111,
+    "maximum_error": 11
+  },
+  {
+    "source": [
+      320,
+      240
+    ],
+    "output": [
+      40,
+      30
+    ],
+    "mean_absolute_error": 4.179722222222222,
+    "maximum_error": 10
+  },
+  {
+    "source": [
+      640,
+      480
+    ],
+    "output": [
+      640,
+      480
+    ],
+    "mean_absolute_error": 3.7468760850694443,
+    "maximum_error": 15
+  },
+  {
+    "source": [
+      640,
+      480
+    ],
+    "output": [
+      320,
+      240
+    ],
+    "mean_absolute_error": 4.181267361111111,
+    "maximum_error": 12
+  },
+  {
+    "source": [
+      640,
+      480
+    ],
+    "output": [
+      160,
+      120
+    ],
+    "mean_absolute_error": 4.1777951388888885,
+    "maximum_error": 11
+  },
+  {
+    "source": [
+      640,
+      480
+    ],
+    "output": [
+      80,
+      60
+    ],
+    "mean_absolute_error": 4.176458333333334,
+    "maximum_error": 11
+  }
+]

@@ -1,0 +1,65 @@
+> capture "version"
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+> halt 2000
+
+> targets
+TargetName         Type       Endian TapName            State       
+--  ------------------ ---------- ------ ------------------ ------------
+ 0* esp32p4.hp.cpu0    esp32p4    little esp32p4.tap1       halted
+ 1  esp32p4.hp.cpu1    esp32p4    little esp32p4.tap1       halted
+
+==== esp32p4.hp.cpu0 ====
+> targets esp32p4.hp.cpu0
+
+> reg sp force
+> reg ra force
+> reg dpc force
+> reg mepc force
+> reg mcause force
+> reg mtval force
+sp (/32): 0x4ffc1010
+ra (/32): 0x4ff46dc0
+dpc (/32): 0x4ff40104
+mepc (/32): 0x4ff40102
+mcause (/32): 0x30000007
+mtval (/32): 0x4ffc1010
+ra     0x4ff46dc0 esp_cpu_configure_region_protection+0x2ce
+mepc   0x4ff40102 exception_common+0x2
+mcause 0x30000007 ?
+mtval  0x4ffc1010 __esp_start+0x763e0
+sp     0x4ffc1010 __esp_start+0x763e0
+> mdw 0x4ffc1010 28
+0x4ffc1010: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ffc1030: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ffc1050: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ffc1070: 00000000 00000000 00000000 00000000
+
+==== esp32p4.hp.cpu1 ====
+> targets esp32p4.hp.cpu1
+
+> reg sp force
+> reg ra force
+> reg dpc force
+> reg mepc force
+> reg mcause force
+> reg mtval force
+sp (/32): 0x4ffbef90
+ra (/32): 0x4fc0293c
+dpc (/32): 0x4fc02938
+mepc (/32): 0x00000000
+mcause (/32): 0x00000000
+mtval (/32): 0x00000000
+ra     0x4fc0293c _etext+0xf9ae64a
+mepc   -
+mcause -
+mtval  -
+sp     0x4ffbef90 __esp_start+0x74360
+> mdw 0x4ffbef90 28
+0x4ffbef90: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ffbefb0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ffbefd0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+0x4ffbeff0: 00000000 00000000 00000000 00000000
+> targets esp32p4.hp.cpu0
+
+> resume
+

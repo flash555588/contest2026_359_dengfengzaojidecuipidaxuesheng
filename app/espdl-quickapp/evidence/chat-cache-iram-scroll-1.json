@@ -1,0 +1,30 @@
+[
+  {
+    "command": "desktop ui chat",
+    "output": "desktop ui chat\ndesktop: ui chat ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-status",
+    "output": "desktop ui chat-status\nchat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=40096 last_state=2 last_error=2 editor=0\nchat-stream text_bytes=346 thinking_bytes=93788 thinking_tokens=20968 tokens_known=1 rounds=4 rebuilds=1 updates=0 refresh_max_ms=30 draft_bytes=0\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-up",
+    "output": "desktop ui chat-scroll-up\nchat-scroll render_ms=40 scroll_y=-150\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-down",
+    "output": "desktop ui chat-scroll-down\nchat-scroll render_ms=40 scroll_y=90\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-up",
+    "output": "desktop ui chat-scroll-up\nchat-scroll render_ms=20 scroll_y=-150\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui chat-scroll-down",
+    "output": "desktop ui chat-scroll-down\nchat-scroll render_ms=40 scroll_y=90\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui qpk-draft-status",
+    "output": "desktop ui qpk-draft-status\nqpk-draft loaded=1 busy=0 revision=5 previewed=5 saved=0 error=0 preview_active=0 name=五子棋 package=\nqpk-save stage=0 elapsed_ms=0\nflash-stack ops=27102 caller=483df12c worker=4ffadacc\nnsh> \u001b[K"
+  }
+]

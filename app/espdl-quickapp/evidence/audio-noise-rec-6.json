@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui click:停止并保存",
+    "output": "desktop ui click:停止并保存\nclick 停止并保存 -> 0\ndesktop: ui click:停止并保存 ready\nnsh> \u001b[K"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "command": "ls /proc/fs/smartfs/smart0",
+    "output": "ls /proc/fs/smartfs/smart0\n/proc/fs/smartfs/smart0:\n debuglevel\n status\nnsh> \u001b[K"
+  },
+  {
+    "command": "cat /proc/fs/smartfs/smart0/status",
+    "output": "cat /proc/fs/smartfs/smart0/status\nFormat version:    1\nName Len:          32\nTotal Sectors:     4096\nSector Size:       1024\nFormat Sector:     1820\nDir Sector:        4\nFree Sectors:      792\nReleased Sectors:  3052\nUnused Sectors:    0\nBlock Erases:      363\nSectors Per Block: 4\nSector Utilization:100%\nUneven Wear Count: 0\nnsh> \u001b[K"
+  }
+]

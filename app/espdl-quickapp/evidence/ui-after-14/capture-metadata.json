@@ -1,0 +1,10 @@
+{
+  "firmware_sha256": "577be0c8d5ed5995d978da97745ab8b6f0223e4b23a9e9daf6eb5067f73e6b5c",
+  "theme": "light",
+  "requested_pages": [
+    "espdl-follow",
+    "espdl-result"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

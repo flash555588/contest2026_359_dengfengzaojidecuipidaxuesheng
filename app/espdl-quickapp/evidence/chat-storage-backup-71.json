@@ -1,0 +1,23 @@
+[
+  {
+    "name": "history.json",
+    "expected_bytes": 0,
+    "exported_bytes": 0,
+    "complete": true,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "valid_json": false
+  },
+  {
+    "name": "history.tmp",
+    "expected_bytes": 160,
+    "exported_bytes": 160,
+    "complete": true,
+    "sha256": "d212fd90a91b81c9ab4e5dc3cb7f8dd0c19277fa6171aea3b6175d6d54e5a124",
+    "valid_json": true,
+    "version": 1,
+    "turns": 1,
+    "states": [
+      0
+    ]
+  }
+]

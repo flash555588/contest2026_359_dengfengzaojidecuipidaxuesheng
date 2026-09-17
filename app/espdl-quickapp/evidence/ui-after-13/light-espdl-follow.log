@@ -1,0 +1,52 @@
+desktop ui espdl
+[qpk] started ESP-DL 离线识别 (org.openvela.espdl 0.1.0) with QuickJS
+desktop: ui espdl ready
+nsh> desktop ui espdlstart
+espdl start clicked=1
+desktop: ui espdl-start ready
+nsh> 
+desktop ui audit
+UI_LAYOUT_BEGIN
+[{"id":1,"parent":0,"type":"container","x":0,"y":0,"w":1024,"h":600,"scroll":false,"text":""},
+{"id":2,"parent":1,"type":"button","x":13,"y":11,"w":52,"h":42,"scroll":false,"text":""},
+{"id":3,"parent":2,"type":"label","x":32,"y":19,"w":15,"h":27,"scroll":true,"text":""},
+{"id":4,"parent":1,"type":"label","x":79,"y":16,"w":214,"h":39,"scroll":true,"text":"ESP-DL 离线识别"},
+{"id":5,"parent":1,"type":"container","x":1,"y":63,"w":1022,"h":536,"scroll":false,"text":""},
+{"id":6,"parent":5,"type":"container","x":25,"y":67,"w":320,"h":48,"scroll":false,"text":""},
+{"id":7,"parent":5,"type":"button","x":29,"y":71,"w":154,"h":40,"scroll":false,"text":""},
+{"id":8,"parent":7,"type":"label","x":49,"y":77,"w":114,"h":28,"scroll":true,"text":"人脸跟随"},
+{"id":9,"parent":5,"type":"button","x":187,"y":71,"w":154,"h":40,"scroll":false,"text":""},
+{"id":10,"parent":9,"type":"label","x":207,"y":77,"w":114,"h":28,"scroll":true,"text":"物体分类"},
+{"id":11,"parent":5,"type":"label","x":365,"y":81,"w":260,"h":24,"scroll":true,"text":"选择模式，开始探索"},
+{"id":12,"parent":5,"type":"container","x":835,"y":71,"w":164,"h":36,"scroll":false,"text":""},
+{"id":13,"parent":5,"type":"label","x":839,"y":77,"w":156,"h":24,"scroll":true,"text":"本地识别 · 无需联网"},
+{"id":14,"parent":5,"type":"container","x":25,"y":127,"w":512,"h":392,"scroll":false,"text":""},
+{"id":15,"parent":5,"type":"container","x":245,"y":247,"w":72,"h":72,"scroll":false,"text":""},
+{"id":16,"parent":5,"type":"label","x":269,"y":271,"w":15,"h":27,"scroll":true,"text":""},
+{"id":17,"parent":5,"type":"label","x":45,"y":339,"w":472,"h":32,"scroll":true,"text":"相机已就绪"},
+{"id":18,"parent":5,"type":"label","x":45,"y":379,"w":472,"h":28,"scroll":true,"text":"点击开始跟随，查看实时画面"},
+{"id":19,"parent":5,"type":"container","x":553,"y":127,"w":446,"h":276,"scroll":false,"text":""},
+{"id":20,"parent":5,"type":"label","x":577,"y":143,"w":398,"h":24,"scroll":true,"text":"跟随状态"},
+{"id":21,"parent":5,"type":"label","x":577,"y":175,"w":398,"h":40,"scroll":true,"text":"暂时无法识别"},
+{"id":22,"parent":5,"type":"label","x":577,"y":219,"w":398,"h":40,"scroll":true,"text":"识别失败（-5），可重试"},
+{"id":23,"parent":5,"type":"label","x":577,"y":267,"w":300,"h":28,"scroll":true,"text":"横向偏移"},
+{"id":24,"parent":5,"type":"label","x":885,"y":267,"w":90,"h":28,"scroll":true,"text":"--"},
+{"id":25,"parent":5,"type":"container","x":577,"y":297,"w":398,"h":2,"scroll":false,"text":""},
+{"id":26,"parent":5,"type":"label","x":577,"y":303,"w":300,"h":28,"scroll":true,"text":"纵向偏移"},
+{"id":27,"parent":5,"type":"label","x":885,"y":303,"w":90,"h":28,"scroll":true,"text":"--"},
+{"id":28,"parent":5,"type":"container","x":577,"y":333,"w":398,"h":2,"scroll":false,"text":""},
+{"id":29,"parent":5,"type":"label","x":577,"y":339,"w":300,"h":28,"scroll":true,"text":"画面内人脸"},
+{"id":30,"parent":5,"type":"label","x":885,"y":339,"w":90,"h":28,"scroll":true,"text":"--"},
+{"id":31,"parent":5,"type":"container","x":577,"y":369,"w":398,"h":2,"scroll":false,"text":""},
+{"id":32,"parent":5,"type":"container","x":553,"y":419,"w":446,"h":100,"scroll":false,"text":""},
+{"id":33,"parent":5,"type":"label","x":573,"y":431,"w":406,"h":24,"scroll":true,"text":"当前相机"},
+{"id":34,"parent":5,"type":"button","x":569,"y":461,"w":414,"h":44,"scroll":false,"text":""},
+{"id":35,"parent":34,"type":"label","x":590,"y":469,"w":372,"h":28,"scroll":true,"text":"HD Web Camera"},
+{"id":36,"parent":5,"type":"label","x":25,"y":539,"w":512,"h":44,"scroll":true,"text":"识别失败（-5），可重试"},
+{"id":37,"parent":5,"type":"button","x":553,"y":535,"w":330,"h":48,"scroll":false,"text":""},
+{"id":38,"parent":37,"type":"label","x":573,"y":545,"w":290,"h":28,"scroll":true,"text":"开始跟随"},
+{"id":39,"parent":5,"type":"button","x":895,"y":535,"w":104,"h":48,"scroll":false,"text":""},
+{"id":40,"parent":39,"type":"label","x":916,"y":545,"w":62,"h":28,"scroll":true,"text":"停止"}
+]
+UI_LAYOUT_END
+nsh> 

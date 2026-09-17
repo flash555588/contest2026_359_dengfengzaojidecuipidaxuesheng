@@ -1,0 +1,10 @@
+[
+  {
+    "command": "desktop ui click:删除",
+    "output": "desktop ui click:删除\nclick 删除 -> 1\ndesktop: ui click:删除 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui audit",
+    "output": "desktop ui audit\nUI_LAYOUT_BEGIN\n[{\"id\":1,\"parent\":0,\"type\":\"container\",\"x\":0,\"y\":0,\"w\":1024,\"h\":600,\"scroll\":false,\"text\":\"\"},\n{\"id\":2,\"parent\":1,\"type\":\"container\",\"x\":232,\"y\":140,\"w\":560,\"h\":320,\"scroll\":false,\"text\":\"\"},\n{\"id\":3,\"parent\":2,\"type\":\"label\",\"x\":260,\"y\":164,\"w\":504,\"h\":39,\"scroll\":true,\"text\":\"删除这个应用？\"},\n{\"id\":4,\"parent\":2,\"type\":\"label\",\"x\":260,\"y\":222,\"w\":504,\"h\":28,\"scroll\":true,\"text\":\"OX棋\"},\n{\"id\":5,\"parent\":2,\"type\":\"label\",\"x\":260,\"y\":280,\"w\":504,\"h\":28,\"scroll\":true,\"text\":\"应用文件和应用数据将一并删除，无法恢复。\"},\n{\"id\":6,\"parent\":2,\"type\":\"button\",\"x\":260,\"y\":378,\"w\":238,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":7,\"parent\":6,\"type\":\"label\",\"x\":272,\"y\":391,\"w\":214,\"h\":22,\"scroll\":true,\"text\":\"取消\"},\n{\"id\":8,\"parent\":2,\"type\":\"button\",\"x\":514,\"y\":378,\"w\":250,\"h\":48,\"scroll\":false,\"text\":\"\"},\n{\"id\":9,\"parent\":8,\"type\":\"label\",\"x\":526,\"y\":391,\"w\":226,\"h\":22,\"scroll\":true,\"text\":\"删除应用\"}\n]\nUI_LAYOUT_END\nnsh> \u001b[K"
+  }
+]

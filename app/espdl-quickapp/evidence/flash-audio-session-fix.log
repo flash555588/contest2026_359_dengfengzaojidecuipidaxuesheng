@@ -1,0 +1,6 @@
+esptool v5.3.1
+Serial port COM23:
+
+A fatal error occurred: Could not open COM23, the port is busy or doesn't exist.
+(could not open port 'COM23': PermissionError(13, '¾Ü¾ø·ÃÎÊ¡£', None, 5))
+

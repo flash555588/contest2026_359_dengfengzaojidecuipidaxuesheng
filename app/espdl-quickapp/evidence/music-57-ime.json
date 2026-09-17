@@ -1,0 +1,22 @@
+[
+  {
+    "command": "desktop ui click:搜索歌名、歌手",
+    "output": "desktop ui click:搜索歌名、歌手\nclick 搜索歌名、歌手 -> 1\ndesktop: ui click:搜索歌名、歌手 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-key:q",
+    "output": "desktop ui music-key:q\nclick 搜索歌名、歌手 -> 1\ndesktop: ui click:搜索歌名、歌手 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-key:i",
+    "output": "desktop ui music-key:i\nclick 搜索歌名、歌手 -> 1\ndesktop: ui click:搜索歌名、歌手 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-key:n",
+    "output": "desktop ui music-key:n\nclick 搜索歌名、歌手 -> 1\ndesktop: ui click:搜索歌名、歌手 ready\nnsh> \u001b[K"
+  },
+  {
+    "command": "desktop ui music-key:g",
+    "output": "desktop ui music-key:g\nclick 搜索歌名、歌手 -> 1\ndesktop: ui click:搜索歌名、歌手 ready\nnsh> \u001b[K"
+  }
+]

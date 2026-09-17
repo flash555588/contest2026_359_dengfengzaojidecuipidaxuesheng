@@ -1,0 +1,6 @@
+[
+  {
+    "command": "desktop ui espdl-stop",
+    "output": "desktop ui espdl-stop\nespdl stop clicked=1\ndesktop: ui espdl-stop ready\nnsh> \u001b[K"
+  }
+]

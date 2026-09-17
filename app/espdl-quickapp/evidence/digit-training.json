@@ -1,0 +1,112 @@
+{
+  "dataset": "MNIST (Keras mirror)",
+  "dataset_url": "https://storage.googleapis.com/tensorflow/tf-keras-datasets/mnist.npz",
+  "dataset_sha256": "731c5ac602752760c8e48fbffcf8c3b850d9dc2a2aedcf2cc48468fc17b673d1",
+  "seed": 20260915,
+  "train_examples": 55000,
+  "validation_examples": 5000,
+  "test_examples": 10000,
+  "architecture": [
+    784,
+    128,
+    10
+  ],
+  "epochs": 20,
+  "chosen_epoch": 17,
+  "validation_accuracy": 0.9792,
+  "test_float_accuracy": 0.9799,
+  "test_int8_accuracy": 0.9796,
+  "rounding": "nearest ties to even; symmetric int8; ReLU after first Gemm",
+  "exponents": [
+    -7,
+    -7,
+    -3,
+    -7,
+    -2
+  ],
+  "model_bytes": 102248,
+  "model_sha256": "730160c876dbf16684fe41c701d9eba71f149e3ae1194eb16211d5885a54baa4",
+  "elapsed_seconds": 68.48,
+  "history": [
+    {
+      "epoch": 1,
+      "validation_accuracy": 0.9186
+    },
+    {
+      "epoch": 2,
+      "validation_accuracy": 0.9242
+    },
+    {
+      "epoch": 3,
+      "validation_accuracy": 0.9436
+    },
+    {
+      "epoch": 4,
+      "validation_accuracy": 0.961
+    },
+    {
+      "epoch": 5,
+      "validation_accuracy": 0.9614
+    },
+    {
+      "epoch": 6,
+      "validation_accuracy": 0.962
+    },
+    {
+      "epoch": 7,
+      "validation_accuracy": 0.9696
+    },
+    {
+      "epoch": 8,
+      "validation_accuracy": 0.9674
+    },
+    {
+      "epoch": 9,
+      "validation_accuracy": 0.97
+    },
+    {
+      "epoch": 10,
+      "validation_accuracy": 0.9734
+    },
+    {
+      "epoch": 11,
+      "validation_accuracy": 0.9736
+    },
+    {
+      "epoch": 12,
+      "validation_accuracy": 0.9724
+    },
+    {
+      "epoch": 13,
+      "validation_accuracy": 0.9786
+    },
+    {
+      "epoch": 14,
+      "validation_accuracy": 0.9784
+    },
+    {
+      "epoch": 15,
+      "validation_accuracy": 0.9772
+    },
+    {
+      "epoch": 16,
+      "validation_accuracy": 0.977
+    },
+    {
+      "epoch": 17,
+      "validation_accuracy": 0.9792
+    },
+    {
+      "epoch": 18,
+      "validation_accuracy": 0.979
+    },
+    {
+      "epoch": 19,
+      "validation_accuracy": 0.9788
+    },
+    {
+      "epoch": 20,
+      "validation_accuracy": 0.979
+    }
+  ]
+}

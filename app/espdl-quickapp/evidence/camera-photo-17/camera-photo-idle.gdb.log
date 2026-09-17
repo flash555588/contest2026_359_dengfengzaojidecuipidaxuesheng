@@ -1,0 +1,11 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x400b1102 in qpk_mjpeg_decode (decoder=decoder@entry=0x487ce8d0, input=input@entry=0x486ce6c8 "\377\330\377\340", size=<optimized out>, capacity=<optimized out>, output=output@entry=0x480001c0, width=width@entry=1024, height=height@entry=500, expected_width=<optimized out>, expected_height=480) at qpk_mjpeg.c:109
+warning: 109	qpk_mjpeg.c: No such file or directory
+[esp32p4.hp.cpu0] Target halted, PC=0x400B1102, debug_reason=00000000
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42570, debug_reason=00000000
+dumped 731320 bytes in 35.287525s (20.239 KiB/s)
+[esp32p4.hp.cpu0] Target halted, PC=0x400B1106, debug_reason=00000004
+[esp32p4.hp.cpu1] Target halted, PC=0x4FF42572, debug_reason=00000004
+[Inferior 1 (Remote target) detached]

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>大肥鱼桌宠</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #0b0f10; color: #f4ead6;
+      font-family: "Microsoft YaHei UI", "Noto Sans SC", sans-serif; }
+    .stage { position: relative; width: 960px; height: 540px; margin: 24px auto;
+      background: #101618; border-radius: 16px; overflow: hidden; }
+    .panel { position: absolute; inset: 24px 24px 24px 24px; padding: 20px 28px;
+      background: #0b0f10; }
+    h1 { margin: 0; font-size: 22px; color: #8ec8ea; font-weight: 600; }
+    .sub { margin: 8px 0 18px; color: #8b989c; font-size: 14px; }
+    .status { font-size: 16px; }
+    .bubble { margin-top: 8px; min-height: 24px; color: #c5d0d3; }
+    .meters { margin: 10px 0 18px; color: #8b989c; font-size: 14px; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 8px; color: #fff; height: 44px;
+      min-width: 88px; padding: 0 14px; font-size: 15px; cursor: pointer; }
+    .api { margin-top: 18px; color: #6b787c; font-size: 13px; }
+    .pet { position: absolute; right: 48px; bottom: 36px; width: 96px; height: 124px;
+      pointer-events: none; transition: transform 0.2s ease; }
+    .body { position: absolute; left: 10px; top: 36px; width: 76px; height: 62px;
+      background: #3d9ad1; border-radius: 40px; }
+    .belly { position: absolute; left: 24px; top: 64px; width: 48px; height: 26px;
+      background: #f4ead6; border-radius: 20px; }
+    .eye { position: absolute; top: 50px; width: 11px; height: 11px; background: #fff;
+      border-radius: 50%; }
+    .eye.l { left: 30px; } .eye.r { left: 55px; }
+    .pupil { position: absolute; top: 53px; width: 4px; height: 4px; background: #243040;
+      border-radius: 50%; }
+    .pupil.l { left: 33px; } .pupil.r { left: 58px; }
+    .speech { position: absolute; left: -20px; top: 0; width: 140px; padding: 6px 8px;
+      background: #fff; color: #243040; border-radius: 10px; font-size: 12px;
+      text-align: center; }
+    .speech:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="panel">
+      <h1>大肥鱼桌宠</h1>
+      <div class="sub">本地宠物 · 其他快应用可调用 system.pet</div>
+      <div class="status" id="status">自由散步</div>
+      <div class="bubble" id="bubble">戳我一下，或者让别的应用喊我</div>
+      <div class="meters" id="meters">心情 72  饥饿 28</div>
+      <div class="row">
+        <button style="background:#3d9ad1" data-act="wander">散步</button>
+        <button style="background:#2b6f9c" data-act="follow">跟随</button>
+        <button style="background:#1e272a" data-act="still">待着</button>
+      </div>
+      <div class="row">
+        <button style="background:#1fa97a" data-act="poke">戳一下</button>
+        <button style="background:#4f6fa8" data-act="talk">说句话</button>
+        <button style="background:#5686fe" data-act="chat">聊天</button>
+        <button style="background:#1e272a" data-act="toggle">显隐</button>
+      </div>
+      <div class="row">
+        <button style="background:#3d9ad1" data-feed="fish">小鱼干</button>
+        <button style="background:#e07a5f" data-feed="cake">蛋糕</button>
+        <button style="background:#d8a843" data-feed="candy">棒棒糖</button>
+        <button style="background:#e26d7f" data-feed="dango">团子</button>
+        <button style="background:#7aa2e3" data-feed="gem">钻石</button>
+      </div>
+      <div class="api">其他应用: system.pet.speak("番茄完成") / poke() / feed("fish")</div>
+    </div>
+    <div class="pet" id="pet">
+      <div class="speech" id="speech"></div>
+      <div class="body"></div>
+      <div class="belly"></div>
+      <div class="eye l"></div><div class="eye r"></div>
+      <div class="pupil l"></div><div class="pupil r"></div>
+    </div>
+  </div>
+  <script src="engine.js"></script>
+  <script>
+    const pet = createPet();
+    const status = document.getElementById('status');
+    const bubble = document.getElementById('bubble');
+    const meters = document.getElementById('meters');
+    const speech = document.getElementById('speech');
+    const petEl = document.getElementById('pet');
+    function modeLabel(mode) {
+      if (mode === 'follow') return '跟随指针';
+      if (mode === 'still') return '原地待着';
+      return '自由散步';
+    }
+    function render() {
+      const s = pet.getState();
+      status.textContent = modeLabel(s.mode) + (s.visible ? '' : ' · 已隐藏');
+      bubble.textContent = s.bubble || '（安静地呼吸）';
+      meters.textContent = '心情 ' + s.mood + '  饥饿 ' + s.hunger + '  朝向 ' + s.dir;
+      speech.textContent = s.bubble || '';
+      petEl.style.opacity = s.visible ? '1' : '0.2';
+      petEl.style.transform = s.jump > 0 ? 'translateY(-12px)' : 'none';
+    }
+    document.querySelector('.panel').addEventListener('click', function (e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.act === 'wander') pet.setMode('wander');
+      if (btn.dataset.act === 'follow') pet.setMode('follow');
+      if (btn.dataset.act === 'still') pet.setMode('still');
+      if (btn.dataset.act === 'poke') pet.poke();
+      if (btn.dataset.act === 'talk') pet.say('梁白开，更适合国人的大硬鲸模型');
+      if (btn.dataset.act === 'chat') pet.chat('你好');
+      if (btn.dataset.act === 'toggle') pet.toggle();
+      if (btn.dataset.feed) pet.feed(btn.dataset.feed);
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>

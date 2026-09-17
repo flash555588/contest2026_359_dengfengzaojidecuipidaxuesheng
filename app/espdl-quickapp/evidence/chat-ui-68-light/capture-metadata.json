@@ -1,0 +1,10 @@
+{
+  "firmware_sha256": "8ed06408540d9d9fff0f43964aa0108622c0b5d36e7b31e330d3ff8012d2d985",
+  "theme": "light",
+  "requested_pages": [
+    "chat",
+    "chat-input"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

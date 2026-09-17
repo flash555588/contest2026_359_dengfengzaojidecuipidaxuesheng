@@ -1,0 +1,9 @@
+{
+  "firmware_sha256": "be93622662a9bff9d8e401891e25c37a84a0a95dca8bc9ed0d0035bfd5ad5608",
+  "theme": "light",
+  "requested_pages": [
+    "recorder"
+  ],
+  "method": "desktop-thread RGB565 snapshot; read-only JTAG; lossless RLE",
+  "input_values_in_layout_report": false
+}

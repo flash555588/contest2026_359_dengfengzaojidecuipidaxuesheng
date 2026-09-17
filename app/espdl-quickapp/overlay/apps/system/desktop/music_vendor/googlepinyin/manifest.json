@@ -1,0 +1,15 @@
+{
+  "project": "libgooglepinyin",
+  "version": "0.1.2",
+  "license": "Apache-2.0",
+  "source": "https://deb.debian.org/debian/pool/main/libg/libgooglepinyin/libgooglepinyin_0.1.2.orig.tar.bz2",
+  "source_sha256": "1a339ae45721a60b9fadd15e43c34b9bb27af3bb999c00ed0d88b4084cfd0637",
+  "dictionary_bytes": 1068442,
+  "dictionary_sha256": "179311c55ab9b912a07ef040e5a95af97e704e2248b7b97735f17a3e05d13b67",
+  "adaptations": [
+    "Fixed-width little-endian dictionary counts and node offsets",
+    "Read system dictionary through fmemopen",
+    "Disable dictionary builder code in firmware",
+    "Free dictionary index and user sync buffers on teardown"
+  ]
+}

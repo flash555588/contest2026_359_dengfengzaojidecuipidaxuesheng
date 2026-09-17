@@ -1,0 +1,10 @@
+{
+  "asan": true,
+  "ubsan": true,
+  "physical_io": "not exercised",
+  "result": "PASS: HAL nesting/preemption, I2S allocation rollback, TX/RX rejection ownership",
+  "sources": {
+    "os": "440153daac7cb99da572fc6b3f742e8a969d936ed8043207b87d53fde4faa0fb",
+    "i2s": "d7b79ad1fa5c7feb0e407210ae3c2555cf87e3cff0313967aa56e8038ebabf76"
+  }
+}

@@ -1,0 +1,11 @@
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+warning: Remote failure reply: 01
+0x4ff42570 in esp_cpu_wait_for_intr () at chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c:68
+warning: 68	chip/esp-hal-3rdparty/components/esp_hw_support/cpu.c: No such file or directory
+Function "up_assert" not defined.
+Breakpoint 1 at 0x4001dda4: file /tmp/v3-desktop-espdl-20260915/nuttx/include/arch/irq.h, line 879.
+accepting 'tcl' connection on tcp/6666
+Open On-Chip Debugger v0.12.0-esp32-20250707 (2025-07-06-17:44)
+C:\Users\wenji\Desktop\�½��ļ��� (2)\v3-sources-20260914\v3-sources-20260914\diagnostics\catch-assert.gdb:7: Error in sourced command file:
+Remote communication error.  Target disconnected: error while reading: No error.
