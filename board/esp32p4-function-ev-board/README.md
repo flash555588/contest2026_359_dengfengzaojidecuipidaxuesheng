@@ -53,11 +53,11 @@ python tools/wsl_copy_firmware.py --variant v3.2-usb
 **烧录**：
 
 ```powershell
-powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7
+powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7 -Transport uart-bridge
 # 仅在确认芯片为 v3.2 后使用：
-powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7
+powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7 -Transport uart-bridge
 # NSH 与烧录口共用 P4 原生 USB Serial/JTAG：
-powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2-usb -Port COM23
+powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2-usb -Port COM23 -Transport usb-jtag
 ```
 
 脚本把所选镜像写到偏移 **0x2000**（ESP32-P4 Simple Boot app offset），默认 460800 baud，flash 参数为 DIO / 80 MHz / 16 MiB。`0x0` 是错误地址，不能使用。
