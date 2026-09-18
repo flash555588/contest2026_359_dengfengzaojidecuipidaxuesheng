@@ -6,6 +6,11 @@
 > `git show ff5c6bd:diagnostics/<文件>` 查看单个脚本，或用独立 worktree 检出该提交复现
 > 原开发环境；不要把旧源码集合重新复制到当前参赛树。
 
+目录入口：[overlay](overlay/README.md)、[models](models/README.md)、
+[tests](tests/README.md)、[evidence](evidence/README.md)、[tools](tools/README.md)。
+Home Assistant 的原生入口与 HTTP 限制见 [HASS.md](HASS.md)。
+下文保留历史开发环境、路径和布局；不能据此认为任意新设备已授权擦除或当前仓库可独立全量构建。
+
 同一固件中的 ESPClaw 触屏聊天、服务配置及共用 HTTPS 说明见 [CHAT.md](CHAT.md)。
 内置录音机、GPIO／I²C／SPI／UART／PWM／舵机／音频／BLE 快应用接口与 AI 参考见 [HARDWARE.md](HARDWARE.md)。
 
@@ -33,7 +38,7 @@ P4 神经网络加速使用 ESP-DL 官方 `xespv` 向量指令、`xesploop` 硬�
 
 ## Flash 布局
 
-用户已授权移动 `/data` 并丢弃旧数据。16 MiB flash 的新布局如下，地址区间右端不包含在内：
+下述布局记录历史开发过程中对 `/data` 的迁移，不构成对当前设备再次擦除数据的授权。16 MiB flash 的布局如下，地址区间右端不包含在内：
 
 | 用途 | 起始地址 | 结束地址 |
 | --- | --- | --- |
