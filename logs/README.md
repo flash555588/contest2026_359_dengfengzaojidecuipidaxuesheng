@@ -1,20 +1,23 @@
-# logs/ — AI Coding 日志目录
+# logs：AI Coding 与历史运行记录
 
-存放你在开发中与 AI 工具的对话日志，和作品代码一并提交。
+本目录已包含项目日志，不是待替换的空白模板。返回[仓库首页](../README.md)。
 
-> 本目录现在是**示例**，请替换成你自己导出的真实日志（删掉示例的 `your-github-login/` 目录）。
+## 内容分类
 
-## 目录结构
+[flash555588](flash555588/README.md)按日期保存真实 AI Coding JSONL，会话入口是
+[manifest.json](flash555588/manifest.json)。日志清单描述已收录的会话，不保证本机所有
+AI 对话都被自动采集，也不能用它推断当前对话已上传。
 
-```text
-logs/
-└── <github_login>/              # 你的 GitHub 用户名，一人一目录
-    ├── manifest.json            # 会话清单
-    └── <date>/                  # 日期 YYYY-MM-DD
-        └── <tool>__<sid>.jsonl  # 一个会话一个文件（工具名与 session id 用 __ 连接）
-```
+本目录根部的 `build-*.log`、`v1-*.log` 等是构建、串口或实板记录；
+它们不是 AI 对话。其他功能证据在 [docs/evidence](../docs/evidence/README.md)与
+[应用 evidence](../app/espdl-quickapp/evidence/README.md)。
 
-- `<tool>`：`claude-code` / `opencode` / `codex` / `kiro`
-- 每个 `.jsonl` 每行一个事件，由组委会提供的日志归集工具导出，**只提交 JSONL 本身**。
+## 提交与隐私
 
-导出与提交的完整步骤、字段定义见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
+使用归集工具导出真实会话并更新清单，不手工伪造事件、时间或工具结果。
+本机归集规则仅在被识别为 openvela 工作区时自动采集，不应为了“补日志”导出个人项目。
+公开前检查长期令牌、密钥、Wi-Fi 凭据、个人信息和设备数据，清理结果需人工复核。
+
+在仓库根目录运行 `python3 tools/check_submission.py` 检查日志字段、路径、清单与其他
+提交门槛；通过校验不代表完成全部隐私或许可审查。日志应与代码一起经过正常 Git 审查，
+不直接上传整个用户配置目录，也不把测试报告冒充 AI Coding 会话。

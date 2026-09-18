@@ -1,70 +1,79 @@
-# ESP32-P4 Function-EV-Board openvela 新硬件适配
+# ESP32-P4 openvela 图形终端与智能家居集成
 
-本项目面向 2026 首届 openvela AI 硬件开发者大赛“新硬件适配”赛道，目标是在乐鑫 ESP32-P4 Function-EV-Board 上完成 openvela/NuttX 启动、外部 PSRAM、MIPI-DSI LCD、GT911 触摸和 LVGL 图形桌面的板级适配。仓库同时维护早期 revision v1.x 与量产 revision v3.2 两套可复现配置。
+本仓库是 `contest2026_359_dengfengzaojidecuipidaxuesheng` 的参赛与工程交付仓，
+面向 ESP32-P4 Function-EV-Board，保存 openvela/NuttX 板级与芯片 overlay、图形桌面、
+QuickJS 快应用、Home Assistant 原生集成、构建工具和验证记录。
 
-当前已在 ESP32-P4 revision v1.0 实板上完成 Simple Boot、稳定 NuttShell、32 MiB PSRAM 系统堆、MIPI-DSI/DW-GDMA framebuffer、`/dev/fb0`、GT911 `/dev/input0`、LVGL 桌面与 QuickJS 快应用运行时 bring-up。串口与实物已验证完整 1024×600 首帧更新、连续 DMA 帧计数、全屏 LVGL 桌面、触摸设备打开及 **GT911 实际点击/拖动坐标**（LVGL 输出 `TOUCH: pressed x=... y=...`，坐标方向正确）。2026-08-30 的最终 v1.0 固件还通过了重新烧录、镜像 SHA-256 校验和真实断电冷启动，OuO/QuickJS 自动启动并进入 NSH。剩余验收项为 v3.2 芯片实板回归；v3.2 配置已完成构建，但不得烧入 v1.0 芯片。
+它不是完整的 NuttX/openvela 源码树，也不是 Home Assistant 官方客户端或小米官方米家客户端。
+阅读代码可直接克隆本仓库；固件构建还需要匹配的外部源码、工具链和具体硬件。
 
-## 当前应用快照
+## 从哪里开始
 
-2026-09-17 的 ESP32-P4 v3 应用成果统一放在
-[`app/espdl-quickapp`](app/espdl-quickapp/README.md)。该目录包含 ESP-DL 人脸跟随与物体分类、
-ESPClaw 触屏聊天和 AI 快应用生成、中文音乐、录音机、天气、设备门户、硬件 API、模型、
-主机测试及实板证据。它是当前开发快照，不替代下方已经固定并通过大赛自检的 v1.x
-可复现基线；外部 AI 服务、第三方音乐服务和未连接的外设仍以各自文档中的验证边界为准。
+先阅读[目录说明](#目录导航)，再按目标选择入口：板级适配见 [board](board/README.md)，
+芯片驱动见 [chip](chip/README.md)，应用开发见 [app](app/README.md)，
+快应用见 [quickapp](quickapp/README.md)，构建与提交工具见 [tools](tools/README.md)。
 
-旧源码集合不再重复放进当前目录树。完整导出仍可从 Git 提交 `170a792` 和 `ff5c6bd`
-读取，版本用途与取回方法见 [版本历史说明](docs/HISTORY.md)。
+当前 v3 应用开发快照位于 [app/espdl-quickapp](app/espdl-quickapp/README.md)。
+Home Assistant 的实际入口、网络限制和实板证据见 [HASS.md](app/espdl-quickapp/HASS.md)。
+历史固件请从 [firmware](firmware/README.md) 选择，不要把文件夹日期或“候选”名称当作兼容性保证。
+
+## 版本与验证边界
+
+仓库中并存三类材料，不能互相替代：历史 v1.x 固件及其验收记录、针对不同 revision 的
+板级配置，以及 2026-09-17 整理的 v3 应用 overlay 与应用级证据。
+
+[2026-08-30 v1.0 测试报告](firmware/esp32p4-desktop-v1/TEST_REPORT.md)记录了对应镜像的
+烧录校验、冷启动、PSRAM 和桌面/QuickJS 状态；[v3.2 构建候选](firmware/esp32p4-desktop-v3.2-candidate/README.md)
+不能因编译成功就标记为已通过 v3.2 实机验收。v3 应用快照中的后来证据也只适用于其记录的对象。
+
+`483a750` 是 Home Assistant 原生集成的一次内容基准，不是把整个仓库固定到旧提交的要求。
+旧源码集合及独立 worktree 的取回方法见 [docs/HISTORY.md](docs/HISTORY.md)。
+请勿把历史快照整体覆盖回当前参赛结构。
 
 ## 适配亮点
 
-- 针对 ESP32-P4 revision v1.0 增加 `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` 启动路径，并将 CPU 定档在实测稳定的 CPLL 90 MHz。
-- 修复 Simple Boot 下看门狗、时钟、MSPI/XIP 初始化顺序问题，使 NSH 可稳定启动。
-- 将 32 MiB PSRAM 纳入系统堆；v1.x 使用稳定的 80 MHz，v3.2 使用原厂 200 MHz。
-- 接入 Espressif MIPI-DSI Host、DPI Bridge、DPHY LDO 和 EK79007 类面板初始化流程。
-- 按 Espressif EK79007 参考配置校正双 Lane 900 Mbps 与完整消隐参数；v1.x 使用已实测全屏的 24 MHz 低带宽档，v3.2 使用 52 MHz 原厂档。
-- 接入 `/dev/fb0`、LVGL 9 NuttX framebuffer 后端与 GT911 轮询触摸，并按脏行执行 PSRAM cache writeback。
-- 为双缓冲 page-flip 的生产者与 ISR 回调增加 SMP 自旋锁，避免待提交 framebuffer 指针竞争；同时把不适合在 ISR 中执行的 framebuffer upper-half 访问移到任务上下文。
-- GT911 使用官方 BSP 的 HP I2C1（SCL=GPIO8 / SDA=GPIO7，0x5D 或 0x14 地址探测）；触摸初始化必须放在 MIPI-DSI 显示初始化之后，否则首个面板 DCS 写会以 `-110` 超时、整屏无法点亮。
-- 扩展 QuickJS QPK 运行时，提供 OuO、2048、持久化 `system.storage` 与手势交互；补齐路径校验、存储命名隔离、LVGL 分配失败清理和回调生命周期管理。
-- 为 LVGL NuttX framebuffer 增加可配置渲染缓冲模式，并为 tiny-ttf 字形缓存补充 OOM 防护。
-- 增加 DSI/DPI 寄存器、时钟、帧计数和中断状态诊断接口，支持测试图案与帧缓冲路径 A/B 定位。
-- 保存可烧录固件、实板启动日志以及 AI Coding 会话日志，便于复现和审阅。
+板级工作包括 Simple Boot、PSRAM、MIPI-DSI framebuffer、GT911 触摸和 LVGL 桌面。
+不同芯片 revision 的时钟、内存布局和显示参数不能混用；具体配置与历史验证状态见
+[板级说明](board/esp32p4-function-ev-board/README.md)和[配置索引](configs/README.md)。
 
-## 硬件环境
+应用层包含 OuO、相机、番茄钟和 Home Assistant 快应用；v3 overlay 另保存 ESP-DL、
+聊天、音乐、录音机、设备门户、桌宠和硬件 API。功能存在于源码中不等于已完成外部服务或实板验收，
+必须同时阅读[应用文档](app/espdl-quickapp/README.md)与[验证证据说明](app/espdl-quickapp/evidence/README.md)。
 
-| 项目 | 配置 |
-| --- | --- |
-| 开发板 | ESP32-P4 Function-EV-Board（实测板 v1.4） |
-| 主芯片 | ESP32-P4 revision v1.0；另提供 v3.2 构建配置 |
-| Flash | 16 MB，DIO，80 MHz |
-| PSRAM | 32 MiB；v1.x 80 MHz / v3.2 200 MHz |
-| 屏幕 | 7 英寸 MIPI-DSI，1024×600，RGB565 |
-| DSI | 2 Lane，900 Mbps；v1.x DPI 24 MHz / v3.2 DPI 52 MHz |
-| 串口 | CP2102N，UART0 GPIO37/38，115200 |
-| LCD 控制 | RST GPIO27，背光 GPIO26 |
+Home Assistant 原生页面使用共享服务；米家设备需要先接入用户自己的 Home Assistant。
+该路径只支持受限局域网 HTTP，令牌会明文传输，仅应在可信隔离网络使用。
+旧兼容桥的 HTTPS 尚未实现，不能把两条后端的文档混为一谈，详见
+[Home Assistant 源码说明](app/homeassistant/README.md)。
 
-## 目录结构
+## 目录导航
 
 ```text
-app/espdl-quickapp/               当前 v3 应用 overlay、模型、测试与验证证据
-board/esp32p4-function-ev-board/  板级配置、启动、LCD、触摸与桌面代码
-board/esp32p4-common/             ESP32-P4 公共板级支持 overlay
-chip/esp32p4/                     ESP32-P4 架构和 Espressif 驱动 overlay
-docs/                             作品说明、验证证据与历史索引
-firmware/esp32p4-nsh/             可烧录固件与启动日志
-firmware/esp32p4-desktop-v1/      2026-08-30 最终 v1.0 桌面固件与测试报告
-firmware/esp32p4-sc2336-camera-v1.0/  2026-08-30 SC2336 RAW8 取帧固件与测试报告
-firmware/esp32p4-camera-preview-v1.0/ 2026-09-03 SC2336 RGB565 零拷贝实时预览固件与测试报告
-ouo/                              OuO QuickJS 应用源码、清单与设计说明
-logs/flash555588/                 AI Coding 日志和实板工作记录
-tools/patches/                     最终 nuttx/apps 可复现补丁
-tools/                             WSL 构建、同步、检查与 Windows 烧录工具
-contest2026_*.xml                 repo manifest 与 linkfile 映射
+app/        原生应用、内置资源与 v3 应用开发快照
+board/      开发板与公共板级支持
+chip/       ESP32-P4 架构、驱动及 Espressif 适配
+configs/    桌面配置片段；不能替代板级 configs
+quickapp/   QuickJS 快应用的可编辑源码与 manifest
+ouo/        OuO 快应用、设计说明和独立许可证
+firmware/   按版本归档的镜像、校验文件和历史报告
+tools/     构建、overlay、补丁、自检、烧录和宿主测试工具
+docs/      文档导航、历史边界及专题证据
+logs/      AI Coding 会话、清单以及历史构建/串口日志
 ```
 
-`contest2026_359_dengfengzaojidecuipidaxuesheng.xml` 会把仓内板级与芯片 overlay 映射到 openvela 编译树，不需要直接修改工作区中的 `nuttx/` 或 `vendor/` 仓库。
+[app](app/README.md) · [board](board/README.md) · [chip](chip/README.md) ·
+[configs](configs/README.md) · [quickapp](quickapp/README.md) · [OuO](ouo/README.md) ·
+[firmware](firmware/README.md) · [tools](tools/README.md) · [docs](docs/README.md) · [logs](logs/README.md)
 
 ## 获取工程
+
+只查看本仓库源码与文档：
+
+```bash
+git clone --branch dev-ai-contest-2026 https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng.git
+cd contest2026_359_dengfengzaojidecuipidaxuesheng
+```
+
+建立完整 openvela 工作区时，在独立目录使用仓库提供的 manifest：
 
 ```bash
 repo init -u https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng \
@@ -73,83 +82,110 @@ repo init -u https://github.com/open-vela/contest2026_359_dengfengzaojidecuipida
 repo sync -c -j8
 ```
 
+注意：该 manifest 的团队项目 `revision` 当前写为 `codex/espclaw-final`，而不是
+`dev-ai-contest-2026`。上述命令选择的是 manifest 分支，不保证团队源码自动切到本 README
+对应的提交。同步前请检查 [团队 manifest](contest2026_359_dengfengzaojidecuipidaxuesheng.xml)
+和 [openvela.xml](openvela.xml)，同步后核对实际提交，不要直接重置已有开发分支。
+
 ## 构建
 
-当前构建流程在 WSL 中执行。仓内脚本会把 overlay 同步到 openvela 工作树并构建 ESP32-P4 NSH 配置：
+构建环境以 Linux/WSL 为主，需要 Python 3、Git、构建依赖和匹配的 `riscv32-esp-elf`
+工具链。Node.js 用于宿主 JavaScript 测试。这里不把宿主测试通过称为固件构建通过。
+
+### 板级 NSH 与开发 overlay
+
+`tools/wsl_build_p4_nsh.py` 接受 `nsh`、`nsh-v3`、`nsh-v3-usb`，通过
+`OPENVELA_ROOT` 选择外部工作区。例如在本仓库根目录运行：
 
 ```bash
-# 可选；默认使用 ~/vela-p4
 export OPENVELA_ROOT=/path/to/vela-p4
-
-# revision v1.x
-python tools/wsl_build_p4_nsh.py nsh
-python tools/wsl_copy_firmware.py --variant v1.x
-
-# revision v3.2
-python tools/wsl_build_p4_nsh.py nsh-v3
-python tools/wsl_copy_firmware.py --variant v3.2
+python3 tools/wsl_build_p4_nsh.py nsh
 ```
 
-底层构建入口为 `tools/wsl_make_p4_nsh.sh`。详细的启动、镜像生成和调试说明见 `board/esp32p4-function-ev-board/README.md` 与 `DISPLAY_PLAN.md`。
+这些开发脚本会改动外部编译树。部分 overlay/归档脚本仍包含作者机器路径，运行前必须检查
+源目录、目标目录及本地改动；尤其不能把 `wsl_copy_firmware.py` 当作已完成路径参数化的通用工具。
+参见[工具说明](tools/README.md)。
 
-最终 v1.0 桌面/OuO/相机预览版本需要在 `repo sync` 后按顺序应用可复现补丁（nuttx：0001、0003、0004、0006、0007、0008、0011、0013、0014、0015、0016、0018、0020、0022、0024、0026；apps：0002、0005、0009、0010、0012、0017、0019、0021、0023、0025、0027）：
+### 历史 v1.x 桌面与相机补丁链
+
+[apply_final_overlays.sh](tools/apply_final_overlays.sh)固定要求 NuttX
+`2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 和 apps
+`88827afd368d4bbb4802b96ed44d9582f85b2f92`。这不是向任意最新 openvela 树应用补丁的入口，
+也不等价于把 v3 应用快照全部集成进固件。
+
+仅在独立工作区的基线匹配、依赖齐备并确认无未保存修改后，从本仓库根目录执行：
 
 ```bash
-cd contest2026_359_dengfengzaojidecuipidaxuesheng
 bash tools/apply_final_overlays.sh
-
 cd ../nuttx
 tools/configure.sh esp32p4-function-ev-board:desktop-v1
 make CROSSDEV=/path/to/riscv32-esp-elf/bin/riscv32-esp-elf- -j16
 ```
 
-补丁固定基线为 nuttx `2f1387d56eb04ad2599baca58a3fa2380cdaaedb` 与 apps `88827afd368d4bbb4802b96ed44d9582f85b2f92`。应用脚本会校验基线、补丁 SHA256、工作树清洁性和应用后文件摘要；二次执行只在补丁集与结果都未变时安全跳过。桌面、OuO 和相机预览均由 `apps/system/desktop` 提供；board 层只负责注册 framebuffer、触摸和相机设备，不再包含或自动启动 LVGL 应用代码。0008/0009 还提供 `/dev/dsi-diag0` 与 `dsi_diag`，用原子 ioctl 快照取代依赖链接地址的 DSI 计数读取。0012 修复 QuickJS 归档文件名不一致，校验固定归档 SHA256，并使 LVGL Kconfig 版本与已固定的 v9.2.1 源码一致。0013 将 `esp-hal-3rdparty` 固定到 `78c092909fca38d1e2ccf767b5eff66bddc5c789`，并把原先的临时 Python 改写收敛为可审查、可重复应用的 HAL patch。0014 恢复 DSI 同步换页 API，并保留 LPWORK 回调模式，修正 0008 引入的头文件/实现不一致。0015 在生成的 sensor/panel 源码中记录固定的 Espressif 来源 commit；0016/0017 收口已确认的 NuttX 和应用头文件 nxstyle 缺陷；0018 使 CMake 与 Make 使用同一 HAL revision，并在 CMake 配置阶段核对 revision、幂等应用芯片级 HAL patch；0019 对齐 QuickJS 的 Make/CMake 源文件、RISC-V 浮点环境常量、补丁和下载校验；0020/0021 补齐 CSI/HAL、board camera 与 desktop 应用的 CMake target，0022 补齐 CSI HAL 的 CMake include path。完整许可清单见 `THIRD_PARTY.md`。
+补丁顺序、摘要和幂等检查以脚本及 [patches 说明](tools/patches/README.md)为准。
+[内部发布 manifest](esp32p4-internal-release.xml)包含另一组固定提交及团队仓库依赖；
+不要假定它与上述补丁基线一致或所有依赖都已公开。公共上游映射的待办见
+[UPSTREAM_PLAN.md](UPSTREAM_PLAN.md)。
 
-## 生成镜像与烧录
+## 镜像选择与烧录
 
-构建脚本使用工作树固定的 esptool 生成带 `--ram-only-header` 的 Simple Boot 镜像，并由归档脚本原样复制；不要再用其他 esptool 版本重复转换 ELF。
+先按[固件索引](firmware/README.md)核对芯片 revision、板卡、镜像来源和 `SHA256SUMS`。
+历史 v1.0 镜像不能直接用于 v3.2，反之亦然。端口号必须替换为实际设备端口。
 
-按住 BOOT、点按 RST 进入下载模式后执行：
+下面只预览命令，不执行烧录：
 
 ```powershell
-# 先用 esptool chip-id 或启动日志确认 revision，再选择对应镜像
-powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7 -Transport uart-bridge
-powershell -File tools\flash_p4_nsh.ps1 -Variant v3.2 -Port COM7 -Transport uart-bridge
+powershell -File tools\flash_p4_nsh.ps1 -Variant v1.x -Port COM7 -Transport uart-bridge -DryRun
 ```
 
-脚本默认以 460800 波特率将镜像烧录到 `0x2000`。ESP32-P4 Simple Boot 镜像不能写到 `0x0`；v3.2 镜像也不能用于本仓当前实测的 v1.0 芯片。
+该脚本针对其 NSH Simple Boot 镜像，将应用写到 `0x2000`，并按 `/data` 位于 `0x400000`
+做大小边界检查。不要用它直接烧录采用不同分区布局的 v3 应用或模型镜像，也不要从其他版本
+照抄地址、Flash 参数或烧录命令。真正烧录前必须完成硬件、分区和镜像确认。
 
 ## 验证
 
-串口使用 115200 波特率。成功启动后应看到：
+在仓库根目录执行已有的包检查与提交检查：
 
-```text
-WARNING: NuttX supports ESP32-P4 chip revision > v3.0 (chip revision is v1.0).
-Ignoring this error and continuing because CONFIG_ESP32P4_SELECTS_REV_LESS_V3 is set...
-NuttShell (NSH)
-nsh>
+```bash
+python3 tools/check_package.py
+python3 tools/check_submission.py
+node --test app/homeassistant/tests/homeassistant.test.cjs
+node --test app/espdl-quickapp/tests/dafeiyu.test.cjs app/espdl-quickapp/tests/package.test.cjs
 ```
 
-默认固件使用 PSRAM RGB565 framebuffer，而非 DSI Host 内部测试图案。启动后先保留全屏色条 3 秒，再切换到浅色 LVGL 桌面；串口应出现 `DESKTOP: touch ready`、首次 `DISP: update ... w=1024 h=600`，且 `ps` 中同时存在 `nsh_main` 与 `desktop`。点击屏幕后应出现 `TOUCH: pressed x=... y=...`。主页点击 `touch test` 可进入触控测试页：该页显示按下/拖动/释放计数、实时坐标、6 个分区命中和最近释放坐标；串口同步输出 `TOUCHTEST: down ...` 与 `TOUCHTEST: up ...`。
+`check_submission.py` 会调用包检查，并检查 README 必需章节、会话清单及日志格式。
+包检查还会核对固件摘要、补丁格式和仓库卫生；这些检查不能替代全量许可证审查或实板验收。
+测试所需环境及换行符注意事项见[测试说明](app/espdl-quickapp/tests/README.md)。
 
-v1.x 回归命令示例：
-
-```powershell
-python tools\p4_serial_smoke.py --port COM7 --seconds 16 `
-  --command "cat /proc/uptime" --command free
-```
-
-每次复位后应看到 `PSRAM: size=33554432 initialized=1`、
-`TOUCH: gt911 /dev/input0 -> 0`、`DISP: display_init -> 0`、
-`NuttShell (NSH)` 和 `DESKTOP: ui ready`。2026-08-23 已在同一镜像上连续执行
-3 轮并通过；日志保存在 `logs/v1-stability-*.log`。
-
-最终固件、哈希和 2026-08-30 烧录/冷启动记录见 `firmware/esp32p4-desktop-v1/`；早期实板启动记录见 `firmware/esp32p4-nsh/bootlog.txt` 和 `logs/flash555588/`。
+板上验收至少应区分：构建与链接成功、烧录写入校验、冷启动、显示/触摸、应用功能以及
+外部服务联调。历史证据入口为 [docs/evidence](docs/evidence/README.md)、
+[应用 evidence](app/espdl-quickapp/evidence/README.md)和各固件目录的报告。
+文档重写不构成一次新的硬件验证。
 
 ## AI Coding 使用说明
 
-本项目使用 AI 辅助进行需求拆解、ESP32-P4 v1.0 勘误核对、Simple Boot 启动故障定位、时钟/XIP 实验设计、MIPI-DSI 驱动移植、DMA 与显示异常分析、代码审查和文档整理。完整的选定会话和工作记录位于 `logs/flash555588/`。
+AI 用于需求拆解、移植、问题定位、测试和文档整理。选定的真实会话位于
+[logs/flash555588](logs/flash555588/README.md)，以该目录的 `manifest.json` 为清单入口。
+这里还保留历史构建和串口记录，它们不是 AI 对话日志，不能互相替代。
 
-## 当前状态与后续工作
+提交日志前应检查个人信息、凭据和第三方内容；不要编造会话、补写假的工具结果，
+也不要把整个用户配置目录或设备 `/data` 上传到仓库。
 
-当前大赛基线支持双 revision 构建；v1.0 实板已验证稳定 NSH、32 MiB PSRAM、DW-GDMA 连续整帧、24 MHz 全屏 LVGL framebuffer 更新、GT911 实际点击/拖动坐标、OuO/QuickJS 自动启动，并通过连续复位与真实断电冷启动回归。最新 v3 应用快照及其独立验证边界见 `app/espdl-quickapp/`。剩余工作是把该快照收敛为新的可复现补丁集，并完成所有外部服务和外接硬件的最终实板验收。
+## 许可证、第三方内容与品牌
+
+当前仓库没有统一的根级 `LICENSE` / `NOTICE`，不能把整个仓库直接标成
+“全部 Apache 2.0”或据此作出完整商用授权承诺。请按文件声明、组件自带许可证和
+[THIRD_PARTY.md](THIRD_PARTY.md)核对实际来源与分发义务；台账也需要随依赖更新复核。
+
+Apache 2.0 包含特定范围的专利许可，但不授予一般商标使用权；再分发时还需遵守许可证、
+适用声明、修改说明及 NOTICE 等要求，见 [Apache 官方条款](https://www.apache.org/licenses/LICENSE-2.0)。
+调用 Home Assistant 不代表获得其品牌、其他厂商 Logo、文档或所有依赖的统一授权。
+本项目不代表 Home Assistant、小米或其他厂商的官方背书。
+
+## 维护与提交
+
+新增功能应同时更新最近一层目录 README、配置、测试及必要的来源记录。源码、生成文件、
+实板证据应明确区分；不要为了缩小 diff 而删除许可证，也不要把凭据或临时 ELF/MAP 塞入源码提交。
+
+本目录结构用于清晰交付，不要求在第三方库、生成缓存和每个日期日志目录下重复添加 README。
+历史版本查看[版本说明](docs/HISTORY.md)，后续公共仓拆分查看[上游计划](UPSTREAM_PLAN.md)。
