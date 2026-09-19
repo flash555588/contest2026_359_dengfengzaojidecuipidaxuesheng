@@ -1020,14 +1020,10 @@ static void glass_settings(lv_event_t *e)
 }
 
 #include "glass_music_ui.inc"
-#ifdef CONFIG_SYSTEM_HASS
-#include "glass_hass_ui.inc"
-#else
 static void glass_homeassistant(lv_event_t *e)
 {
   launch_builtin_homeassistant_qapp(e);
 }
-#endif
 #include "glass_chat_ui.inc"
 
 static void glass_music(lv_event_t *e)

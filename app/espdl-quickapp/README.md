@@ -8,6 +8,8 @@
 
 同一固件中的 ESPClaw 触屏聊天、服务配置及共用 HTTPS 说明见 [CHAT.md](CHAT.md)。
 内置录音机、GPIO／I²C／SPI／UART／PWM／舵机／音频／BLE 快应用接口与 AI 参考见 [HARDWARE.md](HARDWARE.md)。
+Home Assistant 原生米家页的实体范围、分页、状态色、控制确认和布局依据见
+[HA-TILE-DESIGN.md](HA-TILE-DESIGN.md)。
 
 大肥鱼桌宠 1.0.1 的原生浮层、`system.pet` API 和快应用源码已接入当前 overlay，
 说明与许可证见 [dafeiyu/README.md](overlay/apps/system/desktop/dafeiyu/README.md)。

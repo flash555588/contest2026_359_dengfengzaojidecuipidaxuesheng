@@ -25,19 +25,28 @@
   const W = size.width, H = size.height;
   const dark = ui.primary === 0xffffff;
   const colors = {
-    background: dark ? 0x101318 : 0xf3f5f8,
-    surface: dark ? 0x1d222b : 0xffffff,
-    active: dark ? 0x3c2d20 : 0xfff0e4,
-    hero: dark ? 0x32271f : 0xffe4cf,
-    heroMuted: dark ? 0xcab39d : 0x8b5b36,
-    sensor: dark ? 0x1c2f33 : 0xe3f1ef,
-    detail: dark ? 0x171c24 : 0xf7f8fa,
-    text: dark ? 0xf7f8fa : 0x15171a,
-    muted: dark ? 0x9da5b2 : 0x6f7782,
-    accent: dark ? 0xff7a1a : 0xff6900,
-    selected: dark ? 0x4b321f : 0xffe2cc,
-    good: dark ? 0x68d39b : 0x148054,
-    warning: dark ? 0xf2be63 : 0xa36100
+    background: dark ? 0x111820 : 0xf3f7f9,
+    surface: dark ? 0x202a33 : 0xffffff,
+    active: dark ? 0x173a4b : 0xe4f5fc,
+    hero: dark ? 0x087cad : 0x08a8e8,
+    heroMuted: dark ? 0xb9e7f8 : 0xdff5fd,
+    sensor: dark ? 0x17352f : 0xe7f7f2,
+    detail: dark ? 0x18222b : 0xffffff,
+    text: dark ? 0xf4f8fa : 0x24343e,
+    muted: dark ? 0x9baab4 : 0x75858f,
+    accent: dark ? 0x44c5f2 : 0x079fdc,
+    selected: dark ? 0x0a6d98 : 0x08a8e8,
+    good: dark ? 0x66d8ad : 0x18a879,
+    warning: dark ? 0xffcb61 : 0xb97808,
+    miBlue: dark ? 0x0877a8 : 0x08a8e8,
+    miBlueDark: dark ? 0x075b80 : 0x078ec6,
+    miBluePale: dark ? 0x173440 : 0xe2f3fb,
+    line: dark ? 0x39424b : 0xdfe7ec,
+    rail: dark ? 0x171c23 : 0xf8fafb,
+    chip: dark ? 0x27343b : 0xf0f4f7,
+    amber: dark ? 0xffc43d : 0xffbd22,
+    teal: dark ? 0x43c5a0 : 0x16a085,
+    danger: dark ? 0xff8b83 : 0xd95d50
   };
   const styles = {
     icon: { radius: 18, borderWidth: 0 },
@@ -45,13 +54,22 @@
     card: { radius: 18, borderWidth: 0 },
     control: { radius: 14, borderWidth: 0, fontSize: 16 },
     setting: { radius: 14, borderWidth: 0, fontSize: 15 },
-    panel: { radius: 18, borderWidth: 0 }
+    panel: { radius: 18, borderWidth: 0 },
+    miCard: { radius: 8, borderWidth: 1, borderColor: dark ? 0x394750 : 0xdfe7ec,
+      borderOpacity: 100, fontSize: 14 },
+    miTab: { radius: 6, borderWidth: 0, fontSize: 15,
+      textColor: dark ? 0xd9e3e8 : 0x53636d },
+    miTabActive: { radius: 6, borderWidth: 0, fontSize: 15,
+      textColor: dark ? 0xffffff : 0x078ec6 },
+    miIcon: { radius: 8, borderWidth: 0, fontSize: 16 },
+    miAction: { radius: 8, borderWidth: 0, fontSize: 14 }
   };
   const glyph = {
     search: '\uf002', refresh: '\uf021', settings: '\uf013',
     previous: '\uf053', next: '\uf054', favorite: '\uf067', followed: '\uf00c',
     light: '\uf0e7', switch: '\uf011', input_boolean: '\uf205', fan: '\uf2dc',
-    sensor: '\uf2c9', binary_sensor: '\uf06a', home: '\uf015'
+    sensor: '\uf2c9', binary_sensor: '\uf06a', home: '\uf015',
+    humidity: '\uf043', energy: '\uf0e7', devices: '\uf1b2'
   };
   let url = 'http://homeassistant.local:8123';
   let token = '';
@@ -812,7 +830,7 @@
 
   function panel(x, y, w, h, color, radius) {
     const id = ui.panel(x, y, w, h, color);
-    ui.setStyle(id, { radius: radius || 18, borderWidth: 0 });
+    ui.setStyle(id, { radius: radius === undefined ? 18 : radius, borderWidth: 0 });
     return id;
   }
 
@@ -833,7 +851,7 @@
     hide(pair.icon, value);
   }
 
-  function buildUi() {
+  function legacyBuildUi() {
     ui.background(colors.background);
     const pad = 12;
     const compact = W < 480;
@@ -960,7 +978,7 @@
     return out;
   }
 
-  function render() {
+  function legacyRender() {
     if (!widgets || disposed) return;
     const item = current();
     ui.setText(widgets.kicker, settingsOpen ? 'HOME ASSISTANT' :
@@ -1049,6 +1067,357 @@
       nativeManaged ? '令牌：由本地服务管理' : '令牌：未输入');
     ui.setText(widgets.transport, httpAllowed || nativeManaged ?
       '本地网络 · HTTP 明文连接' : '连接前需要确认本地 HTTP 风险');
+    buttonText(widgets.settings[2], httpAllowed ? 'HTTP 已允许' : '允许 HTTP');
+    buttonText(widgets.settings[3], scope === 'favorites' ? '仅关注' : '全部实体');
+    buttonText(widgets.settings[5], connected ? '重新同步' : '连接家庭');
+    buttonColor(widgets.settings[5], colors.selected);
+    renderButtons();
+  }
+
+  function environmentValue(kind) {
+    const names = {
+      temperature: /温度|temperature/i,
+      humidity: /湿度|humidity/i,
+      energy: /能耗|功率|电量|energy|power/i
+    };
+    const units = {
+      temperature: /°c|℃|°f/i,
+      humidity: /^%$/,
+      energy: /^(w|kw|wh|kwh)$/i
+    };
+    const item = entities.find(row => row.domain === 'sensor' && available(row) &&
+      (names[kind].test(row.name) || units[kind].test(row.unit)));
+    return item ? fit(item.state + (item.unit ? ' ' + item.unit : ''), 116, 22) : '--';
+  }
+
+  function buildUi() {
+    ui.background(colors.background);
+    const narrow = W < 500;
+    const compact = W < 640;
+    const topH = 56;
+    const railW = narrow ? 96 : compact ? 112 : 158;
+    const gap = compact ? 8 : 12;
+    const contentX = railW + gap;
+    const contentW = W - contentX - gap;
+    const metricY = 92;
+    const metricGap = compact ? 6 : 10;
+    const metricWidth = Math.floor((contentW - metricGap * 2) / 3);
+    const gridY = narrow ? 128 : 206;
+    const footerY = H - 46;
+    const columns = W >= 720 ? 3 : W >= 500 ? 2 : 1;
+    const rowCount = Math.max(1, Math.min(2,
+      Math.floor((footerY - gridY + 10) / 82)));
+    const cardWidth = Math.floor((contentW - (columns - 1) * 10) / columns);
+    const cardHeight = Math.max(72, Math.floor((footerY - gridY -
+      (rowCount - 1) * 10) / rowCount));
+    const railSummaryY = H - 166;
+    const settingsY = 88;
+    const settingsStep = H < 430 ? 36 : 46;
+    const settingsButtonY = H < 430 ? 216 : 232;
+    const settingsButtonH = H < 430 ? 32 : 36;
+    const out = { cards: [], tabs: [], settings: [], metrics: [], homeOnly: [],
+      pageSize: columns * rowCount, compact, narrow, footerY, gridY, contentX, contentW };
+
+    // Allocate background surfaces before interactive controls to preserve draw order.
+    out.topPanel = panel(0, 0, W, topH, colors.hero, 0);
+    out.railPanel = panel(0, topH, railW, H - topH, colors.rail, 0);
+    out.railSummaryPanel = panel(12, railSummaryY, railW - 24, 112, colors.surface, 8);
+    for (let i = 0; i < 3; i++) {
+      out.metrics.push({
+        panel: panel(contentX + i * (metricWidth + metricGap), metricY,
+          metricWidth, 72, colors.surface, 8)
+      });
+    }
+    out.detailPanel = panel(contentX, 92, contentW, H - 150, colors.detail, 8);
+    out.setupPanel = panel(contentX, settingsY, contentW, H - settingsY - 14,
+      colors.detail, 8);
+    initializeButtonPool();
+
+    out.brandIcon = label(glyph.home, 16, 14, 26, 28, 24, 0xffffff, true);
+    out.brand = label('米家', 48, 13, Math.max(42, railW - 52), 30, 22, 0xffffff);
+    out.title = label('家庭总览', contentX, 16, compact ? 72 : 128, 26, 19, 0xffffff);
+    out.status = label('', contentX + (compact ? 78 : 138), 19,
+      Math.max(30, W - contentX - (compact ? 222 : 282)), 22, 13, colors.heroMuted);
+    out.search = iconButton(glyph.search, W - 136, 10, promptSearch);
+    out.refresh = iconButton(glyph.refresh, W - 92, 10, refresh);
+    out.settingsButton = iconButton(glyph.settings, W - 48, 10, () => {
+      settingsOpen = !settingsOpen;
+      render();
+    });
+    [out.search, out.refresh, out.settingsButton].forEach(pair => {
+      pair.button.color = colors.miBlueDark;
+      pair.button.style = styles.miIcon;
+      ui.setColor(pair.icon, 0xffffff);
+    });
+
+    out.railHome = label('我的家', 16, 72, railW - 24, 26, 19, colors.text);
+    out.railHint = label('HOME ASSISTANT', 16, 100, railW - 24, 18, 11, colors.muted);
+    [['all', '总览'], ['favorites', '常用'], ['controls', '设备'], ['sensors', '环境']]
+      .forEach((tab, index) => {
+        const button = createButton(tab[1], 12, 130 + index * 42, railW - 24, 34, () => {
+          filter = tab[0];
+          page = 0;
+          selectedId = '';
+          detailOpen = false;
+          settingsOpen = false;
+          render();
+        }, colors.rail, styles.miTab);
+        button.section = 'main';
+        out.tabs.push({ button, key: tab[0] });
+      });
+    out.railOverview = label('家庭概览', 16, railSummaryY + 8, railW - 32, 20, 13, colors.muted);
+    out.railDevices = label('', 16, railSummaryY + 36, railW - 32, 20, 15, colors.text);
+    out.railOnline = label('', 16, railSummaryY + 64, railW - 32, 20, 15, colors.good);
+    out.railActive = label('', 16, railSummaryY + 92, railW - 32, 20, 15, colors.warning);
+    out.homeOnly.push(out.railOverview, out.railDevices, out.railOnline, out.railActive);
+
+    out.overline = label('家庭环境', contentX, 68, contentW, 20, 14, colors.muted);
+    const metricDefinitions = [
+      ['室内温度', glyph.sensor, colors.miBlue],
+      ['空气湿度', glyph.humidity, colors.teal],
+      ['当前能耗', glyph.energy, colors.amber]
+    ];
+    out.metrics.forEach((metric, index) => {
+      const x = contentX + index * (metricWidth + metricGap);
+      metric.icon = label(metricDefinitions[index][1], x + 12, metricY + 13,
+        26, 28, 22, metricDefinitions[index][2], true);
+      metric.value = label('--', x + 44, metricY + 10, Math.max(8, metricWidth - 52),
+        28, compact ? 18 : 22, colors.text);
+      metric.name = label(metricDefinitions[index][0], x + 44, metricY + 42,
+        Math.max(8, metricWidth - 52), 18, 13, colors.muted);
+      out.homeOnly.push(metric.panel, metric.icon, metric.value, metric.name);
+    });
+    out.homeOnly.push(out.overline);
+    out.sectionTitle = label('全部设备', contentX, narrow ? 92 : 174,
+      contentW - 126, 24, 18, colors.text);
+    out.sectionMeta = label('', W - 126, narrow ? 95 : 177, 114, 20, 13, colors.muted);
+    out.homeOnly.push(out.sectionTitle, out.sectionMeta);
+
+    for (let i = 0; i < out.pageSize; i++) {
+      const x = contentX + i % columns * (cardWidth + 10);
+      const y = gridY + Math.floor(i / columns) * (cardHeight + 10);
+      const button = createButton('', x, y, cardWidth, cardHeight, () => {
+        const item = visibleEntities()[page * out.pageSize + i];
+        if (!item) return;
+        selectedId = item.entity_id;
+        detailOpen = true;
+        render();
+      }, colors.surface, styles.miCard);
+      button.section = 'list';
+      out.cards.push({
+        button,
+        icon: label('', x + 14, y + 14, 30, 30, 24, colors.accent, true),
+        name: label('', x + 48, y + 12, cardWidth - 58, 24, 16, colors.text),
+        state: label('', x + 48, y + 39, cardWidth - 58, 22, 14, colors.muted),
+        badge: label('', x + 14, y + cardHeight - 30, cardWidth - 28, 20, 13, colors.muted),
+        textWidth: cardWidth - 58
+      });
+    }
+    out.empty = label('', contentX + 14, gridY + 30, contentW - 28, 54, 17, colors.muted);
+    out.previous = iconButton(glyph.previous, contentX, footerY, () => {
+      if (detailOpen) {
+        selectedId = '';
+        detailOpen = false;
+      } else if (page > 0) page--;
+      render();
+    });
+    out.next = iconButton(glyph.next, W - 52, footerY, () => {
+      if ((page + 1) * out.pageSize < visibleEntities().length) page++;
+      render();
+    });
+    out.pages = label('', contentX + 48, footerY + 7, contentW - 96, 24, 14, colors.muted);
+    out.previous.button.section = 'navigation';
+    out.next.button.section = 'list';
+
+    const detailX = contentX + 22;
+    out.entityIcon = label('', detailX, 112, 36, 36, 30, colors.accent, true);
+    out.entityName = label('', detailX + 48, 104, contentW - 128, 30, 22, colors.text);
+    out.entityId = label('', detailX + 48, 138, contentW - 88, 24, 14, colors.muted);
+    out.detail = label('', detailX + 48, 186, contentW - 88, 30, 18, colors.text);
+    out.favorite = iconButton(glyph.favorite, W - 62, 104, toggleFavorite);
+    out.on = createButton('开启', detailX, H - 74, 96, 38,
+      () => control('turn_on'), colors.selected, styles.miAction);
+    out.off = createButton('关闭', detailX + 106, H - 74, 96, 38,
+      () => control('turn_off'), colors.chip, styles.miAction);
+    out.minus = createButton('-', W - 158, H - 74, 38, 38,
+      () => changeBrightness(-10), colors.chip, styles.miIcon);
+    out.level = label('', W - 114, H - 66, 58, 24, 16, colors.text);
+    out.plus = createButton('+', W - 50, H - 74, 38, 38,
+      () => changeBrightness(10), colors.chip, styles.miIcon);
+    [out.favorite.button, out.on, out.off, out.minus, out.plus].forEach(button => {
+      button.section = 'detail';
+    });
+
+    const settingsX = contentX + 22;
+    const settingsWidth = Math.floor((contentW - 54) / 2);
+    out.settingsHeading = label('Home Assistant 连接', settingsX, 104,
+      contentW - 44, 28, 21, colors.text);
+    out.url = label('', settingsX, 142, contentW - 44, 24, 15, colors.text);
+    out.secret = label('', settingsX, 171, contentW - 44, 22, 14, colors.muted);
+    out.transport = label('HTTP · 未加密', settingsX, 198,
+      contentW - 44, 22, 14, colors.warning);
+    const definitions = [
+      ['服务端', promptUrl], ['访问令牌', promptToken],
+      ['允许 HTTP', () => {
+        if (httpAllowed) {
+          invalidate();
+          httpAllowed = false;
+        } else httpAllowed = true;
+        message = httpAllowed ? '已允许本次局域网明文连接' : '已撤销 HTTP 授权';
+        render();
+      }],
+      ['全部实体', () => {
+        if (pending || nativeBusy || queued) {
+          message = '请求结束后才能切换范围';
+          render();
+          return;
+        }
+        scope = scope === 'all' ? 'favorites' : 'all';
+        save('eh_scope', scope);
+        selectedId = '';
+        if (connected) {
+          beginStates();
+          startQueued();
+        }
+        render();
+      }],
+      ['添加关注', addFavorite], ['连接', connect], ['断开', disconnect]
+    ];
+    definitions.forEach((entry, index) => {
+      out.settings.push(createButton(entry[0],
+        settingsX + index % 2 * (settingsWidth + 10),
+        settingsButtonY + Math.floor(index / 2) * settingsStep,
+        settingsWidth, settingsButtonH, entry[1],
+        index === 5 ? colors.selected : colors.chip, styles.miAction));
+    });
+    out.settings.forEach(button => { button.section = 'settings'; });
+    return out;
+  }
+
+  function render() {
+    if (!widgets || disposed) return;
+    const item = current();
+    const filtered = visibleEntities();
+    const homeView = !settingsOpen && !detailOpen;
+    const online = entities.filter(available).length;
+    page = Math.max(0, Math.min(page,
+      Math.max(0, Math.ceil(filtered.length / widgets.pageSize) - 1)));
+    if (!settingsOpen && !filtered.slice(page * widgets.pageSize,
+        (page + 1) * widgets.pageSize).some(row => row.entity_id === selectedId)) {
+      selectedId = '';
+    }
+
+    ui.setText(widgets.title, settingsOpen ? '连接设置' :
+      detailOpen ? '设备控制' : '家庭总览');
+    ui.setText(widgets.status, fit(message,
+      Math.max(30, W - widgets.contentX - (widgets.compact ? 222 : 282)), 13));
+    ui.setColor(widgets.status, phase === 'error' ? 0xffe39a : colors.heroMuted);
+    hide(widgets.status, widgets.narrow);
+    widgets.tabs.forEach(tab => {
+      hide(tab.button, settingsOpen || detailOpen);
+      const selected = tab.key === filter;
+      buttonColor(tab.button, selected ? colors.miBluePale : colors.rail);
+      tab.button.style = selected ? styles.miTabActive : styles.miTab;
+    });
+    pairHidden(widgets.search, !homeView);
+    pairHidden(widgets.refresh, !homeView);
+    pairHidden(widgets.settingsButton, settingsOpen);
+
+    widgets.homeOnly.forEach(id => hide(id, !homeView));
+    if (widgets.narrow) {
+      widgets.metrics.forEach(metric => {
+        [metric.panel, metric.icon, metric.value, metric.name].forEach(id => hide(id, true));
+      });
+      hide(widgets.overline, true);
+    }
+    hide(widgets.railSummaryPanel, !homeView || H < 430);
+    if (H < 430) {
+      [widgets.railOverview, widgets.railDevices, widgets.railOnline, widgets.railActive]
+        .forEach(id => hide(id, true));
+    }
+    hide(widgets.detailPanel, settingsOpen || !detailOpen || !item);
+    hide(widgets.setupPanel, !settingsOpen);
+    ui.setText(widgets.railDevices, '设备  ' + controlDevices());
+    ui.setText(widgets.railOnline, '在线  ' + online);
+    ui.setText(widgets.railActive, '运行  ' + activeDevices());
+    ui.setText(widgets.metrics[0].value, environmentValue('temperature'));
+    ui.setText(widgets.metrics[1].value, environmentValue('humidity'));
+    ui.setText(widgets.metrics[2].value, environmentValue('energy'));
+    const filterNames = {
+      all: '全部设备', favorites: '常用设备', controls: '可控设备', sensors: '环境传感器'
+    };
+    ui.setText(widgets.sectionTitle, filterNames[filter]);
+    ui.setText(widgets.sectionMeta, filtered.length + ' 个实体');
+
+    widgets.cards.forEach((card, index) => {
+      const row = filtered[page * widgets.pageSize + index];
+      [card.button, card.icon, card.name, card.state, card.badge].forEach(id =>
+        hide(id, !homeView || !row));
+      if (!row) return;
+      const isOn = available(row) && row.state === 'on';
+      const isSensor = ['sensor', 'binary_sensor'].includes(row.domain);
+      buttonColor(card.button, isOn ? colors.active :
+        isSensor ? colors.sensor : colors.surface);
+      ui.setText(card.icon, glyph[row.domain] || glyph.devices);
+      ui.setText(card.name, fit(row.name, card.textWidth, 16));
+      ui.setText(card.state, fit(stateText(row), card.textWidth, 14));
+      ui.setText(card.badge, !available(row) ? '● 离线' :
+        isOn ? '● 正在运行  ' + cardStatus(row) :
+          isSensor ? '● 实时数据' : '○ 已关闭');
+      const accent = !available(row) ? colors.muted : isOn ? colors.miBlue :
+        isSensor ? colors.teal : colors.muted;
+      ui.setColor(card.icon, accent);
+      ui.setColor(card.state, accent);
+      ui.setColor(card.badge, accent);
+    });
+    hide(widgets.empty, settingsOpen || (detailOpen ? !!current() : filtered.length > 0));
+    ui.setText(widgets.empty, detailOpen ? '实体已不在当前列表' :
+      search ? '没有匹配的实体' : filter === 'favorites' ? '还没有常用设备' :
+        connected ? '当前分类没有设备' : '正在读取家庭设备');
+    pairHidden(widgets.previous, settingsOpen || (!detailOpen && page === 0));
+    pairHidden(widgets.next, settingsOpen || detailOpen ||
+      (page + 1) * widgets.pageSize >= filtered.length);
+    hide(widgets.pages, !homeView);
+    ui.setText(widgets.pages, fit((page + 1) + ' / ' +
+      Math.max(1, Math.ceil(filtered.length / widgets.pageSize)) + '  ·  ' +
+      (lastCached ? '本地缓存' : connected ? '实时状态' : '等待连接') +
+      (search ? '  ·  搜索中' : ''), widgets.contentW - 96, 14));
+    placeIconButton(widgets.previous, widgets.contentX,
+      detailOpen ? H - 124 : widgets.footerY);
+
+    [widgets.entityIcon, widgets.entityName, widgets.entityId, widgets.detail]
+      .forEach(id => hide(id, settingsOpen || !item));
+    pairHidden(widgets.favorite, settingsOpen || !item);
+    if (item) {
+      ui.setText(widgets.entityIcon, glyph[item.domain] || glyph.devices);
+      ui.setColor(widgets.entityIcon, available(item) && item.state === 'on' ?
+        colors.miBlue : colors.muted);
+      ui.setText(widgets.entityName, fit(item.name, widgets.contentW - 128, 22));
+      ui.setText(widgets.entityId, fit(item.entity_id, widgets.contentW - 88, 14));
+      ui.setText(widgets.detail, fit('当前状态  ·  ' + stateText(item),
+        widgets.contentW - 88, 18));
+      ui.setText(widgets.favorite.icon,
+        favorites.includes(item.entity_id) ? glyph.followed : glyph.favorite);
+      ui.setColor(widgets.favorite.icon,
+        favorites.includes(item.entity_id) ? colors.warning : colors.muted);
+    }
+    const usable = !settingsOpen && connected && available(item) &&
+      !pending && !queued && !nativeBusy;
+    hide(widgets.on, !usable || !supports(item, 'turn_on'));
+    hide(widgets.off, !usable || !supports(item, 'turn_off'));
+    const dimmer = usable && item.dimmable && item.brightness !== null &&
+      supports(item, 'turn_on');
+    [widgets.minus, widgets.level, widgets.plus].forEach(id => hide(id, !dimmer));
+    if (dimmer) ui.setText(widgets.level, item.brightness + '%');
+
+    [widgets.settingsHeading, widgets.url, widgets.secret, widgets.transport]
+      .forEach(id => hide(id, !settingsOpen));
+    widgets.settings.forEach(id => hide(id, !settingsOpen));
+    ui.setText(widgets.url, fit('家庭中枢  ·  ' + url, widgets.contentW - 44, 15));
+    ui.setText(widgets.secret, token ? '令牌：已输入（仅本次会话）' :
+      nativeManaged ? '令牌：由本地服务管理' : '令牌：未输入');
+    ui.setText(widgets.transport, httpAllowed || nativeManaged ?
+      '本地网络  ·  HTTP 明文连接' : '连接前需要确认本地 HTTP 风险');
     buttonText(widgets.settings[2], httpAllowed ? 'HTTP 已允许' : '允许 HTTP');
     buttonText(widgets.settings[3], scope === 'favorites' ? '仅关注' : '全部实体');
     buttonText(widgets.settings[5], connected ? '重新同步' : '连接家庭');

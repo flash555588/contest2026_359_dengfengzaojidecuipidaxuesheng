@@ -1,8 +1,8 @@
 {
-  "bytes": 7028888,
-  "sha256": "6d3139f33c3ac95458620d3b9937eb2e380c0371541fb68263a9fb38654c59cf",
+  "bytes": 7037880,
+  "sha256": "acdfc72ec79ff99d1c879d4b0d31326e32c24ec03a5880e32f0abcda40626424",
   "flash_start": 8192,
-  "flash_end": 7037080,
+  "flash_end": 7046072,
   "program_limit": 8388608,
   "models_start": 8388608,
   "models_limit": 12582912,
@@ -66,7 +66,7 @@
     "hass_portal_bootstrap": true
   },
   "single_float_abi": true,
-  "internal_startup_end": 1341829908,
+  "internal_startup_end": 1341864468,
   "internal_startup_limit": 1341915136,
   "cache_critical_iram": {
     "esp_cache_suspend_ext_mem_cache": 1341435720,
