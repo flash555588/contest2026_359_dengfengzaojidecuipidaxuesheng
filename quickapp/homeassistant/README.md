@@ -1,31 +1,32 @@
-# 家居（Home Assistant 面板）
+# Home Assistant 家居面板 Quick App
 
-OpenVela QPK 桌面应用：Lovelace 风格家页面，通过 REST 连接局域网里的 Home Assistant（树莓派 / Green）。
+本目录保存家居面板的 [app.js](app.js)、[manifest.json](manifest.json)、浏览器预览
+`preview.html` 和参考数据 `ref-db.json`。返回[快应用索引](../README.md)。
 
-## 布局
+这不是 Home Assistant 官方客户端或小米官方米家客户端。米家等设备需要先接入用户
+自己的 Home Assistant；本应用不负责小米账号登录或云端设备接入。
 
-- `quickapp/homeassistant/`：设备端 `app.js`、网页预览 `preview.html`、设计对照 `ref-db.json`
-- `app/homeassistant/`：QPK C 客户端 `qpk_homeassistant.*`、资源生成脚本、测试
+## 选择实际后端
 
-## 约束
+当前 v3 overlay 的共享原生服务由 `system.homeAssistantService` 提供，面板与原生
+LVGL 页面使用同一服务。该服务支持受限局域网 HTTP，不支持 HTTPS；令牌会明文发送，
+仅应在可信网络中使用。配置、权限和设备入口见 [HASS.md](../../app/espdl-quickapp/HASS.md)。
 
-- QPK 最多 16 个事件、64 个控件
-- HTTP 仅 `config` / `states` / `services` 与 `GET /api/states/{entity_id}`
-- 实体身份对齐 HA core：`(domain, platform, unique_id)`
-- 实时状态用 5 秒静默轮询，不是 WebSocket
+根级旧桥 `app/homeassistant/qpk_homeassistant.c` 是另一条路径：它拒绝 HTTP，
+HTTPS 也尚未实现。不能把这理解成“配置 HTTPS 即可连接”，或把两个后端的约束混用。
+源码职责见 [app/homeassistant](../../app/homeassistant/README.md)。
 
-## 预览
+## 编辑、资源与测试
 
-仓库根目录起静态服务后打开：
+保持本目录 JS 为 LF；修改后核验 overlay JS 副本、两份 C 资源和授权 SHA-256。
+不能只复制新 JS 而继续使用旧授权头。当前生成脚本的输出范围见
+[资源生成说明](../../app/homeassistant/README.md#源码与派生文件)。
 
-`camera-app` 开发时为 `http://127.0.0.1:8787/camera-app/homeassistant/preview.html`
+从仓库根目录运行：
 
-本目录下直接打开 `preview.html` 也可看 Lovelace 家/能源分区。
+```bash
+node --test app/homeassistant/tests/homeassistant.test.cjs
+```
 
-## 连接真实 HA
-
-1. 在 HA 个人资料创建长期访问令牌
-2. 设备端只接受 HTTPS 地址与令牌；当前固件尚未配置 TLS 信任库时会拒绝请求，绝不回退到明文 HTTP
-3. 同步后按 entity_id 注册槽位
-
-不要把令牌写进仓库。
+`preview.html` 用于浏览器侧界面观察，不能证明真实 API、令牌配置或设备端控制已通过。
+不要把长期令牌、设备私有地址配置或 `/data` 内容写入此目录或公开日志。

@@ -14,3 +14,5 @@ tools/patches/*.patch -text -whitespace
 firmware/esp32p4-camera-preview-v1.0/* text eol=lf
 firmware/esp32p4-camera-preview-v1.0/*.bin binary
 firmware/esp32p4-camera-preview-v1.0/*.log -text -whitespace
+quickapp/homeassistant/app.js text eol=lf
+app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js text eol=lf
