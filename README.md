@@ -15,15 +15,16 @@ QuickJS 快应用、Home Assistant 原生集成、构建工具和验证记录。
 
 当前 v3 应用开发快照位于 [app/espdl-quickapp](app/espdl-quickapp/README.md)。
 Home Assistant 的实际入口、网络限制和实板证据见 [HASS.md](app/espdl-quickapp/HASS.md)。
-历史固件请从 [firmware](firmware/README.md) 选择，不要把文件夹日期或“候选”名称当作兼容性保证。
+当前固件入口请从 [firmware/v3](firmware/v3/README.md) 开始；v1 和早期实验材料集中在
+[firmware/历史测试固件](firmware/历史测试固件/)，不要把文件夹日期或“候选”名称当作兼容性保证。
 
 ## 版本与验证边界
 
 仓库中并存三类材料，不能互相替代：历史 v1.x 固件及其验收记录、针对不同 revision 的
 板级配置，以及 2026-09-17 整理的 v3 应用 overlay 与应用级证据。
 
-[2026-08-30 v1.0 测试报告](firmware/esp32p4-desktop-v1/TEST_REPORT.md)记录了对应镜像的
-烧录校验、冷启动、PSRAM 和桌面/QuickJS 状态；[v3.2 构建候选](firmware/esp32p4-desktop-v3.2-candidate/README.md)
+[2026-08-30 v1.0 测试报告](firmware/历史测试固件/esp32p4-desktop-v1/TEST_REPORT.md)记录了对应镜像的
+烧录校验、冷启动、PSRAM 和桌面/QuickJS 状态；[v3.2 构建候选](firmware/v3/esp32p4-desktop-v3.2-candidate/README.md)
 不能因编译成功就标记为已通过 v3.2 实机验收。v3 应用快照中的后来证据也只适用于其记录的对象。
 
 `483a750` 是 Home Assistant 原生集成的一次内容基准，不是把整个仓库固定到旧提交的要求。

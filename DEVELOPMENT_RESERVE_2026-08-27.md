@@ -4,7 +4,7 @@
 
 ## 定位
 
-本清单保存不改变当前 release 判定、但能支持后续排障和验收的本地开发资产。正式 v1.0 发布固件仍以 `firmware/esp32p4-desktop-v1.0-release` 为准；v3.2 仍是待对应硬件验证的 candidate。
+本清单保存不改变当前 release 判定、但能支持后续排障和验收的本地开发资产。正式 v1.0 发布固件归档在 `firmware/历史测试固件/esp32p4-desktop-v1.0-release`；当前浏览和复现入口是 `firmware/v3`，其中 v3.2 仍是待对应硬件验证的 candidate。
 
 ## 本次纳入
 

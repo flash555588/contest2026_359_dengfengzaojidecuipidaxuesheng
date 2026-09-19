@@ -51,7 +51,7 @@ ESP32-P4 板级、芯片和桌面源代码已进入完整 NuttX/apps 成员仓�
 
 | 文件 | 大小 | SHA-256 |
 | --- | ---: | --- |
-| `firmware/esp32p4-desktop-v1.0-release/nuttx.bin` | 2908784 | `74420C66BE6A0298DBBEB21326600D47010612C27A097030DF4E47CC90E2C058` |
+| `firmware/历史测试固件/esp32p4-desktop-v1.0-release/nuttx.bin` | 2908784 | `74420C66BE6A0298DBBEB21326600D47010612C27A097030DF4E47CC90E2C058` |
 
 esptool 5.3.1 识别芯片为 revision v1.0 / ECO2，MAC `60:55:f9:fa:f4:8b`，镜像写入 `0x2000` 并校验通过。连续两次硬复位均进入 NSH，版本为 `NuttX 0.0.0 cd61ccdd`，无 dirty 标记。证据位于 `logs/v1-repro2-smoke-20260827.log` 和 `logs/v1-repro2-reset-cycle2-20260827.log`。
 
@@ -59,7 +59,7 @@ esptool 5.3.1 识别芯片为 revision v1.0 / ECO2，MAC `60:55:f9:fa:f4:8b`，�
 
 | 文件 | 大小 | SHA-256 |
 | --- | ---: | --- |
-| `firmware/esp32p4-desktop-v3.2-candidate/nuttx.bin` | 2954848 | `886A9FB5793F6EE17285C8BBE373FEFAE5450DD5BD95FF19A4E2A634B07FE80E` |
+| `firmware/v3/esp32p4-desktop-v3.2-candidate/nuttx.bin` | 2954848 | `886A9FB5793F6EE17285C8BBE373FEFAE5450DD5BD95FF19A4E2A634B07FE80E` |
 
 v3.2 解析配置为 revision ≥3.1、400 MHz，低于 v3 的兼容选项关闭。构建日志为 `logs/build-repro-v3.2-20260827.log`。由于没有对应实板，本包不能升级为 release。
 
