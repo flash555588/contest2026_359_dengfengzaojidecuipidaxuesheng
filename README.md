@@ -195,3 +195,4 @@ Apache 2.0 包含特定范围的专利许可，但不授予一般商标使用权
 This submission follows the existing cloud repository layout and archives the latest local work, experiments, flash logs, and device tests. The source workspace was not moved, deleted, or modified.
 
 See [the work log](docs/WORKLOG_2026-09-19.md) and the raw [application evidence](app/espdl-quickapp/evidence/README.md). The final image is 7096868 bytes with SHA-256 `25f42781e8cd0dfe3a814f0a7b9e83b7b86910887f090860655e310275fdd6fe`; only the program partition was flashed, preserving models and `/data`.
+The current application source is synchronized from the locally verified 04-v3-20260913/espdl-quickapp tree, including the Home Assistant UI and BLE touchpad implementation. The old cloud v1 snapshot is not the release baseline. See the 2026-09-19 handoff logs at logs/2026-09-19/README.md.

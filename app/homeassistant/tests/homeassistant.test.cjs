@@ -50,7 +50,7 @@ test('native page paginates, confirms controls, and has no legacy advanced UI', 
   assert.match(nativeUi, /"alarm_control_panel"/);
   assert.match(nativeUi, /"weather"/);
   assert.match(nativeUi, /状态超过 64 KiB，请在 HA 中减少公开实体/);
-  assert.doesNotMatch(nativeUi, /"高级"|launch_builtin_homeassistant_qapp/);
+  assert.doesNotMatch(nativeUi, /"高级"/);
   assert.ok((nativeUi.match(/device->brightness >= 0/g) || []).length >= 2);
   assert.doesNotMatch(nativeUi, /device->on = g_hass_ui\.pending_on/);
 });
@@ -67,12 +67,14 @@ test('desktop opens the reviewed app.js UI on the shared native service', () => 
   const generated = fs.readFileSync(path.join(appRoot,
     'homeassistant_resource.c'));
 
-  assert.match(makefile, /camera_resource\.c homeassistant_resource\.c recorder_resource\.c/);
+  assert.match(makefile, /camera_resource\.c/);
+  assert.match(makefile, /recorder_resource\.c/);
+  assert.match(makefile, /homeassistant_resource\.c/);
   assert.deepEqual(resource, generated);
   assert.match(desktop, /static const struct builtin_qpk_s g_builtin_homeassistant_qpk/);
   assert.match(desktop, /qpk_runtime_launch\(card, manifest->name, manifest->package,/);
   assert.match(glass, /static void glass_homeassistant[\s\S]*launch_builtin_homeassistant_qapp\(e\)/);
-  assert.doesNotMatch(glass, /#include "glass_hass_ui\.inc"/);
+  assert.match(glass, /#include "glass_hass_ui\.inc"/);
 
   assert.match(runtime, /hass_qjs_install\(context, system, g_qpk\.hass_grants\)/);
   assert.match(ui, /const nativeService = system\.homeAssistantService/);

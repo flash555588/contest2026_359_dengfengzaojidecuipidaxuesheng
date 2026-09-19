@@ -2086,9 +2086,5 @@ static void glass_hass_app(lv_obj_t *card)
 
 static void glass_homeassistant(lv_event_t *event)
 {
-  LV_UNUSED(event);
-  lv_obj_t *card = panel_card("智能家居");
-  if (!card) return;
-  glass_hass_app(card);
-  glass_homeassistant_enter(card);
+  launch_builtin_homeassistant_qapp(event);
 }
