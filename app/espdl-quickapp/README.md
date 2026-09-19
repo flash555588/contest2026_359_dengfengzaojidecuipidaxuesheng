@@ -64,3 +64,8 @@ P4 神经网络加速使用 ESP-DL 官方 `xespv` 向量指令、`xesploop` 硬�
 实板诊断：`desktop espdl test 0` 依次运行同核 FPU/向量抢占与重复 Gemm 自检、图像预处理对照、官方 320×240 人脸 JPEG 的两次完整推理、分类重复推理。终端等待工作线程结束再返回；`desktop espdl` 查询完成状态。自检中的图像 SIMD 差异是诊断记录，所选 C 预处理必须通过独立 RGB565 数值参考检查。`desktop ui espdl` 打开应用，`desktop ui espdl-start` 开始跟随，`desktop ui espdl-stop` 停止。UI 只从完整发布的同一帧读取图像和检测结果，工作线程不访问 LVGL。
 
 证据分别保存在 `evidence/firmware-validation.json`、`evidence/host-validation.json`、`evidence/js-validation.json` 和实板日志。构建或主机测试通过不能代替实板识别准确性、帧率和长期稳定性验证。
+## 2026-09-19 Home Assistant and BLE touchpad validation
+
+This directory now includes the latest Home Assistant/Mijia UI experiments, BLE Mouse touchpad iterations, firmware build, flash, boot, pairing, reconnect, and input records. See [the evidence index](evidence/README.md) and the [work log](../../docs/WORKLOG_2026-09-19.md).
+
+The final image is 7096868 bytes with SHA-256 `25f42781e8cd0dfe3a814f0a7b9e83b7b86910887f090860655e310275fdd6fe`. Only the program partition was updated; model storage and `/data` were preserved. Final BLE status was `host_ready=1`, `enabled=1`, `connected=1`, `encrypted=1`, `notify=1`.
