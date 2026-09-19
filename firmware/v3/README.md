@@ -8,10 +8,11 @@
 - [`esp32p4-desktop-v3.2-candidate/`](esp32p4-desktop-v3.2-candidate/)：桌面/LVGL v3.2 构建候选，含 `nuttx.bin`、解析配置、构建元数据和 SHA-256 清单。
 - [`esp32p4-nsh-v3.2/`](esp32p4-nsh-v3.2/)：v3.2 UART NSH 构建产物。
 - [`esp32p4-nsh-v3.2-usb/`](esp32p4-nsh-v3.2-usb/)：v3.2 USB Serial/JTAG 控制台构建产物。
+- [`esp32p4-application-v3-20260919.md`](esp32p4-application-v3-20260919.md)：实际烧录到 v3.2 实板并完成 Home Assistant、BLE 触摸板和 UI 验证的应用镜像记录。
 
 ## 状态边界
 
-v3.2 候选已完成干净配置切换和全量构建，但当前记录没有 v3.2 实板启动证据。因此文档使用“构建候选”，不是“正式发布”或“已完成实机适配”。在 v1.0/ECO2 板上禁止烧录这些镜像。
+`esp32p4-desktop-v3.2-candidate` 是 2026-08-27 的独立旧构建候选，仍按其目录说明保留“未完成实板验收”的边界。在此之后，2026-09-19 的本地 v3 应用镜像已经在 v3.2 实板上完成烧录、启动、Home Assistant UI、连接服务和 BLE 触摸板验证；两者不是同一个二进制文件。所有镜像仍禁止烧录到 v1.0/ECO2 板。
 
 当前本地已验证的 v3 应用版本是源码优先的交付基线：Home Assistant 卡片 UI、QuickJS 原生服务桥接、BLE HID/触摸板和 C6 入口均在
 [`app/espdl-quickapp/`](../../app/espdl-quickapp/README.md)，实板烧录和 UI 证据在

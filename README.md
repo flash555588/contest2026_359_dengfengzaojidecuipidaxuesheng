@@ -24,8 +24,8 @@ Home Assistant 的实际入口、网络限制和实板证据见 [HASS.md](app/es
 板级配置，以及 2026-09-17 整理的 v3 应用 overlay 与应用级证据。
 
 [2026-08-30 v1.0 测试报告](firmware/历史测试固件/esp32p4-desktop-v1/TEST_REPORT.md)记录了对应镜像的
-烧录校验、冷启动、PSRAM 和桌面/QuickJS 状态；[v3.2 构建候选](firmware/v3/esp32p4-desktop-v3.2-candidate/README.md)
-不能因编译成功就标记为已通过 v3.2 实机验收。v3 应用快照中的后来证据也只适用于其记录的对象。
+烧录校验、冷启动、PSRAM 和桌面/QuickJS 状态；[2026-08-27 v3.2 构建候选](firmware/v3/esp32p4-desktop-v3.2-candidate/README.md)
+是独立的旧候选。2026-09-19 的实际 v3 应用实板验证见 [v3 应用记录](firmware/v3/esp32p4-application-v3-20260919.md)，不能把两种镜像混为同一版本。
 
 `483a750` 是 Home Assistant 原生集成的一次内容基准，不是把整个仓库固定到旧提交的要求。
 旧源码集合及独立 worktree 的取回方法见 [docs/HISTORY.md](docs/HISTORY.md)。
