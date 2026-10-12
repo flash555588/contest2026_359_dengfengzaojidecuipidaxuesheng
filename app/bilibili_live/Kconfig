@@ -1,0 +1,13 @@
+config SYSTEM_BILIBILI_LIVE
+	bool "Bilibili direct live video (LVGL / OpenH264)"
+	default n
+	depends on SYSTEM_DESKTOP && NET_TCP && HAVE_CXX
+	select NETUTILS_CJSON
+	select LIBC_NETDB
+	select NET_SOCKOPTS
+	select PTHREAD_MUTEX_TYPES
+	select LIBM
+	---help---
+		Direct HTTPS API and HTTP(S)-FLV playback without a relay server.
+		Video only: live AAC playback is not implemented. Uses desktop glass_https.
+		Install pinned dependencies with tools/install_bilibili_live.py first.

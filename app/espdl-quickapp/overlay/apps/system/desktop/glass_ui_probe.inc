@@ -117,6 +117,12 @@ static void desktop_ui_probe_tree(lv_obj_t *object, unsigned parent)
 static bool desktop_ui_probe_click(lv_obj_t *object, const char *text)
 {
   if (!object || !lv_obj_is_visible(object)) return false;
+  if(lv_obj_check_type(object,&lv_checkbox_class)&&!lv_obj_has_state(object,LV_STATE_DISABLED)&&
+     !strcmp(lv_checkbox_get_text(object),text)){
+    if(lv_obj_has_state(object,LV_STATE_CHECKED))lv_obj_remove_state(object,LV_STATE_CHECKED);
+    else lv_obj_add_state(object,LV_STATE_CHECKED);
+    lv_obj_send_event(object,LV_EVENT_VALUE_CHANGED,NULL);return true;
+  }
   if (lv_obj_has_flag(object, LV_OBJ_FLAG_CLICKABLE) && !lv_obj_has_state(object, LV_STATE_DISABLED))
     {
       for (uint32_t i = 0; i < lv_obj_get_child_count(object); i++) {
@@ -172,6 +178,21 @@ static void desktop_ui_probe_service(void)
       g_ui_probe_frame_bytes = 0;
       desktop_ui_probe_print("desktop: frame released\n");
     }
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  else if (!strcmp(command, "bilibili")) launch_bilibili(NULL);
+  else if (!strcmp(command, "local-video")) launch_local_video(NULL);
+  else if (!strncmp(command, "local-play:", 11)) {
+    launch_local_video(NULL); local_video_play_path(command + 11);
+  }
+  else if (!strcmp(command, "local-stop")) panel_hide(NULL);
+  else if (!strncmp(command, "bilibili-play:", 14)) {
+    launch_bilibili(NULL);
+    bili_live_play_room(command + 14);
+  }
+  else if (!strncmp(command,"huya-play:",10)) { launch_bilibili(NULL);bili_live_play_platform(1,command+10); }
+  else if (!strncmp(command,"cc-play:",8)) { launch_bilibili(NULL);bili_live_play_platform(2,command+8); }
+  else if (!strcmp(command, "bilibili-stop")) panel_hide(NULL);
+#endif
   else if (!strcmp(command, "weather-status"))
     {
       struct glass_weather_snapshot weather;
@@ -283,8 +304,11 @@ static void desktop_ui_probe_service(void)
   else
     {
       if (!strncmp(command, "click:", 6))
-        desktop_ui_probe_print("click %s -> %d\n", command + 6,
-          desktop_ui_probe_click(g_chat_ui.confirm ? g_chat_ui.confirm : g_desktop.current_card, command + 6));
+        {
+          bool clicked=desktop_ui_probe_click(g_chat_ui.confirm ? g_chat_ui.confirm : g_desktop.current_card,command+6);
+          if(!clicked)clicked=desktop_ui_probe_click(lv_layer_top(),command+6);
+          desktop_ui_probe_print("click %s -> %d\n",command+6,clicked);
+        }
       else if (!strncmp(command, "touch:", 6))
         {
           /* touch:<state>:<x>:<y> replays one pointer update with fractions
@@ -388,7 +412,16 @@ static int desktop_ui_probe_request(const char *command)
     "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet", "pet-status"};
   /* click:<label> presses one visible control by its label, which is how the
    * file manager's list rows are verified. */
-  bool found = (!strncmp(command, "click:", 6) && command[6] != '\0') ||
+  bool found =
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+               (!strcmp(command, "local-video")) || (!strcmp(command, "local-stop")) ||
+               (!strncmp(command, "local-play:", 11) && !strncmp(command + 11, "/sdcard/", 8)) ||
+               (!strcmp(command, "bilibili")) || (!strcmp(command, "bilibili-stop")) ||
+               (!strncmp(command, "bilibili-play:", 14) && bili_valid_room(command + 14)) ||
+               (!strncmp(command,"huya-play:",10) && bili_valid_room(command+10)) ||
+               (!strncmp(command,"cc-play:",8) && bili_valid_room(command+8)) ||
+#endif
+               (!strncmp(command, "click:", 6) && command[6] != '\0') ||
                (!strncmp(command, "music-key:", 10) && command[10] != '\0') ||
                (!strncmp(command, "chat-key:", 9) && command[9] != '\0') ||
                (!strncmp(command, "chat-type:", 10) && command[10] != '\0') ||

@@ -97,3 +97,15 @@ trees, retain all upstream license and NOTICE files, and update this ledger if
 any source commit or register table changes. A repository-wide root LICENSE and
 NOTICE remain release-level P0 deliverables and are intentionally tracked
 separately from this P1 provenance record.
+
+## Local and live media players
+
+- OpenH264 2.6.0: Cisco BSD license, installed from a SHA-256 pinned archive.
+  The installer preserves the upstream LICENSE and applies decoder-only RV32,
+  bounded scratch storage, allocation guards and worker ownership patches.
+- minimp4: CC0, revision and source hash in
+  `app/bilibili_live/local_vendor/UPSTREAM.json`; upstream notice stays in header.
+- Helix AAC via arduino-libhelix: original RealNetworks license retained as
+  `app/bilibili_live/local_vendor/HELIX-UPSTREAM-LICENSE.txt`; revision and local
+  adaptations are recorded in the same manifest. No Arduino wrapper is linked.
+- TLS remains the existing desktop glass_https / mbedTLS implementation.

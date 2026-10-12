@@ -1,0 +1,16 @@
+{
+  "minimp4": {
+    "repo": "lieff/minimp4",
+    "commit": "2a3014a7753cfcba4442adeb469431967238fe6a",
+    "sha256": "1049558a37f4dca34f5a5ff76b04c0d14705e3e66974afc650b9b76d19ccfd08"
+  },
+  "arduino-libhelix": {
+    "repo": "pschatzmann/arduino-libhelix",
+    "commit": "f6e55a307c7577c5e3dfe1bf424a61075235fa08",
+    "sha256": "1130795efcd1daa262c45107ab8c25431893e85f19c7336833a9af530dab1ea1"
+  },
+  "changes": [
+    "minimp4: composition timestamps, NAL prefix length, 4 MiB index allocator in caller",
+    "Helix: AAC-LC only, generic RV32 arithmetic and libc allocator; no Arduino C++ wrappers"
+  ]
+}

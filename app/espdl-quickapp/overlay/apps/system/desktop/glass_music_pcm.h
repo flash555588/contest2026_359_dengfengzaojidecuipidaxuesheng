@@ -16,6 +16,7 @@ struct music_pcm {
   unsigned submitted_samples[MUSIC_PCM_BUFFERS];
 };
 int music_pcm_open(struct music_pcm *pcm, unsigned rate, unsigned volume);
+int music_pcm_try_open(struct music_pcm *pcm, unsigned rate, unsigned volume);
 int music_pcm_write(struct music_pcm *pcm, const int16_t *samples, unsigned frames, unsigned channels);
 int music_pcm_volume(struct music_pcm *pcm, unsigned volume);
 int music_pcm_pause(struct music_pcm *pcm, bool paused);
