@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Synchronize the reviewed HA frontend and retain exact-source authorization."""
+from pathlib import Path
+import hashlib,json,re,runpy,shutil
+
+repo=Path(__file__).resolve().parents[1]
+desktop=repo/'app/espdl-quickapp/overlay/apps/system/desktop'
+source=desktop/'homeassistant/app.js'
+catalog=json.loads((repo/'app/homeassistant/common-card-profiles.json').read_text(encoding='utf-8'))
+profiles=catalog['profiles']
+types=json.loads((repo/'app/homeassistant/quick-card-catalog.json').read_text(encoding='utf-8'))['types']
+assert len({row['id'] for row in profiles})==len(profiles), 'Duplicate profile ID'
+covered=[kind for row in profiles for kind in row['types']]
+assert len(set(covered))==len(covered), 'Device type belongs to multiple profiles'
+assert set(covered)==set(types), 'Every registered device type needs a profile'
+for row in profiles:
+    assert all(len(reading)==3 for reading in row.get('readings',[])), row['id']
+text=source.read_text(encoding='utf-8')
+text,count=re.subn(r'/\* HA_COMMON_PROFILES_BEGIN \*/.*?/\* HA_COMMON_PROFILES_END \*/',
+    lambda _: '/* HA_COMMON_PROFILES_BEGIN */\n  const commonCardProfiles = '+json.dumps(profiles,ensure_ascii=True,separators=(',',':'))+';\n  /* HA_COMMON_PROFILES_END */',text,flags=re.S)
+assert count==1
+source.write_text(text,encoding='utf-8',newline='\n')
+data=source.read_bytes()
+(repo/'quickapp/homeassistant/app.js').write_bytes(data)
+runpy.run_path(str(repo/'app/homeassistant/generate_homeassistant_resource.py'),run_name='__main__')
+generated=repo/'app/homeassistant/homeassistant_resource.c'
+for target in [desktop/'homeassistant_resource.c',repo/'app/homeassistant_resource.c']:
+    shutil.copy2(generated,target)
+auth=desktop/'hass_ui_auth.h'
+text=auth.read_text(encoding='utf-8')
+digest=hashlib.sha256(data).digest()
+text,count=re.subn(r'g_hass_ui_sha256\[32\] = \{[^}]+\}',
+    'g_hass_ui_sha256[32] = {'+', '.join(f'0x{value:02x}' for value in digest)+'}',text)
+assert count==1
+auth.write_text(text,encoding='utf-8')
+print('HA_UI_PACKAGE_OK',len(data),'bytes',digest.hex())

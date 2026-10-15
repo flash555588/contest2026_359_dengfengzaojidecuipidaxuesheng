@@ -1,0 +1,348 @@
+<div id="ha-unified59-devices" aria-label="59 类设备统一交互预览">
+  <div class="dc-app">
+    <header class="dc-bar"><button type="button" class="dc-icon cursor-interaction" aria-label="返回总览" data-home><i data-lucide="chevron-left" aria-hidden="true"></i></button><span>米家 HA</span><small>本地设计预览</small></header>
+    <div class="dc-frame">
+      <nav class="dc-nav" aria-label="米家导航"><strong>我的家</strong><button type="button" class="cursor-interaction" data-nav="overview"><i data-lucide="house" aria-hidden="true"></i>总览</button><button type="button" class="cursor-interaction" data-nav="detail"><i data-lucide="list" aria-hidden="true"></i>设备</button><button type="button" class="cursor-interaction" data-nav="scenes"><i data-lucide="sparkles" aria-hidden="true"></i>场景</button><button type="button" class="cursor-interaction" data-nav="logs"><i data-lucide="scroll-text" aria-hidden="true"></i>日志</button><small>59 类设备 · 按能力展示</small></nav>
+      <main class="dc-main">
+        <div class="dc-toolbar"><span class="dc-page-title">总览</span><select aria-label="选择设备卡片样式" data-device></select></div>
+        <div data-stage></div>
+        <footer class="dc-footer"><span aria-live="polite" data-status>本地预览 · 未连接设备</span><div class="dc-pages" hidden><button type="button" class="cursor-interaction" aria-label="上一页设备" data-prev><i data-lucide="chevron-left" aria-hidden="true"></i></button><span data-page></span><button type="button" class="cursor-interaction" aria-label="下一页设备" data-next><i data-lucide="chevron-right" aria-hidden="true"></i></button></div></footer>
+      </main>
+    </div>
+  </div>
+  <script type="application/json" data-catalog>{"profiles":[{"types":["light"],"primary":["brightness_pct","color_temp_kelvin"]},{"types":["outlet","switch","relay"],"primary":[]},{"types":["fan","ceiling-fan"],"primary":["percentage","preset_mode"]},{"types":["air-conditioner"],"primary":["temperature","hvac_mode"]},{"types":["curtain","airer"],"primary":["position","open_cover","stop_cover","close_cover"]},{"types":["air-purifier","air-fresh"],"primary":["percentage","preset_mode"]},{"types":["humidifier","diffuser"],"primary":["humidity","mode"]},{"types":["speaker"],"primary":["volume_level","media_play","media_pause"]},{"types":["vacuum"],"primary":["start","pause","return_to_base"]},{"types":["water-heater"],"primary":["temperature","operation_mode"]},{"types":["temperature-humidity-sensor"],"primary":[],"readonly":true},{"types":["air-fryer"],"layout":"appliance","primary":[],"readings":[["$state","烹饪状态",""],["left-time","剩余时间",""],["temperature","温度","°C"]]},{"types":["air-monitor"],"layout":"metrics","primary":[],"readonly":true,"readings":[["pm2.5-density","PM2.5","µg/m³"],["co2-density","二氧化碳","ppm"],["hcho-density","甲醛","mg/m³"],["tvoc-density","TVOC","mg/m³"],["temperature","温度","°C"],["relative-humidity","湿度","%"]]},{"types":["bath-heater"],"layout":"climate","primary":["temperature","hvac_mode"],"readings":[["temperature","当前温度","°C"],["$state","运行状态",""]]},{"types":["camera"],"layout":"camera","primary":[],"readings":[["$state","设备状态",""],["battery-level","电量","%"]]},{"types":["coffee-machine"],"layout":"appliance","primary":[],"readings":[["$state","制作状态",""],["left-time","剩余时间",""],["water-level","水量","%"]]},{"types":["cooker"],"layout":"appliance","primary":[],"readings":[["$state","烹饪状态",""],["left-time","剩余时间",""],["temperature","温度","°C"]]},{"types":["dishwasher"],"layout":"appliance","primary":[],"readings":[["$state","洗涤状态",""],["left-time","剩余时间",""],["temperature","水温","°C"]]},{"types":["flowerpot"],"layout":"metrics","primary":[],"readonly":true,"readings":[["relative-humidity","土壤湿度","%"],["illumination","光照","lx"],["soil-ec","土壤电导率","µS/cm"],["temperature","温度","°C"]]},{"types":["fridge"],"layout":"metrics","primary":["temperature","option"],"readings":[["temperature","冷藏温度","°C"],["freezer-temperature","冷冻温度","°C"],["mode","运行模式",""]]},{"types":["fruit-vegetable-purifier"],"layout":"appliance","primary":[],"readings":[["$state","净洗状态",""],["left-time","剩余时间",""]]},{"types":["garbage-can"],"layout":"appliance","primary":[],"readings":[["$state","运行状态",""],["target-lid-state","桶盖状态",""],["battery-level","电量","%"]]},{"types":["gas-concentration"],"layout":"metrics","primary":[],"readonly":true,"readings":[["$value","燃气浓度",""],["battery-level","电量","%"]]},{"types":["gas-sensor"],"layout":"alarm","primary":[],"readonly":true,"states":["未触发报警","检测到燃气"],"readings":[["$state","报警状态",""],["battery-level","电量","%"]]},{"types":["gateway"],"layout":"status","primary":[],"readings":[["$state","设备状态",""],["guard-mode","警戒模式",""]]},{"types":["health-pot"],"layout":"appliance","primary":["temperature"],"readings":[["temperature","水温","°C"],["$state","运行状态",""],["left-time","剩余时间",""]]},{"types":["heater"],"layout":"climate","primary":["temperature","hvac_mode"],"readings":[["temperature","当前温度","°C"],["$state","运行状态",""]]},{"types":["hood"],"layout":"status","primary":["percentage","preset_mode"],"readings":[["$state","运行状态",""],["mode","工作模式",""]]},{"types":["illumination-sensor"],"layout":"metrics","primary":[],"readonly":true,"readings":[["illumination","光照度","lx"],["battery-level","电量","%"]]},{"types":["induction-cooker"],"layout":"appliance","primary":[],"readings":[["$state","烹饪状态",""],["left-time","剩余时间",""]]},{"types":["integrated-stove"],"layout":"appliance","primary":["percentage","preset_mode"],"readings":[["mode","工作模式",""],["$state","运行状态",""]]},{"types":["juicer"],"layout":"appliance","primary":[],"readings":[["$state","运行状态",""],["left-time","剩余时间",""]]},{"types":["kettle"],"layout":"appliance","primary":["temperature"],"readings":[["temperature","当前水温","°C"],["target-temperature","目标水温","°C"],["$state","运行状态",""]]},{"types":["magnet-sensor"],"layout":"status","primary":[],"readonly":true,"states":["门窗已关闭","门窗已打开"],"readings":[["$state","门窗状态",""],["battery-level","电量","%"]]},{"types":["massage"],"layout":"status","primary":[],"readings":[["$state","运行状态",""],["left-time","剩余时间",""]]},{"types":["mirror"],"layout":"status","primary":["brightness_pct","color_temp_kelvin"],"readings":[["$state","照明状态",""]]},{"types":["mosquito-dispeller"],"layout":"status","primary":[],"readings":[["repellent-left-level","耗材余量","%"],["battery-level","电量","%"],["$state","运行状态",""]]},{"types":["motion-sensor"],"layout":"status","primary":[],"readonly":true,"states":["未检测到活动","检测到活动"],"readings":[["$state","活动状态",""],["battery-level","电量","%"]]},{"types":["moxibustion"],"layout":"status","primary":[],"readings":[["$state","运行状态",""],["temperature","温度","°C"]]},{"types":["oven"],"layout":"appliance","primary":["temperature"],"readings":[["$state","烹饪状态",""],["temperature","当前温度","°C"],["left-time","剩余时间",""]]},{"types":["pet-drinking-fountain"],"layout":"status","primary":[],"readings":[["$state","供水状态",""],["water-level","水量","%"],["filter-life-level","滤芯余量","%"]]},{"types":["plant-monitor"],"layout":"metrics","primary":[],"readonly":true,"readings":[["relative-humidity","土壤湿度","%"],["illumination","光照","lx"],["soil-ec","土壤电导率","µS/cm"],["temperature","温度","°C"]]},{"types":["pressure-cooker"],"layout":"appliance","primary":[],"readings":[["$state","烹饪状态",""],["left-time","剩余时间",""]]},{"types":["printer"],"layout":"appliance","primary":[],"readings":[["$state","打印状态",""],["progress","任务进度","%"]]},{"types":["smoke-sensor"],"layout":"alarm","primary":[],"readonly":true,"states":["未触发报警","检测到烟雾"],"readings":[["$state","报警状态",""],["battery-level","电量","%"]]},{"types":["submersion-sensor"],"layout":"alarm","primary":[],"readonly":true,"states":["未检测到漏水","检测到漏水"],"readings":[["$state","水浸状态",""],["battery-level","电量","%"]]},{"types":["towel-rack"],"layout":"climate","primary":["temperature"],"readings":[["$state","运行状态",""],["temperature","温度","°C"]]},{"types":["treadmill"],"layout":"metrics","primary":[],"readings":[["current-distance","运动距离","km"],["working-time","运动时长","min"],["speed","当前速度","km/h"]]},{"types":["video-doorbell"],"layout":"camera","primary":[],"readings":[["$state","设备状态",""],["battery-level","电量","%"]]},{"types":["walking-pad"],"layout":"metrics","primary":[],"readings":[["current-distance","运动距离","km"],["working-time","运动时长","min"],["speed","当前速度","km/h"]]},{"types":["washer"],"layout":"appliance","primary":[],"readings":[["$state","洗涤状态",""],["left-time","剩余时间",""],["progress","任务进度","%"]]},{"types":["water-dispenser"],"layout":"appliance","primary":["temperature"],"readings":[["temperature","当前水温","°C"],["target-temperature","目标水温","°C"],["water-level","水量","%"]]},{"types":["water-purifier"],"layout":"metrics","primary":[],"readings":[["tds-out","出水 TDS","ppm"],["filter-life-level","滤芯余量","%"],["$state","运行状态",""]]}],"cases":[{"type":"diffuser","name":"香薰机","states":[{"entity_id":"humidifier.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"air-conditioner","name":"空调","states":[{"entity_id":"climate.preview","state":"cool","attributes":{"temperature":26,"min_temp":16,"max_temp":30,"target_temp_step":0.5,"hvac_modes":["cool","heat","off"],"miot_properties":{}}}]},{"type":"air-fresh","name":"新风机","states":[{"entity_id":"fan.preview","state":"on","attributes":{"percentage":40,"miot_properties":{}}}]},{"type":"air-fryer","name":"空气炸锅","states":[{"entity_id":"sensor.preview","state":"cooking","attributes":{"miot_properties":{"air-fryer.left-time":"00:20","air-fryer.temperature":24.5}}}]},{"type":"air-monitor","name":"空气检测仪","states":[{"entity_id":"sensor.preview","state":"12","attributes":{"unit_of_measurement":"ug/m3","miot_properties":{"environment.hcho-density":0.023,"environment.temperature":24.5,"environment.relative-humidity":48,"air-monitor.pm2.5-density":12,"air-monitor.co2-density":560,"air-monitor.hcho-density":0.023,"air-monitor.tvoc-density":0.12,"air-monitor.temperature":24.5,"air-monitor.relative-humidity":48}}}]},{"type":"air-purifier","name":"空气净化器","states":[{"entity_id":"fan.preview","state":"on","attributes":{"percentage":40,"miot_properties":{}}}]},{"type":"airer","name":"晾衣架","states":[{"entity_id":"cover.preview","state":"open","attributes":{"miot_properties":{}}}]},{"type":"bath-heater","name":"浴霸","states":[{"entity_id":"climate.preview","state":"heat","attributes":{"temperature":26,"min_temp":16,"max_temp":30,"target_temp_step":0.5,"hvac_modes":["heat","off"],"miot_properties":{"bath-heater.temperature":24.5}}}]},{"type":"camera","name":"摄像机","states":[{"entity_id":"camera.preview","state":"idle","attributes":{"miot_properties":{"camera.battery-level":86}}}]},{"type":"ceiling-fan","name":"吊顶风扇","states":[{"entity_id":"fan.preview","state":"on","attributes":{"percentage":40,"miot_properties":{}}}]},{"type":"coffee-machine","name":"咖啡机","states":[{"entity_id":"sensor.preview","state":"idle","attributes":{"miot_properties":{"coffee-machine.left-time":"00:20","coffee-machine.water-level":75}}}]},{"type":"cooker","name":"电饭煲","states":[{"entity_id":"sensor.preview","state":"cooking","attributes":{"miot_properties":{"cooker.left-time":"00:20","cooker.temperature":24.5}}}]},{"type":"curtain","name":"窗帘","states":[{"entity_id":"cover.preview","state":"open","attributes":{"miot_properties":{}}}]},{"type":"dishwasher","name":"洗碗机","states":[{"entity_id":"sensor.preview","state":"washing","attributes":{"miot_properties":{"dishwasher.left-time":"00:20","dishwasher.temperature":24.5}}}]},{"type":"fan","name":"风扇","states":[{"entity_id":"fan.preview","state":"on","attributes":{"percentage":40,"miot_properties":{}}}]},{"type":"flowerpot","name":"花盆","states":[{"entity_id":"sensor.preview","state":"42","attributes":{"unit_of_measurement":"%","miot_properties":{"plant-monitor.relative-humidity":42,"plant-monitor.illumination":380,"plant-monitor.soil-ec":1200,"flowerpot.relative-humidity":42,"flowerpot.illumination":380,"flowerpot.soil-ec":1200,"flowerpot.temperature":24.5}}}]},{"type":"fridge","name":"冰箱","states":[{"entity_id":"sensor.preview","state":"4","attributes":{"unit_of_measurement":"°C","miot_properties":{"fridge.mode":"auto","fridge.temperature":4,"fridge.freezer-temperature":-18}}}]},{"type":"fruit-vegetable-purifier","name":"果蔬净化机","states":[{"entity_id":"sensor.preview","state":"idle","attributes":{"miot_properties":{"fruit-vegetable-purifier.left-time":"00:20"}}}]},{"type":"garbage-can","name":"垃圾桶","states":[{"entity_id":"sensor.preview","state":"idle","attributes":{"miot_properties":{"battery.battery-level":86,"garbage-can.target-lid-state":"closed","garbage-can.battery-level":86}}}]},{"type":"gas-concentration","name":"天然气报警器","states":[{"entity_id":"sensor.preview","state":"0.02","attributes":{"unit_of_measurement":"% LEL","miot_properties":{"gas-concentration.battery-level":86}}}]},{"type":"gas-sensor","name":"燃气传感器","states":[{"entity_id":"binary_sensor.preview","state":"off","attributes":{"miot_properties":{"gas-sensor.battery-level":86}}}]},{"type":"gateway","name":"网关","states":[{"entity_id":"binary_sensor.preview","state":"on","attributes":{"miot_properties":{"gateway.guard-mode":"home"}}}]},{"type":"health-pot","name":"养生壶","states":[{"entity_id":"water_heater.preview","state":"on","attributes":{"temperature":50,"min_temp":35,"max_temp":75,"target_temp_step":1,"miot_properties":{"health-pot.temperature":42,"health-pot.left-time":"00:20"}}}]},{"type":"heater","name":"电暖器","states":[{"entity_id":"climate.preview","state":"heat","attributes":{"temperature":26,"min_temp":16,"max_temp":30,"target_temp_step":0.5,"hvac_modes":["heat","off"],"miot_properties":{"environment.temperature":24.5,"heater.temperature":24.5}}}]},{"type":"hood","name":"油烟机","states":[{"entity_id":"fan.preview","state":"on","attributes":{"percentage":40,"miot_properties":{"hood.mode":"auto"}}}]},{"type":"humidifier","name":"加湿器","states":[{"entity_id":"humidifier.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"illumination-sensor","name":"光照度传感器","states":[{"entity_id":"sensor.preview","state":"380","attributes":{"unit_of_measurement":"lx","miot_properties":{"illumination-sensor.illumination":380,"illumination-sensor.battery-level":86}}}]},{"type":"induction-cooker","name":"电磁炉","states":[{"entity_id":"sensor.preview","state":"cooking","attributes":{"miot_properties":{"induction-cooker.left-time":"00:20"}}}]},{"type":"integrated-stove","name":"集成灶","states":[{"entity_id":"fan.preview","state":"on","attributes":{"percentage":40,"miot_properties":{"integrated-stove.mode":"auto","hood.mode":"auto"}}}]},{"type":"juicer","name":"榨汁机","states":[{"entity_id":"sensor.preview","state":"cooking","attributes":{"miot_properties":{"juicer.left-time":"00:20"}}}]},{"type":"kettle","name":"热水壶","states":[{"entity_id":"water_heater.preview","state":"on","attributes":{"temperature":50,"min_temp":35,"max_temp":75,"target_temp_step":1,"miot_properties":{"kettle.temperature":42,"kettle.target-temperature":50}}}]},{"type":"light","name":"灯","states":[{"entity_id":"light.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"magnet-sensor","name":"门窗传感器","states":[{"entity_id":"binary_sensor.preview","state":"off","attributes":{"miot_properties":{"magnet-sensor.battery-level":86}}}]},{"type":"massage","name":"按摩椅","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{"massage.left-time":"00:20"}}}]},{"type":"mirror","name":"智能镜","states":[{"entity_id":"light.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"mosquito-dispeller","name":"驱蚊器","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{"repellent.repellent-left-level":76,"battery.battery-level":86,"mosquito-dispeller.repellent-left-level":76,"mosquito-dispeller.battery-level":86}}}]},{"type":"motion-sensor","name":"人体传感器","states":[{"entity_id":"binary_sensor.preview","state":"off","attributes":{"miot_properties":{"motion-sensor.battery-level":86}}}]},{"type":"moxibustion","name":"艾灸盒","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{"moxibustion.temperature":24.5}}}]},{"type":"outlet","name":"插排/插座","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"oven","name":"蒸烤箱","states":[{"entity_id":"sensor.preview","state":"cooking","attributes":{"miot_properties":{"oven.temperature":24.5,"oven.left-time":"00:20"}}}]},{"type":"pet-drinking-fountain","name":"宠物饮水机","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{"pet-drinking-fountain.water-level":75,"pet-drinking-fountain.filter-life-level":82}}}]},{"type":"plant-monitor","name":"植物检测仪","states":[{"entity_id":"sensor.preview","state":"42","attributes":{"unit_of_measurement":"%","miot_properties":{"plant-monitor.relative-humidity":42,"plant-monitor.illumination":380,"plant-monitor.soil-ec":1200,"plant-monitor.temperature":24.5}}}]},{"type":"pressure-cooker","name":"压力锅","states":[{"entity_id":"sensor.preview","state":"cooking","attributes":{"miot_properties":{"pressure-cooker.left-time":"00:20"}}}]},{"type":"printer","name":"打印机","states":[{"entity_id":"sensor.preview","state":"printing","attributes":{"miot_properties":{"printer.progress":42}}}]},{"type":"relay","name":"继电器","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"smoke-sensor","name":"烟雾传感器","states":[{"entity_id":"binary_sensor.preview","state":"off","attributes":{"miot_properties":{"smoke-sensor.battery-level":86}}}]},{"type":"speaker","name":"音箱","states":[{"entity_id":"media_player.preview","state":"playing","attributes":{"miot_properties":{}}}]},{"type":"submersion-sensor","name":"水浸传感器","states":[{"entity_id":"binary_sensor.preview","state":"off","attributes":{"miot_properties":{"submersion-sensor.battery-level":86}}}]},{"type":"switch","name":"开关","states":[{"entity_id":"switch.preview","state":"on","attributes":{"miot_properties":{}}}]},{"type":"temperature-humidity-sensor","name":"温湿度传感器","states":[{"entity_id":"sensor.preview","state":"24.5","attributes":{"unit_of_measurement":"°C","miot_properties":{}}}]},{"type":"towel-rack","name":"毛巾架","states":[{"entity_id":"climate.preview","state":"heat","attributes":{"temperature":26,"min_temp":16,"max_temp":30,"target_temp_step":0.5,"hvac_modes":["heat","off"],"miot_properties":{"towel-rack.temperature":24.5}}}]},{"type":"treadmill","name":"跑步机","states":[{"entity_id":"sensor.preview","state":"2.3","attributes":{"unit_of_measurement":"km","miot_properties":{"treadmill.working-time":35,"treadmill.current-distance":2.3,"treadmill.speed":6.5}}}]},{"type":"vacuum","name":"扫地机器人","states":[{"entity_id":"vacuum.preview","state":"idle","attributes":{"miot_properties":{}}}]},{"type":"video-doorbell","name":"可视门铃","states":[{"entity_id":"camera.preview","state":"idle","attributes":{"miot_properties":{"video-doorbell.battery-level":86}}}]},{"type":"walking-pad","name":"走步机","states":[{"entity_id":"sensor.preview","state":"2.3","attributes":{"unit_of_measurement":"km","miot_properties":{"walking-pad.working-time":35,"walking-pad.current-distance":2.3,"walking-pad.speed":6.5}}}]},{"type":"washer","name":"洗衣机","states":[{"entity_id":"sensor.preview","state":"washing","attributes":{"miot_properties":{"washer.left-time":"00:20","washer.progress":42}}}]},{"type":"water-dispenser","name":"饮水机","states":[{"entity_id":"water_heater.preview","state":"on","attributes":{"temperature":50,"min_temp":35,"max_temp":75,"target_temp_step":1,"miot_properties":{"water-dispenser.temperature":42,"water-dispenser.target-temperature":50,"water-dispenser.water-level":75}}}]},{"type":"water-heater","name":"热水器","states":[{"entity_id":"water_heater.preview","state":"on","attributes":{"temperature":50,"min_temp":35,"max_temp":75,"target_temp_step":1,"miot_properties":{}}}]},{"type":"water-purifier","name":"净水器","states":[{"entity_id":"sensor.preview","state":"12","attributes":{"unit_of_measurement":"ppm","miot_properties":{"tds-sensor.tds-out":12,"water-purifier.tds-out":12,"water-purifier.filter-life-level":82}}}]}]}</script>
+</div>
+<style>
+#ha-unified59-devices{--dc-bg:light-dark(#f5f6f7,#101519);--dc-card:light-dark(#fff,#20262c);--dc-track:light-dark(#e9edf2,#303640);--dc-text:light-dark(#23292c,#f1f3f5);--dc-muted:light-dark(#64747e,#a6b0b7);--dc-line:light-dark(#e8ecef,#343b42);--dc-blue:light-dark(#167be1,#329aff);--dc-selected:light-dark(#e6f2ff,#21394f);font:16px/1.4 "Microsoft YaHei",system-ui,sans-serif;color:var(--dc-text)}
+#ha-unified59-devices *{box-sizing:border-box}
+#ha-unified59-devices [hidden]{display:none!important}
+#ha-unified59-devices .dc-app{background:var(--dc-bg);border-radius:22px;overflow:hidden;min-height:600px}
+#ha-unified59-devices button,#ha-unified59-devices input,#ha-unified59-devices select{font:inherit;color:inherit}
+#ha-unified59-devices button{border:0}
+#ha-unified59-devices .dc-bar{height:64px;background:light-dark(#f1f1fc,#202642);display:flex;align-items:center;gap:16px;padding:0 16px;font-size:25px}
+#ha-unified59-devices .dc-bar small{margin-left:auto;font-size:12px;color:var(--dc-muted);padding-right:86px}
+#ha-unified59-devices .dc-icon{width:44px;height:44px;border-radius:12px;background:var(--dc-track);display:grid;place-items:center;flex-shrink:0}
+#ha-unified59-devices .dc-bar .dc-icon{background:light-dark(#e6e7fb,#343b54)}
+#ha-unified59-devices .dc-frame{display:grid;grid-template-columns:164px minmax(0,1fr);min-height:536px}
+#ha-unified59-devices .dc-nav{background:var(--dc-card);display:flex;flex-direction:column;gap:8px;padding:20px 10px}
+#ha-unified59-devices .dc-nav strong{font-size:19px;font-weight:500;padding:0 10px 16px}
+#ha-unified59-devices .dc-nav button,#ha-unified59-devices .dc-nav>span{display:flex;align-items:center;gap:8px;text-align:left;padding:10px 12px;border-radius:9px;background:transparent}
+#ha-unified59-devices .dc-nav [aria-pressed=true]{background:var(--dc-selected);color:var(--dc-blue)}
+#ha-unified59-devices .dc-nav svg{width:20px;height:20px;flex-shrink:0}
+#ha-unified59-devices .dc-nav small{margin-top:auto;color:var(--dc-muted);font-size:12px;padding:18px 7px 0}
+#ha-unified59-devices .dc-main{padding:16px 18px;min-width:0}
+#ha-unified59-devices .dc-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:44px;margin-bottom:16px}
+#ha-unified59-devices .dc-page-title{font-size:20px;margin-right:auto}
+#ha-unified59-devices select{min-height:44px;border:1px solid var(--dc-line);background:var(--dc-card);border-radius:11px;padding:8px 30px 8px 12px;max-width:100%}
+#ha-unified59-devices .dc-view-picker{display:flex;background:var(--dc-track);border-radius:11px;padding:3px;gap:3px}
+#ha-unified59-devices .dc-view-picker button{min-height:38px;padding:6px 10px;border-radius:9px;background:transparent;font-size:14px}
+#ha-unified59-devices .dc-view-picker [aria-pressed=true]{background:var(--dc-card);color:var(--dc-blue)}
+#ha-unified59-devices .dc-device-card{min-height:384px;background:var(--dc-card);border-radius:24px;padding:20px}
+#ha-unified59-devices .dc-card-head{display:flex;align-items:center;gap:12px;margin-bottom:22px;min-height:54px}
+#ha-unified59-devices .dc-device-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:15px;background:var(--dc-selected);color:var(--dc-blue);flex-shrink:0}
+#ha-unified59-devices .dc-device-icon svg{width:28px;height:28px}
+#ha-unified59-devices .dc-card-title{font-weight:500;font-size:23px;margin:0}
+#ha-unified59-devices .dc-card-subtitle{font-size:14px;color:var(--dc-muted);margin-top:3px}
+#ha-unified59-devices .dc-power{width:44px;height:44px;display:grid;place-items:center;margin-left:auto;border-radius:50%;background:var(--dc-track);color:var(--dc-muted);flex-shrink:0}
+#ha-unified59-devices .dc-power[aria-pressed=true]{background:light-dark(#dcf7e8,#234936);color:light-dark(#13744d,#c7ffdf)}
+#ha-unified59-devices .dc-controls{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:36px}
+#ha-unified59-devices .dc-primary,#ha-unified59-devices .dc-secondary{display:grid;gap:23px;align-content:start;min-width:0}
+#ha-unified59-devices .dc-primary .dc-control{max-width:400px}
+#ha-unified59-devices .dc-control{min-width:0}
+#ha-unified59-devices .dc-label{display:flex;align-items:center;gap:8px;min-height:28px;margin-bottom:9px;font-size:15px}
+#ha-unified59-devices .dc-label output{margin-left:auto;font-size:22px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#ha-unified59-devices .dc-range{display:block;appearance:none;-webkit-appearance:none;width:100%;height:52px;border:0;border-radius:18px;margin:0;padding:0 12px;background:linear-gradient(to right,var(--dc-fill,var(--dc-blue)) 0%,var(--dc-fill,var(--dc-blue)) var(--dc-percent),var(--dc-track) var(--dc-percent),var(--dc-track) 100%);touch-action:none}
+#ha-unified59-devices .dc-range.dc-kelvin{background:linear-gradient(to right,#ffb16e,#ffe2c7,#fffdfa)}
+#ha-unified59-devices .dc-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:6px;height:28px;border:0;border-radius:4px;background:#fff}
+#ha-unified59-devices .dc-range.dc-kelvin::-webkit-slider-thumb{border:1px solid #6d8092}
+#ha-unified59-devices .dc-range::-moz-range-thumb{width:6px;height:28px;border:0;border-radius:4px;background:#fff}
+#ha-unified59-devices .dc-range.dc-kelvin::-moz-range-thumb{border:1px solid #6d8092}
+#ha-unified59-devices .dc-buttons{display:flex;flex-wrap:wrap;gap:6px}
+#ha-unified59-devices .dc-buttons button{background:var(--dc-track);border-radius:12px;min-height:46px;min-width:50px;flex:1;padding:9px 10px;font-size:14px;white-space:nowrap}
+#ha-unified59-devices .dc-buttons [aria-pressed=true]{background:var(--dc-selected);color:var(--dc-blue)}
+#ha-unified59-devices .dc-buttons .dc-action{display:flex;align-items:center;justify-content:center;gap:5px}
+#ha-unified59-devices .dc-buttons .dc-action svg{height:20px;width:20px}
+#ha-unified59-devices .dc-stepper{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:7px}
+#ha-unified59-devices .dc-stepper button{display:grid;place-items:center;border-radius:14px;background:var(--dc-track);min-height:58px;font-size:23px}
+#ha-unified59-devices .dc-stepper input{background:var(--dc-bg);border:1px solid var(--dc-line);border-radius:14px;min-width:0;width:100%;text-align:center;font-size:30px;font-variant-numeric:tabular-nums}
+#ha-unified59-devices .dc-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px}
+#ha-unified59-devices .dc-toggle label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dc-muted)}
+#ha-unified59-devices .dc-toggle input{appearance:none;width:46px;height:28px;border-radius:20px;background:var(--dc-track);position:relative;margin:0}
+#ha-unified59-devices .dc-toggle input:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:light-dark(#fff,#bcc7d0)}
+#ha-unified59-devices .dc-toggle input:checked{background:var(--dc-blue)}
+#ha-unified59-devices .dc-toggle input:checked:after{left:21px;background:#fff}
+#ha-unified59-devices .dc-readout{display:flex;align-items:baseline;gap:7px;padding:0 0 7px;flex-wrap:wrap}
+#ha-unified59-devices .dc-readout output{font-size:43px;line-height:1.15;font-variant-numeric:tabular-nums}
+#ha-unified59-devices .dc-readout span{font-size:15px;color:var(--dc-muted)}
+#ha-unified59-devices .dc-status-display{font-size:29px;padding:5px 0 8px}
+#ha-unified59-devices .dc-readings{display:flex;flex-wrap:wrap;gap:24px;margin-top:20px;padding-top:16px;border-top:1px solid var(--dc-line)}
+#ha-unified59-devices .dc-reading{font-size:13px;color:var(--dc-muted)}
+#ha-unified59-devices .dc-reading output{display:block;font-size:22px;font-variant-numeric:tabular-nums;color:var(--dc-text);margin-top:3px}
+#ha-unified59-devices .dc-meter{width:100%;height:8px;border-radius:8px;background:var(--dc-track);overflow:hidden;margin-top:7px}
+#ha-unified59-devices .dc-meter span{display:block;height:100%;background:var(--dc-blue);border-radius:8px}
+#ha-unified59-devices .dc-big-power{display:grid;place-items:center;gap:8px;background:var(--dc-track);width:136px;height:136px;border-radius:50%;margin:8px 0 12px;color:var(--dc-muted)}
+#ha-unified59-devices .dc-big-power[aria-pressed=true]{color:light-dark(#13744d,#c7ffdf);background:light-dark(#dcf7e8,#234936)}
+#ha-unified59-devices .dc-big-power svg{width:42px;height:42px}
+#ha-unified59-devices .dc-palette{display:grid;grid-template-columns:repeat(4,44px);gap:12px;justify-content:start}
+#ha-unified59-devices .dc-swatch{width:44px;height:44px;border-radius:50%;padding:0;background:var(--dc-color);position:relative}
+#ha-unified59-devices .dc-swatch[aria-pressed=true]:after{content:"";position:absolute;inset:-3px;border:2px solid var(--dc-muted);border-radius:50%}
+#ha-unified59-devices .dc-color-picker{display:flex;gap:12px;align-items:center;margin-top:12px;font-size:14px}
+#ha-unified59-devices .dc-color-picker input{width:44px;height:44px;background:transparent;border:0;padding:0;border-radius:50%}
+#ha-unified59-devices [data-device-id=bedside] .dc-secondary{gap:18px}
+#ha-unified59-devices [data-device-id=bedside] .dc-secondary .dc-label{min-height:20px;margin-bottom:8px}
+#ha-unified59-devices [data-device-id=bedside] .dc-color-picker{margin-top:8px}
+#ha-unified59-devices .dc-secondary .dc-readings{margin:0;padding:0;border:0}
+#ha-unified59-devices .dc-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-top:8px;font-size:12px;color:var(--dc-muted);flex-wrap:wrap}
+#ha-unified59-devices .dc-pages{display:flex;align-items:center;gap:8px}
+#ha-unified59-devices .dc-pages button{background:transparent;color:var(--dc-muted);display:grid;place-items:center;min-height:44px;width:36px}
+#ha-unified59-devices .dc-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+#ha-unified59-devices .dc-small-card{padding:17px;background:var(--dc-card);border-radius:20px;min-width:0;min-height:184px;display:flex;flex-direction:column}
+#ha-unified59-devices .dc-small-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+#ha-unified59-devices .dc-small-head .dc-device-icon{width:40px;height:40px;border-radius:50%}
+#ha-unified59-devices .dc-small-head .dc-device-icon svg{width:23px;height:23px}
+#ha-unified59-devices .dc-small-name{font-size:17px;font-weight:500;margin:0}
+#ha-unified59-devices .dc-small-state{font-size:13px;color:var(--dc-muted);margin-top:2px;font-variant-numeric:tabular-nums}
+#ha-unified59-devices .dc-small-head .dc-power{width:36px;height:36px;flex-shrink:0}
+#ha-unified59-devices .dc-small-head .dc-power svg{width:20px;height:20px}
+#ha-unified59-devices .dc-small-card .dc-range{height:48px;border-radius:16px}
+#ha-unified59-devices .dc-small-card .dc-label{font-size:13px;margin-bottom:6px}
+#ha-unified59-devices .dc-small-card .dc-label{display:none}
+#ha-unified59-devices .dc-small-card .dc-label output{font-size:18px}
+#ha-unified59-devices .dc-small-card .dc-buttons{gap:4px}
+#ha-unified59-devices .dc-small-card .dc-buttons button{font-size:12px;padding:7px 6px;min-width:38px;min-height:40px}
+#ha-unified59-devices .dc-small-card .dc-stepper{grid-template-columns:36px minmax(0,1fr) 36px;gap:4px}
+#ha-unified59-devices .dc-small-card .dc-stepper input{font-size:22px}
+#ha-unified59-devices .dc-small-card .dc-stepper button{min-height:42px}
+#ha-unified59-devices .dc-small-card .dc-readout output{font-size:30px}
+#ha-unified59-devices .dc-more{background:transparent;color:var(--dc-muted);text-align:left;font-size:12px;min-height:38px;padding:9px 0 0;margin-top:auto;display:flex;align-items:center;gap:6px}
+#ha-unified59-devices .dc-more svg{width:15px;height:15px}
+#ha-unified59-devices .dc-single-small{width:280px;max-width:100%;margin:14px 0}
+#ha-unified59-devices .dc-single-small .dc-small-card{min-height:220px}
+#ha-unified59-devices .dc-quick-stage{min-height:384px}
+#ha-unified59-devices .dc-small-head>div:nth-child(2){min-width:0;flex:1}
+#ha-unified59-devices .dc-small-name{overflow-wrap:anywhere}
+#ha-unified59-devices .dc-card-head>div:nth-child(2){min-width:0;flex:1}
+#ha-unified59-devices .dc-toolbar select{min-width:0}
+#ha-unified59-devices .dc-camera{display:grid;place-items:center;gap:12px;aspect-ratio:16/9;background:var(--dc-bg);border-radius:18px;color:var(--dc-muted);padding:20px}
+#ha-unified59-devices .dc-camera svg{width:52px;height:52px}
+#ha-unified59-devices .dc-camera small{font-size:13px}
+#ha-unified59-devices .dc-small-card .dc-camera{aspect-ratio:auto;min-height:70px;display:flex;gap:12px;padding:8px}
+#ha-unified59-devices .dc-small-card .dc-camera svg{width:34px;height:34px;flex-shrink:0}
+#ha-unified59-devices .dc-primary .dc-readout output{overflow-wrap:anywhere}
+#ha-unified59-devices .dc-small-card .dc-status-display{font-size:23px;overflow-wrap:anywhere}
+#ha-unified59-devices .dc-card-subtitle{overflow-wrap:anywhere}
+#ha-unified59-devices .dc-secondary:empty{display:none}
+#ha-unified59-devices .dc-toolbar select{width:236px}
+#ha-unified59-devices .dc-empty{display:grid;gap:16px;place-content:center;min-height:360px;text-align:center;color:var(--dc-muted)}
+#ha-unified59-devices .dc-log{display:grid;gap:8px;padding:14px 0;border-bottom:1px solid var(--dc-line)}
+#ha-unified59-devices .dc-log small{color:var(--dc-muted);font-size:13px}
+@media(max-width:620px){#ha-unified59-devices .dc-frame .dc-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:8px;gap:4px}#ha-unified59-devices .dc-nav>strong,#ha-unified59-devices .dc-nav>small{display:none}#ha-unified59-devices .dc-nav button{justify-content:center;gap:5px;padding:8px 3px;min-height:44px;font-size:14px}}
+#ha-unified59-devices [data-reading-grid=true] .dc-primary,#ha-unified59-devices [data-reading-grid=true] .dc-secondary{gap:18px}
+#ha-unified59-devices [data-reading-grid=true] .dc-label{min-height:24px;margin-bottom:6px}
+#ha-unified59-devices [data-reading-grid=true] .dc-readout output{font-size:32px}
+@media(max-width:850px){#ha-unified59-devices .dc-frame{grid-template-columns:122px minmax(0,1fr)}#ha-unified59-devices .dc-toolbar{gap:8px}#ha-unified59-devices .dc-controls{gap:22px;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}#ha-unified59-devices .dc-overview{grid-template-columns:repeat(2,minmax(0,1fr))}#ha-unified59-devices .dc-palette{grid-template-columns:repeat(4,36px);gap:8px}#ha-unified59-devices .dc-swatch{width:36px;height:36px}}
+@media(max-width:620px){#ha-unified59-devices .dc-frame{display:block}#ha-unified59-devices .dc-nav{display:none}#ha-unified59-devices .dc-main{padding:16px 12px}#ha-unified59-devices .dc-controls{grid-template-columns:1fr;gap:26px}#ha-unified59-devices .dc-device-card{padding:18px}#ha-unified59-devices .dc-card-title{font-size:21px}#ha-unified59-devices .dc-bar{font-size:22px;gap:10px;padding:0 12px}#ha-unified59-devices .dc-bar small{padding-right:0;font-size:11px}#ha-unified59-devices .dc-overview{grid-template-columns:1fr}#ha-unified59-devices .dc-palette{grid-template-columns:repeat(4,44px);gap:12px}#ha-unified59-devices .dc-swatch{width:44px;height:44px}}
+</style>
+<script>
+(()=>{
+ const root=document.getElementById('ha-unified59-devices');
+ const R=(id,label,value,min=0,max=100,step=1,unit='%')=>({id,type:'range',label,value,min,max,step,unit});
+ const C=(id,label,value,options)=>({id,type:'choice',label,value,options});
+ const T=(id,label,value)=>({id,type:'toggle',label,value});
+ const N=(id,label,value,min,max,step=.5,unit='°C')=>({id,type:'stepper',label,value,min,max,step,unit});
+ const A=(id,label,options)=>({id,type:'actions',label,options});
+ const D=(id,label,value,unit='')=>({id,type:'reading',label,value,unit});
+ const S=(id,label,value)=>({id,type:'status',label,value});
+ const devices={
+  bedside:{name:'床头灯',room:'卧室',icon:'lightbulb',family:'灯具',power:true,primary:[R('brightness','亮度',79,1),{...R('kelvin','色温',2700,2700,6500,100,'K'),warm:true}],secondary:[{id:'colors',type:'palette',label:'常用色温 · 颜色'},C('effect','灯光效果','none',[['none','无'],['Day','日间'],['Night','夜间'],['Relax','放松']])],readings:[],quick:'brightness'},
+  outlet:{name:'智能插座',room:'客厅',icon:'plug-zap',family:'插座',power:true,primary:[{id:'power',type:'power',label:'电源'},D('watt','当前功率',8.2,'W')],secondary:[D('today','今日用电',.12,'kWh'),D('voltage','电压',220,'V')],readings:[],quick:'watt'},
+  fan:{name:'循环风扇',room:'客厅',icon:'fan',family:'风扇',power:true,primary:[R('speed','风速',40),C('preset','运行模式','normal',[['normal','标准'],['natural','自然风'],['sleep','睡眠']])],secondary:[T('swing','摆风',true)],readings:[],quick:'speed'},
+  climate:{name:'卧室空调',room:'卧室',icon:'snowflake',family:'空调',power:true,primary:[N('target','目标温度',24,16,30),C('mode','运行模式','cool',[['cool','制冷'],['heat','制热'],['dry','除湿'],['fan_only','送风']])],secondary:[C('fan','风速','auto',[['auto','自动'],['low','低'],['medium','中'],['high','高']]),C('swing','摆风','off',[['off','关闭'],['vertical','上下'],['both','全向']])],readings:[D('room-temp','室温',26.5,'°C')],quick:'target'},
+  cover:{name:'客厅窗帘',room:'客厅',icon:'panels-top-left',family:'窗帘',primary:[R('position','开启程度',60),A('move','窗帘控制',[['open','打开','chevrons-up'],['stop','停止','square'],['close','关闭','chevrons-down']])],secondary:[C('favorite','常用位置','half',[['full','全开'],['half','半开'],['closed','全关']])],readings:[],quick:'position'},
+  purifier:{name:'空气净化器',room:'客厅',icon:'wind',family:'空气净化器',power:true,primary:[D('pm25','PM2.5',12,'μg/m³'),R('speed','风速',40)],secondary:[C('preset','净化模式','auto',[['auto','自动'],['sleep','睡眠'],['manual','手动']]),{...D('filter','滤芯余量',83,'%'),meter:true}],readings:[],quick:'pm25'},
+  humidifier:{name:'智能加湿器',room:'卧室',icon:'droplets',family:'加湿器',power:true,primary:[R('humidity','目标湿度',55,30,80),D('current','当前湿度',48,'%')],secondary:[C('mode','加湿模式','auto',[['auto','自动'],['normal','标准'],['sleep','睡眠']])],readings:[],quick:'humidity'},
+  speaker:{name:'客厅音箱',room:'客厅',icon:'speaker',family:'音箱',power:true,primary:[R('volume','音量',35),A('playback','播放控制',[['previous','上一首','skip-back'],['play','播放','play'],['pause','暂停','pause'],['next','下一首','skip-forward']])],secondary:[T('mute','静音',false),C('source','音源','Bluetooth',[['Bluetooth','蓝牙'],['TV','电视'],['Internet radio','网络电台'],['AUX','AUX']])],readings:[],quick:'volume'},
+  vacuum:{name:'扫地机器人',room:'全屋',icon:'bot',family:'扫地机器人',primary:[S('state','当前状态','待机'),A('clean','清扫控制',[['start','开始清扫','play'],['pause','暂停','pause'],['dock','回充','house']])],secondary:[C('suction','吸力','standard',[['quiet','安静'],['standard','标准'],['strong','强力'],['max','最大']]),D('battery','电量',86,'%')],readings:[],quick:'clean'},
+  heater:{name:'热水器',room:'浴室',icon:'heater',family:'热水器',primary:[N('target','目标水温',50,35,75,1),D('current','当前水温',46,'°C')],secondary:[C('mode','加热模式','electric',[['electric','电加热'],['eco','节能'],['off','关闭']])],readings:[],quick:'target'},
+  sensor:{name:'温湿度计',room:'卧室',icon:'thermometer',family:'温湿度传感器',primary:[D('temperature','温度',24.5,'°C'),D('humidity','湿度',48,'%')],secondary:[D('battery','电量',92,'%'),S('state','设备状态','在线')],readings:[],quick:'temperature'}
+ };
+ const catalog=JSON.parse(root.querySelector('[data-catalog]').textContent);
+ const profileByType=new Map(catalog.profiles.flatMap(profile=>profile.types.map(type=>[type,profile])));
+ const bases={light:'bedside',outlet:'outlet',fan:'fan','air-conditioner':'climate',curtain:'cover','air-purifier':'purifier',humidifier:'humidifier',speaker:'speaker',vacuum:'vacuum','water-heater':'heater','temperature-humidity-sensor':'sensor'};
+ const aliases={switch:'outlet',relay:'outlet','ceiling-fan':'fan',airer:'cover','air-fresh':'purifier',diffuser:'humidifier',mirror:'bedside'};
+ const icons={'air-fryer':'cooking-pot','air-monitor':'gauge','bath-heater':'heater',camera:'camera','coffee-machine':'coffee',cooker:'cooking-pot',dishwasher:'washing-machine',flowerpot:'sprout',fridge:'refrigerator','fruit-vegetable-purifier':'salad','garbage-can':'trash-2','gas-concentration':'gauge','gas-sensor':'flame',gateway:'router','health-pot':'coffee',heater:'heater',hood:'wind','illumination-sensor':'sun','induction-cooker':'cooking-pot','integrated-stove':'cooking-pot',juicer:'blend',kettle:'coffee','magnet-sensor':'door-closed',massage:'armchair',mirror:'scan-face','mosquito-dispeller':'bug','motion-sensor':'person-standing',moxibustion:'flame',oven:'microwave','pet-drinking-fountain':'paw-print','plant-monitor':'sprout','pressure-cooker':'cooking-pot',printer:'printer','smoke-sensor':'cloud','submersion-sensor':'droplet','towel-rack':'heater',treadmill:'footprints','video-doorbell':'bell','walking-pad':'footprints',washer:'washing-machine','water-dispenser':'glass-water','water-purifier':'droplets'};
+ const words={idle:'待机',on:'运行中',off:'已关闭',cooking:'烹饪中',washing:'洗涤中',printing:'打印中',heat:'加热中',cool:'制冷中',auto:'自动',closed:'已关闭',open:'已打开',home:'在家布防',playing:'播放中'};
+ catalog.cases.forEach(sample=>{
+  const kind=sample.type,p=profileByType.get(kind);
+  const source=sample.states[0],attrs=source.attributes,props=attrs.miot_properties||{};
+  const id=bases[kind]||'type-'+kind;
+  if(bases[kind]){devices[id].kind=kind;devices[id].readonly=!!p.readonly;return;}
+  let d={name:sample.name,room:'示例设备',family:sample.name,icon:icons[kind]||'circle-dot',primary:[],secondary:[],readings:[],readonly:!!p.readonly,kind};
+  const alias=aliases[kind];
+  if(alias){d={...devices[alias],...d,primary:[...devices[alias].primary],secondary:[...devices[alias].secondary],quick:devices[alias].quick,power:devices[alias].power};if(kind==='mirror')d.secondary=d.secondary.filter(c=>c.type!=='palette');}
+  else if(source.entity_id.startsWith('climate.')&&p.primary.includes('temperature')){
+   d.power=true;d.primary=[N('target','目标温度',attrs.temperature,attrs.min_temp,attrs.max_temp,attrs.target_temp_step),C('mode','运行模式',source.state,attrs.hvac_modes.map(raw=>[raw,words[raw]||raw]))];d.quick='target';
+  }else if(source.entity_id.startsWith('fan.')&&p.primary.includes('percentage')){
+   d.power=true;d.primary=[R('speed','风速',attrs.percentage),C('preset','运行模式','auto',[['auto','自动'],['quiet','安静'],['sleep','睡眠']])];d.quick='speed';
+  }else if(source.entity_id.startsWith('water_heater.')&&p.primary.includes('temperature')){
+   d.power=true;d.primary=[N('target','目标水温',attrs.temperature,attrs.min_temp,attrs.max_temp,attrs.target_temp_step)];d.quick='target';
+  }else if(source.entity_id.startsWith('switch.')&&!p.readonly)d.power=true;
+  const readings=(p.readings||[]).map(([key,label,unit])=>{
+   let value=key==='$state'?(p.states?p.states[source.state==='on'?1:0]:words[source.state]||source.state):key==='$value'?source.state:props[kind+'.'+key]??Object.entries(props).find(([prop])=>prop.endsWith('.'+key))?.[1];
+   if(value===undefined||value===null)return null;
+   if(key==='$value')unit=attrs.unit_of_measurement||unit;
+   if(typeof value==='string')value=words[value]||value;
+   return D('read-'+key,label,value,unit);
+  }).filter(Boolean);
+  if(p.layout==='camera'){
+   d.primary=[{id:'preview',type:'camera',label:'画面预览'}];d.secondary=readings;d.quick='preview';
+  }else if(d.primary.length){if(d.primary.length===1&&readings.length>2)d.primary.push(readings.shift());d.secondary.push(...readings);}
+  else{const half=Math.ceil(readings.length/2);d.primary=readings.slice(0,half);d.secondary=readings.slice(half);d.quick=d.primary[0]?.id;d.readingGrid=true;}
+  if(!d.primary.length){d.primary=[S('state','设备状态',words[source.state]||source.state)];d.quick='state';}
+  devices[id]=d;
+ });
+ const ids=Object.keys(devices);const pageCount=Math.ceil(ids.length/6);const saved=window.openai?.widgetState?.privateContent;
+ const fieldsByDevice=new Map(ids.map(id=>[id,new Map([...devices[id].primary,...devices[id].secondary,...devices[id].readings].map(field=>[field.id,field]))]));
+ const quickFields=new Map(ids.map(id=>[id,fieldsByDevice.get(id).get(devices[id].quick)]));
+ const revisions=new Map(),fieldRevisions=new Map();let revision=0,activeScreen=null,cachedOverview=null,cachedDetail=null,paintFrame=0,lastSavedSignature='',saveTimer=0,savePending=false,saveStarted=0;
+ const pendingPaint=new Map();
+ const activity=[];
+ const controlBindings=new WeakMap();
+ let state={device:devices[saved?.device]?saved.device:'bedside',view:['detail','overview','scenes','logs'].includes(saved?.view)?saved.view:'overview',page:Number.isInteger(saved?.page)?Math.max(0,Math.min(pageCount-1,saved.page)):0,values:saved?.values||{}};
+ const stage=root.querySelector('[data-stage]');const picker=root.querySelector('[data-device]');
+ const title=root.querySelector('.dc-page-title'),navButtons=[...root.querySelectorAll('[data-nav]')],pages=root.querySelector('.dc-pages'),pageLabel=root.querySelector('[data-page]'),previous=root.querySelector('[data-prev]'),nextPage=root.querySelector('[data-next]'),statusLine=root.querySelector('[data-status]');
+ ids.forEach(id=>{const o=document.createElement('option');o.value=id;o.textContent=devices[id].family===devices[id].name?devices[id].name:devices[id].family+' · '+devices[id].name;picker.append(o);});
+ function signature(){return [state.device,state.view,state.page,revision].join('|');}
+ function flushSave(){if(saveTimer)clearTimeout(saveTimer);saveTimer=0;if(!savePending||!window.openai?.setWidgetState)return;savePending=false;const key=signature();if(key===lastSavedSignature)return;lastSavedSignature=key;window.openai.setWidgetState({modelContent:{device:devices[state.device].name,type:devices[state.device].kind,view:state.view,page:state.page+1,registeredDeviceCategories:ids.length},privateContent:{...state,values:Object.fromEntries(Object.entries(state.values).map(([id,values])=>[id,{...values}]))}}).catch(()=>{if(lastSavedSignature===key){lastSavedSignature='';savePending=true;}});}
+ function persist(immediate=false){savePending=true;if(immediate){flushSave();return;}const now=performance.now();if(!saveTimer)saveStarted=now;else clearTimeout(saveTimer);saveTimer=setTimeout(flushSave,Math.max(0,Math.min(120,400-(now-saveStarted))));}
+ function markChanged(device,field){revisions.set(device,++revision);if(!fieldRevisions.has(device))fieldRevisions.set(device,new Map());fieldRevisions.get(device).set(field,revision);}
+ function val(device,c){return state.values[device]?.[c.id]??c.value;}
+ function store(device,c,value){if(Object.is(val(device,c),value))return false;if(!state.values[device])state.values[device]={};state.values[device][c.id]=value;markChanged(device,c.id);savePending=true;return true;}
+ const fmt=(c,v)=>`${typeof v==='number'?(Number.isInteger(v)?v:Number(v.toFixed(2))):v}${c.unit&&c.unit!=='%'&&c.unit!=='K'?' ':''}${c.unit||''}`;
+ function setText(node,text){if(node.textContent!==text)node.textContent=text;}
+ function setAttr(node,name,value){const text=String(value);if(node.getAttribute(name)!==text)node.setAttribute(name,text);}
+ function notice(text){activity.unshift({text,time:new Date().toLocaleTimeString('zh-CN',{hour12:false})});if(activity.length>32)activity.length=32;setText(statusLine,'本地预览 · '+text);persist(true);}
+ function refresh(device,c){
+  const value=val(device,c);
+  (activeScreen?.bindings.get(device)?.fields.get(c.id)||[]).forEach(b=>{
+   if(b.out)setText(b.out,c.type==='reading'&&!b.inlineUnit?String(value):fmt(c,value));
+   if(b.range){if(Number(b.range.value)!==value)b.range.value=value;const percent=(value-c.min)/(c.max-c.min)*100+'%';if(b.range.style.getPropertyValue('--dc-percent')!==percent)b.range.style.setProperty('--dc-percent',percent);}
+   if(b.number&&b.number.value!==String(value))b.number.value=value;
+   b.options?.forEach(option=>setAttr(option,'aria-pressed',option.dataset.option===value));
+   if(b.select&&b.select.value!==value)b.select.value=value;
+   if(b.check){if(b.check.checked!==value)b.check.checked=value;setText(b.toggle,value?'已开启':'已关闭');}
+   if(b.meter){setAttr(b.meter,'aria-valuenow',value);const width=value+'%';if(b.meterFill.style.width!==width)b.meterFill.style.width=width;}
+   b.swatches?.forEach(swatch=>setAttr(swatch,'aria-pressed',swatch.dataset.paletteOption===value));
+   if(b.color){const color=state.values[device]?.rgb||'#ffa64e';if(b.color.value!==color)b.color.value=color;}
+  });
+  updateSmallStatus(device);
+ }
+ function updateSmallStatus(device){(activeScreen?.bindings.get(device)?.statuses||[]).forEach(el=>{const d=devices[device];const quick=quickFields.get(device);const showValue=quick&&!['actions','reading'].includes(quick.type);setText(el,d.power?powerOn(device)?showValue?fmt(quick,val(device,quick))+' · 已开启':'已开启':'已关闭':showValue?fmt(quick,val(device,quick)):d.room);});}
+ function flushPaint(){if(paintFrame)cancelAnimationFrame(paintFrame);paintFrame=0;pendingPaint.forEach((fields,device)=>fields.forEach(c=>refresh(device,c)));pendingPaint.clear();}
+ function queuePaint(device,c){if(!pendingPaint.has(device))pendingPaint.set(device,new Map());pendingPaint.get(device).set(c.id,c);if(!paintFrame)paintFrame=requestAnimationFrame(flushPaint);}
+ const powerOn=device=>state.values[device]?.power??true;
+ function syncPower(device){(activeScreen?.bindings.get(device)?.powers||[]).forEach(({button,label})=>{setAttr(button,'aria-pressed',powerOn(device));if(label)setText(label,powerOn(device)?'已开启':'已关闭');});updateSmallStatus(device);}
+ function snap(c,n){return Number(Math.max(c.min,Math.min(c.max,Math.round((n-c.min)/c.step)*c.step+c.min)).toFixed(6));}
+ function changeValue(device,c,value,commit=true){const changed=store(device,c,value);if(device==='bedside'&&!powerOn(device)){store(device,{id:'power'},true);syncPower(device);}if(commit){flushPaint();refresh(device,c);notice(c.label+' '+fmt(c,value));}else{if(saveTimer)clearTimeout(saveTimer);saveTimer=0;if(changed)queuePaint(device,c);}}
+ function powerButton(device,big=false){const b=document.createElement('button');b.type='button';b.className=(big?'dc-big-power':'dc-power')+' cursor-interaction';b.dataset.powerFor=device;b.setAttribute('aria-pressed',String(powerOn(device)));b.setAttribute('aria-label',devices[device].name+'电源');b.innerHTML='<i data-lucide="power" aria-hidden="true"></i>';if(big){const span=document.createElement('span');span.textContent=powerOn(device)?'已开启':'已关闭';b.append(span);}b.onclick=()=>{store(device,{id:'power'},!powerOn(device));syncPower(device);notice(devices[device].name+(powerOn(device)?'已开启':'已关闭'));};return b;}
+ function control(device,c,small=false){
+  const wrap=document.createElement('div');wrap.className='dc-control';wrap.dataset.field=c.id;const value=val(device,c);const label=document.createElement('div');label.className='dc-label';label.textContent=c.label;wrap.append(label);const binding={};controlBindings.set(wrap,binding);
+  if(c.type==='range'||c.type==='stepper'){const output=document.createElement('output');output.textContent=fmt(c,value);label.append(output);binding.out=output;}
+  if(c.type==='camera'){
+   label.hidden=true;const preview=document.createElement('div');preview.className='dc-camera';preview.append(icon(devices[device].icon));const text=document.createElement('small');text.textContent='暂无预览画面';preview.append(text);wrap.append(preview);
+  }else if(c.type==='range'){
+   const input=document.createElement('input');input.type='range';input.className='dc-range'+(c.warm?' dc-kelvin':'');Object.assign(input,{min:c.min,max:c.max,step:c.step,value});input.setAttribute('aria-label',devices[device].name+' '+c.label);input.style.setProperty('--dc-percent',(value-c.min)/(c.max-c.min)*100+'%');if(device==='bedside'&&c.id==='brightness')input.style.setProperty('--dc-fill','#ffa64e');binding.range=input;input.oninput=()=>changeValue(device,c,input.valueAsNumber,false);input.onchange=()=>changeValue(device,c,input.valueAsNumber);input.addEventListener('pointerdown',e=>e.stopPropagation());wrap.append(input);
+  }else if(c.type==='stepper'){
+   const row=document.createElement('div');row.className='dc-stepper';const input=document.createElement('input');input.type='number';Object.assign(input,{min:c.min,max:c.max,step:c.step,value});input.setAttribute('aria-label',devices[device].name+' '+c.label);binding.number=input;input.onchange=()=>{if(input.value===''||!Number.isFinite(Number(input.value))){input.value=val(device,c);return;}changeValue(device,c,snap(c,Number(input.value)));};[-1,1].forEach((direction,i)=>{const b=document.createElement('button');b.type='button';b.className='cursor-interaction';b.textContent=direction===1?'+':'−';b.setAttribute('aria-label',(direction===1?'提高':'降低')+c.label);b.onclick=()=>changeValue(device,c,snap(c,Number(val(device,c))+direction*c.step));row.append(b);if(!i)row.append(input);});wrap.append(row);
+  }else if(c.type==='choice'){
+   if(c.options.length<=4){const row=document.createElement('div');row.className='dc-buttons';row.setAttribute('role','group');row.setAttribute('aria-label',c.label);binding.options=[];c.options.forEach(([raw,name])=>{const b=document.createElement('button');b.type='button';b.className='cursor-interaction';b.textContent=name;b.dataset.option=raw;b.setAttribute('aria-pressed',String(raw===value));b.onclick=()=>{store(device,c,raw);if(['curtain','airer'].includes(devices[device].kind)&&c.id==='favorite'){const field=devices[device].primary[0];store(device,field,{full:100,half:50,closed:0}[raw]);refresh(device,field);}refresh(device,c);notice(c.label+' '+name);};row.append(b);binding.options.push(b);});wrap.append(row);}else{const select=document.createElement('select');select.setAttribute('aria-label',c.label);c.options.forEach(([raw,name])=>{const o=document.createElement('option');o.value=raw;o.textContent=name;select.append(o);});select.value=value;binding.select=select;select.onchange=()=>changeValue(device,c,select.value);wrap.append(select);}
+  }else if(c.type==='toggle'){
+   wrap.innerHTML='';const row=document.createElement('div');row.className='dc-toggle';const text=document.createElement('span');text.textContent=c.label;const label=document.createElement('label');label.className='cursor-interaction';const status=document.createElement('span');status.dataset.toggleState='true';status.textContent=value?'已开启':'已关闭';const input=document.createElement('input');input.type='checkbox';input.checked=value;input.setAttribute('aria-label',c.label);binding.check=input;binding.toggle=status;input.onchange=()=>changeValue(device,c,input.checked);label.append(status,input);row.append(text,label);wrap.append(row);
+  }else if(c.type==='actions'){
+   const row=document.createElement('div');row.className='dc-buttons';c.options.forEach(([raw,name,icon])=>{const b=document.createElement('button');b.type='button';b.className='dc-action cursor-interaction';b.innerHTML=`<i data-lucide="${icon}" aria-hidden="true"></i>`;const span=document.createElement('span');span.textContent=name;b.append(span);b.onclick=()=>{if(device==='vacuum'){const reading=devices.vacuum.primary[0];store(device,reading,{start:'清扫中',pause:'已暂停',dock:'返回充电'}[raw]);refresh(device,reading);}if(['curtain','airer'].includes(devices[device].kind)&&raw!=='stop'){const position=devices[device].primary[0];store(device,position,raw==='open'?100:0);refresh(device,position);}notice(name);};row.append(b);});wrap.append(row);
+  }else if(c.type==='reading'){
+   const reading=document.createElement('div');reading.className='dc-readout';const output=document.createElement('output');output.textContent=value;binding.out=output;const unit=document.createElement('span');unit.textContent=c.unit;reading.append(output,unit);wrap.append(reading);if(c.meter){const meter=document.createElement('div');meter.className='dc-meter';meter.setAttribute('role','meter');meter.setAttribute('aria-label',c.label);meter.setAttribute('aria-valuenow',value);meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');const fill=document.createElement('span');fill.style.width=value+'%';meter.append(fill);wrap.append(meter);binding.meter=meter;binding.meterFill=fill;}
+  }else if(c.type==='status'){
+   const out=document.createElement('output');out.className='dc-status-display';out.textContent=value;wrap.append(out);binding.out=out;
+  }else if(c.type==='power'){wrap.innerHTML='';wrap.append(powerButton(device,true));
+  }else if(c.type==='palette'){
+   const palette=document.createElement('div');palette.className='dc-palette';const colors=[['k2700','#ffaf59','暖黄'],['k3967','#ffd2af','暖白'],['k5233','#ffebd6','自然白'],['k6500','#fffdfa','白光'],['#7facff','#7facff','蓝色'],['#d796ff','#d796ff','紫色'],['#ff9ef3','#ff9ef3','粉色'],['#ff6e54','#ff6e54','珊瑚色']];binding.swatches=[];colors.forEach(([raw,color,name])=>{const b=document.createElement('button');b.type='button';b.className='dc-swatch cursor-interaction';b.dataset.paletteOption=raw;b.style.setProperty('--dc-color',color);b.setAttribute('aria-label',name);b.setAttribute('aria-pressed',String(val(device,c)===raw));b.onclick=()=>{store(device,c,raw);binding.swatches.forEach(el=>setAttr(el,'aria-pressed',el===b));if(raw.startsWith('k')){const field=devices.bedside.primary[1];store(device,field,Number(raw.slice(1)));refresh(device,field);}notice('已选择'+name);};palette.append(b);binding.swatches.push(b);});wrap.append(palette);const pickerLabel=document.createElement('label');pickerLabel.className='dc-color-picker';const input=document.createElement('input');input.type='color';binding.color=input;input.value=state.values.bedside?.rgb||'#ffa64e';input.setAttribute('aria-label','床头灯颜色');input.onchange=()=>{store(device,{id:'rgb'},input.value);notice('颜色 '+input.value);};pickerLabel.append(input,document.createTextNode('自选颜色'));wrap.append(pickerLabel);
+  }
+  return wrap;
+ }
+ function icon(name){const i=document.createElement('i');i.dataset.lucide=name;i.setAttribute('aria-hidden','true');return i;}
+ function moreButton(device){const b=document.createElement('button');b.type='button';b.className='dc-more cursor-interaction';b.append(document.createTextNode('更多功能'),icon('chevron-right'));b.onclick=()=>{state.device=device;state.view='detail';render();persist();};return b;}
+ function quickCard(device){const d=devices[device];const card=document.createElement('article');card.className='dc-small-card';card.dataset.deviceId=device;card.setAttribute('aria-label',d.name+'小卡片');const head=document.createElement('div');head.className='dc-small-head';const deviceIcon=document.createElement('div');deviceIcon.className='dc-device-icon';deviceIcon.append(icon(d.icon));const title=document.createElement('div');const h=document.createElement('h3');h.className='dc-small-name';h.textContent=d.name;const status=document.createElement('div');status.className='dc-small-state';status.dataset.smallState=device;title.append(h,status);head.append(deviceIcon,title);if(d.power)head.append(powerButton(device));card.append(head);const field=quickFields.get(device);if(field)card.append(control(device,field,true));card.append(moreButton(device));return card;}
+ function detailCard(device){const d=devices[device];const card=document.createElement('section');card.className='dc-device-card';card.dataset.deviceId=device;card.dataset.readingGrid=String(!!d.readingGrid);card.setAttribute('aria-label',d.name+'大卡片');const head=document.createElement('div');head.className='dc-card-head';const deviceIcon=document.createElement('div');deviceIcon.className='dc-device-icon';deviceIcon.append(icon(d.icon));const title=document.createElement('div');const h=document.createElement('h2');h.className='dc-card-title';h.textContent=d.name;const sub=document.createElement('div');sub.className='dc-card-subtitle';sub.textContent=d.room+' · '+(d.readonly?'传感器只读':'设备功能');title.append(h,sub);head.append(deviceIcon,title);if(d.power)head.append(powerButton(device));card.append(head);const controls=document.createElement('div');controls.className='dc-controls';const left=document.createElement('div');left.className='dc-primary';const right=document.createElement('div');right.className='dc-secondary';d.primary.forEach(c=>left.append(control(device,c)));d.secondary.forEach(c=>right.append(control(device,c)));controls.append(left,right);card.append(controls);if(d.readings.length){const readings=document.createElement('div');readings.className='dc-readings';d.readings.forEach(c=>{const row=document.createElement('div');row.className='dc-reading';row.dataset.field=c.id;row.textContent=c.label;const output=document.createElement('output');output.textContent=fmt(c,val(device,c));controlBindings.set(row,{out:output,inlineUnit:true});row.append(output);readings.append(row);});right.append(readings);}return card;}
+ function indexScreen(node,key){
+  const bindings=new Map();
+  const cards=node.matches('[data-device-id]')?[node]:node.querySelectorAll('[data-device-id]');
+  cards.forEach(card=>{
+   const device=card.dataset.deviceId,fields=new Map();
+   card.querySelectorAll('[data-field]').forEach(w=>{
+    if(!fields.has(w.dataset.field))fields.set(w.dataset.field,[]);
+    fields.get(w.dataset.field).push(controlBindings.get(w));
+   });
+   bindings.set(device,{fields,statuses:[...card.querySelectorAll('[data-small-state]')],powers:[...card.querySelectorAll('[data-power-for]')].map(button=>({button,label:button.querySelector('span')}))});
+  });
+  return {node,key,bindings,versions:new Map(),iconsReady:false};
+ }
+ function syncScreen(){
+  activeScreen.bindings.forEach((binding,device)=>{
+   const current=revisions.get(device)||0,seen=activeScreen.versions.get(device);if(seen===current)return;
+   const changed=fieldRevisions.get(device);
+   binding.fields.forEach((_,id)=>{if(seen!==undefined&&(changed?.get(id)||0)<=seen&&!(id==='colors'&&(changed?.get('rgb')||0)>seen))return;const c=fieldsByDevice.get(device).get(id);if(c)refresh(device,c);});
+   if(seen===undefined||(changed?.get('power')||0)>seen)syncPower(device);activeScreen.versions.set(device,current);
+  });
+ }
+ function render(){
+  flushPaint();if(picker.value!==state.device)picker.value=state.device;const overview=state.view==='overview';
+  picker.hidden=state.view==='scenes'||state.view==='logs';
+  if(picker.hidden){
+   setText(title,state.view==='scenes'?'场景':'日志');navButtons.forEach(button=>setAttr(button,'aria-pressed',button.dataset.nav===state.view));pages.hidden=true;
+   const content=document.createElement('section');
+   if(state.view==='scenes'||!activity.length){content.className='dc-empty';const label=document.createElement('span');label.textContent=state.view==='scenes'?'暂无已同步的场景或脚本':'暂无本次会话操作记录';content.append(label);}
+   else activity.forEach(entry=>{const row=document.createElement('div');row.className='dc-log';const text=document.createElement('span');text.textContent=entry.text;const time=document.createElement('small');time.textContent=entry.time;row.append(text,time);content.append(row);});
+   stage.replaceChildren(content);activeScreen=null;setText(statusLine,state.view==='scenes'?'本地设计预览 · 未连接 Home Assistant':'本次预览操作 · 最多 32 条');return;
+  }
+  const targetKey=overview?'overview:'+state.page:'detail:'+state.device;
+  if(activeScreen?.key===targetKey){syncScreen();return;}
+  setText(title,overview?'总览':'更多功能');navButtons.forEach(b=>setAttr(b,'aria-pressed',b.dataset.nav===(overview?'overview':'detail')));if(pages.hidden===overview)pages.hidden=!overview;
+  let screen;
+  if(overview){
+   const key='overview:'+state.page;
+   if(cachedOverview?.key!==key){const grid=document.createElement('div');grid.className='dc-overview';ids.slice(state.page*6,state.page*6+6).forEach(device=>grid.append(quickCard(device)));cachedOverview=indexScreen(grid,key);}
+   screen=cachedOverview;setText(pageLabel,(state.page+1)+' / '+pageCount);if(previous.disabled!==(state.page===0))previous.disabled=state.page===0;if(nextPage.disabled!==(state.page===pageCount-1))nextPage.disabled=state.page===pageCount-1;
+  }else{
+   const key='detail:'+state.device;
+   if(cachedDetail?.key!==key)cachedDetail=indexScreen(detailCard(state.device),key);
+   screen=cachedDetail;
+  }
+  if(activeScreen!==screen){stage.replaceChildren(screen.node);activeScreen=screen;}
+  syncScreen();setText(statusLine,'本地预览 · 未连接设备');
+  if(!screen.iconsReady&&globalThis.lucide){lucide.createIcons({attrs:{width:22,height:22}});screen.iconsReady=true;}
+ }
+ picker.onchange=()=>{state.device=picker.value;state.page=Math.floor(ids.indexOf(state.device)/6);state.view='overview';render();persist();};root.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{state.view=b.dataset.nav==='detail'?'overview':b.dataset.nav;render();persist();});root.querySelector('[data-home]').onclick=()=>{state.view='overview';render();persist();};root.querySelector('[data-prev]').onclick=()=>{state.page=Math.max(0,state.page-1);render();persist();};root.querySelector('[data-next]').onclick=()=>{state.page=Math.min(pageCount-1,state.page+1);render();persist();};
+ window.addEventListener('openai:set_globals',e=>{
+  const next=e.detail?.globals?.widgetState?.privateContent;if(!next||!devices[next.device]||!['overview','detail','scenes','logs'].includes(next.view))return;
+  const incoming={};
+  Object.entries(next.values||{}).forEach(([device,values])=>{if(!devices[device]||!values||typeof values!=='object')return;incoming[device]=Object.fromEntries(Object.entries(values).filter(([id,value])=>(fieldsByDevice.get(device).has(id)||id==='power'||id==='rgb')&&(['string','boolean'].includes(typeof value)||(typeof value==='number'&&Number.isFinite(value)))));});
+  let changed=false;
+  new Set([...Object.keys(state.values),...Object.keys(incoming)]).forEach(device=>{
+   if(!devices[device])return;const before=state.values[device]||{},after=incoming[device]||{};
+   new Set([...Object.keys(before),...Object.keys(after)]).forEach(id=>{
+    const fallback=id==='power'?true:id==='rgb'?'#ffa64e':fieldsByDevice.get(device).get(id)?.value;
+    if(!Object.is(before[id]??fallback,after[id]??fallback)){markChanged(device,id);changed=true;}
+   });
+  });
+  const page=Math.max(0,Math.min(pageCount-1,Math.trunc(Number(next.page))||0));
+  const navigationChanged=state.device!==next.device||state.view!==next.view||state.page!==page;
+  if(!changed&&!navigationChanged)return;
+  flushPaint();if(saveTimer)clearTimeout(saveTimer);saveTimer=0;savePending=false;
+  state={device:next.device,view:next.view,page,values:incoming};lastSavedSignature=signature();render();
+ });
+ window.addEventListener('pagehide',()=>{flushPaint();flushSave();});
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){flushPaint();flushSave();}});
+ render();
+})();
+</script>
