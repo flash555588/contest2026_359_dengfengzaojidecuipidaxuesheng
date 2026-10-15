@@ -142,7 +142,7 @@ static lv_obj_t *glass_files_icon(lv_obj_t *parent, const char *symbol,
   style_button(button, theme_surface());
   lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, data);
   lv_obj_t *label = lv_label_create(button);
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
   lv_label_set_text(label, symbol);
   lv_obj_center(label);

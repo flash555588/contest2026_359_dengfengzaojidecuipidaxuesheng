@@ -2,6 +2,7 @@
 #include <nuttx/config.h>
 #include "glass_ime.h"
 #include "glass_pinyin.h"
+#include "glass_icons.h"
 #ifdef CONFIG_SYSTEM_DESKTOP
 #include "glass_voice.h"
 #endif
@@ -364,8 +365,22 @@ static void ime_voice_clicked(lv_event_t *e)
 }
 #endif
 
+bool glass_ime_start_voice(lv_obj_t *keyboard)
+{
+#ifdef CONFIG_SYSTEM_DESKTOP
+  struct ime *ime = keyboard ? get_ime(keyboard) : NULL;
+  if (!ime || !ime->voice || ime->voice_owns) return false;
+  ime_voice_begin(ime);
+  return ime->voice_owns;
+#else
+  LV_UNUSED(keyboard);
+  return false;
+#endif
+}
+
 void glass_ime_attach(lv_obj_t *keyboard, const lv_font_t *font, bool chinese, uint32_t foreground, uint32_t surface, uint32_t accent)
 {
+  if (keyboard) lv_obj_set_style_text_font(keyboard, glass_icon_font(14), LV_PART_ITEMS);
   if (!keyboard || get_ime(keyboard)) return;
   struct ime *ime=calloc(1,sizeof(*ime));
   if (!ime) return;
@@ -391,13 +406,13 @@ void glass_ime_attach(lv_obj_t *keyboard, const lv_font_t *font, bool chinese, u
   int size=(width-start-end)/5;
   for (unsigned i=0;i<5;i++) ime->candidates[i]=ime_button(ime,start+i*size,size-2,font,foreground,surface);
 #ifdef CONFIG_SYSTEM_DESKTOP
-  ime->voice=ime_button(ime,width-118,40,&lv_font_montserrat_24,accent,surface);
+  ime->voice=ime_button(ime,width-118,40,glass_icon_font(24),accent,surface);
   lv_label_set_text(lv_obj_get_child(ime->voice,0),LV_SYMBOL_AUDIO);
   lv_obj_remove_event_cb(ime->voice,candidate_clicked);
   lv_obj_add_event_cb(ime->voice,ime_voice_clicked,LV_EVENT_CLICKED,ime);
 #endif
-  ime->previous=ime_button(ime,width-74,34,&lv_font_montserrat_24,foreground,surface);
-  ime->next=ime_button(ime,width-38,34,&lv_font_montserrat_24,foreground,surface);
+  ime->previous=ime_button(ime,width-74,34,glass_icon_font(24),foreground,surface);
+  ime->next=ime_button(ime,width-38,34,glass_icon_font(24),foreground,surface);
   lv_label_set_text(lv_obj_get_child(ime->previous,0),LV_SYMBOL_LEFT);
   lv_label_set_text(lv_obj_get_child(ime->next,0),LV_SYMBOL_RIGHT);
   lv_obj_remove_event_cb(keyboard,lv_keyboard_def_event_cb);

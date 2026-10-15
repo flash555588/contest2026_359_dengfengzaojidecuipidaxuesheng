@@ -52,6 +52,18 @@ void glass_chat_cancel(void);
 int glass_chat_clear(void);
 /* Copies only when revision changes; callers keep their snapshot off-stack. */
 bool glass_chat_get(struct chat_snapshot *out);
+/* A small typed projection for passive UI companions, without copying history
+ * or starting a chat/network worker. Read under the service mutex. */
+enum chat_activity { CHAT_ACTIVITY_CONNECT, CHAT_ACTIVITY_THINK,
+                     CHAT_ACTIVITY_REPLY, CHAT_ACTIVITY_TOOL };
+struct chat_activity_snapshot {
+  enum chat_phase phase;
+  enum chat_activity activity;
+  enum chat_turn_state state;
+  uint32_t turn_id;
+  bool loaded, configured;
+};
+void glass_chat_activity_get(struct chat_activity_snapshot *out);
 const char *glass_chat_error_text(enum chat_error error);
 bool glass_chat_utf8(const char *text, size_t limit, bool multiline);
 size_t glass_chat_copy_utf8(char *out, size_t capacity, const char *text);

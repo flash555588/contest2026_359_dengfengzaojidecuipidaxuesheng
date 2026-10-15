@@ -1,15 +1,15 @@
-# OuO：ESPClaw 参考项目
+# Grok Ball：ESPClaw 参考项目
 
-设备路径：`/data/qpk/.examples/ouo/`。
+设备路径 /data/qpk/.examples/ouo/，保留 OuO 示例 ID。显示名 Grok Ball，版本 2.0.0。
 
-用途：表情状态、触摸三参数回调、动画、有限定时器。
+用途：32 种表情、触摸注视、自旋彩带、滑动切换、AI emotionId 与有限动画定时器。源码与 desktop/ouo/app.js 逐字节一致，由 tools/generate_grok_ouo.py 生成；SHA-256 在父目录 catalog.json 记录。
 
-源码来源：`desktop/ouo/app.js`，与当前固件对应源代码逐字节一致（LF、UTF-8）。
+“表情”入口提供三组直接选择；打开时暂停背景动画，关闭后恢复。启用上游 active 状态以运行眨眼、眼环轮换、待机小动作和任务完成撒花。AI 提示使用 tips 事件的 text 字段，状态切换会清除旧文字。面板期间背景按键不响应，球体以外的触摸不触发自旋。
 
-源码 SHA-256：`72ec0ffb36e5fcceb9d482b9c8b8760587e81ebcd31afe32ca54b8ba50aa4b0a`。
+上游 https://github.com/tycoding/grok-ball ，固定版本 de368ce3acdc5a70e871ee46ebbe8f60b11d3d6a。MIT 许可保留于 app.js，适配代码 Apache-2.0。当前固件播放 `/sdcard/grok/` 中的 RGB565+A8 原始帧，不在设备上运行 SVG。素材保持 32 个表情 ID，八秒循环、10 fps；注视采用九方向素材，自旋播放预渲染片段。
 
-已有证据与边界：espdl-quickapp/tests/test_ouo_app.js 覆盖状态、定时器、触摸和帧工作量；evidence/ouo-touch-boot.json 等为实板专项记录。聆听、充电等文案只是表情状态。
+状态 ID：00..07、10..21、30..41。00 睡眠，02 待机，10 开心，30 思考；未知 ID 回退 02。勿使用旧 OuO 含义。
 
-本次生成器的固定源码/交互测试报告位于 `espdl-quickapp/evidence/qpk-authoring-validation.json`；只有报告实际存在且相应测试通过时才可引用其结论。这些文件不包含应用用户数据，也不读取 `.data` 或服务配置。
+`tools/test_grok_sd.py` 验证双缓冲、全部状态/配色、注视、自旋、暂停、缺失/损坏素材及退出生命周期。实板测试以对应烧录报告为准；旧 OuO 性能记录不适用于本版。
 
-阅读顺序：先理解 `app.js` 的状态和渲染函数，再按新任务借用 API。示例 package 只用于说明来源，新应用由生成器分配 `ai.<slug>`，不要复用它。存储异常提示、按钮大小、主题和内容区尺寸应针对新应用再次检查。
+新应用应由生成器分配 ai.<slug> 包名。尺寸使用 ui.getSize() 内容区域，勿复制示例包名。

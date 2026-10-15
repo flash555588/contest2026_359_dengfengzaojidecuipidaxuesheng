@@ -5,6 +5,7 @@
  */
 
 #define GLASS_HISTORY 24
+#define GLASS_HOME_CARD_COUNT 5
 /* Shown clock offset used only while this build has no zoneinfo database. */
 #define GLASS_CLOCK_OFFSET_SECONDS (8 * 3600)
 #include <limits.h>
@@ -61,6 +62,8 @@ static struct
   lv_obj_t *date;
   lv_obj_t *temperature;
   lv_obj_t *humidity;
+  lv_obj_t *humidity_status;
+  lv_obj_t *weather_condition;
   lv_obj_t *air;
   lv_obj_t *devices;
   lv_obj_t *sync;
@@ -76,7 +79,7 @@ static struct
   lv_obj_t *wifi_button;
   lv_obj_t *settings_switch;
   lv_obj_t *widget_dropdown;
-  lv_obj_t *home_cards[4];
+  lv_obj_t *home_cards[GLASS_HOME_CARD_COUNT];
   lv_obj_t *motion_switch;
   lv_obj_t *brightness_slider;
   lv_font_t *font72;
@@ -253,7 +256,7 @@ static lv_obj_t *glass_symbol(lv_obj_t *parent, const char *text,
   lv_label_set_text(label, text);
   lv_obj_set_pos(label, x, y);
   lv_obj_set_style_text_color(label, lv_color_hex(color), 0);
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   return label;
 }
 
@@ -306,6 +309,8 @@ static void glass_clickable(lv_obj_t *card, lv_event_cb_t callback, void *data)
   lv_obj_set_style_border_opa(card, 160, LV_STATE_PRESSED);
   lv_obj_add_event_cb(card, callback, LV_EVENT_CLICKED, data);
 }
+
+#include "glass_detail_ui.inc"
 
 static void glass_chart_deleted(lv_event_t *e)
 {
@@ -513,16 +518,16 @@ static void glass_update(lv_timer_t *timer)
   if (initial || display.temperature != g_glass_display.temperature)
     {
       if (display.temperature != -999)
-        lv_label_set_text_fmt(g_glass.temperature, "%d C", display.temperature);
+        lv_label_set_text_fmt(g_glass.temperature, "%d°", display.temperature);
       else
-        lv_label_set_text(g_glass.temperature, "-- C");
+        lv_label_set_text(g_glass.temperature, "--°");
     }
   if (initial || display.humidity != g_glass_display.humidity)
     {
       if (display.humidity >= 0)
-        lv_label_set_text_fmt(g_glass.humidity, "湿度 %d%%", display.humidity);
+        lv_label_set_text_fmt(g_glass.humidity, "%d%%", display.humidity);
       else
-        lv_label_set_text(g_glass.humidity, "湿度 --%");
+        lv_label_set_text(g_glass.humidity, "--%");
     }
   bool sample_changed = display.has_sample != g_glass_display.has_sample;
   if (initial || sample_changed ||
@@ -545,17 +550,27 @@ static void glass_update(lv_timer_t *timer)
         {
           /* Expired snapshots do not need a perpetual once-per-second redraw. */
           static const char *units[] = {"秒", "分钟", "小时", "天"};
-          lv_label_set_text_fmt(g_glass.sync, "上次同步 %lu %s前 · 可用 / 全部实体",
+          lv_label_set_text_fmt(g_glass.sync, "%lu %s前",
                                 (unsigned long)display.sync_value,
                                 units[display.sync_unit]);
         }
       else
-        lv_label_set_text(g_glass.sync, "尚未同步 · 点击连接 Home Assistant");
+        lv_label_set_text(g_glass.sync, "尚未同步");
     }
   bool widget_changed = initial || display.widget != g_glass_display.widget;
   bool weather_changed = widget_changed ||
     display.weather_revision != g_glass_display.weather_revision ||
     display.weather_stale != g_glass_display.weather_stale;
+  if (initial || display.humidity != g_glass_display.humidity)
+    lv_label_set_text(g_glass.humidity_status,
+      display.humidity < 0 ? "暂无数据" : display.humidity < 30 ? "偏干燥" :
+      display.humidity > 60 ? "偏潮湿" : "舒适");
+  if (weather_changed)
+    lv_label_set_text(g_glass.weather_condition,
+      weather.valid ? weather.data.condition :
+      weather.state == WEATHER_WAIT_NET ? "等待联网" :
+      weather.state == WEATHER_WAIT_TIME ? "等待校时" :
+      weather.state == WEATHER_FAILED ? "更新失败" : "正在更新");
   if (widget_changed)
     {
       lv_label_set_text(g_glass.widget_title, display.widget == 0 ? "空气质量" :
@@ -576,7 +591,7 @@ static void glass_update(lv_timer_t *timer)
         }
       if (weather_changed)
         {
-          lv_label_set_text(g_glass.air, "AQI 指数");
+          lv_label_set_text(g_glass.air, "AQI");
           lv_label_set_text(g_glass.widget_category,
             weather.valid && weather.data.aqi >= 0 ? weather.data.category : "暂无数据");
           static const uint32_t colors[] = {0x969aa5, 0x49b894, 0xba9e40,
@@ -596,13 +611,13 @@ static void glass_update(lv_timer_t *timer)
       if (widget_changed || display.humidity != g_glass_display.humidity)
         {
           if (display.humidity >= 0)
-            lv_label_set_text_fmt(g_glass.widget_value, "%d%%", display.humidity);
+            lv_label_set_text_fmt(g_glass.widget_value, "%d", display.humidity);
           else
-            lv_label_set_text(g_glass.widget_value, "--%");
+            lv_label_set_text(g_glass.widget_value, "--");
         }
       if (widget_changed)
         {
-          lv_label_set_text(g_glass.air, "相对湿度");
+          lv_label_set_text(g_glass.air, "%");
           lv_obj_set_style_text_color(g_glass.widget_value, lv_color_hex(theme_primary()), 0);
         }
     }
@@ -614,7 +629,7 @@ static void glass_update(lv_timer_t *timer)
       if (widget_changed)
         {
           lv_label_set_text(g_glass.widget_hint, "分钟 · 本机实时数据");
-          lv_label_set_text(g_glass.air, "运行时间");
+          lv_label_set_text(g_glass.air, "分钟");
           lv_obj_set_style_text_color(g_glass.widget_value, lv_color_hex(theme_primary()), 0);
         }
     }
@@ -675,7 +690,7 @@ static void glass_motion_changed(lv_event_t *e)
     {
       lv_anim_delete(g_glass.home, NULL);
       lv_obj_set_style_opa(g_glass.home, LV_OPA_COVER, 0);
-      for (int i = 0; i < 4; i++)
+      for (int i = 0; i < GLASS_HOME_CARD_COUNT; i++)
         {
           lv_anim_delete(g_glass.home_cards[i], NULL);
           lv_obj_set_style_translate_y(g_glass.home_cards[i], 0, 0);
@@ -755,6 +770,26 @@ static void glass_control_gesture(lv_event_t *e)
 
 static void glass_control_switch_style(lv_obj_t *sw)
 {
+  lv_obj_remove_style_all(sw);
+  lv_obj_set_ext_click_area(sw, 8);
+  if (g_glass.reduced_motion)
+    {
+      static const lv_style_prop_t properties[] = {0};
+      static lv_style_transition_dsc_t no_motion;
+      /* This LVGL version requires a valid descriptor, including for no animation. */
+      lv_style_transition_dsc_init(&no_motion, properties, lv_anim_path_linear, 0, 0, NULL);
+      lv_obj_set_style_transition(sw, &no_motion, LV_PART_MAIN);
+      lv_obj_set_style_transition(sw, &no_motion, LV_PART_INDICATOR);
+      lv_obj_set_style_transition(sw, &no_motion, LV_PART_KNOB);
+    }
+  lv_obj_set_style_pad_all(sw, 0, LV_PART_MAIN);
+  lv_obj_set_style_border_width(sw, 0, LV_PART_MAIN);
+  lv_obj_set_style_radius(sw, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+  lv_obj_set_style_radius(sw, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+  lv_obj_set_style_radius(sw, LV_RADIUS_CIRCLE, LV_PART_KNOB);
+  lv_obj_set_style_bg_opa(sw, LV_OPA_TRANSP, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_opa(sw, LV_OPA_COVER, LV_PART_INDICATOR | LV_STATE_CHECKED);
+  lv_obj_set_style_bg_opa(sw, LV_OPA_COVER, LV_PART_KNOB);
   lv_obj_set_style_bg_color(sw, lv_color_hex(g_desktop.light_theme ?
                             0xcbd0d8 : 0x505765), LV_PART_MAIN);
   lv_obj_set_style_bg_color(sw, lv_color_hex(0x3a9a87),
@@ -901,123 +936,7 @@ static void glass_system_page_open(lv_event_t *e)
 
 #include "glass_portal_ui.inc"
 
-static void glass_settings(lv_event_t *e)
-{
-  LV_UNUSED(e);
-  glass_preferences_update();
-  g_control_preferences = true;
-  lv_obj_t *card = panel_card("控制面板");
-  if (!card) return;
-  g_control_card = card;
-  lv_obj_add_event_cb(card, glass_control_deleted, LV_EVENT_DELETE, NULL);
-  lv_obj_clean(card);
-  lv_obj_remove_style_all(card);
-  lv_obj_set_pos(card, 0, 0);
-  lv_obj_set_size(card, 1024, 600);
-  lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_color(card, lv_color_hex(g_desktop.light_theme ? 0xf3f4f8 : 0x191d28), 0);
-  lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-  lv_obj_remove_event_cb(g_desktop.panel, glass_control_outside);
-
-  glass_text(card, "控制面板", 40, 28, 240, 28, theme_primary());
-  g_preferences_status = glass_text(card, glass_preferences_status_text(),
-                                    298, 36, 460, 16, theme_secondary());
-  g_preferences_shown = glass_preferences_display_state();
-  lv_obj_add_event_cb(g_preferences_status, glass_preferences_status_deleted, LV_EVENT_DELETE, NULL);
-  glass_button(card, "返回桌面", 864, 24, 120, theme_surface(), glass_settings_back, NULL);
-
-  lv_obj_t *display = glass_box(card, 40, 96, 544, 208, theme_card(), 20);
-  glass_text(display, "屏幕显示", 24, 20, 280, 20, theme_primary());
-  glass_text(display, "亮度", 24, 62, 200, 16, theme_secondary());
-  lv_obj_t *value = glass_text(display, "100%", 404, 60, 112, 20, theme_primary());
-  lv_obj_set_style_text_align(value, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_t *brightness = lv_slider_create(display);
-  g_glass.brightness_slider = brightness;
-  lv_obj_set_pos(brightness, 40, 110);
-  lv_obj_set_size(brightness, 464, 8);
-  lv_obj_set_ext_click_area(brightness, 18);
-  lv_obj_set_style_radius(brightness, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-  lv_obj_set_style_radius(brightness, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
-  lv_obj_set_style_bg_color(brightness, lv_color_hex(theme_surface()), LV_PART_MAIN);
-  lv_obj_set_style_bg_color(brightness, lv_color_hex(theme_accent()), LV_PART_INDICATOR);
-  lv_obj_set_style_bg_color(brightness, lv_color_hex(0xffffff), LV_PART_KNOB);
-  lv_obj_set_style_pad_all(brightness, 8, LV_PART_KNOB);
-  lv_obj_set_style_radius(brightness, LV_RADIUS_CIRCLE, LV_PART_KNOB);
-  lv_obj_set_style_border_width(brightness, 2, LV_PART_KNOB);
-  lv_obj_set_style_border_color(brightness, lv_color_hex(theme_accent()), LV_PART_KNOB);
-  lv_obj_set_style_shadow_width(brightness, 0, LV_PART_KNOB);
-  lv_slider_set_range(brightness, 10, 100);
-  lv_slider_set_value(brightness, g_screen_brightness, LV_ANIM_OFF);
-#ifdef GLASS_PWM_BACKLIGHT
-  lv_label_set_text_fmt(value, "%d%%", g_screen_brightness);
-  lv_obj_add_event_cb(brightness, glass_brightness_changed, LV_EVENT_RELEASED, value);
-  glass_text(display, "拖动滑块调整屏幕亮度", 24, 158, 496, 16, theme_secondary());
-#else
-  lv_obj_add_state(brightness, LV_STATE_DISABLED);
-  lv_obj_set_style_bg_color(brightness, lv_color_hex(g_desktop.light_theme ? 0xaab2c5 : 0x64718a),
-                            LV_PART_INDICATOR | LV_STATE_DISABLED);
-  lv_obj_set_style_border_color(brightness, lv_color_hex(theme_secondary()),
-                                LV_PART_KNOB | LV_STATE_DISABLED);
-  glass_text(display, "当前屏幕使用固定亮度", 24, 158, 496, 16, theme_secondary());
-#endif
-
-  lv_obj_t *appearance = glass_box(card, 40, 324, 544, 236, theme_card(), 20);
-  glass_text(appearance, "个性化", 24, 20, 180, 20, theme_primary());
-  glass_text(appearance, "浅色外观", 24, 70, 160, 20, theme_primary());
-  lv_obj_t *sw = lv_switch_create(appearance);
-  g_glass.settings_switch = sw;
-  lv_obj_set_pos(sw, 200, 64); lv_obj_set_size(sw, 60, 34);
-  glass_control_switch_style(sw);
-  if (g_desktop.light_theme) lv_obj_add_state(sw, LV_STATE_CHECKED);
-  lv_obj_add_event_cb(sw, theme_changed, LV_EVENT_VALUE_CHANGED, NULL);
-  glass_text(appearance, "减少动效", 292, 70, 140, 20, theme_primary());
-  sw = lv_switch_create(appearance);
-  g_glass.motion_switch = sw;
-  lv_obj_set_pos(sw, 460, 64); lv_obj_set_size(sw, 60, 34);
-  glass_control_switch_style(sw);
-  if (g_glass.reduced_motion) lv_obj_add_state(sw, LV_STATE_CHECKED);
-  lv_obj_add_event_cb(sw, glass_motion_changed, LV_EVENT_VALUE_CHANGED, NULL);
-  glass_text(appearance, "主视觉配色", 24, 124, 160, 16, theme_secondary());
-  const uint32_t colors[] = {0x6c619e, 0xb77860, 0x498d82};
-  for (unsigned i = 0; i < 3; i++)
-    {
-      lv_obj_t *choice = glass_button(appearance, "", 216 + i * 104, 112, 88,
-                                      colors[i], glass_palette_select, (void *)(uintptr_t)i);
-      lv_obj_set_style_border_width(choice, g_glass.palette == i ? 2 : 0, 0);
-      lv_obj_set_style_border_color(choice, lv_color_hex(0xffffff), 0);
-      lv_obj_set_style_border_opa(choice, LV_OPA_COVER, 0);
-      if (g_glass.palette == i)
-        {
-          lv_obj_t *check = glass_symbol(choice, LV_SYMBOL_OK, 0, 0, 0xffffff);
-          lv_obj_center(check);
-        }
-    }
-  glass_text(appearance, "桌面小组件", 24, 184, 176, 16, theme_secondary());
-  lv_obj_t *dropdown = lv_dropdown_create(appearance);
-  g_glass.widget_dropdown = dropdown;
-  lv_dropdown_set_options(dropdown, "空气质量\n环境湿度\n系统运行");
-  lv_dropdown_set_selected(dropdown, g_glass.widget);
-  lv_obj_set_pos(dropdown, 216, 174); lv_obj_set_size(dropdown, 304, 44);
-  glass_input_style(dropdown);
-  lv_obj_set_style_text_font(dropdown, &lv_font_montserrat_24, LV_PART_INDICATOR);
-  lv_obj_t *list = lv_dropdown_get_list(dropdown);
-  lv_obj_set_style_text_font(list, zh_font(20), 0);
-  lv_obj_set_style_text_color(list, lv_color_hex(theme_primary()), 0);
-  lv_obj_set_style_bg_color(list, lv_color_hex(theme_card()), 0);
-  lv_obj_set_style_radius(list, 12, 0);
-  lv_obj_add_event_cb(dropdown, glass_widget_select, LV_EVENT_VALUE_CHANGED, NULL);
-
-  lv_obj_t *connectivity = glass_box(card, 608, 96, 376, 208, theme_card(), 20);
-  glass_text(connectivity, "网络与连接", 24, 20, 328, 20, theme_primary());
-  glass_button(connectivity, "Wi-Fi 网络", 24, 70, 328, theme_surface(), glass_system_page_open, NULL);
-  glass_button(connectivity, "蓝牙设备", 24, 136, 328, theme_surface(), glass_system_page_open, (void *)2);
-  lv_obj_t *system = glass_box(card, 608, 324, 376, 236, theme_card(), 20);
-  glass_text(system, "系统管理", 24, 20, 328, 20, theme_primary());
-  glass_button(system, "存储与文件", 24, 70, 328, theme_surface(), glass_system_page_open, (void *)1);
-  glass_button(system, "系统性能", 24, 136, 154, theme_surface(), glass_system_page_open, (void *)3);
-  glass_button(system, "扫码配置", 194, 136, 158, theme_surface(), glass_portal_open, NULL);
-  glass_text(system, "扫码设置、传文件、安装应用", 24, 202, 328, 16, theme_secondary());
-}
+#include "glass_settings_ui.inc"
 
 #include "glass_music_ui.inc"
 #ifdef CONFIG_SYSTEM_HASS
@@ -1126,7 +1045,7 @@ static void glass_apps_render(void)
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 "网络直播", "本地视频",
 #endif
-"ESPClaw AI 助手", "相机", "录音机", "智能家居", "蓝牙鼠标", "OuO", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
+"ESPClaw AI 助手", "相机", "录音机", "智能家居", "蓝牙鼠标", "Grok Ball", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
   const char *symbols[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 LV_SYMBOL_VIDEO, LV_SYMBOL_VIDEO,
@@ -1201,197 +1120,7 @@ static void glass_homeassistant_enter(lv_obj_t *card)
   lv_anim_start(&animation);
 }
 
-/* Home-only styling keeps application panels and their hit targets stable. */
-static void glass_home_finish(void)
-{
-  for (unsigned int i = 0; i < 4; i++)
-    {
-      lv_obj_t *card = g_glass.home_cards[i];
-      lv_obj_set_style_shadow_width(card, 22, 0);
-      lv_obj_set_style_shadow_ofs_y(card, 8, 0);
-      lv_obj_set_style_shadow_color(card, lv_color_hex(0x34333f), 0);
-      lv_obj_set_style_shadow_opa(card, g_desktop.light_theme ? 42 : 65, 0);
-      lv_obj_set_style_border_width(card, 1, 0);
-      lv_obj_set_style_border_opa(card, g_desktop.light_theme ? 180 : 65, 0);
-      lv_obj_set_style_shadow_width(card, 10, LV_STATE_PRESSED);
-      lv_obj_set_style_shadow_ofs_y(card, 3, LV_STATE_PRESSED);
-      lv_obj_set_style_translate_y(card, 2, LV_STATE_PRESSED);
-      if (!g_glass.reduced_motion)
-        {
-          lv_anim_t animation;
-          lv_obj_set_style_translate_y(card, 12, 0);
-          lv_anim_init(&animation);
-          lv_anim_set_var(&animation, card);
-          lv_anim_set_values(&animation, 12, 0);
-          lv_anim_set_delay(&animation, i * 45);
-          lv_anim_set_duration(&animation, 260);
-          lv_anim_set_path_cb(&animation, lv_anim_path_ease_out);
-          lv_anim_set_exec_cb(&animation, glass_card_offset);
-          lv_anim_start(&animation);
-        }
-    }
-}
-
-static void glass_rebuild(void)
-{
-  lv_obj_t *root;
-  lv_obj_t *card;
-  uint32_t primary = theme_primary();
-  uint32_t secondary = theme_secondary();
-  bool light = g_desktop.light_theme;
-  if (g_glass.home != NULL)
-    {
-      lv_anim_delete(g_glass.home, glass_fade);
-      lv_obj_delete(g_glass.home);
-    }
-  g_glass_display.valid = false;
-  root = glass_box(g_desktop.screen, 0, 0, 1024, 600,
-                    light ? 0xf3f3f6 : 0x191b20, 0);
-  g_glass.home = root;
-  /* The shell stays behind the original modal/application container. */
-  lv_obj_move_to_index(root, 0);
-  glass_gradient(root, light ? 0xededf2 : 0x25272c, LV_GRAD_DIR_HOR);
-  glass_text(root, "VelaDesk", 112, 30, 230, 20, primary);
-  g_glass.wifi_button = glass_box(root, 16, 16, 72, 64, theme_card(), 8);
-  /* Centre the glyph and its caption on the same axis: their font metrics
-   * differ, so aligning both to the box beats tuned offsets. */
-  lv_obj_t *wifi_symbol = glass_symbol(g_glass.wifi_button, LV_SYMBOL_WIFI,
-                                       0, 0, primary);
-  lv_obj_align(wifi_symbol, LV_ALIGN_TOP_MID, 0, 7);
-  lv_obj_t *wifi_label = glass_text(g_glass.wifi_button, "Wi-Fi", 0, 0,
-                                    68, 16, primary);
-  lv_obj_set_style_text_align(wifi_label, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(wifi_label, LV_ALIGN_TOP_MID, 0, 36);
-  glass_clickable(g_glass.wifi_button, glass_system_page_open, NULL);
-  g_glass.date = glass_text(root, "时钟待校准", 386, 34, 380, 16, secondary);
-  g_glass.clock = glass_text(root, "--:--", 814, 28, 116, 28, primary);
-  lv_obj_t *pull_zone = glass_box(root, 800, 0, 224, 78, theme_surface(), 0);
-  lv_obj_set_style_bg_opa(pull_zone, LV_OPA_TRANSP, 0);
-  lv_obj_remove_flag(pull_zone, LV_OBJ_FLAG_GESTURE_BUBBLE);
-  if (!GLASS_SIMPLE_SETTINGS)
-    lv_obj_add_event_cb(pull_zone, glass_control_gesture, LV_EVENT_GESTURE, NULL);
-  g_glass.theme_button = glass_button(root, "", 948, 22, 48,
-    theme_surface(), settings_clicked, NULL);
-  lv_obj_set_style_radius(g_glass.theme_button, 12, 0);
-  /* Two opposing sliders form the familiar control-center glyph. */
-  for (int row = 0; row < 2; row++)
-    {
-      lv_obj_t *track = glass_box(g_glass.theme_button, 12, 15 + row * 14,
-                                  24, 3, primary, 2);
-      lv_obj_remove_flag(track, LV_OBJ_FLAG_CLICKABLE);
-      lv_obj_t *knob = glass_box(g_glass.theme_button, row ? 25 : 14,
-                                 11 + row * 14, 9, 11, primary, 4);
-      lv_obj_remove_flag(knob, LV_OBJ_FLAG_CLICKABLE);
-    }
-
-  card = glass_card(root, 112, 96, 884, 288, 0x202734);
-  g_glass.home_cards[0] = card;
-  lv_obj_set_style_radius(card, 16, 0);
-  static const uint32_t ends[] = {0x565076, 0x71423f, 0x326461};
-  glass_gradient(card, ends[g_glass.palette], LV_GRAD_DIR_HOR);
-  if (g_wallpaper.data != NULL)
-    {
-      lv_obj_t *image = lv_image_create(card);
-      lv_image_set_src(image, &g_wallpaper);
-      lv_obj_set_pos(image, 0, 0);
-      lv_obj_remove_flag(image, LV_OBJ_FLAG_CLICKABLE);
-      lv_obj_set_style_clip_corner(card, true, 0);
-    }
-  lv_obj_set_style_border_width(card, 2, 0);
-  lv_obj_set_style_border_opa(card, 150, 0);
-  glass_text(card, "MUSIC / 音乐空间", 32, 30, 370, 20, 0xf3d983);
-  glass_text(card, "此刻，听见喜欢", 32, 132, 418, 28, 0xffffff);
-  glass_text(card, "搜索好歌，收藏你的热爱", 34, 185, 400, 20, 0xe4dfe3);
-  glass_symbol(card, LV_SYMBOL_RIGHT, 36, 239, 0xffffff);
-  const lv_image_dsc_t *feature_covers[] = {&img_lv_demo_music_cover_1,
-                                           &img_lv_demo_music_cover_3};
-  for (int i = 0; i < 2; i++)
-    {
-      lv_obj_t *art = lv_image_create(card);
-      lv_image_set_src(art, feature_covers[i]);
-      lv_image_set_pivot(art, 0, 0);
-      lv_image_set_scale(art, i ? 300 : 240);
-      lv_obj_set_pos(art, i ? 638 : 475, i ? 60 : 34);
-      lv_obj_remove_flag(art, LV_OBJ_FLAG_CLICKABLE);
-    }
-  glass_clickable(card, glass_music, NULL);
-
-  card = glass_card(root, 400, 404, 308, 172, light ? 0xe0efeb : 0x323a38);
-  g_glass.home_cards[2] = card;
-  lv_obj_set_style_radius(card, 16, 0);
-  glass_text(card, "智能家居", 22, 18, 220, 20, primary);
-  glass_symbol(card, LV_SYMBOL_HOME, 258, 22, light ? 0x27776b : 0x99dbca);
-  g_glass.devices = glass_number(card, "-- / --", 21, 52, 266, false, primary);
-  g_glass.sync = glass_text(card, "尚未同步 · 点击连接 Home Assistant",
-                            22, 137, 264, 16, secondary);
-  glass_clickable(card, glass_homeassistant, NULL);
-
-  card = glass_card(root, 728, 404, 268, 172, theme_card());
-  g_glass.home_cards[3] = card;
-  lv_obj_set_style_radius(card, 16, 0);
-  g_glass.widget_title = glass_text(card, "空气质量", 20, 18, 128, 20, primary);
-  g_glass.widget_badge = glass_box(card, 164, 16, 84, 26, secondary, 8);
-  lv_obj_set_style_bg_opa(g_glass.widget_badge, 24, 0);
-  lv_obj_remove_flag(g_glass.widget_badge, LV_OBJ_FLAG_CLICKABLE);
-  g_glass.widget_category = glass_text(g_glass.widget_badge, "暂无数据", 4, 4, 76, 16, secondary);
-  lv_obj_set_style_text_align(g_glass.widget_category, LV_TEXT_ALIGN_CENTER, 0);
-  /* Four-digit AQI and 100% humidity fit without colliding with the weather column. */
-  g_glass.widget_value = glass_number(card, "--", 20, 48, 132, false, primary);
-  g_glass.air = glass_text(card, "AQI 指数", 22, 106, 128, 16, secondary);
-  lv_obj_t *rule = glass_box(card, 152, 56, 1, 64, secondary, 0);
-  lv_obj_set_style_bg_opa(rule, 40, 0);
-  lv_obj_remove_flag(rule, LV_OBJ_FLAG_CLICKABLE);
-  glass_text(card, "温度", 164, 52, 84, 16, secondary);
-  g_glass.temperature = glass_text(card, "-- C", 164, 74, 84, 24, primary);
-  g_glass.humidity = glass_text(card, "湿度 --%", 164, 106, 84, 16, secondary);
-  rule = glass_box(card, 20, 132, 228, 1, secondary, 0);
-  lv_obj_set_style_bg_opa(rule, 32, 0);
-  lv_obj_remove_flag(rule, LV_OBJ_FLAG_CLICKABLE);
-  g_glass.widget_hint = glass_text(card, "等待联网", 20, 142, 228, 16, secondary);
-  glass_clickable(card, glass_widget_open, NULL);
-
-  card = glass_card(root, 112, 404, 268, 172, 0xd63858);
-  g_glass.home_cards[1] = card;
-  lv_obj_set_style_radius(card, 16, 0);
-  glass_gradient(card, 0xee725f, LV_GRAD_DIR_HOR);
-  glass_text(card, "音乐空间", 22, 18, 224, 20, 0xffffff);
-  glass_text(card, "搜索 · 播放 · 收藏", 22, 137, 224, 16, 0xffffff);
-  lv_obj_t *cover = lv_image_create(card);
-  lv_image_set_src(cover, &img_lv_demo_music_cover_1);
-  lv_obj_set_pos(cover, 140, 48);
-  lv_image_set_scale(cover, 144);
-  lv_image_set_pivot(cover, 0, 0);
-  lv_obj_remove_flag(cover, LV_OBJ_FLAG_CLICKABLE);
-  glass_clickable(card, glass_music, NULL);
-
-  const char *symbols[] = {LV_SYMBOL_IMAGE, LV_SYMBOL_HOME, LV_SYMBOL_EDIT, LV_SYMBOL_AUDIO,
-                           LV_SYMBOL_EYE_OPEN, LV_SYMBOL_LIST};
-  const char *dock_names[] = {"相机", "家居", "AI", "音乐", "OuO", "应用"};
-  lv_event_cb_t callbacks[] = {launch_builtin_camera_qapp, glass_homeassistant,
-    glass_chat_open, glass_music, launch_builtin_ouo_qapp, qpk_clicked};
-  for (int i = 0; i < 6; i++)
-    {
-      card = glass_box(root, 16, 96 + i * 80, 72, 76, theme_card(), 18);
-      lv_obj_set_style_bg_opa(card, LV_OPA_TRANSP, 0);
-      glass_symbol(card, symbols[i], 24, 14, secondary);
-      lv_obj_t *dock_label = glass_text(card, dock_names[i], 0, 49, 72, 16, secondary);
-      lv_obj_set_style_text_align(dock_label, LV_TEXT_ALIGN_CENTER, 0);
-      lv_obj_set_style_bg_opa(card, 100, LV_STATE_PRESSED);
-      glass_clickable(card, callbacks[i], NULL);
-    }
-  glass_update(NULL);
-  glass_home_finish();
-  if (!g_glass.reduced_motion)
-    {
-      lv_anim_t animation;
-      lv_anim_init(&animation);
-      lv_anim_set_var(&animation, root);
-      lv_anim_set_values(&animation, 200, 255);
-      lv_anim_set_duration(&animation, 220);
-      lv_anim_set_exec_cb(&animation, glass_fade);
-      lv_anim_start(&animation);
-    }
-}
+#include "glass_home_ui.inc"
 
 static bool g_edge_back_pending;
 static bool g_edge_tracking;
@@ -1508,9 +1237,9 @@ static void desktop_ui_create(void)
   g_glass.temperature_c = -999;
   g_glass.humidity_pct = -1;
   g_glass.pm25 = -1;
-  g_glass.palette = 1;
+  g_glass.palette = 0;
   g_desktop.light_theme = true;
-  uint8_t preferences[4] = {1, 1, 0, 0};
+  uint8_t preferences[4] = {1, 0, 0, 0};
   if (glass_settings_load(preferences) == 0)
     {
       g_desktop.light_theme = preferences[0];
@@ -1536,6 +1265,10 @@ static void desktop_ui_create(void)
     128, LV_FONT_KERNING_NORMAL, 24);
   g_glass.font48 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
     48, LV_FONT_KERNING_NORMAL, 24);
+  glass_home_fonts_init(g_desktop_font_start, size);
+  if (g_desktop.font16) g_desktop.font16->fallback = glass_icon_font(16);
+  if (g_desktop.font20) g_desktop.font20->fallback = glass_icon_font(20);
+  if (g_desktop.font28) g_desktop.font28->fallback = glass_icon_font(24);
   g_desktop.screen = lv_screen_active();
   lv_obj_set_style_text_font(g_desktop.screen, zh_font(20), 0);
   lv_obj_remove_flag(g_desktop.screen, LV_OBJ_FLAG_SCROLLABLE);

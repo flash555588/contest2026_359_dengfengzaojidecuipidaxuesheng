@@ -2,6 +2,10 @@
 #pragma once
 #include <stddef.h>
 #include <malloc.h>
+/* Shared execution guard; renderers yield cooperatively before this limit.
+ * Embedded companions must not add shorter application-specific cutoffs. */
+#define QPK_JS_EVENT_TIMEOUT_MS 5000
+#define QPK_JS_COMPILE_TIMEOUT_MS 10000
 
 static inline size_t qpk_js_memory_budget(void)
 {

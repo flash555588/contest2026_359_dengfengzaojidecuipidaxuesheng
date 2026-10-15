@@ -217,10 +217,19 @@ int glass_https_poll(struct webclient_tls_connection *conn,short events,int time
   int state=request_state(&conn->request); if(state) return state;
   if((events&POLLIN)&&mbedtls_ssl_get_bytes_avail(&conn->ssl)>0) return 1;
   struct pollfd pfd={.fd=conn->net.fd,.events=events};
+  int64_t end=glass_https_milliseconds()+timeout_ms;
   int ret;
-  do { ret=poll(&pfd,1,timeout_ms); } while(ret<0&&errno==EINTR);
+  for(;;) {
+    state=request_state(&conn->request);if(state)return state;
+    int64_t now=glass_https_milliseconds();
+    int64_t remaining=(end<conn->request.deadline_ms?end:conn->request.deadline_ms)-now;
+    if(remaining<0)remaining=0;
+    ret=poll(&pfd,1,(int)remaining);
+    if(ret>=0||errno!=EINTR)break;
+    if(glass_https_milliseconds()>=end)return request_state(&conn->request);
+  }
   if(ret<0) return -errno;
-  if(!ret) return 0;
+  if(!ret) return request_state(&conn->request);
   if(pfd.revents&POLLNVAL) return -EBADF;
   if(pfd.revents&events) return 1;
   return pfd.revents&(POLLERR|POLLHUP)?-ECONNRESET:0;

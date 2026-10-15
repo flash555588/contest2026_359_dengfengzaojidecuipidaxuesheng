@@ -74,11 +74,17 @@ upstream projects.
 - Integration: NuttX compatibility patches and the contest QPK runtime. Patch
   `0012` fixes the archive name and verifies the archive before extraction.
 
-## Contest-owned OuO application
+## Grok Ball replacement for the OuO entry
 
 - Location: `ouo/`.
-- License: Apache License 2.0, as declared by `ouo/LICENSE`.
-- Copyright: Vela Mood Console contributors.
+- Upstream: https://github.com/tycoding/grok-ball, commit
+  `de368ce3acdc5a70e871ee46ebbe8f60b11d3d6a`.
+- Original engine, 25 eye contours and 32 emotion definitions: MIT, copyright
+  (c) 2026 tycoding. The unmodified engine and full license are retained under
+  `ouo/vendor/`; source hashes are in `ouo/vendor/UPSTREAM.json`.
+- The SVG scene adapter, LVGL contour renderer and native app integration
+  are Apache-2.0, as declared by `ouo/LICENSE`. Generated app and embedded C
+  resources include the upstream MIT notice and declare both licenses.
 
 ## Dafeiyu desktop pet
 

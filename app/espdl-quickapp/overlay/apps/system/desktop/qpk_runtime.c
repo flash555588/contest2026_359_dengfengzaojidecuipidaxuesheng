@@ -36,6 +36,7 @@
 #include "qpk_security.h"
 #include "qpk_error_text.h"
 #include "glass_ime.h"
+#include "glass_icons.h"
 #include "qpk_storage.h"
 #include "qpk_limits.h"
 #include "glass_portal.h"
@@ -49,15 +50,20 @@
 #include "glass_dashboard.h"
 
 #define QPK_STACK_LIMIT   (16 * 1024)
-#define QPK_EVAL_BUDGET   250
-/* A touch, swipe or button callback runs while the finger is waiting, so it
- * has to stay short. A timer callback is deferred background work: the app has
- * already drawn whatever it wants the user to see, and a game or a solver
- * legitimately needs longer than an interactive response. Both are wall-clock
- * ceilings that stop a runaway script from freezing the UI thread.
- */
-#define QPK_EVENT_BUDGET  80
-#define QPK_TIMER_BUDGET  250
+/* JavaScript entries are no longer cut off at an interactive budget. A
+ * button, timer, promise job or startup script may run as long as it keeps
+ * making progress; only an entry that runs without yielding for
+ * QPK_HANG_BUDGET milliseconds is treated as unresponsive, keeps the app
+ * alive, and asks the user through the desktop (wait or terminate).
+ * Ordinary exceptions still go to the error toast. */
+#define QPK_HANG_BUDGET QPK_JS_EVENT_TIMEOUT_MS
+/* The unresponsive prompt hides itself after this much healthy run time;
+ * a stopped runtime hides it immediately. */
+#define QPK_HANG_RECOVER_MS 3000
+#define QPK_HANG_WATCH_PERIOD_MS 500
+/* Parsing has no user-code execution. Give it the same bounded compile phase
+ * as draft validation, then start the execution clock for every application. */
+#define QPK_COMPILE_BUDGET QPK_JS_COMPILE_TIMEOUT_MS
 /* One frame is about 16 ms; a yield only has to let LVGL run once. */
 #define QPK_YIELD_PERIOD_MS 1
 #define QPK_DIR CONFIG_SYSTEM_DESKTOP_QPK_DIR
@@ -95,6 +101,8 @@ enum qpk_widget_type_e
   QPK_WIDGET_RECT,
   QPK_WIDGET_ARC,
   QPK_WIDGET_LINE,
+  QPK_WIDGET_POLYGON,
+  QPK_WIDGET_GROK,
 };
 
 struct qpk_event_s
@@ -189,6 +197,7 @@ struct qpk_runtime_s
   struct qpk_event_s swipe_event;
   JSValue touch_event;
   bool touch_used;
+  bool touch_test_active;
   struct qpk_timer_s *timers;
   lv_obj_t *input_shade;
   lv_obj_t *input_textarea;
@@ -196,6 +205,7 @@ struct qpk_runtime_s
   qpk_font_cb_t font_cb;
   qpk_message_cb_t toast_cb;
   qpk_message_cb_t dialog_cb;
+  qpk_unresponsive_cb_t unresponsive_cb;
   char name[48];
   char package[48];
   bool ha_config_access;
@@ -205,6 +215,10 @@ struct qpk_runtime_s
   char version[24];
   char error[160];
   uint64_t deadline_ms;
+  bool hang_fired;       /* the current JS entry was cut off by the deadline */
+  bool hang_reported;    /* the desktop currently shows the unresponsive prompt */
+  uint64_t last_hang_ms; /* last deadline interrupt, for the recovery watch */
+  lv_timer_t *hang_timer;
   uint32_t primary_color;
   uint32_t secondary_color;
   uint32_t surface_color;
@@ -528,18 +542,27 @@ static int qpk_interrupt(JSRuntime *runtime, void *opaque)
   struct qpk_runtime_s *qpk = opaque;
 
   (void)runtime;
-  return qpk->deadline_ms != 0 && qpk_now_ms() > qpk->deadline_ms;
+  if (qpk->deadline_ms == 0 || qpk_now_ms() < qpk->deadline_ms)
+    {
+      return 0;
+    }
+
+  qpk->hang_fired = true;
+  return 1;
 }
 
-static void qpk_deadline_begin(unsigned int budget_ms)
+static uint64_t qpk_deadline_begin(unsigned int budget_ms)
 {
-  g_qpk.deadline_ms = qpk_now_ms() + budget_ms;
+  uint64_t previous = g_qpk.deadline_ms;
+  uint64_t next = qpk_now_ms() + budget_ms;
+  g_qpk.deadline_ms = previous && previous < next ? previous : next;
   JS_UpdateStackTop(g_qpk.runtime);
+  return previous;
 }
 
-static void qpk_deadline_end(void)
+static void qpk_deadline_end(uint64_t previous)
 {
-  g_qpk.deadline_ms = 0;
+  g_qpk.deadline_ms = previous;
 }
 
 static void qpk_show_error(const char *prefix)
@@ -575,20 +598,73 @@ static void qpk_show_error(const char *prefix)
   JS_FreeValue(g_qpk.context, JS_GetException(g_qpk.context));
 }
 
+/* The only path that asks the user about a slow app. An entry that ran past
+ * QPK_HANG_BUDGET without yielding is reported to the desktop as
+ * unresponsive; the app stays alive, and the prompt hides again after
+ * QPK_HANG_RECOVER_MS of healthy run time or when the runtime stops.
+ */
+static void qpk_hang_notify(bool unresponsive)
+{
+  if (unresponsive)
+    {
+      g_qpk.last_hang_ms = qpk_now_ms();
+      JS_FreeValue(g_qpk.context, JS_GetException(g_qpk.context));
+      if (!g_qpk.hang_reported)
+        {
+          printf("[qpk] unresponsive: a JavaScript entry ran past %u ms\n",
+                 (unsigned)QPK_HANG_BUDGET);
+          g_qpk.hang_reported = true;
+          if (g_qpk.unresponsive_cb != NULL)
+            {
+              g_qpk.unresponsive_cb(true);
+            }
+        }
+    }
+  else if (g_qpk.hang_reported)
+    {
+      g_qpk.hang_reported = false;
+      if (g_qpk.unresponsive_cb != NULL)
+        {
+          g_qpk.unresponsive_cb(false);
+        }
+    }
+}
+
+static void qpk_hang_watch(lv_timer_t *timer)
+{
+  (void)timer;
+
+  if (g_qpk.hang_reported && g_qpk.context != NULL &&
+      qpk_now_ms() - g_qpk.last_hang_ms >= QPK_HANG_RECOVER_MS)
+    {
+      printf("[qpk] responsive again; hiding the unresponsive prompt\n");
+      qpk_hang_notify(false);
+    }
+}
+
 static int qpk_run_jobs(void)
 {
   JSContext *context;
-  int ret;
+  int ret = 0;
 
-  do
+  while (JS_IsJobPending(g_qpk.runtime))
     {
+      /* Short promise jobs can endlessly enqueue each other without reaching
+       * QuickJS's bytecode interrupt interval. Check between jobs as well. */
+      if (qpk_interrupt(g_qpk.runtime, &g_qpk))
+        {
+          JS_ThrowInternalError(g_qpk.context, "asynchronous execution budget exceeded");
+          qpk_hang_notify(true);
+          return -1;
+        }
       ret = JS_ExecutePendingJob(g_qpk.runtime, &context);
+      if (ret <= 0) break;
     }
-  while (ret > 0);
 
   if (ret < 0)
     {
-      qpk_show_error("异步任务错误");
+      if (g_qpk.hang_fired) qpk_hang_notify(true);
+      else qpk_show_error("异步任务错误");
       return -1;
     }
 
@@ -616,20 +692,21 @@ static JSValue qpk_call(JSValueConst function, unsigned int budget_ms)
   JSValue retained = JS_DupValue(g_qpk.context, function);
   uint64_t started = qpk_now_ms();
 
-  qpk_deadline_begin(budget_ms);
+  g_qpk.hang_fired = false;
+  uint64_t previous = qpk_deadline_begin(budget_ms);
   result = JS_Call(g_qpk.context, retained, JS_UNDEFINED, 0, NULL);
-  qpk_deadline_end();
   if (JS_IsException(result))
     {
       qpk_budget_report(started, budget_ms);
-      qpk_show_error("事件执行错误");
+      if (g_qpk.hang_fired) qpk_hang_notify(true);
+      else qpk_show_error("事件执行错误");
+      qpk_deadline_end(previous);
       JS_FreeValue(g_qpk.context, retained);
       return result;
     }
 
-  qpk_deadline_begin(budget_ms);
-  qpk_run_jobs();
-  qpk_deadline_end();
+  if (qpk_run_jobs() < 0) { JS_FreeValue(g_qpk.context, result); result = JS_EXCEPTION; }
+  qpk_deadline_end(previous);
   qpk_budget_report(started, budget_ms);
   JS_FreeValue(g_qpk.context, retained);
   return result;
@@ -642,20 +719,21 @@ static JSValue qpk_call_args(JSValueConst function, unsigned int budget_ms,
   JSValue retained = JS_DupValue(g_qpk.context, function);
   uint64_t started = qpk_now_ms();
 
-  qpk_deadline_begin(budget_ms);
+  g_qpk.hang_fired = false;
+  uint64_t previous = qpk_deadline_begin(budget_ms);
   result = JS_Call(g_qpk.context, retained, JS_UNDEFINED, argc, argv);
-  qpk_deadline_end();
   if (JS_IsException(result))
     {
       qpk_budget_report(started, budget_ms);
-      qpk_show_error("事件执行错误");
+      if (g_qpk.hang_fired) qpk_hang_notify(true);
+      else qpk_show_error("事件执行错误");
+      qpk_deadline_end(previous);
       JS_FreeValue(g_qpk.context, retained);
       return result;
     }
 
-  qpk_deadline_begin(budget_ms);
-  qpk_run_jobs();
-  qpk_deadline_end();
+  if (qpk_run_jobs() < 0) { JS_FreeValue(g_qpk.context, result); result = JS_EXCEPTION; }
+  qpk_deadline_end(previous);
   qpk_budget_report(started, budget_ms);
   JS_FreeValue(g_qpk.context, retained);
   return result;
@@ -714,6 +792,8 @@ static int qpk_arg_int(JSContext *context, int argc,
 static uint32_t qpk_arg_color(JSContext *context, int argc,
                               JSValueConst *argv, int index,
                               uint32_t fallback);
+
+#include "qpk_grok.inc"
 
 static JSValue js_ui_arc(JSContext *context, JSValueConst this_value,
                          int argc, JSValueConst *argv)
@@ -852,6 +932,8 @@ static JSValue js_ui_line_set(JSContext *context, JSValueConst this_value,
   return JS_UNDEFINED;
 }
 
+#include "qpk_polygon.inc"
+
 static bool qpk_widget_current(int handle, uint64_t generation)
 {
   return handle > 0 && handle <= g_qpk.widget_capacity &&
@@ -927,7 +1009,7 @@ static void qpk_event_clicked(lv_event_t *event)
       return;
     }
 
-  result = qpk_call(binding->function, QPK_EVENT_BUDGET);
+  result = qpk_call(binding->function, QPK_HANG_BUDGET);
   JS_FreeValue(g_qpk.context, result);
 }
 
@@ -962,7 +1044,7 @@ static void qpk_event_swiped(lv_event_t *event)
     }
 
   argument = JS_NewString(g_qpk.context, direction);
-  result = qpk_call_args(g_qpk.swipe_event.function, QPK_EVENT_BUDGET,
+  result = qpk_call_args(g_qpk.swipe_event.function, QPK_HANG_BUDGET,
                          1, &argument);
   JS_FreeValue(g_qpk.context, argument);
   JS_FreeValue(g_qpk.context, result);
@@ -978,7 +1060,7 @@ static void qpk_touch_call(const char *state, double nx, double ny)
   arguments[0] = JS_NewString(g_qpk.context, state);
   arguments[1] = JS_NewFloat64(g_qpk.context, nx);
   arguments[2] = JS_NewFloat64(g_qpk.context, ny);
-  result = qpk_call_args(g_qpk.touch_event, QPK_EVENT_BUDGET, 3, arguments);
+  result = qpk_call_args(g_qpk.touch_event, QPK_HANG_BUDGET, 3, arguments);
   JS_FreeValue(g_qpk.context, arguments[0]);
   JS_FreeValue(g_qpk.context, arguments[1]);
   JS_FreeValue(g_qpk.context, arguments[2]);
@@ -989,13 +1071,45 @@ static void qpk_touch_call(const char *state, double nx, double ny)
 int qpk_runtime_touch_test(const char *state, double nx, double ny)
 {
   if (g_qpk.context == NULL || !g_qpk.touch_used || state == NULL) return 0;
+  if (!strcmp(state,"down")) g_qpk.touch_test_active=true;
   qpk_touch_call(state, nx, ny);
+  if (!strcmp(state,"up") || !strcmp(state,"cancel")) g_qpk.touch_test_active=false;
   return 1;
+}
+
+int qpk_runtime_ha_status(char *out, size_t capacity)
+{
+  if (!out || !capacity) return -EINVAL;
+  out[0] = 0;
+  if (!g_qpk.context || strcmp(g_qpk.package,"com.openvela.homeassistant")) return -ENOENT;
+  static const char query[] =
+    "JSON.stringify((()=>{const s=ESPHomeHA.snapshot();return {connected:s.connected,"
+    "phase:s.phase,message:s.message,entityCount:s.entities.length,"
+    "registeredTypes:s.registeredCardTypes.length,registeredVariants:s.registeredCardVariants,"
+    "deviceCount:s.deviceCards.filter(c=>c.device_id).length,cardCount:s.deviceCards.length,"
+    "roomPage:s.roomPage,selectedId:s.selectedId,detailOpen:s.detailOpen,"
+    "detailAdvanced:s.detailAdvanced,layoutEditing:s.layoutEditing,"
+    "layout:s.layoutPages[s.roomPage],sliders:s.brightnessControls,parameters:s.parameterControls,"
+    "functions:s.functionControls,controlQueue:s.controlQueue.length,cards:s.deviceCards.slice(0,64).map(c=>"
+    "({id:c.card_id,device:c.device_id,entity:c.entity_id,name:c.name,"
+    "members:c.members.length,size:c.cardSize,type:c.quickReference.type,variant:c.quickReference.variant,"
+    "model:c.model,readonly:c.readonly,reference:c.quickReference.layout}))};})())";
+  uint64_t previous=qpk_deadline_begin(QPK_HANG_BUDGET);
+  JSValue value=JS_Eval(g_qpk.context,query,sizeof(query)-1,"ha-status",JS_EVAL_TYPE_GLOBAL);
+  qpk_deadline_end(previous);
+  int ret=-EIO;
+  if (!JS_IsException(value))
+    {
+      size_t size;const char *json=JS_ToCStringLen(g_qpk.context,&size,value);
+      if(json){ret=size<capacity?0:-ENOSPC;if(!ret)memcpy(out,json,size+1);JS_FreeCString(g_qpk.context,json);}
+    }
+  else {JSValue error=JS_GetException(g_qpk.context);JS_FreeValue(g_qpk.context,error);}
+  JS_FreeValue(g_qpk.context,value);return ret;
 }
 
 static void qpk_event_touched(lv_event_t *event)
 {
-  if (g_qpk.context == NULL || !g_qpk.touch_used || g_qpk.root == NULL)
+  if (g_qpk.context == NULL || !g_qpk.touch_used || g_qpk.root == NULL || g_qpk.touch_test_active)
     {
       return;
     }
@@ -1097,9 +1211,13 @@ static JSValue js_ui_text(JSContext *context, JSValueConst this_value,
       lv_obj_set_style_text_font(label, g_qpk.font_cb(size), 0);
     }
 
-  /* Optional icon mode uses the built-in symbol font, not the CJK font. */
+  /* Icon mode shares the native outline family with desktop/application UI. */
   if (qpk_arg_int(context, argc, argv, 5, 0) == 1)
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
+  else if (qpk_arg_int(context, argc, argv, 5, 0) == 2)
+    lv_obj_set_style_text_font(label, glass_icon_font(64), 0);
+  else if (qpk_arg_int(context, argc, argv, 5, 0) == 3)
+    lv_obj_set_style_text_font(label, glass_icon_font(32), 0);
 
   handle = qpk_add_widget(label, QPK_WIDGET_LABEL);
   JS_FreeCString(context, text);
@@ -1334,22 +1452,53 @@ static JSValue js_ui_set_color(JSContext *context, JSValueConst this_value,
   return JS_UNDEFINED;
 }
 
+/* Return metrics from the same face used by ui.text/setStyle. */
+static JSValue js_ui_measure_text(JSContext *context, JSValueConst this_value,
+                                  int argc, JSValueConst *argv)
+{
+  (void)this_value;
+  if (argc < 1) return JS_ThrowTypeError(context, "measurement text is required");
+  int size = qpk_arg_int(context, argc, argv, 1, 20);
+  if (size < 1 || size > 48)
+    return JS_ThrowRangeError(context, "invalid measurement font size");
+  const char *text = argc > 0 ? JS_ToCString(context, argv[0]) : NULL;
+  if (!text) return JS_EXCEPTION;
+  const lv_font_t *font = g_qpk.font_cb ? g_qpk.font_cb(size) : LV_FONT_DEFAULT;
+  lv_point_t extent;
+  lv_text_get_size(&extent, text, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+  JS_FreeCString(context, text);
+  JSValue result = JS_NewObject(context);
+  if (JS_IsException(result)) return result;
+  JS_SetPropertyStr(context, result, "width", JS_NewInt32(context, extent.x));
+  JS_SetPropertyStr(context, result, "height", JS_NewInt32(context, extent.y));
+  JS_SetPropertyStr(context, result, "baseline", JS_NewInt32(context, font->base_line));
+  return result;
+}
+
+static JSValue js_ui_now_ms(JSContext *context, JSValueConst this_value,
+                            int argc, JSValueConst *argv)
+{
+  (void)this_value; (void)argc; (void)argv;
+  return JS_NewFloat64(context, (double)qpk_now_ms());
+}
+
 /* Optional per-widget styling keeps existing quick apps' defaults intact. */
 static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
                                int argc, JSValueConst *argv)
 {
   static const char *names[] = {"radius", "borderColor", "borderWidth",
-    "borderOpacity", "textColor", "fontSize", "center", "ellipsis", "enabled"};
-  static const int limits[] = {64, 0xffffff, 8, 255, 0xffffff, 48, 1, 1, 1};
-  int32_t values[9];
-  bool present[9];
+    "borderOpacity", "textColor", "fontSize", "center", "ellipsis", "enabled", "icon",
+    "gradientEnd", "gradientHorizontal", "gradientVertical"};
+  static const int limits[] = {64, 0xffffff, 8, 255, 0xffffff, 48, 1, 1, 1, 3, 0xffffff, 1, 1};
+  int32_t values[13];
+  bool present[13];
   int handle = qpk_arg_int(context, argc, argv, 0, 0);
   if (handle <= 0 || handle > g_qpk.widget_capacity || !g_qpk.widgets[handle - 1])
     return JS_ThrowRangeError(context, "invalid widget handle");
   if (argc < 2 || !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(context, "style must be an object");
   uint64_t generation = g_qpk.widget_generations[handle - 1];
-  for (unsigned i = 0; i < 9; i++)
+  for (unsigned i = 0; i < 13; i++)
     {
       JSValue value = JS_GetPropertyStr(context, argv[1], names[i]);
       if (JS_IsException(value)) return JS_EXCEPTION;
@@ -1371,11 +1520,18 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
   if (present[1]) lv_obj_set_style_border_color(obj, lv_color_hex(values[1]), 0);
   if (present[2]) lv_obj_set_style_border_width(obj, values[2], 0);
   if (present[3]) lv_obj_set_style_border_opa(obj, values[3], 0);
+  if (present[10]) lv_obj_set_style_bg_grad_color(obj, lv_color_hex(values[10]), 0);
+  if (present[11]) lv_obj_set_style_bg_grad_dir(obj, values[11] ? LV_GRAD_DIR_HOR : LV_GRAD_DIR_NONE, 0);
+  if (present[12] && (values[12] || !present[11]))
+    lv_obj_set_style_bg_grad_dir(obj, values[12] ? LV_GRAD_DIR_VER : LV_GRAD_DIR_NONE, 0);
   if (label)
     {
       if (present[4]) lv_obj_set_style_text_color(label, lv_color_hex(values[4]), 0);
       if (present[5] && g_qpk.font_cb)
         lv_obj_set_style_text_font(label, g_qpk.font_cb(values[5]), 0);
+      if (present[9] && values[9] > 0)
+        lv_obj_set_style_text_font(label, glass_icon_font(values[9] == 2 ? 64 :
+                                                       values[9] == 3 ? 32 : 24), 0);
       if (present[6]) lv_obj_set_style_text_align(label,
         values[6] ? LV_TEXT_ALIGN_CENTER : LV_TEXT_ALIGN_LEFT, 0);
       if (present[7]) lv_label_set_long_mode(label,
@@ -1612,7 +1768,7 @@ static void qpk_input_finish(bool submit)
 
   if (submit)
     {
-      result = qpk_call_args(callback, QPK_EVENT_BUDGET, 1, &argument);
+      result = qpk_call_args(callback, QPK_HANG_BUDGET, 1, &argument);
       JS_FreeValue(context, result);
       JS_FreeValue(context, argument);
     }
@@ -2054,6 +2210,12 @@ static JSValue js_ui_button(JSContext *context, JSValueConst this_value,
       return JS_ThrowOutOfMemory(context);
     }
 
+  /* ui.onTouch belongs to the page. Button hit targets must forward pointer
+   * events as well, otherwise a slider drawn underneath a card button loses
+   * its continuous PRESSED/PRESSING/RELEASED stream. Click ownership remains
+   * with the original button callback and its application gesture guard. */
+  lv_obj_add_flag(button, LV_OBJ_FLAG_EVENT_BUBBLE);
+
   lv_obj_set_pos(button, qpk_arg_int(context, argc, argv, 1, 220),
                  qpk_arg_int(context, argc, argv, 2, 160));
   lv_obj_set_size(button, qpk_arg_int(context, argc, argv, 3, 300),
@@ -2244,24 +2406,32 @@ static void qpk_timer_cb(lv_timer_t *timer)
        * touched after the release below.
        */
 
+      g_qpk.hang_fired = false;
+      uint64_t previous = qpk_deadline_begin(QPK_HANG_BUDGET);
       result = JS_Call(g_qpk.context, binding->function, JS_UNDEFINED, 0, NULL);
+      bool failed = JS_IsException(result);
+      if (failed)
+        {
+          if (g_qpk.hang_fired) qpk_hang_notify(true);
+          else qpk_show_error("异步恢复错误");
+        }
       JS_FreeValue(g_qpk.context, result);
       if (binding->used && binding->timer == timer && binding->id == id)
         {
           qpk_timer_release(g_qpk.context, binding);
         }
 
-      qpk_deadline_begin(QPK_TIMER_BUDGET);
-      qpk_run_jobs();
-      qpk_deadline_end();
+      if (!failed) qpk_run_jobs();
+      qpk_deadline_end(previous);
       return;
     }
 
-  result = qpk_call(binding->function, QPK_TIMER_BUDGET);
+  result = qpk_call(binding->function, QPK_HANG_BUDGET);
   /* The callback may cancel itself and reuse this slot for a new timer. A
-   * timeout or a failure ends the binding; an interval keeps it. */
-  if ((JS_IsException(result) || !binding->repeat) && binding->used &&
-      binding->timer == timer && binding->id == id)
+   * real error ends the binding; a hang keeps an interval alive so the app
+   * can keep running. */
+  if (((JS_IsException(result) && !g_qpk.hang_fired) || !binding->repeat) &&
+      binding->used && binding->timer == timer && binding->id == id)
     {
       qpk_timer_release(g_qpk.context, binding);
     }
@@ -3610,6 +3780,10 @@ static void qpk_install_api(JSContext *context)
                                     "setColor", 2));
   JS_SetPropertyStr(context, object, "setStyle",
                     JS_NewCFunction(context, js_ui_set_style, "setStyle", 2));
+  JS_SetPropertyStr(context, object, "measureText",
+                    JS_NewCFunction(context, js_ui_measure_text, "measureText", 2));
+  JS_SetPropertyStr(context, object, "nowMs",
+                    JS_NewCFunction(context, js_ui_now_ms, "nowMs", 0));
   JS_SetPropertyStr(context, object, "panel",
                     JS_NewCFunction(context, js_ui_panel, "panel", 7));
   JS_SetPropertyStr(context, object, "button",
@@ -3643,6 +3817,18 @@ static void qpk_install_api(JSContext *context)
                     JS_NewCFunction(context, js_ui_line, "line", 7));
   JS_SetPropertyStr(context, object, "lineSet",
                     JS_NewCFunction(context, js_ui_line_set, "lineSet", 2));
+  JS_SetPropertyStr(context, object, "polygon",
+                    JS_NewCFunction(context, js_ui_polygon, "polygon", 5));
+  JS_SetPropertyStr(context, object, "polygonSet",
+                    JS_NewCFunction(context, js_ui_polygon_set, "polygonSet", 6));
+  JS_SetPropertyStr(context, object, "polygonBuffer",
+                    JS_NewCFunction(context, js_ui_polygon_buffer, "polygonBuffer", 5));
+  JS_SetPropertyStr(context, object, "polygonSetBuffer",
+                    JS_NewCFunction(context, js_ui_polygon_set_buffer, "polygonSetBuffer", 6));
+  JS_SetPropertyStr(context, object, "front",
+                    JS_NewCFunction(context, js_ui_front, "front", 1));
+  JS_SetPropertyStr(context, object, "grokSprite",JS_NewCFunction(context,js_ui_grok_sprite,"grokSprite",6));
+  JS_SetPropertyStr(context, object, "grokControl",JS_NewCFunction(context,js_ui_grok_control,"grokControl",3));
   JS_SetPropertyStr(context, object, "primary",
                     JS_NewUint32(context, g_qpk.primary_color));
   JS_SetPropertyStr(context, object, "secondary",
@@ -3772,7 +3958,8 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
                        const char *filename, const char *source,
                        size_t source_len, qpk_font_cb_t font_cb,
                        qpk_message_cb_t toast_cb,
-                       qpk_message_cb_t dialog_cb)
+                       qpk_message_cb_t dialog_cb,
+                       qpk_unresponsive_cb_t unresponsive_cb)
 {
   JSValue result;
   uint32_t background;
@@ -3793,8 +3980,11 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   g_qpk.font_cb = font_cb;
   g_qpk.toast_cb = toast_cb;
   g_qpk.dialog_cb = dialog_cb;
+  g_qpk.unresponsive_cb = unresponsive_cb;
   g_qpk.next_timer_id = 100;
   g_qpk.input_callback = JS_UNDEFINED;
+  g_qpk.hang_timer = lv_timer_create(qpk_hang_watch, QPK_HANG_WATCH_PERIOD_MS,
+                                     NULL);
   background = lv_color_to_u32(lv_obj_get_style_bg_color(root,
                                                           LV_PART_MAIN));
   brightness = ((background >> 16) & 0xff) +
@@ -3848,24 +4038,41 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   lv_obj_add_event_cb(g_qpk.root, qpk_event_touched, LV_EVENT_RELEASED, NULL);
   lv_obj_add_event_cb(g_qpk.root, qpk_event_touched, LV_EVENT_PRESS_LOST, NULL);
   qpk_install_api(g_qpk.context);
-  qpk_deadline_begin(QPK_EVAL_BUDGET);
+  const uint64_t startup_began = qpk_now_ms();
+  g_qpk.hang_fired = false;
+  uint64_t previous = qpk_deadline_begin(QPK_COMPILE_BUDGET);
   result = JS_Eval(g_qpk.context, source, source_len,
-                   filename ? filename : "app.js", JS_EVAL_TYPE_GLOBAL);
-  qpk_deadline_end();
+                   filename ? filename : "app.js",
+                   JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+  qpk_deadline_end(previous);
+  const uint64_t compiled_at = qpk_now_ms();
   if (JS_IsException(result))
     {
-      qpk_show_error("启动失败");
+      qpk_show_error(g_qpk.hang_fired ? "编译超时" : "编译失败");
+      JS_FreeValue(g_qpk.context, result);
+      qpk_runtime_stop();
+      return -ENOEXEC;
+    }
+  g_qpk.hang_fired = false;
+  previous = qpk_deadline_begin(QPK_HANG_BUDGET);
+  result = JS_EvalFunction(g_qpk.context, result);
+  if (JS_IsException(result))
+    {
+      qpk_show_error(g_qpk.hang_fired ? "启动超时" : "启动失败");
+      qpk_deadline_end(previous);
       JS_FreeValue(g_qpk.context, result);
       qpk_runtime_stop();
       return -ENOEXEC;
     }
 
   JS_FreeValue(g_qpk.context, result);
-  qpk_deadline_begin(QPK_EVAL_BUDGET);
-  qpk_run_jobs();
-  qpk_deadline_end();
-  printf("[qpk] started %s (%s %s) with QuickJS\n",
-         g_qpk.name, g_qpk.package, g_qpk.version);
+  int jobs_result = qpk_run_jobs();
+  qpk_deadline_end(previous);
+  if (jobs_result < 0) { qpk_runtime_stop(); return -ENOEXEC; }
+  printf("[qpk] started %s (%s %s) with QuickJS compile_ms=%lu execute_ms=%lu\n",
+         g_qpk.name, g_qpk.package, g_qpk.version,
+         (unsigned long)(compiled_at - startup_began),
+         (unsigned long)(qpk_now_ms() - compiled_at));
   return 0;
 }
 
@@ -3877,6 +4084,17 @@ void qpk_runtime_stop(void)
   qpk_dl_ui_stop();
   qpk_camera_stop();
   qpk_ha_stop();
+
+  if (g_qpk.hang_timer != NULL)
+    {
+      lv_timer_delete(g_qpk.hang_timer);
+      g_qpk.hang_timer = NULL;
+    }
+
+  if (g_qpk.hang_reported)
+    {
+      qpk_hang_notify(false);
+    }
 
   if (g_qpk.root != NULL)
     {
@@ -4064,6 +4282,29 @@ bool qpk_runtime_camera_poll(void)
     }
 
   return redraw;
+}
+
+int qpk_runtime_select_espdl_mode(unsigned mode)
+{
+  JSContext *context = g_qpk.context;
+  if (!context || mode > 1) return -EINVAL;
+  JSValue global = JS_GetGlobalObject(context);
+  JSValue app = JS_GetPropertyStr(context, global, "EspDlApp");
+  JSValue method = JS_IsObject(app) ?
+    JS_GetPropertyStr(context, app, "selectMode") : JS_UNDEFINED;
+  int ret = -ENOENT;
+  if (JS_IsFunction(context, method))
+    {
+      JSValue argument = JS_NewUint32(context, mode);
+      JSValue result = qpk_call_args(method, QPK_HANG_BUDGET, 1, &argument);
+      ret = JS_IsException(result) ? -EIO : 0;
+      JS_FreeValue(context, result);
+      JS_FreeValue(context, argument);
+    }
+  JS_FreeValue(context, method);
+  JS_FreeValue(context, app);
+  JS_FreeValue(context, global);
+  return ret;
 }
 
 bool qpk_runtime_running(void)

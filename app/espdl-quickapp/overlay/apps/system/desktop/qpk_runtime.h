@@ -6,11 +6,16 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <lvgl/lvgl.h>
 
 typedef const lv_font_t *(*qpk_font_cb_t)(int size);
 typedef void (*qpk_message_cb_t)(const char *message);
+/* Reported when a JavaScript entry runs past the response budget without
+ * yielding (true) and again once the app has been healthy or stops (false).
+ * The desktop shows and hides the wait/terminate prompt. */
+typedef void (*qpk_unresponsive_cb_t)(bool unresponsive);
 
 /* Lifecycle and UI calls belong to the LVGL thread. Stop the active runtime
  * before destroying its root; retired pages may be deleted after a handoff.
@@ -20,9 +25,13 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
                        const char *filename, const char *source,
                        size_t source_len, qpk_font_cb_t font_cb,
                        qpk_message_cb_t toast_cb,
-                       qpk_message_cb_t dialog_cb);
+                       qpk_message_cb_t dialog_cb,
+                       qpk_unresponsive_cb_t unresponsive_cb);
 void qpk_runtime_stop(void);
 bool qpk_runtime_running(void);
+/* Select classification (0) or face following (1) on the active built-in
+ * ESP-DL app. Bounded JS callback, LVGL thread only; does not start capture. */
+int qpk_runtime_select_espdl_mode(unsigned mode);
 /* UI-thread diagnostics; the last error survives stop until the next launch. */
 const char *qpk_runtime_last_error(void);
 unsigned qpk_runtime_widget_count(void);
@@ -39,3 +48,5 @@ bool qpk_runtime_camera_poll(void);
  * ui.onTouch(), using fractions of the app content. Returns 1 when delivered.
  */
 int qpk_runtime_touch_test(const char *state, double nx, double ny);
+/* Fixed, read-only HA diagnostic. No credential fields are exported. */
+int qpk_runtime_ha_status(char *out, size_t capacity);

@@ -86,11 +86,11 @@ static void glass_music_player(lv_obj_t *card)
   g_music_stop = glass_button(card, "", 176, 172, 64,
                               theme_surface(), glass_music_command, (void *)GLASS_STOP);
   lv_obj_t *volume_icon = glass_text(card, "", 270, 182, 36, 20, theme_primary());
-  lv_obj_set_style_text_font(volume_icon, LV_FONT_DEFAULT, 0);
+  lv_obj_set_style_text_font(volume_icon, glass_icon_font(24), 0);
   lv_label_set_text(volume_icon, LV_SYMBOL_VOLUME_MAX);
   lv_obj_t *icon_buttons[] = {g_music_play, g_music_pause, g_music_stop};
   for (unsigned i = 0; i < 3; i++)
-    lv_obj_set_style_text_font(lv_obj_get_child(icon_buttons[i], 0), LV_FONT_DEFAULT, 0);
+    lv_obj_set_style_text_font(lv_obj_get_child(icon_buttons[i], 0), glass_icon_font(24), 0);
   lv_label_set_text(lv_obj_get_child(g_music_play, 0), LV_SYMBOL_PLAY);
   lv_label_set_text(lv_obj_get_child(g_music_stop, 0), LV_SYMBOL_STOP);
   g_music_volume = lv_slider_create(card);

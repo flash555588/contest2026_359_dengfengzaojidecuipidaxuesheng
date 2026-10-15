@@ -2,12 +2,15 @@
 #include "glass_chat.h"
 #include "glass_ime.h"
 #include "glass_qpk_builder.h"
+#include "glass_grok.h"
 
 static struct {
   lv_obj_t *root, *messages, *status, *model, *count, *storage, *draft_label, *action, *action_label;
   lv_obj_t *editor, *input, *keyboard, *counter, *confirm, *waiting;
   lv_obj_t *app_status, *preview_button, *save_button, *discard_button;
   bool discard_requested;
+  struct glass_grok *ball;
+  lv_obj_t *ball_strip, *ball_mount, *ball_anchor;
   lv_obj_t *live_bubble, *live_reasoning;
   lv_obj_t *live_parts[24];
   unsigned live_count;
@@ -39,6 +42,18 @@ static void chat_ui_editor_open(lv_event_t *e);
 static void chat_ui_config(lv_event_t *e);
 static void chat_ui_discard(lv_event_t *e);
 static lv_obj_t *chat_ui_text(lv_obj_t *, const char *, int, int, int, int, uint32_t, bool);
+static void chat_ui_ball_position(lv_event_t *e)
+{
+  LV_UNUSED(e);
+  if(!g_chat_ui.ball_mount)return;
+  if(!g_chat_ui.ball_anchor||g_chat_ui.editor||g_chat_ui.archive_panel){lv_obj_add_flag(g_chat_ui.ball_mount,LV_OBJ_FLAG_HIDDEN);return;}
+  lv_obj_update_layout(g_chat_ui.messages);
+  lv_area_t anchor,strip;lv_obj_get_coords(g_chat_ui.ball_anchor,&anchor);lv_obj_get_coords(g_chat_ui.ball_strip,&strip);
+  int y=anchor.y1-strip.y1;
+  lv_obj_set_pos(g_chat_ui.ball_mount,0,y);
+  if(y+64<=0||y>=382)lv_obj_add_flag(g_chat_ui.ball_mount,LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_remove_flag(g_chat_ui.ball_mount,LV_OBJ_FLAG_HIDDEN);
+}
 
 static void chat_ui_label(lv_obj_t *label, const char *text)
 { if (label && strcmp(lv_label_get_text(label), text)) lv_label_set_text(label, text); }
@@ -88,7 +103,7 @@ static void chat_ui_preview_app(lv_event_t *e)
   lv_obj_t *card = qapp_page_prepare(title);
   if (!card) { free(source); show_toast("内存不足，无法预览"); return; }
   int ret = qpk_runtime_launch(card, draft.name, package, "draft", "app.js", source, strlen(source),
-                               zh_font, show_toast, qpk_show_dialog);
+                               zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   free(source);
   const char *error = qpk_runtime_last_error();
   if (ret || error[0] || !qpk_runtime_widget_count()) {
@@ -157,6 +172,7 @@ static void chat_ui_editor_close(lv_event_t *e)
   lv_obj_delete(g_chat_ui.editor);
   g_chat_ui.editor = g_chat_ui.input = g_chat_ui.keyboard = g_chat_ui.counter = NULL;
   lv_label_set_text(g_chat_ui.draft_label, chat_draft[0] ? chat_draft : "聊点什么…");
+  chat_ui_ball_position(NULL);
 }
 
 static void chat_ui_send(lv_event_t *e)
@@ -239,6 +255,7 @@ static void chat_ui_editor_open(lv_event_t *e)
   lv_obj_add_event_cb(g_chat_ui.keyboard, chat_ui_editor_close, LV_EVENT_READY, NULL);
   lv_obj_add_event_cb(g_chat_ui.keyboard, chat_ui_editor_close, LV_EVENT_CANCEL, NULL);
   chat_ui_counter(NULL);
+  chat_ui_ball_position(NULL);
 }
 
 static void chat_ui_suggestion(lv_event_t *e)
@@ -263,6 +280,7 @@ static void chat_ui_archive_close(lv_event_t *e)
   g_chat_ui.archive_panel = g_chat_ui.archive_content = g_chat_ui.archive_status = NULL;
   g_chat_ui.archive_previous = g_chat_ui.archive_next = NULL;
   free(g_chat_ui.archive_page); g_chat_ui.archive_page = NULL;
+  chat_ui_ball_position(NULL);
 }
 static void chat_ui_archive_step(lv_event_t *e)
 {
@@ -297,15 +315,17 @@ static void chat_ui_archive_open(lv_event_t *e)
   glass_pager_enabled(g_chat_ui.archive_previous, false, g_chat_ui.primary);
   glass_pager_enabled(g_chat_ui.archive_next, false, g_chat_ui.primary);
   chat_ui_button(panel, "返回对话", 574, 440, 168, 42, true, chat_ui_archive_close, NULL);
+  chat_ui_ball_position(NULL);
 }
 
 static int chat_ui_bubble(const char *text, int y, bool user)
 {
-  int width = user ? 580 : 706, x = user ? 164 : 8;
+  int width = user ? 580 : 630, x = user ? 164 : 84;
   chat_ui_text(g_chat_ui.messages, user ? "你" : "ESPClaw", x + 4, y, width - 8, 16, g_chat_ui.secondary, false);
   lv_obj_t *bubble = glass_box(g_chat_ui.messages, x, y + 28, width, 60,
                                user ? g_chat_ui.accent : g_chat_ui.surface, 16);
   lv_obj_remove_flag(bubble, LV_OBJ_FLAG_CLICKABLE);
+  if(!user)g_chat_ui.ball_anchor=bubble;
   int height = chat_ui_chunks(bubble, text, width, user ? 0xffffff : g_chat_ui.primary, false);
   return y + 28 + height + 22;
 }
@@ -316,12 +336,13 @@ static void chat_ui_messages(void)
   struct chat_snapshot *s = g_chat_ui.snapshot;
   int scroll = lv_obj_get_scroll_y(g_chat_ui.messages);
   bool follow = lv_obj_get_scroll_bottom(g_chat_ui.messages) < 48;
+  g_chat_ui.ball_anchor=NULL;
   lv_obj_clean(g_chat_ui.messages); g_chat_ui.waiting = g_chat_ui.live_bubble = g_chat_ui.live_reasoning = NULL;
   g_chat_ui.live_count = 0;
   if (!s->count) {
-    lv_obj_t *mark = glass_box(g_chat_ui.messages, 8, 18, 56, 56, g_chat_ui.accent, 18);
+    lv_obj_t *mark = glass_box(g_chat_ui.messages, 8, 18, 64, 64, g_chat_ui.background, 0);
     lv_obj_remove_flag(mark, LV_OBJ_FLAG_CLICKABLE);
-    glass_symbol(mark, LV_SYMBOL_EDIT, 16, 16, 0xffffff);
+    g_chat_ui.ball_anchor=mark;
     chat_ui_text(g_chat_ui.messages, "有什么想聊的？", 8, 94, 700, 28, g_chat_ui.primary, false);
     chat_ui_text(g_chat_ui.messages, s->configured ? "聊想法、写文字，一起把问题想明白。" : "先连接你的 AI 服务，让灵感从这里开始。",
                   8, 144, 700, 20, g_chat_ui.secondary, false);
@@ -354,14 +375,15 @@ static void chat_ui_messages(void)
         }
         if (t->output_limited) { chat_ui_text(g_chat_ui.messages, "已达到本次输出 Token 上限，可调整设置后继续。", 12, y, 704, 16, g_chat_ui.secondary, true); y += 38; }
       } else if (t->state == CHAT_WAITING) {
-        g_chat_ui.waiting = chat_ui_text(g_chat_ui.messages, "等待服务响应…", 12, y + 8, 700, 16, g_chat_ui.secondary, false);
-        g_chat_ui.live_reasoning = chat_ui_text(g_chat_ui.messages, "", 12, y + 36, 700, 16, g_chat_ui.secondary, false);
+        g_chat_ui.waiting = chat_ui_text(g_chat_ui.messages, "等待服务响应…", 88, y + 8, 626, 16, g_chat_ui.secondary, false);
+        g_chat_ui.live_reasoning = chat_ui_text(g_chat_ui.messages, "", 88, y + 36, 626, 16, g_chat_ui.secondary, false);
         lv_obj_set_height(g_chat_ui.live_reasoning, 56);
         lv_label_set_long_mode(g_chat_ui.live_reasoning, LV_LABEL_LONG_DOT);
         g_chat_ui.live_y = y + 102;
-        g_chat_ui.live_bubble = glass_box(g_chat_ui.messages, 8, g_chat_ui.live_y, 706, 60, g_chat_ui.surface, 16);
+        g_chat_ui.live_bubble = glass_box(g_chat_ui.messages, 84, g_chat_ui.live_y, 630, 60, g_chat_ui.surface, 16);
+        g_chat_ui.ball_anchor=g_chat_ui.live_bubble;
         lv_obj_remove_flag(g_chat_ui.live_bubble, LV_OBJ_FLAG_CLICKABLE);
-        y = g_chat_ui.live_y + chat_ui_chunks(g_chat_ui.live_bubble, t->reply, 706, g_chat_ui.primary, true) + 22;
+        y = g_chat_ui.live_y + chat_ui_chunks(g_chat_ui.live_bubble, t->reply, 630, g_chat_ui.primary, true) + 22;
       } else {
         if (t->reply[0]) y = chat_ui_bubble(t->reply, y, false);
         if (t->archive[0]) { chat_ui_button(g_chat_ui.messages, "阅读已收到的内容", 8, y, 220, 42, false, chat_ui_archive_open, (void *)t->archive); y += 52; }
@@ -377,6 +399,7 @@ static void chat_ui_messages(void)
   lv_obj_update_layout(g_chat_ui.messages);
   if (follow) lv_obj_scroll_to_y(g_chat_ui.messages, LV_COORD_MAX, LV_ANIM_OFF);
   else lv_obj_scroll_to_y(g_chat_ui.messages, scroll, LV_ANIM_OFF);
+  chat_ui_ball_position(NULL);
   g_chat_ui.drawn_revision = s->revision; g_chat_ui.drawn_count = s->count;
   g_chat_ui.drawn_id = s->count ? s->turns[s->count - 1].id : 0;
   g_chat_ui.drawn_state = s->count ? s->turns[s->count - 1].state : CHAT_DONE;
@@ -389,7 +412,7 @@ static void chat_ui_live(void)
   if (!s->count || !g_chat_ui.live_bubble) return;
   const struct chat_turn *t = &s->turns[s->count - 1];
   bool follow = lv_obj_get_scroll_bottom(g_chat_ui.messages) < 48;
-  chat_ui_chunks(g_chat_ui.live_bubble, t->reply, 706, g_chat_ui.primary, true);
+  chat_ui_chunks(g_chat_ui.live_bubble, t->reply, 630, g_chat_ui.primary, true);
   const char *tail = t->reasoning; size_t size = strlen(tail);
   if (size > 240) { tail += size - 240; while ((*tail & 0xc0) == 0x80) tail++; }
   chat_ui_label(g_chat_ui.live_reasoning, tail);
@@ -399,6 +422,7 @@ static void chat_ui_live(void)
   chat_ui_label(g_chat_ui.waiting, progress);
   lv_obj_update_layout(g_chat_ui.messages);
   if (follow) lv_obj_scroll_to_y(g_chat_ui.messages, LV_COORD_MAX, LV_ANIM_OFF);
+  chat_ui_ball_position(NULL);
   g_chat_ui.drawn_revision = s->revision;
 }
 
@@ -569,6 +593,7 @@ static void chat_ui_refresh(lv_timer_t *timer)
     if (g_chat_ui.waiting && s->phase != CHAT_IDLE) chat_ui_label(g_chat_ui.waiting, s->phase == CHAT_CLEARING ? "正在开始新对话…" : "正在停止回复…");
   }
   if (++g_chat_ui.ticks % 20 == 0 && s->phase == CHAT_IDLE) glass_chat_refresh_config();
+  chat_ui_ball_position(NULL);
   uint32_t elapsed = lv_tick_get() - refresh_started;
   if (elapsed > g_chat_ui.refresh_max_ms) g_chat_ui.refresh_max_ms = elapsed;
 }
@@ -641,6 +666,15 @@ static void glass_chat_show(bool from_apps)
   g_chat_ui.messages = glass_box(card, 242, 115, 764, 382, g_chat_ui.background, 0);
   lv_obj_add_flag(g_chat_ui.messages, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(g_chat_ui.messages, LV_DIR_VER); lv_obj_set_scrollbar_mode(g_chat_ui.messages, LV_SCROLLBAR_MODE_AUTO);
+  lv_obj_add_event_cb(g_chat_ui.messages,chat_ui_ball_position,LV_EVENT_SCROLL,NULL);
+  g_chat_ui.ball_strip=glass_box(card,250,115,64,382,g_chat_ui.background,0);
+  lv_obj_set_style_bg_opa(g_chat_ui.ball_strip,LV_OPA_TRANSP,0);
+  lv_obj_remove_flag(g_chat_ui.ball_strip,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  g_chat_ui.ball_mount=glass_box(g_chat_ui.ball_strip,0,0,64,64,g_chat_ui.background,0);
+  lv_obj_set_style_bg_opa(g_chat_ui.ball_mount,LV_OPA_TRANSP,0);
+  lv_obj_remove_flag(g_chat_ui.ball_mount,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  g_chat_ui.ball=glass_grok_create_avatar(g_chat_ui.ball_mount,zh_font);
+  glass_grok_set_reduced_motion(g_chat_ui.ball,g_glass.reduced_motion);
   lv_obj_t *draft = glass_box(card, 250, 514, 614, 58, g_chat_ui.surface, 16);
   glass_clickable(draft, chat_ui_editor_open, NULL);
   g_chat_ui.draft_label = chat_ui_text(draft, chat_draft[0] ? chat_draft : "聊点什么…", 20, 18, 574, 20, g_chat_ui.secondary, false);

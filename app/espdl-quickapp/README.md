@@ -1,6 +1,67 @@
 # ESP-DL 人脸跟随与物体分类
 
+## LVGL 首页品质升级（待用户审核）
+
+当前首页使用原生 LVGL 对象复刻审核稿，布局固定为 1024×600；保留上游音乐封面，
+将重复音乐卡片替换为 AI 对话入口，并组合相机／识别、天气／环境、影音入口。
+实现见 `overlay/apps/system/desktop/glass_home_ui.inc`，天气与家居继续读取现有服务，
+没有数据时显示占位符。新线性图标字体在原生应用、快应用图标模式和输入法中共用，
+保持已有 `LV_SYMBOL_*` 编码；字形与音乐卡片的 RGB565 渐变填充均可重新生成：
+
+```bash
+python3 tools/generate_glass_icons.py   # Pillow；已提交生成后的 C 字体，不需运行时依赖
+python3 tools/generate_home_gradient.py
+python3 tools/render_refined_home.py --apps /path/to/prepared/apps --output /path/to/render-output
+```
+
+上述工具从仓库根目录执行。宿主渲染使用真实 LVGL、生产布局／更新函数和已有 OTF／
+音乐封面资源；服务数据与入口回调为模拟环境，所以 PNG 不是实板截图。检查覆盖无数据、
+示例数据、深浅色、反复重建、组件切换和入口事件，启用 ASan／UBSan。当前 ESP32-P4 v3
+固件已编译；本次没有连接、烧录或修改设备，仍等待用户视觉审核。
+
+现有 Node 前端回归中，桌宠打包字节一致性用例因检出文件的 CRLF／LF 边界不同而失败，
+对应 JS 和生成资源本次未改动；相机、录音机、离线识别、家居和桌宠行为回归通过。
+
+### 全界面离线审核
+
+控制面板现采用左侧导航、独立设置卡片和共用线性图标。系统性能页提供 CPU／内存
+切换、大折线图和侧栏缩略曲线；每秒读取已有监测服务，在页面存活期间最多保留
+60 个有效样本，关闭后释放监测会话。内存占用仅统计系统堆。天气页增加主天气卡片，
+突出当前温度与天气图标，并展示已有的湿度、AQI、PM2.5 和更新状态，不添加无来源
+的预报数据。
+
+音乐页底部增加已播放时间、播放进度条和总时长，与现有播放器快照同步。
+总时长读取 MP3 首帧中的 Xing／Info／VBRI 帧数；无法读取时显示 `--:--`，
+正常播放结束后使用实际播放时长。现有流式播放器没有 seek 接口，进度条仅展示进度。
+
+`tools/render_all_ui.py` 复用现有原生二级页面、媒体页构造函数、快应用资源和生产
+QuickJS／LVGL 控件绑定，生成 1024×600 RGB565 帧缓冲截图。输入法也使用生产 C
+布局；词库、语音、网络和设备服务保持离线。审核样本覆盖页面入口、详情、输入、
+确认、草稿预览和服务数据状态，深浅色各一套。独立应用保留原有配色，媒体页不含
+实际相机／视频解码画面。宿主运行启用 ASan／UBSan，不连接或烧录设备。
+
+```bash
+# Linux / WSL；先用 render_refined_home.py 准备同配置的宿主 LVGL 缓存
+python3 tools/render_all_ui.py --apps /path/to/prepared/apps --cache /path/to/home-render-cache --output /path/to/all-ui-review
+# 已复制到本地的截图目录；Python 需有 Pillow，Windows 默认使用微软雅黑
+python tools/package_ui_review.py /path/to/all-ui-review
+```
+
+打包目录中的 `index.html` 支持功能筛选、深浅色并排对比和原图放大；
+`LVGL-全界面审核.zip` 包含全部原始 PNG、分类拼图、清单和离线图册。
+
 同一固件中的 ESPClaw 触屏聊天、服务配置及共用 HTTPS 说明见 [CHAT.md](CHAT.md)。
+双网络使用有效有线网关优先、Wi-Fi 备用：网线只有链路但没有 DHCP 地址时，
+不抢占无线外网出口。桌面统一管理 `eth0` / `wlan0` 的 DHCP 和 DNS，
+构建必须关闭 `CONFIG_NSH_NETINIT`，避免 UDP 68 端口和 DNS 被两个初始化任务争用。
+插线后会申请有线租约，断线后 DNS 回到可用的 Wi-Fi；网口启停不直接操作 LVGL。
+两种接口均在 DHCP 租期一半时重新申请，失败后每 10 秒重试；原租约到期或链路变化时
+清理旧地址、网关和对应 DNS。Wi-Fi 后台任务持续运行，热点恢复后重新获取 IP，
+未关联时每 30 秒尝试使用 C6 已保存的配置重连，用户手动断开后停止自动重连。
+所有租约期限使用单调时钟，NTP 校时不改变期限。设置页只提交 DHCP 请求，不阻塞 UI。
+2026-10-15 的宿主回归可运行 `python3 tools/tests/test_network_lifetime.py`
+（在仓库根目录、Linux/WSL、需要 C 编译器），覆盖提前续租、失败/到期、重关联、
+过期连接的 ACK、NAK、长时间计时、无限租约及双网 DNS 切换；尚需实板长期运行验证。
 内置录音机、GPIO／I²C／SPI／UART／PWM／舵机／音频／BLE 快应用接口与 AI 参考见 [HARDWARE.md](HARDWARE.md)。
 Home Assistant 原生米家页的实体范围、分页、状态色、控制确认和布局依据见
 [HA-TILE-DESIGN.md](HA-TILE-DESIGN.md)。
@@ -65,3 +126,7 @@ The application source in this directory is synchronized from the locally verifi
 The music credential header was intentionally excluded because it contains a hard-coded API key. The runtime keeps its credential fallback behavior and accepts user configuration at runtime.
 
 See the source and hardware work log at ../../docs/WORKLOG_2026-09-19.md and the 2026-09-19 hardware handoff logs at ../../logs/2026-09-19/README.md.
+
+## Grok Ball LVGL port
+
+OuO now launches Grok Ball 2.0.0 using the pinned MIT upstream engine and native SVG contour adaptation. See ../../ouo/README.md for source/license, state migration and validation limits. The CLI/package identifiers remain compatible. Native host render and ESP32-P4 build are review evidence only; no flashing or hardware performance validation was performed.

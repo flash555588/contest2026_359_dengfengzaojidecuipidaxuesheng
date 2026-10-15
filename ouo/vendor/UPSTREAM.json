@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/tycoding/grok-ball",
+  "commit": "de368ce3acdc5a70e871ee46ebbe8f60b11d3d6a",
+  "license": "MIT",
+  "source_sha256": {
+    "grok-ball.js": "72960b6398032d45c8e4ca4386dfb2a9b6f286d67af0d3c2692dcffeab273fbb",
+    "GROK-BALL-LICENSE.txt": "628de66f2b2ea320fa234e8bdfe1818c9f1f9ae57f6dcdf7424d5b3f0405c9c4"
+  },
+  "adaptation": "Upstream engine unchanged; SVG contours mapped to native LVGL, original body/eye colors retained, radial/linear gradients retain all stops and use short horizontal interpolation segments."
+}
