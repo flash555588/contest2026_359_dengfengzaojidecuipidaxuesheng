@@ -1,0 +1,12 @@
+{
+  "frontend_tests": 97,
+  "native_captures": 4,
+  "offline_ha_entities": 200,
+  "device_cards": 4,
+  "device_summary": "4 台设备 · 已同步",
+  "entity_count_retained_in_logs": true,
+  "native_source_hashes_verified": 54,
+  "flashed": true,
+  "flash_sha256": "174be0586d7d8c295976caeb471ea5b2817d331b4836e0914e34b8357a8f5a04",
+  "manual_touchscreen_verification": "pending user"
+}

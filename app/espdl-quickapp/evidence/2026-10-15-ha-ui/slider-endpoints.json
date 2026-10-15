@@ -1,0 +1,114 @@
+[
+  {
+    "theme": "light",
+    "stage": "drag",
+    "percent": 0,
+    "orange_pixels": 0,
+    "thumb_center": 217.5
+  },
+  {
+    "theme": "light",
+    "stage": "drag",
+    "percent": 1,
+    "orange_pixels": 164,
+    "thumb_center": 221.5
+  },
+  {
+    "theme": "light",
+    "stage": "drag",
+    "percent": 50,
+    "orange_pixels": 10200,
+    "thumb_center": 402.5
+  },
+  {
+    "theme": "light",
+    "stage": "drag",
+    "percent": 100,
+    "orange_pixels": 20352,
+    "thumb_center": 587.5
+  },
+  {
+    "theme": "light",
+    "stage": "set",
+    "percent": 0,
+    "orange_pixels": 0,
+    "thumb_center": 217.5
+  },
+  {
+    "theme": "light",
+    "stage": "set",
+    "percent": 1,
+    "orange_pixels": 164,
+    "thumb_center": 221.5
+  },
+  {
+    "theme": "light",
+    "stage": "set",
+    "percent": 50,
+    "orange_pixels": 10200,
+    "thumb_center": 402.5
+  },
+  {
+    "theme": "light",
+    "stage": "set",
+    "percent": 100,
+    "orange_pixels": 20352,
+    "thumb_center": 587.5
+  },
+  {
+    "theme": "dark",
+    "stage": "drag",
+    "percent": 0,
+    "orange_pixels": 0,
+    "thumb_center": 217.5
+  },
+  {
+    "theme": "dark",
+    "stage": "drag",
+    "percent": 1,
+    "orange_pixels": 162,
+    "thumb_center": 221.5
+  },
+  {
+    "theme": "dark",
+    "stage": "drag",
+    "percent": 50,
+    "orange_pixels": 10196,
+    "thumb_center": 402.5
+  },
+  {
+    "theme": "dark",
+    "stage": "drag",
+    "percent": 100,
+    "orange_pixels": 20344,
+    "thumb_center": 587.5
+  },
+  {
+    "theme": "dark",
+    "stage": "set",
+    "percent": 0,
+    "orange_pixels": 0,
+    "thumb_center": 217.5
+  },
+  {
+    "theme": "dark",
+    "stage": "set",
+    "percent": 1,
+    "orange_pixels": 162,
+    "thumb_center": 221.5
+  },
+  {
+    "theme": "dark",
+    "stage": "set",
+    "percent": 50,
+    "orange_pixels": 10196,
+    "thumb_center": 402.5
+  },
+  {
+    "theme": "dark",
+    "stage": "set",
+    "percent": 100,
+    "orange_pixels": 20344,
+    "thumb_center": 587.5
+  }
+]

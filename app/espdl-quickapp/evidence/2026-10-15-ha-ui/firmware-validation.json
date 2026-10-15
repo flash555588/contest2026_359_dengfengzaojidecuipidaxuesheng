@@ -1,0 +1,12 @@
+{
+  "firmware_bytes": 8313152,
+  "firmware_sha256": "174be0586d7d8c295976caeb471ea5b2817d331b4836e0914e34b8357a8f5a04",
+  "source_js_sha256": "34a0707ef2b22a83c7bd4d1b8a6fa3b6ea9dd2f9c89ba8bbcb8d23fb0c455ba5",
+  "source_files_verified": 445,
+  "exact_js_embedded": true,
+  "application_end": "0x7ef940",
+  "flashed": true,
+  "real_ha_device_test": "pending manual testing",
+  "flash_sha256": "174be0586d7d8c295976caeb471ea5b2817d331b4836e0914e34b8357a8f5a04",
+  "manual_touchscreen_verification": "pending user"
+}
