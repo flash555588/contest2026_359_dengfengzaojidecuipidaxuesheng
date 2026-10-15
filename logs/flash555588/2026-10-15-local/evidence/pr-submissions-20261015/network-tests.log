@@ -1,0 +1,28 @@
+[net] wlan0 lease=100 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+[net] wlan0 lease=100 seconds
+[net] wlan0 DHCP retry: -110
+[net] wlan0 DHCP retry: -110
+[net] wlan0 lease=100 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+[net] wlan0 lease=100 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+[net] wlan0 lease=100 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+[net] wlan0 DHCP retry: -11
+[net] wlan0 lease=100 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+[net] wlan0 DHCP retry: -110
+[net] wlan0 DHCP retry: -116
+[net] wlan0 DHCP retry: -116
+[net] wlan0 lease=100 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+[net] wlan0 lease=100 seconds
+[net] wlan0 lease=4294967295 seconds
+[net] eth0 lease=20 seconds
+[net] internet=eth0 dns=[REDACTED:ipv4]
+[net] eth0 lease=20 seconds
+[net] internet=wlan0 dns=[REDACTED:ipv4]
+PASS network lifetime: T1, retries, expiry, reconnect, stale ACK, NAK, invalid/infinite leases, long uptime, wired DNS fallback, manual disconnect
+PASS actual IPv4 default-device overlay: pending DHCP, wired preference, carrier loss, missing gateway, bootstrap fallback
+PASS actual SDIO read/dispatch: 1..40 Ethernet frames, 60KB batches, tails, counter wrap, empty FIFO and capacity guard

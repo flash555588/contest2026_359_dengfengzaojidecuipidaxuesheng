@@ -1,0 +1,38 @@
+[
+  {
+    "test": "saved_endpoint_and_token_after_flash",
+    "passed": true,
+    "url": "http://[REDACTED:ipv4]:8123",
+    "token_set": true
+  },
+  {
+    "test": "real_server_device_list_loaded",
+    "passed": true,
+    "counts": [
+      "实体 128",
+      "在线 49",
+      "运行 1"
+    ]
+  },
+  {
+    "test": "invalid_slash_port_preserves_saved_config",
+    "passed": true
+  },
+  {
+    "test": "oversize_token_rejected_without_change",
+    "passed": true
+  },
+  {
+    "test": "open_page_invalidates_old_home_on_remote_change",
+    "passed": true
+  },
+  {
+    "test": "restore_url_without_token_reconnects_open_page",
+    "passed": true,
+    "token_preserved": true
+  },
+  {
+    "test": "reboot_retains_address_and_token_and_syncs",
+    "passed": true
+  }
+]

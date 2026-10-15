@@ -1,0 +1,563 @@
+{
+  "firmware_sha256": "ac08113ccb9ef0a4490d82c22f2aedc519955ea3c51088e022d286aedb793f88",
+  "flash_hash_verified": true,
+  "superseded_by_firmware_sha256": "12ae8a15103f3a6e4c2292eb6e309e1d5b5a4522bfadc9e5e5c7085834e9fb32",
+  "sd_banks_verified": [
+    {
+      "file": "home-white.gbs",
+      "bytes": 125829536,
+      "device_sha256": "212c0c195872404d345c847b92a200ffc04b596acefe0b3361e30df00f435095",
+      "verified": true
+    },
+    {
+      "file": "home-black.gbs",
+      "bytes": 125829536,
+      "device_sha256": "3355910f6798c2472c12e56f416b5fb04ff61c4651293c151abb3a386dd9ecc8",
+      "verified": true
+    },
+    {
+      "file": "mini-white.gbs",
+      "bytes": 31457696,
+      "device_sha256": "1e58de88a62c1372aa3f9c45a475f37343740a31c01d1fad61b8be01c74c8b05",
+      "verified": true
+    },
+    {
+      "file": "app-white.gbs",
+      "bytes": 165151256,
+      "device_sha256": "a97ccefca62f26d754eb148b7d96b7949c5d42d6f2b7bef36d19953d6f9338e3",
+      "verified": true
+    },
+    {
+      "file": "app-black.gbs",
+      "bytes": 165151256,
+      "device_sha256": "c617b656305edd8f526c7b50a2cdc226eab6e38f2e9043b6e9b3db04a3a94c35",
+      "verified": true
+    }
+  ],
+  "app_navigation_tests": {
+    "firmware_sha256": "ac08113ccb9ef0a4490d82c22f2aedc519955ea3c51088e022d286aedb793f88",
+    "method": "real COM4 board; production application entries and native LVGL object audits",
+    "checks": [
+      {
+        "name": "home",
+        "open_command": "desktop ui home",
+        "status": "passed",
+        "label_count": 70,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "settings",
+        "open_command": "desktop ui settings",
+        "status": "passed",
+        "label_count": 49,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "wifi",
+        "open_command": "desktop ui wifi",
+        "status": "passed",
+        "label_count": 13,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "bluetooth",
+        "open_command": "desktop ui bluetooth",
+        "status": "passed",
+        "label_count": 26,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "files",
+        "open_command": "desktop ui files",
+        "status": "passed",
+        "label_count": 21,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "resources",
+        "open_command": "desktop ui resources",
+        "status": "passed",
+        "label_count": 27,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "weather",
+        "open_command": "desktop ui weather",
+        "status": "passed",
+        "label_count": 31,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": [
+          "weather-status"
+        ]
+      },
+      {
+        "name": "environment",
+        "open_command": "desktop ui environment",
+        "status": "passed",
+        "label_count": 5,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "portal",
+        "open_command": "desktop ui portal",
+        "status": "passed",
+        "label_count": 11,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "about",
+        "open_command": "desktop ui about",
+        "status": "passed",
+        "label_count": 3,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": []
+      },
+      {
+        "name": "music",
+        "open_command": "desktop ui music",
+        "status": "passed",
+        "label_count": 31,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": [
+          "music-status"
+        ]
+      },
+      {
+        "name": "chat",
+        "open_command": "desktop ui chat",
+        "status": "passed",
+        "label_count": 22,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "actions": [
+          "chat-status"
+        ]
+      },
+      {
+        "name": "网络直播",
+        "status": "passed",
+        "registered": true,
+        "label_count": 5,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "本地视频",
+        "status": "passed",
+        "registered": true,
+        "label_count": 12,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "ESPClaw AI 助手",
+        "status": "passed",
+        "registered": true,
+        "label_count": 22,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "navigation": "navigation page=chat return=apps"
+      },
+      {
+        "name": "相机",
+        "status": "passed",
+        "registered": true,
+        "label_count": 12,
+        "native_widgets": 20,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "录音机",
+        "status": "passed",
+        "registered": true,
+        "label_count": 19,
+        "native_widgets": 59,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "智能家居",
+        "status": "passed",
+        "registered": true,
+        "label_count": 17,
+        "native_widgets": 137,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "蓝牙鼠标",
+        "status": "passed",
+        "registered": true,
+        "label_count": 26,
+        "native_widgets": 0,
+        "runtime_error": "",
+        "navigation": "navigation page=panel return=home"
+      },
+      {
+        "name": "Grok Ball",
+        "status": "passed",
+        "registered": true,
+        "label_count": 8,
+        "native_widgets": 7,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "2048",
+        "status": "passed",
+        "registered": true,
+        "label_count": 12,
+        "native_widgets": 41,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "你好快应用",
+        "status": "passed",
+        "registered": true,
+        "label_count": 9,
+        "native_widgets": 8,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "ESP-DL 离线识别",
+        "status": "passed",
+        "registered": true,
+        "label_count": 23,
+        "native_widgets": 34,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      },
+      {
+        "name": "大肥鱼桌宠",
+        "status": "passed",
+        "registered": true,
+        "label_count": 24,
+        "native_widgets": 22,
+        "runtime_error": "",
+        "navigation": "navigation page=qapp return=apps"
+      }
+    ]
+  },
+  "grok_playback_tests": {
+    "firmware_sha256": "ac08113ccb9ef0a4490d82c22f2aedc519955ea3c51088e022d286aedb793f88",
+    "method": "actual board SD player counters / COM4",
+    "samples": [
+      {
+        "player": "home-white",
+        "elapsed": 10.499748000002,
+        "frames": 104,
+        "fps": 9.904999624751012,
+        "status": {
+          "id": 2,
+          "frames": 124,
+          "reads": 125,
+          "mean_us": 30160,
+          "max_us": 40000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 98304,
+          "ready": 1,
+          "visible": 1
+        }
+      },
+      {
+        "player": "home-black",
+        "elapsed": 10.505470599993714,
+        "frames": 101,
+        "fps": 9.614038613373534,
+        "status": {
+          "id": 2,
+          "frames": 122,
+          "reads": 123,
+          "mean_us": 30162,
+          "max_us": 40000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 98304,
+          "ready": 1,
+          "visible": 1
+        }
+      },
+      {
+        "player": "app-white",
+        "elapsed": 10.57600439999078,
+        "frames": 97,
+        "fps": 9.171705715259023,
+        "status": {
+          "id": 35,
+          "frames": 124,
+          "reads": 131,
+          "mean_us": 31374,
+          "max_us": 70000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 98304,
+          "ready": 1,
+          "visible": 1
+        }
+      },
+      {
+        "player": "app-white",
+        "elapsed": 5.58643260000099,
+        "frames": 55,
+        "fps": 9.84528122651838,
+        "status": {
+          "id": 1,
+          "frames": 600,
+          "reads": 641,
+          "mean_us": 32184,
+          "max_us": 70000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 98304,
+          "ready": 1,
+          "visible": 1
+        }
+      },
+      {
+        "player": "app-white",
+        "elapsed": 4.57603170000948,
+        "frames": 45,
+        "fps": 9.833847960429727,
+        "status": {
+          "id": 1,
+          "frames": 660,
+          "reads": 703,
+          "mean_us": 32119,
+          "max_us": 70000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 98304,
+          "ready": 1,
+          "visible": 1
+        }
+      },
+      {
+        "player": "mini-white",
+        "elapsed": 5.506993000002694,
+        "frames": 53,
+        "fps": 9.624126996343389,
+        "status": {
+          "id": 34,
+          "frames": 67,
+          "reads": 70,
+          "mean_us": 3857,
+          "max_us": 20000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 24576,
+          "ready": 1,
+          "visible": 1
+        }
+      },
+      {
+        "player": "app-black",
+        "elapsed": 10.53172510000877,
+        "frames": 104,
+        "fps": 9.874925428875217,
+        "status": {
+          "id": 34,
+          "frames": 127,
+          "reads": 128,
+          "mean_us": 30703,
+          "max_us": 70000,
+          "errors": 0,
+          "error": 0,
+          "buffer": 98304,
+          "ready": 1,
+          "visible": 1
+        }
+      }
+    ],
+    "expressions": [
+      {
+        "id": "00",
+        "name": "睡眠",
+        "passed": true
+      },
+      {
+        "id": "01",
+        "name": "唤醒",
+        "passed": true
+      },
+      {
+        "id": "02",
+        "name": "待机放空",
+        "passed": true
+      },
+      {
+        "id": "03",
+        "name": "好奇",
+        "passed": true
+      },
+      {
+        "id": "04",
+        "name": "发呆",
+        "passed": true
+      },
+      {
+        "id": "05",
+        "name": "加载苏醒",
+        "passed": true
+      },
+      {
+        "id": "06",
+        "name": "休眠",
+        "passed": true
+      },
+      {
+        "id": "07",
+        "name": "抖动唤醒",
+        "passed": true
+      },
+      {
+        "id": "10",
+        "name": "开心",
+        "passed": true
+      },
+      {
+        "id": "11",
+        "name": "疑惑",
+        "passed": true
+      },
+      {
+        "id": "12",
+        "name": "失落",
+        "passed": true
+      },
+      {
+        "id": "13",
+        "name": "惊讶",
+        "passed": true
+      },
+      {
+        "id": "14",
+        "name": "害羞",
+        "passed": true
+      },
+      {
+        "id": "15",
+        "name": "疲惫",
+        "passed": true
+      },
+      {
+        "id": "16",
+        "name": "专注",
+        "passed": true
+      },
+      {
+        "id": "17",
+        "name": "慌张",
+        "passed": true
+      },
+      {
+        "id": "18",
+        "name": "无奈",
+        "passed": true
+      },
+      {
+        "id": "19",
+        "name": "满意",
+        "passed": true
+      },
+      {
+        "id": "20",
+        "name": "困惑",
+        "passed": true
+      },
+      {
+        "id": "21",
+        "name": "生气",
+        "passed": true
+      },
+      {
+        "id": "30",
+        "name": "思考中",
+        "passed": true
+      },
+      {
+        "id": "31",
+        "name": "接收任务",
+        "passed": true
+      },
+      {
+        "id": "32",
+        "name": "处理中忙碌",
+        "passed": true
+      },
+      {
+        "id": "33",
+        "name": "任务完成",
+        "passed": true
+      },
+      {
+        "id": "34",
+        "name": "出错",
+        "passed": true
+      },
+      {
+        "id": "35",
+        "name": "等待输入",
+        "passed": true
+      },
+      {
+        "id": "36",
+        "name": "联网加载",
+        "passed": true
+      },
+      {
+        "id": "37",
+        "name": "复述回忆",
+        "passed": true
+      },
+      {
+        "id": "38",
+        "name": "拒绝/受限",
+        "passed": true
+      },
+      {
+        "id": "39",
+        "name": "输出回复",
+        "passed": true
+      },
+      {
+        "id": "40",
+        "name": "检索资料",
+        "passed": true
+      },
+      {
+        "id": "41",
+        "name": "停止终止",
+        "passed": true
+      }
+    ],
+    "entry_cycles": 5,
+    "chat_status": "desktop ui chat-status\nchat loaded=1 configured=1 phase=1 turns=1 storage=0 revision=9 last_state=2 last_error=5 editor=0\nchat-stream text_bytes=0 thinking_bytes=0 thinking_tokens=0 tokens_known=0 rounds=1 rebuilds=3 updates=2 refresh_max_ms=30 draft_bytes=0\nnsh> \u001b[K"
+  },
+  "models_unchanged": true,
+  "test_scope": "App entry/return, 32 expression selectors, player frame counters, SD hashes; backend validation is separate."
+}

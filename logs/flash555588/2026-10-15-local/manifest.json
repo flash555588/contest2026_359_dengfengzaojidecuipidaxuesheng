@@ -1,0 +1,278 @@
+{
+  "exported_at": "2026-10-15T03:47:33.965878+00:00",
+  "scope": "Only the three explicitly project-related Codex threads and listed project verification artifacts; no whole-machine log sweep.",
+  "cutoff_note": "Active session is a point-in-time snapshot. Original source hashes identify exactly the collected bytes.",
+  "redactions": {
+    "jwt": 1,
+    "api-key": 0,
+    "bearer": 6,
+    "ipv4": 3158,
+    "mac": 112,
+    "pairing-code": 0,
+    "secret-value": 13,
+    "cli-secret": 0,
+    "plain-secret": 28,
+    "opaque-value": 9,
+    "email": 36
+  },
+  "sessions": [
+    {
+      "file_path": "logs/flash555588/2026-10-12/codex__01a13068-e466-7580-9273-24720cdd2ff0.jsonl",
+      "events": 2207,
+      "bytes": 5808244,
+      "sha256": "493062b1227a69f15014a3ff3dc68f1fa5a19aa83abeb324f5f730975f8d05da",
+      "source_integrity": [
+        {
+          "source_file": "rollout-2026-10-12T21-59-03-01a13068-e466-7580-9273-24720cdd2ff0.jsonl",
+          "sha256": "868c31c8ac007acfd56482b1585156053bf91ae2da9d3bc1a9ff486bc08143b7",
+          "bytes": 4563010
+        },
+        {
+          "source_file": "rollout-2026-10-13T00-19-57-01a13068-e466-7580-9273-24720cdd2ff0_01a130e9-e63e-7492-9e1f-6c08fe91dec2.jsonl",
+          "sha256": "b4af6b0fd8f21d3def4003024a78024b9f125137e45bb49f1b57a74209ad73ed",
+          "bytes": 4315793
+        },
+        {
+          "source_file": "rollout-2026-10-13T07-32-37-01a13068-e466-7580-9273-24720cdd2ff0_01a13276-036d-71d0-b85b-3f7cda1f51bf.jsonl",
+          "sha256": "0c068a3db15c375b1812b090ca18e2571d5085e90a1c2ca7c8bf629a7348d457",
+          "bytes": 21635164
+        }
+      ]
+    },
+    {
+      "file_path": "logs/flash555588/2026-10-13/codex__01a13476-90fb-7e90-919f-cb755ae031b5.jsonl",
+      "events": 3460,
+      "bytes": 13766279,
+      "sha256": "d6a10c935c4e17880b424f2b7a28286848b05631f029bcb95024d662771ca8ef",
+      "source_integrity": [
+        {
+          "source_file": "rollout-2026-10-13T16-52-28-01a13476-90fb-7e90-919f-cb755ae031b5.jsonl",
+          "sha256": "01366ab4b803f8fdb9f255cdd35cc3763a2c91e4fbd4613f6240155179ad4e85",
+          "bytes": 53030679
+        },
+        {
+          "source_file": "rollout-2026-10-14T08-09-21-01a13476-90fb-7e90-919f-cb755ae031b5_01a137be-029e-7812-bc60-ff20c6858057.jsonl",
+          "sha256": "e792ee05a845cf41675de902d63f91c5ff0d46488af48c69e04e8e39790b2249",
+          "bytes": 17347600
+        },
+        {
+          "source_file": "rollout-2026-10-14T12-26-52-01a13476-90fb-7e90-919f-cb755ae031b5_01a138a9-c69d-7893-a795-4db7ff442a3a.jsonl",
+          "sha256": "8bce5d76ef372b75678eb1333b4b150aea492f7e4d8048f45c4699f8ac837559",
+          "bytes": 7193895
+        },
+        {
+          "source_file": "rollout-2026-10-14T13-22-37-01a13476-90fb-7e90-919f-cb755ae031b5_01a138dc-d0ce-79a3-8227-9d5c1b520572.jsonl",
+          "sha256": "7feeb2c961e4521d1020a8cb2d103fa5a1975439001c8fb13a08dcb7a63f6ab6",
+          "bytes": 21940356
+        },
+        {
+          "source_file": "rollout-2026-10-14T19-28-58-01a13476-90fb-7e90-919f-cb755ae031b5_01a13a2c-3696-7062-bdf9-e671a57d785e.jsonl",
+          "sha256": "9100f39236e9dfa484f00aa922031d713e39b3f3895d546914cb044e6d712c85",
+          "bytes": 42484656
+        },
+        {
+          "source_file": "rollout-2026-10-15T01-29-03-01a13476-90fb-7e90-919f-cb755ae031b5_01a13b75-e1fd-71a2-8c21-21a58329400e.jsonl",
+          "sha256": "a1dc8a1dd08843bee42563235a1a71a3fe38a790eb7d14bb9b5645e83a0e2522",
+          "bytes": 2017674
+        }
+      ]
+    },
+    {
+      "file_path": "logs/flash555588/2026-10-14/codex__01a13cd3-24e8-7e43-9e21-885adf415700.jsonl",
+      "events": 830,
+      "bytes": 4088773,
+      "sha256": "43b33637849f67a1c3895f06d53369fcb6f1f721cf914a677d418a30004078c9",
+      "source_integrity": [
+        {
+          "source_file": "rollout-2026-10-15T07-50-33-01a13cd3-24e8-7e43-9e21-885adf415700.jsonl",
+          "sha256": "9187e42f72cf910cd51469334a1818ad8af39e4363ab32679f08086b22d397dc",
+          "bytes": 14557545
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/ha-template-tests.log",
+      "source": "output/pr-submissions-20261015/ha-template-tests.log",
+      "source_sha256": "60ce10399dac04e70cc4897f5ee1b41eb950c5a2b6d2b6e99df5dc50047f0ef8",
+      "export_sha256": "60ce10399dac04e70cc4897f5ee1b41eb950c5a2b6d2b6e99df5dc50047f0ef8",
+      "bytes": 105
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/frontend-tests.log",
+      "source": "output/pr-submissions-20261015/frontend-tests.log",
+      "source_sha256": "a123c7faa3652857c3c4af85b15a566499731e3011bfb4167071fb69b28e70e8",
+      "export_sha256": "87d4c722d305da297170624d8b91c227bc4870197a8f3f99220ab5cc9d994e17",
+      "bytes": 118569
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/grok-frontend.log",
+      "source": "output/pr-submissions-20261015/grok-frontend.log",
+      "source_sha256": "cf124e2152467ec75acfc388b3fb8728a1618a56802d7047876800f0299b09ad",
+      "export_sha256": "cf124e2152467ec75acfc388b3fb8728a1618a56802d7047876800f0299b09ad",
+      "bytes": 108
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/grok-native-tests.log",
+      "source": "output/pr-submissions-20261015/grok-native-tests.log",
+      "source_sha256": "1aebcfe4227acb84b4ffb18e57febbe99ef7a58a32b1bced564895929ce8e45e",
+      "export_sha256": "1aebcfe4227acb84b4ffb18e57febbe99ef7a58a32b1bced564895929ce8e45e",
+      "bytes": 310
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/grok-offline-svg-tests.log",
+      "source": "output/pr-submissions-20261015/grok-offline-svg-tests.log",
+      "source_sha256": "28f69dacf29bb3bbf7d4465d504573a637076ce7b138834b3108690ab481fcb1",
+      "export_sha256": "28f69dacf29bb3bbf7d4465d504573a637076ce7b138834b3108690ab481fcb1",
+      "bytes": 1200
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/ha-service-tests.log",
+      "source": "output/pr-submissions-20261015/ha-service-tests.log",
+      "source_sha256": "6ae995508f2c51f38d22b95220e778cc0651bda449589aec0807809b19f1bf3f",
+      "export_sha256": "6ae995508f2c51f38d22b95220e778cc0651bda449589aec0807809b19f1bf3f",
+      "bytes": 337
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/media-tests.log",
+      "source": "output/pr-submissions-20261015/media-tests.log",
+      "source_sha256": "2fb3d91964aceaef28c95220cca078d45a7948d1213414dd851e5ed6a8448c10",
+      "export_sha256": "2fb3d91964aceaef28c95220cca078d45a7948d1213414dd851e5ed6a8448c10",
+      "bytes": 16045
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/network-tests.log",
+      "source": "output/pr-submissions-20261015/network-tests.log",
+      "source_sha256": "2be8b4c1af0ff29ca274cc238ab7f1d9825fba7c0c85d8ff5f0e68eda5d5f01c",
+      "export_sha256": "10f78be35ca06dff33814a273214d3e50eb217a2de9c40b6fde8aca8a10f2515",
+      "bytes": 1223
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/runtime-tests.log",
+      "source": "output/pr-submissions-20261015/runtime-tests.log",
+      "source_sha256": "8409d9730155d82bb524ffdc10f24a2e75ec1a149c3afbee7f498175e11b76bb",
+      "export_sha256": "8409d9730155d82bb524ffdc10f24a2e75ec1a149c3afbee7f498175e11b76bb",
+      "bytes": 658
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/pr-submissions-20261015/desktop-build.log",
+      "source": "output/pr-submissions-20261015/desktop-build.log",
+      "source_sha256": "14da62e569709e9791476aa9f230541aee15217f30d4f46d6a70c1d0b3ebb4eb",
+      "export_sha256": "bc2462dac9456b52b6ac70b3a745b026320ac55716e60f5f50c982b7c88c7bf1",
+      "bytes": 194580
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-config-fix-20261014/board-results.json",
+      "source": "output/ha-config-fix-20261014/board-results.json",
+      "source_sha256": "f905b09dc266b8b4c4f2dcd1dddcaa9ad9bef705aafb87c1320200c87d5f84bf",
+      "export_sha256": "76a105ec7a3921c813d2fa408ff577081dba1de3af9dec7bedc4496d4fd20acf",
+      "bytes": 800
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-config-fix-20261014/VALIDATION.json",
+      "source": "output/ha-config-fix-20261014/VALIDATION.json",
+      "source_sha256": "4a6bf5b6156b1d77c6059b8b79135e33bb9b6f1bb854f83e8c58b6b270e7bcd0",
+      "export_sha256": "2120abc96bf53b7c23af06dcf79a533abf332c8821fe0d721daa87987ca2f468",
+      "bytes": 2314
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-config-fix-20261014/native-tests.log",
+      "source": "output/ha-config-fix-20261014/native-tests.log",
+      "source_sha256": "4fac9f4e7f706fe5a96e7142bb05fedebd2fb1ec4ed8515986928e02d4d4130e",
+      "export_sha256": "6a1cff6749f2683eaa16274325b386c918c1a137c4a58bfb2ff581791b04f0c7",
+      "bytes": 367
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/integrated-flash-20261014/FLASH-VALIDATION.json",
+      "source": "output/integrated-flash-20261014/FLASH-VALIDATION.json",
+      "source_sha256": "9d0a462971711534716f4c17f81afcf3e8bb5dac85a4753c9f3d313fb4c9e206",
+      "export_sha256": "9d0a462971711534716f4c17f81afcf3e8bb5dac85a4753c9f3d313fb4c9e206",
+      "bytes": 14160
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/integrated-flash-20261014/final-native-tests.log",
+      "source": "output/integrated-flash-20261014/final-native-tests.log",
+      "source_sha256": "7bc1d1e2f83509ee0d8aa5bb5c0ecfbfd705930beec7e237c09430d4fcf2973e",
+      "export_sha256": "23253292f5ff1628e1789f154255c9cef3392d890805376fc85959a563a9d2c1",
+      "bytes": 596
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/integrated-flash-20261014/sd-verified.json",
+      "source": "output/integrated-flash-20261014/sd-verified.json",
+      "source_sha256": "25ac70105c357fcd8d62e41fe08a9724646495dc32bd45362a5af25e91246392",
+      "export_sha256": "25ac70105c357fcd8d62e41fe08a9724646495dc32bd45362a5af25e91246392",
+      "bytes": 895
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/integrated-flash-20261014/flash-sd-final.log",
+      "source": "output/integrated-flash-20261014/flash-sd-final.log",
+      "source_sha256": "c8d0d1d0155514510887182ec4ae892ca8d819d3bf124d106465de6d4a00c6bd",
+      "export_sha256": "e99e3d006735e8ed7e567c0e330bd6187fd70e45d45b733da202f2975b731437",
+      "bytes": 24818
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/integrated-flash-20261014/boot-sd.log",
+      "source": "output/integrated-flash-20261014/boot-sd.log",
+      "source_sha256": "25e0c3212f35152e01e4614c52ee4c330e65dfca087efae53534c53f3448d6ea",
+      "export_sha256": "24294ce8e264ea11d8e8d0b6ac90451acfeed479788f626579ea3280eb9fe487",
+      "bytes": 1812
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-unified-firmware-20261015/flash-validation.json",
+      "source": "output/ha-unified-firmware-20261015/flash-validation.json",
+      "source_sha256": "998366162cd91a29b6faddae932b84dd898fe6c7c499649d9c554f41c45d73a2",
+      "export_sha256": "998366162cd91a29b6faddae932b84dd898fe6c7c499649d9c554f41c45d73a2",
+      "bytes": 543
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-unified-firmware-20261015/flash.log",
+      "source": "output/ha-unified-firmware-20261015/flash.log",
+      "source_sha256": "d4a09c3bfa8e3fa0d6b51e929a20bd51df5688aa982074e6c5a81a9bdd13bcd5",
+      "export_sha256": "f63ab4e06e259653514b0fa7f4ec187d69590d758e95e7050f5991078e141b93",
+      "bytes": 24983
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-unified-firmware-20261015/ui-validation.json",
+      "source": "output/ha-unified-firmware-20261015/ui-validation.json",
+      "source_sha256": "5ef652d7e9065b4286a74a5ceaddf957cbfc2214e6c479a1e7fb8ce9e845f11e",
+      "export_sha256": "5ef652d7e9065b4286a74a5ceaddf957cbfc2214e6c479a1e7fb8ce9e845f11e",
+      "bytes": 490
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-unified-firmware-20261015/native-render.log",
+      "source": "output/ha-unified-firmware-20261015/native-render.log",
+      "source_sha256": "dd8a8169a2fc52a59329932fb4ca2d48bd83200110054fa9fb0365daef041f12",
+      "export_sha256": "dd8a8169a2fc52a59329932fb4ca2d48bd83200110054fa9fb0365daef041f12",
+      "bytes": 12415
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-scene-sync-20261015/validation.json",
+      "source": "output/ha-scene-sync-20261015/validation.json",
+      "source_sha256": "99ba66e26577cec0363b2f17a02dc310aadef45dea02aef16dada78da6d52a51",
+      "export_sha256": "99ba66e26577cec0363b2f17a02dc310aadef45dea02aef16dada78da6d52a51",
+      "bytes": 272
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-scene-sync-20261015/native-render.log",
+      "source": "output/ha-scene-sync-20261015/native-render.log",
+      "source_sha256": "b3423edbfe65e11213d3d8964623beb2d062a4f0f23deb7991a6a30e07b351f1",
+      "export_sha256": "b3423edbfe65e11213d3d8964623beb2d062a4f0f23deb7991a6a30e07b351f1",
+      "bytes": 315
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-scene-sync-20261015/native-service-tests.log",
+      "source": "output/ha-scene-sync-20261015/native-service-tests.log",
+      "source_sha256": "6ae995508f2c51f38d22b95220e778cc0651bda449589aec0807809b19f1bf3f",
+      "export_sha256": "6ae995508f2c51f38d22b95220e778cc0651bda449589aec0807809b19f1bf3f",
+      "bytes": 337
+    },
+    {
+      "file": "logs/flash555588/2026-10-15-local/evidence/ha-scene-sync-20261015/build.log",
+      "source": "output/ha-scene-sync-20261015/build.log",
+      "source_sha256": "931e720f552baec5fdb515f0bc3c80aa4e14ad621fd26c9bb63e4eb300126d05",
+      "export_sha256": "ae84278e4a60439bc1c857f7a4e01b97f8132156ac5bc3511800c1ff13eb2e08",
+      "bytes": 189772
+    }
+  ]
+}

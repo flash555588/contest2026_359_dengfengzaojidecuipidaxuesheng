@@ -1,0 +1,10 @@
+CAPTURE light ha-scenes
+CAPTURE light ha-scene-detail
+CAPTURE light ha-logs
+CAPTURE light ha-devices
+CAPTURE dark ha-scenes
+CAPTURE dark ha-scene-detail
+CAPTURE dark ha-logs
+CAPTURE dark ha-devices
+HA_NAVIGATION_NATIVE_OK: 8 captures, 252 icon checks
+ALL_UI_RENDER_OK /home/flash/vela-p4/out/ha-scene-sync-20261015

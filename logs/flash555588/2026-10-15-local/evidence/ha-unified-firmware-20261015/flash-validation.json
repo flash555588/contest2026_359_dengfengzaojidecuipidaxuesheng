@@ -1,0 +1,17 @@
+{
+  "port": "COM4",
+  "chip": "ESP32-P4 v3.2",
+  "firmware_sha256": "9772990f6881209ba726938a21ad79dc442bf486ebeb2c50037ed7893198b807",
+  "bytes": 8181224,
+  "offset": "0x2000",
+  "end": "0x7cf5e8",
+  "model_and_data_regions_written": false,
+  "boot_observation": "passive serial; no UI or NSH commands",
+  "flash_exit_code": 0,
+  "flash_hash_verified": true,
+  "boot_bytes": 0,
+  "boot_fault_detected": false,
+  "console_prompt_seen": false,
+  "startup_observed": false,
+  "manual_touchscreen_verification": "pending user"
+}

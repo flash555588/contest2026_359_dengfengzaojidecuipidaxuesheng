@@ -1,0 +1,32 @@
+[
+  {
+    "file": "home-white.gbs",
+    "bytes": 125829536,
+    "device_sha256": "212c0c195872404d345c847b92a200ffc04b596acefe0b3361e30df00f435095",
+    "verified": true
+  },
+  {
+    "file": "home-black.gbs",
+    "bytes": 125829536,
+    "device_sha256": "3355910f6798c2472c12e56f416b5fb04ff61c4651293c151abb3a386dd9ecc8",
+    "verified": true
+  },
+  {
+    "file": "mini-white.gbs",
+    "bytes": 31457696,
+    "device_sha256": "1e58de88a62c1372aa3f9c45a475f37343740a31c01d1fad61b8be01c74c8b05",
+    "verified": true
+  },
+  {
+    "file": "app-white.gbs",
+    "bytes": 165151256,
+    "device_sha256": "a97ccefca62f26d754eb148b7d96b7949c5d42d6f2b7bef36d19953d6f9338e3",
+    "verified": true
+  },
+  {
+    "file": "app-black.gbs",
+    "bytes": 165151256,
+    "device_sha256": "c617b656305edd8f526c7b50a2cdc226eab6e38f2e9043b6e9b3db04a3a94c35",
+    "verified": true
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "frontendTests": 62,
+  "frontendFailures": 0,
+  "categories": 59,
+  "nativeCaptures": 236,
+  "nativeMissingGlyphCheck": true,
+  "cameraGlyph": "U+E002, built-in 32px icon font",
+  "cameraLayering": "icon and caption brought above preview panel",
+  "firmwareResourceMatchesNativeRender": true,
+  "firmwareSHA256": "9772990f6881209ba726938a21ad79dc442bf486ebeb2c50037ed7893198b807",
+  "physicalTouchscreenVerification": "pending user",
+  "automaticDeviceUICommands": false
+}

@@ -4,6 +4,9 @@
 
 ## 内容分类
 
+[2026-10-15 本机日志归集](flash555588/2026-10-15-local/README.md)包含本项目三个 Codex
+会话及编译、主机测试和历史烧录记录，附来源校验值、脱敏说明与验证限制。
+
 [flash555588](flash555588/README.md)按日期保存真实 AI Coding JSONL，会话入口是
 [manifest.json](flash555588/manifest.json)。日志清单描述已收录的会话，不保证本机所有
 AI 对话都被自动采集，也不能用它推断当前对话已上传。
