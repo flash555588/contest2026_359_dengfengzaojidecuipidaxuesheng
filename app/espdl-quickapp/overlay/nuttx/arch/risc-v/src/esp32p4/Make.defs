@@ -26,6 +26,11 @@ CMN_CSRCS := $(filter-out riscv_mtimer.c,$(CMN_CSRCS))
 include common/espressif/Make.defs
 
 CHIP_CSRCS += esp_chip_rev.c esp_atomic64.c
+ifeq ($(CONFIG_ESP32P4_PPA),y)
+CHIP_CSRCS += esp32p4_ppa.c
+INCLUDES += -I$(ARCH_SRCDIR)/chip/$(ESP_HAL_3RDPARTY_REPO)/components/esp_hal_ppa/include
+INCLUDES += -I$(ARCH_SRCDIR)/chip/$(ESP_HAL_3RDPARTY_REPO)/components/esp_hal_ppa/esp32p4/include
+endif
 ifeq ($(CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS),y)
 CHIP_CSRCS += esp32p4_extctx.c
 endif

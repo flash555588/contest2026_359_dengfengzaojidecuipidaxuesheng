@@ -186,6 +186,12 @@ static struct esp_ldo_config_t g_sdcard_ldo =
 
 int esp_bringup(void)
 {
+#ifdef CONFIG_ESP32P4_PPA
+  extern int esp32p4_ppa_register(const char *path);
+  int ppa_ret = esp32p4_ppa_register("/dev/ppa0");
+  if (ppa_ret < 0)
+    syslog(LOG_ERR, "PPA register failed: %d\n", ppa_ret);
+#endif
 #ifdef CONFIG_ESP32P4_CAMERA_USB
   extern int camera_usb_initialize(void);
   int usb_camera_ret = camera_usb_initialize();

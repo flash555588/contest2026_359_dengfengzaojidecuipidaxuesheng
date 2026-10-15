@@ -29,6 +29,11 @@
 #endif
 
 #include "qpk_runtime.h"
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+#include "../bilibili_live/bili_live.h"
+#include "../bilibili_live/local_video_ui.h"
+#include "../bilibili_live/bili_api.h"
+#endif
 #include "qpk_security.h"
 #include "qpk_storage.h"
 #include "qpk_limits.h"
@@ -469,6 +474,9 @@ static void panel_hide(lv_event_t *e)
   chat_qpk_preview_finish();
   g_camera_launch_pending = false;
   qpk_runtime_stop();
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  bili_live_stop();
+#endif
   desktop_transients_reset();
   lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
   g_desktop.current_card = NULL;
@@ -489,6 +497,9 @@ static lv_obj_t *panel_card(const char *title)
   chat_qpk_preview_finish();
   g_camera_launch_pending = false;
   qpk_runtime_stop();
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  bili_live_stop();
+#endif
   desktop_transients_reset();
   g_desktop.apps_page = false;
   g_desktop.chat_page = false;
@@ -899,6 +910,9 @@ static lv_obj_t *qapp_page_prepare(const char *title)
   chat_qpk_preview_finish();
   g_camera_launch_pending = false;
   qpk_runtime_stop();
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  bili_live_stop();
+#endif
   desktop_transients_reset();
   lv_obj_remove_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
 
@@ -1114,6 +1128,9 @@ static void launch_builtin_camera_qapp(lv_event_t *e)
     {
       /* The old page/JS may retire now; its hardware has a separate lifetime. */
       qpk_runtime_stop();
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  bili_live_stop();
+#endif
       g_camera_launch_pending = true;
       return;
     }
@@ -1345,6 +1362,20 @@ static void about_clicked(lv_event_t *e)
   lv_obj_set_pos(label, 24, 82);
 }
 
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+static void launch_local_video(lv_event_t *e)
+{
+  LV_UNUSED(e);
+  lv_obj_t *card = qapp_page_prepare("本地视频");
+  if (card) { local_video_show(card, zh_font(18)); qapp_page_commit(card); }
+}
+static void launch_bilibili(lv_event_t *e)
+{
+  LV_UNUSED(e);
+  lv_obj_t *card = qapp_page_prepare("网络直播");
+  if (card) { bili_live_show(card, zh_font(18)); qapp_page_commit(card); }
+}
+#endif
 #include "glass_ui.inc"
 #include "glass_ui_probe.inc"
 
