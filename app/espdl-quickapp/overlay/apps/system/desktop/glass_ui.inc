@@ -1122,10 +1122,22 @@ static void glass_apps_render(void)
   if (card == NULL) return;
   g_desktop.apps_page = true;
   lv_obj_t *grid = glass_box(card, 20, 80, 880, 336, theme_card(), 0);
-  const char *names[] = {"ESPClaw AI 助手", "相机", "录音机", "智能家居", "蓝牙鼠标", "OuO", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
-  const char *symbols[] = {LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_GPS,
+  const char *names[] = {
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+"网络直播", "本地视频",
+#endif
+"ESPClaw AI 助手", "相机", "录音机", "智能家居", "蓝牙鼠标", "OuO", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
+  const char *symbols[] = {
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+LV_SYMBOL_VIDEO, LV_SYMBOL_VIDEO,
+#endif
+LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_GPS,
                            LV_SYMBOL_EYE_OPEN, LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, LV_SYMBOL_PLAY};
-  lv_event_cb_t callbacks[] = {glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass_homeassistant,
+  lv_event_cb_t callbacks[] = {
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+launch_bilibili, launch_local_video,
+#endif
+glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass_homeassistant,
     glass_mouse_open, launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp, launch_builtin_dafeiyu_qapp};
   const int builtin_count=sizeof(names)/sizeof(names[0]);
   const int total = builtin_count + g_desktop.nqpk;

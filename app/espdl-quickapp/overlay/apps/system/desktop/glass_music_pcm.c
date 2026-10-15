@@ -83,11 +83,16 @@ int music_pcm_volume(struct music_pcm *pcm, unsigned volume)
   return ioctl(pcm->fd, AUDIOIOC_CONFIGURE, (unsigned long)&caps) < 0 ? -errno : 0;
 }
 
-int music_pcm_open(struct music_pcm *pcm, unsigned rate, unsigned volume)
+static int pcm_open(struct music_pcm *pcm, unsigned rate, unsigned volume, bool nonblocking)
 {
   memset(pcm, 0, sizeof(*pcm)); pcm->fd = -1; pcm->mq = (mqd_t)-1;
   if (rate < 8000 || rate > 48000) return -EINVAL;
-  int ret = music_pcm_session_lock();
+  int ret;
+  if (nonblocking) {
+    ret = pthread_mutex_trylock(&g_pcm_session_lock);
+    if (!ret) atomic_store(&g_pcm_session_active, true);
+    else ret = -ret;
+  } else ret = music_pcm_session_lock();
   if (ret) return ret;
   pcm->session_locked = true;
   pcm->fd = open("/dev/audio/pcm0", O_RDWR);
@@ -129,6 +134,11 @@ fail:
   music_pcm_close(pcm);
   return ret;
 }
+
+int music_pcm_open(struct music_pcm *pcm, unsigned rate, unsigned volume)
+{ return pcm_open(pcm, rate, volume, false); }
+int music_pcm_try_open(struct music_pcm *pcm, unsigned rate, unsigned volume)
+{ return pcm_open(pcm, rate, volume, true); }
 
 int music_pcm_write(struct music_pcm *pcm, const int16_t *samples, unsigned frames, unsigned channels)
 {

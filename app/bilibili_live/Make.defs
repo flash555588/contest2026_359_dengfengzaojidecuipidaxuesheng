@@ -1,0 +1,3 @@
+ifeq ($(CONFIG_SYSTEM_BILIBILI_LIVE),y)
+CONFIGURED_APPS += $(APPDIR)/system/bilibili_live
+endif

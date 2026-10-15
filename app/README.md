@@ -20,3 +20,5 @@
 
 固件选择见 [firmware](../firmware/README.md)，第三方来源见
 [THIRD_PARTY.md](../THIRD_PARTY.md)。不要提交服务令牌、私有配置和临时构建产物。
+
+[网络直播与本地视频](bilibili_live/README.md)：B站、虎牙、网易CC直播，单线程 H.264＋AAC；SD 卡 MP4 H.264/MJPEG＋AAC、全屏显示。
