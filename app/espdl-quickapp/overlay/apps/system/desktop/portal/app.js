@@ -3,24 +3,26 @@ const $=id=>document.getElementById(id);
 const sessionKey='device-space-session-v1';
 let token='',path='data',pack=null,busy=false,connectionAttempt=0,connecting=false;
 let pairBlockedUntil=0,pairTimer=0;
+let activeRequests=0,loadedToken='',connectionInterrupted=false;
 try{token=sessionStorage.getItem(sessionKey)||'';}catch{}
 if(!/^[0-9a-f]{32}$/.test(token))token='';
 const say=(message,error=false)=>{ $('status').textContent=message; $('status').classList.toggle('error',error); };
 function remember(){try{if(token)sessionStorage.setItem(sessionKey,token);else sessionStorage.removeItem(sessionKey);}catch{}}
 function connectionView(connected){
+  if(connected)connectionInterrupted=false;
   $('workspace').hidden=!connected;$('connect').hidden=connected;$('disconnect').hidden=!connected;
   $('connection-badge').textContent=connected?'已连接设备':'等待连接';
   $('connection-badge').classList.toggle('offline',!connected);
   $('retry-connection').hidden=true;
 }
-function forget(){token='';remember();connectionView(false);$('pair-code').value='';}
+function forget(){token='';loadedToken='';remember();connectionView(false);$('pair-code').value='';}
 function pairButton(){
   const seconds=Math.max(0,Math.ceil((pairBlockedUntil-Date.now())/1000));
   $('pair-button').disabled=connecting||seconds>0;
   $('pair-button').textContent=connecting?'正在连接…':seconds?seconds+' 秒后重试':'连接设备';
   if(!seconds&&pairTimer){clearInterval(pairTimer);pairTimer=0;}
 }
-async function request(url,method='GET',body,authenticate=true){
+async function exchange(url,method,body,authenticate,attempt){
   const requestToken=token,headers=authenticate?{Authorization:'Bearer '+requestToken}:{};
   if(body!==undefined&&!(body instanceof Blob)&&!(body instanceof Uint8Array)){headers['Content-Type']='application/json';body=JSON.stringify(body);}
   const controller=new AbortController();
@@ -31,18 +33,46 @@ async function request(url,method='GET',body,authenticate=true){
     const r=new Response(await response.arrayBuffer(),{status:response.status,headers:response.headers});
     if(!r.ok){
       let data;try{data=await r.json();}catch{}
-      if(authenticate&&r.status===401&&token===requestToken)forget();
+      if(authenticate&&r.status===401&&token===requestToken&&attempt===connectionAttempt)forget();
       const error=Error(data?.error||'连接失败，请检查设备网络');
       error.status=r.status;error.retryAfter=Number(data?.retry_after)||0;throw error;
     }
     return r;
-  }catch(e){
-    if(e.name==='AbortError'||e instanceof TypeError){
-      $('retry-connection').hidden=!token;$('connection-badge').textContent='连接中断';
-      throw Error('暂时无法连接设备，请检查 Wi-Fi 后重试。');
-    }
-    throw e;
   }finally{clearTimeout(timer);}
+}
+async function request(url,method='GET',body,authenticate=true){
+  const attempt=connectionAttempt,requestToken=token;
+  // Reads and the code exchange can be repeated; configuration writes cannot.
+  const retries=method==='GET'||(!authenticate&&url==='pair')?2:0;
+  activeRequests++;
+  try{
+    for(let retry=0;;retry++){
+      try{
+        const response=await exchange(url,method,body,authenticate,attempt);
+        if(authenticate&&attempt===connectionAttempt&&token===requestToken&&
+            loadedToken===token&&connectionInterrupted&&!connecting)connectionView(true);
+        return response;
+      }catch(e){
+        const network=e.name==='AbortError'||e instanceof TypeError;
+        const current=attempt===connectionAttempt&&token===requestToken;
+        if(network&&current&&retry<retries){
+          await new Promise(resolve=>setTimeout(resolve,250*(retry+1)));
+          if(attempt===connectionAttempt&&token===requestToken)continue;
+        }
+        if(network){
+          if(current){
+            connectionInterrupted=true;
+            $('retry-connection').hidden=!token;$('connection-badge').textContent='连接中断';
+            $('connection-badge').classList.add('offline');
+          }
+          throw Error(method==='POST'&&url.startsWith('config?')?
+            '保存回执未收到，配置可能已保存。请恢复连接后核对，再决定是否重新提交。':
+            '暂时无法连接设备，已保留填写内容，请检查 Wi-Fi 后重试。');
+        }
+        throw e;
+      }
+    }
+  }finally{activeRequests--;}
 }
 const api=(url,method='GET',body)=>request(url,method,body,true);
 const run=fn=>Promise.resolve().then(fn).catch(e=>say(e.message,true));
@@ -57,8 +87,13 @@ async function connect(code=''){
       token=data.token;remember();
     }
     if(!token){connectionView(false);say('请输入设备屏幕上的连接令牌。');return;}
-    for(const id of ['ai','homeassistant','music','voice','desktop']){
-      await loadConfig(id,attempt);if(attempt!==connectionAttempt)return;
+    if(!code&&loadedToken===token){
+      await api('session');if(attempt!==connectionAttempt)return;
+    }else{
+      for(const id of ['ai','homeassistant','music','voice','desktop']){
+        await loadConfig(id,attempt);if(attempt!==connectionAttempt)return;
+      }
+      loadedToken=token;
     }
     connectionView(true);$('pair-code').value='';say('已连接设备，可以开始配置。');
   }catch(e){
@@ -79,11 +114,47 @@ $('pair-code').addEventListener('input',e=>{e.target.value=e.target.value.replac
 $('pair-form').onsubmit=e=>{e.preventDefault();if(!connecting&&Date.now()>=pairBlockedUntil)connect($('pair-code').value);};
 $('retry-connection').onclick=()=>connect();
 $('disconnect').onclick=()=>{connectionAttempt++;connecting=false;forget();pairButton();say('已断开此网页，输入令牌即可重新连接。');};
+async function keepSession(){
+  if(document.hidden||!token||loadedToken!==token||connecting||busy||activeRequests)return;
+  try{await api('session');}catch(e){if(e.status===401)say(e.message,true);}
+}
+setInterval(keepSession,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)keepSession();});
+window.addEventListener('online',keepSession);
 window.addEventListener('hashchange',()=>{const code=scannedCode();if(code)connect(code);});
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));for(const id of ['config','files','install'])$(id).hidden=id!==b.dataset.tab;if(b.dataset.tab==='files')run(list);});
 async function loadConfig(id,attempt){const data=await(await api('config?section='+id)).json();if(attempt!==undefined&&attempt!==connectionAttempt)return;const form=$(id);for(const [key,value]of Object.entries(data)){if(key.endsWith('_set')){form.querySelector('.saved').textContent=value?'已保存密钥，留空即可保留':'未设置自定义密钥';continue;}const el=form.elements.namedItem(key);if(el)el.value=id==='ai'&&key==='timeout_ms'?Math.max(300000,value):value;}}
+function validateHomeAssistant(data){
+  data.url=String(data.url||'').trim();
+  const match=/^http:\/\/([a-zA-Z0-9._-]+)(?::([0-9]{1,5}))?\/?$/.exec(data.url);
+  if(!match||data.url.length>127||(match[2]&&(Number(match[2])<1||Number(match[2])>65535)))
+    throw Error('Home Assistant 地址应为 http://主机:端口，例如 http://192.168.1.10:8123；端口前用冒号，不是 /8123。');
+  if('token' in data){
+    data.token=data.token.trim();
+    if(data.token.length>511||/[^\x21-\x7e]/.test(data.token))throw Error('长期访问令牌格式不正确（最多 511 字符），请重新复制完整令牌。');
+    if(!data.token)delete data.token;
+  }
+}
 for(const id of ['ai','homeassistant','music','voice','desktop']){
-  $(id).onsubmit=e=>{e.preventDefault();run(async()=>{const form=e.target,button=form.querySelector('button');button.disabled=true;try{const data=Object.fromEntries(new FormData(form));for(const key of ['api_key','token','secret_id','secret_key'])if(data[key]==='')delete data[key];for(const key of ['max_tokens','timeout_ms','light','palette','widget','reduced_motion'])if(key in data)data[key]=Number(data[key]);await api('config?section='+id,'POST',data);form.querySelectorAll('input[type=password]').forEach(x=>x.value='');say(id==='desktop'?'外观已提交，设备正在应用和保存。':id==='voice'?'语音输入配置已保存。':id==='homeassistant'?'智能家居配置已保存并应用。':'已保存，下次使用时生效。');if(id!=='desktop')await loadConfig(id);}finally{button.disabled=false;}});};
+  $(id).onsubmit=e=>{
+    e.preventDefault();run(async()=>{
+      const form=e.target,button=form.querySelector('button');button.disabled=true;
+      try{
+        const data=Object.fromEntries(new FormData(form));
+        if(id==='homeassistant')validateHomeAssistant(data);
+        for(const key of ['api_key','token','secret_id','secret_key'])if(data[key]==='')delete data[key];
+        for(const key of ['max_tokens','timeout_ms','light','palette','widget','reduced_motion'])if(key in data)data[key]=Number(data[key]);
+        await api('config?section='+id,'POST',data);
+        form.querySelectorAll('input[type=password]').forEach(x=>x.value='');
+        say(id==='desktop'?'外观已提交，设备正在应用和保存。':id==='voice'?'语音输入配置已保存。':id==='homeassistant'?'智能家居配置已保存并应用。':'已保存，下次使用时生效。');
+        if(id!=='desktop'){
+          try{await loadConfig(id);}catch(e){
+            say('配置已保存，暂时无法读取最新配置。请恢复连接后核对。',true);
+          }
+        }
+      }finally{button.disabled=false;}
+    });
+  };
 }
 const size=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(2)+' MB';
 /* The manager browses the whole volume: show the real path a shortcut points at. */

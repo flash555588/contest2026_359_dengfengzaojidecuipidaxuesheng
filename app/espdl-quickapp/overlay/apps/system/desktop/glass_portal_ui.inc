@@ -53,7 +53,7 @@ static void glass_portal_show(lv_event_cb_t back)
     back==glass_homeassistant?"返回家居":"返回聊天";
   glass_button(card,back_text,760,14,160,theme_surface(),portal_go_back,NULL);
   struct in_addr address; char code[PORTAL_CODE_LENGTH+1],url[96],display[64],ip[INET_ADDRSTRLEN];
-  if(netlib_get_ipv4addr("eth0",&address)<0||!address.s_addr) {
+  if(netlib_get_ipv4addr(C6NET_IFNAME,&address)<0||!address.s_addr) {
     glass_text(card,"请先连接 Wi-Fi，再打开扫码配置",52,160,800,28,theme_primary()); return;
   }
   int ret=portal_service_start(); if(!ret) ret=portal_session_open(code,sizeof(code));

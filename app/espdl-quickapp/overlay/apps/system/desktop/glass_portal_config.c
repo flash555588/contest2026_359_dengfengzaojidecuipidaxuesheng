@@ -1,6 +1,11 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_portal.h"
 #include "qpk_storage.h"
+#include <nuttx/config.h>
+#include "../hass/hass_config_validate.h"
+#ifdef CONFIG_SYSTEM_HASS
+#include "hass_service.h"
+#endif
 #include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -71,7 +76,7 @@ struct field { const char *section,*key; unsigned limit; bool secret; };
 static const struct field fields[]={
  {"ai","api_key",2048,true},{"ai","base_url",1024,false},{"ai","model",128,false},
  {"ai","backend",32,false},{"ai","system_prompt",1024,false},
- {"homeassistant","url",1024,false},{"homeassistant","token",2048,true},{"music","api_key",128,true},
+ {"homeassistant","url",HASS_URL_CAPACITY-1,false},{"homeassistant","token",HASS_TOKEN_CAPACITY-1,true},{"music","api_key",128,true},
  {"voice","app_id",32,false},{"voice","secret_id",128,true},{"voice","secret_key",128,true}
 };
 cJSON *portal_config_get(const char *section)
@@ -89,6 +94,9 @@ int portal_config_save(const char *section,const cJSON *patch)
 {
   if(!cJSON_IsObject(patch)) return -EINVAL;
   pthread_mutex_lock(&config_lock); cJSON *o=defaults(section); int ret=-EINVAL;
+#ifdef CONFIG_SYSTEM_HASS
+  int ha_client=0;
+#endif
   if(!o) goto done;
   const char *desktop_keys[]={"light","palette","widget","reduced_motion"};
   for(const cJSON *v=patch->child;v;v=v->next) {
@@ -119,10 +127,30 @@ int portal_config_save(const char *section,const cJSON *patch)
     for(unsigned i=0;i<4;i++) desktop_pending[i]=number(o,desktop_keys[i],0);
     desktop_dirty=true; ret=0; goto done;
   }
+  if(!strcmp(section,"homeassistant")) {
+    const char *url=string(o,"url",""),*token=string(o,"token","");
+    if((*url&&!hass_config_url_valid(url))||!hass_config_token_valid(token)) goto done;
+#ifdef CONFIG_SYSTEM_HASS
+    /* Reserve the apply handle before writing; a failed save keeps the active
+     * connection. Hold config_lock across save/apply so concurrent writers
+     * cannot apply an older URL with a newer token. */
+    ha_client=hass_open(HASS_READ|HASS_CONTROL|HASS_CONFIGURE);
+    if(ha_client<0) { ret=ha_client; goto done; }
+#endif
+  }
   char *data=cJSON_PrintUnformatted(o);
   if(!data) { ret=-ENOMEM; goto done; }
   ret=qpk_storage_write(PORTAL_CONFIG_ROOT,"portal",section,data,strlen(data)); free(data);
+#ifdef CONFIG_SYSTEM_HASS
+  if(!ret&&ha_client>0) {
+    const char *url=string(o,"url",""),*token=string(o,"token","");
+    ret=*url&&*token?hass_configure(ha_client,url,token,true):hass_clear_configuration(ha_client);
+  }
+#endif
 done:
+#ifdef CONFIG_SYSTEM_HASS
+  if(ha_client>0) hass_close(ha_client);
+#endif
   cJSON_Delete(o); pthread_mutex_unlock(&config_lock); return ret;
 }
 int portal_ai_load(struct portal_ai_config *out)
@@ -188,6 +216,41 @@ int portal_ha_save(const char *url,const char *token)
      !cJSON_AddStringToObject(patch,"token",token))
     { cJSON_Delete(patch); return -ENOMEM; }
   int ret=portal_config_save("homeassistant",patch); cJSON_Delete(patch); return ret;
+}
+int portal_ha_load(char *url,size_t url_size,char *token,size_t token_size)
+{
+  if(!url||!url_size||!token||!token_size) return -EINVAL;
+  url[0]=token[0]='\0';
+  pthread_mutex_lock(&config_lock);
+  cJSON *o=defaults("homeassistant"); int ret=-EIO;
+  if(o) {
+    const char *u=string(o,"url",""),*t=string(o,"token","");
+    ret=strlen(u)>=url_size||strlen(t)>=token_size?-ENOSPC:0;
+    if(!ret) { strcpy(url,u); strcpy(token,t); }
+  }
+  cJSON_Delete(o); pthread_mutex_unlock(&config_lock); return ret;
+}
+int portal_ha_apply(void)
+{
+#ifdef CONFIG_SYSTEM_HASS
+  pthread_mutex_lock(&config_lock);
+  cJSON *o=defaults("homeassistant"); int ret=-EIO;
+  if(o) {
+    const char *url=string(o,"url",""),*token=string(o,"token","");
+    if((*url&&!hass_config_url_valid(url))||!hass_config_token_valid(token)) ret=-EINVAL;
+    else {
+      int client=hass_open(HASS_READ|HASS_CONTROL|HASS_CONFIGURE);
+      ret=client;
+      if(client>0) {
+        ret=*url&&*token?hass_configure(client,url,token,true):hass_clear_configuration(client);
+        hass_close(client);
+      }
+    }
+  }
+  cJSON_Delete(o); pthread_mutex_unlock(&config_lock); return ret;
+#else
+  return -ENOSYS;
+#endif
 }
 void portal_desktop_publish(const uint8_t values[4])
 { pthread_mutex_lock(&config_lock); memcpy(desktop_values,values,4); pthread_mutex_unlock(&config_lock); }

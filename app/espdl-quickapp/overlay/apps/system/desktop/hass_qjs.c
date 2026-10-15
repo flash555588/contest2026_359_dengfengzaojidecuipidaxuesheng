@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "hass_qjs.h"
 #include "hass_service.h"
+#include "../hass/hass_config_validate.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,21 +60,19 @@ static JSValue invoke(JSContext *context, JSValueConst self, int argc,
     }
   int ret = attach(binding);
   if (ret < 0) return JS_ThrowInternalError(context, "HA client capacity unavailable");
-  const char *a = NULL, *b = NULL;
-  if (method <= 3 && argc > 0) a = string_arg(context, argv[0]);
-  if (method == 0 && argc > 1) b = string_arg(context, argv[1]);
+  const char *a = NULL, *b = NULL, *c = NULL;
+  if ((method <= 3 || method == 7) && argc > 0) a = string_arg(context, argv[0]);
+  if ((method == 0 || method == 7) && argc > 1) b = string_arg(context, argv[1]);
+  if (method == 7 && argc > 2) c = string_arg(context, argv[2]);
   ret = -EINVAL;
   if (method == 0 && a && b && argc == 3 && JS_IsBool(argv[2]))
     {
-      ret = hass_configure(binding->client, a, b,
-                           JS_ToBool(context, argv[2]));
-      if (ret == 0)
+      if (!(binding->grants & HASS_CONFIGURE) || !JS_ToBool(context, argv[2])) ret=-EACCES;
+      else if (!hass_config_url_valid(a) || !hass_config_token_valid(b) || !*b) ret=-EINVAL;
+      else
         {
           ret = hass_config_persist(a, b);
-          if (ret < 0)
-            {
-              hass_clear_configuration(binding->client);
-            }
+          if (ret == 0) ret = hass_configure(binding->client, a, b, true);
         }
     }
   else if (method == 1 && a && argc == 1) ret = hass_get(binding->client, a);
@@ -84,8 +83,10 @@ static JSValue invoke(JSContext *context, JSValueConst self, int argc,
       if (JS_ToFloat64(context, &level, argv[2]) == 0 && level >= -1 && level <= 100 && level == (int)level)
         ret = hass_control(binding->client, a, JS_ToBool(context, argv[1]), (int)level);
     }
-  JS_FreeCString(context, a); JS_FreeCString(context, b);
-  if (method <= 3) return JS_NewInt32(context, ret);
+  else if (method == 7 && a && b && c && argc == 3)
+    ret = hass_call_service(binding->client, a, b, c);
+  JS_FreeCString(context, a); JS_FreeCString(context, b); JS_FreeCString(context, c);
+  if (method <= 3 || method == 7) return JS_NewInt32(context, ret);
   JSValue object = JS_NewObject(context);
   if (method == 4)
     {
@@ -109,6 +110,10 @@ static JSValue invoke(JSContext *context, JSValueConst self, int argc,
       if (hass_get_url(binding->client, url, sizeof(url)) < 0) url[0] = 0;
       hass_cache_info(binding->client, &cached, &cache_age);
       JS_SetPropertyStr(context, object, "configured", JS_NewBool(context, configured));
+      JS_SetPropertyStr(context, object, "configurationRevision",
+                        JS_NewUint32(context, hass_configuration_revision()));
+      JS_SetPropertyStr(context, object, "deviceGroups", JS_NewBool(context, true));
+      JS_SetPropertyStr(context, object, "sceneSync", JS_NewBool(context, true));
       JS_SetPropertyStr(context, object, "busy", JS_NewBool(context, busy));
       JS_SetPropertyStr(context, object, "url", JS_NewString(context, url));
       JS_SetPropertyStr(context, object, "canControl", JS_NewBool(context, binding->grants & HASS_CONTROL));
@@ -134,8 +139,8 @@ int hass_qjs_install(JSContext *context, JSValue system, unsigned grants)
   if (JS_IsException(holder)) { hass_close(binding->client); free(binding); return -ENOMEM; }
   JS_SetOpaque(holder, binding);
   JSValue api = JS_NewObject(context);
-  const char *names[] = {"configure", "get", "getState", "control", "poll", "close", "status"};
-  const int lengths[] = {3, 1, 1, 3, 0, 0, 0};
+  const char *names[] = {"configure", "get", "getState", "control", "poll", "close", "status", "callService"};
+  const int lengths[] = {3, 1, 1, 3, 0, 0, 0, 3};
   for (unsigned i = 0; i < sizeof(names) / sizeof(names[0]); i++)
     JS_SetPropertyStr(context, api, names[i], JS_NewCFunctionData(context, invoke, lengths[i], i, 1, &holder));
   JS_SetPropertyStr(context, api, "apiVersion", JS_NewInt32(context, 1));

@@ -196,6 +196,12 @@ static bool take_token(char **cursor,char *out,size_t capacity)
 }
 static int upload(int fd,const char *path,size_t size,const char *auth)
 {
+  /* Large SD assets keep the existing inactivity deadline. Give an active
+   * transfer a size-dependent total budget instead of cutting it off at 120 s.
+   * At most one hour, even if the peer sends continuously. */
+  uint64_t budget=REQUEST_TIMEOUT_MS+(uint64_t)size*1000/(64*1024);
+  if(budget>3600000)budget=3600000;
+  io_deadline=milliseconds()+(int64_t)budget;
   char temp[256]; if(snprintf(temp,sizeof(temp),"%s",path)>=(int)sizeof(temp)) return -EINVAL;
   char *name=strrchr(temp,'/'); if(!name) return -EINVAL;
   strcpy(name+1,".upload");
@@ -314,6 +320,11 @@ static void client(int fd,char *headers)
     cJSON *o=receive_json(fd,size); if(!io_failed) pair_client(fd,o); cJSON_Delete(o); return;
   }
   if(!authorized(auth)) { cJSON *o=cJSON_CreateObject(); cJSON_AddStringToObject(o,"error","连接已失效，请输入设备上的令牌或重新扫码"); json_reply(fd,401,o); return; }
+  if(!strcmp(url,"/api/session")&&!strcmp(method,"GET")&&!arg) {
+    cJSON *o=cJSON_CreateObject(); cJSON_AddBoolToObject(o,"ok",true);
+    cJSON_AddNumberToObject(o,"idle_seconds",SESSION_IDLE_SECONDS);
+    json_reply(fd,200,o); return;
+  }
   if(arg) { if(strncmp(arg,"path=",5)&&strncmp(arg,"section=",8)) { result(fd,-EINVAL,NULL); return; } arg=strchr(arg,'=')+1; if(decode(arg)) { result(fd,-EINVAL,NULL); return; } }
   if(!strcmp(url,"/api/config")&&!strcmp(method,"GET")&&arg) { cJSON *o=portal_config_get(arg); if(!o) result(fd,-EIO,NULL); else json_reply(fd,200,o); return; }
   char path[256];
@@ -340,9 +351,8 @@ static void client(int fd,char *headers)
   int ret=-EINVAL; char error[128]="";
   if(!strcmp(url,"/api/config")&&arg) {
     ret=portal_config_save(arg,o);
-#ifdef CONFIG_SYSTEM_HASS
-    if(!ret&&!strcmp(arg,"homeassistant")) ret=hass_portal_bootstrap();
-#endif
+    if(ret==-EINVAL&&!strcmp(arg,"homeassistant"))
+      snprintf(error,sizeof(error),"HA 地址请用 http://主机:端口（不要 /8123）；令牌最多 511 字符");
   }
   else if(!strcmp(url,"/api/mkdir")&&arg) { ret=portal_public_path(arg,path,sizeof(path)); if(!ret&&mkdir(path,0700)<0) ret=-errno; }
   else if(!strcmp(url,"/api/install/begin")) { ret=portal_install_begin(o,error,sizeof(error)); }

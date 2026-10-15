@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "hass_service.h"
+#include "hass_config_validate.h"
 #include "hass_transport.h"
+#include "hass_actions.h"
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -32,6 +34,7 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct client_s g_clients[HASS_MAX_CLIENTS];
 static uint32_t g_next_client = 1, g_next_request = 1;
 static uint32_t g_owner, g_request;
+static uint32_t g_configuration_revision;
 static enum request_kind_e g_kind;
 static char g_url[128], g_token[512];
 static char *g_states_cache;
@@ -120,30 +123,6 @@ static void pump(void)
   g_kind = REQUEST_NONE;
 }
 
-static bool http_url(const char *url)
-{
-  if (!url || strlen(url) >= sizeof(g_url) || strncmp(url, "http://", 7)) return false;
-  const char *p = url + 7;
-  size_t n = strcspn(p, ":/");
-  if (!n || n >= sizeof(g_url) - 7) return false;
-  for (size_t i = 0; i < n; i++)
-    if (!((p[i] >= 'a' && p[i] <= 'z') ||
-          (p[i] >= 'A' && p[i] <= 'Z') ||
-          (p[i] >= '0' && p[i] <= '9') ||
-          p[i] == '.' || p[i] == '-' || p[i] == '_')) return false;
-  p += n;
-  if (*p == ':')
-    {
-      unsigned port = 0;
-      const char *start = ++p;
-      while (*p >= '0' && *p <= '9')
-        { port = port * 10 + (*p++ - '0'); if (port > 65535) return false; }
-      if (p == start || !port) return false;
-    }
-  if (*p && strcmp(p, "/")) return false;
-  return true;
-}
-
 static bool entity_valid(const char *entity)
 {
   if (!entity || strlen(entity) >= 96 || entity[0] < 'a' || entity[0] > 'z') return false;
@@ -187,13 +166,13 @@ int hass_close(uint32_t id)
 int hass_configure(uint32_t id, const char *url, const char *token, bool allow)
 {
   if (!allow) return -EACCES;
-  if (!http_url(url) || !token || !*token || strlen(token) >= sizeof(g_token)) return -EINVAL;
-  for (const unsigned char *p = (const unsigned char *)token; *p; p++)
-    if (*p < 33 || *p > 126) return -EINVAL;
+  if (!hass_config_url_valid(url) || !hass_config_token_valid(token) || !*token) return -EINVAL;
   pthread_mutex_lock(&g_lock);
   pump();
   struct client_s *client = lookup(id);
   int ret = !client ? -EBADF : !(client->grants & HASS_CONFIGURE) ? -EACCES : 0;
+  if (!ret && !strcmp(g_url,url) && !strcmp(g_token,token))
+    { pthread_mutex_unlock(&g_lock); return 0; }
   if (!ret)
     {
       uint32_t owner = g_owner;
@@ -211,6 +190,7 @@ int hass_configure(uint32_t id, const char *url, const char *token, bool allow)
       wipe(g_token, sizeof(g_token));
       strcpy(g_url, url);
       strcpy(g_token, token);
+      g_configuration_revision++;
     }
   pthread_mutex_unlock(&g_lock);
   return ret;
@@ -224,7 +204,10 @@ int hass_clear_configuration(uint32_t id)
   if (!ret)
     {
       if (g_owner) hass_transport_stop();
+      g_owner = g_request = 0;
+      g_kind = REQUEST_NONE;
       wipe(g_token, sizeof(g_token)); wipe(g_url, sizeof(g_url));
+      g_configuration_revision++;
       cache_clear();
       for (unsigned i = 0; i < HASS_MAX_CLIENTS; i++) hass_result_free(&g_clients[i].result);
     }
@@ -233,7 +216,7 @@ int hass_clear_configuration(uint32_t id)
 }
 
 static int submit(uint32_t id, const char *resource, const char *entity, bool control,
-                  bool on, int brightness)
+                  bool on, int brightness, const char *action, const char *data)
 {
   pthread_mutex_lock(&g_lock);
   pump();
@@ -263,7 +246,13 @@ static int submit(uint32_t id, const char *resource, const char *entity, bool co
       char domain[96], body[192];
       size_t n = (size_t)(strchr(entity, '.') - entity);
       memcpy(domain, entity, n); domain[n] = 0;
-      if (strcmp(domain, "light") && strcmp(domain, "switch") &&
+      if (action)
+        {
+          if (!hass_action_valid(domain, action, entity, data)) ret = -EINVAL;
+          else ret = hass_transport_call_service(g_url, g_token, domain, action, data);
+          if (!ret) cache_clear();
+        }
+      else if (strcmp(domain, "light") && strcmp(domain, "switch") &&
           strcmp(domain, "input_boolean") && strcmp(domain, "fan")) ret = -EACCES;
       else if (brightness < -1 || brightness > 100 || brightness == 0 ||
                (brightness != -1 && (!on || strcmp(domain, "light")))) ret = -EINVAL;
@@ -289,11 +278,21 @@ static int submit(uint32_t id, const char *resource, const char *entity, bool co
   return ret;
 }
 
-int hass_get(uint32_t id, const char *resource) { return submit(id, resource, NULL, false, false, -1); }
+uint32_t hass_configuration_revision(void)
+{
+  pthread_mutex_lock(&g_lock);
+  uint32_t revision = g_configuration_revision;
+  pthread_mutex_unlock(&g_lock);
+  return revision;
+}
+
+int hass_get(uint32_t id, const char *resource) { return submit(id, resource, NULL, false, false, -1, NULL, NULL); }
 int hass_get_state(uint32_t id, const char *entity)
-{ return entity ? submit(id, NULL, entity, false, false, -1) : -EINVAL; }
+{ return entity ? submit(id, NULL, entity, false, false, -1, NULL, NULL) : -EINVAL; }
 int hass_control(uint32_t id, const char *entity, bool on, int brightness)
-{ return entity ? submit(id, NULL, entity, true, on, brightness) : -EINVAL; }
+{ return entity ? submit(id, NULL, entity, true, on, brightness, NULL, NULL) : -EINVAL; }
+int hass_call_service(uint32_t id, const char *entity, const char *service, const char *body)
+{ return entity && service && body ? submit(id, NULL, entity, true, false, -1, service, body) : -EINVAL; }
 
 int hass_poll(uint32_t id, struct hass_result_s *result)
 {
@@ -307,7 +306,8 @@ int hass_poll(uint32_t id, struct hass_result_s *result)
     {
       *result = client->result;
       memset(&client->result, 0, sizeof(client->result));
-      if (g_owner == id) { result->busy = true; result->request_id = g_request; }
+      if (g_owner == id) result->request_id = g_request;
+      result->busy = g_owner != 0 || hass_transport_busy();
     }
   pthread_mutex_unlock(&g_lock);
   return ret;
@@ -320,7 +320,7 @@ void hass_status(bool *configured, bool *busy, unsigned *clients)
   unsigned count = 0;
   for (unsigned i = 0; i < HASS_MAX_CLIENTS; i++) if (g_clients[i].id) count++;
   if (configured) *configured = g_token[0] != 0;
-  if (busy) *busy = g_owner != 0;
+  if (busy) *busy = g_owner != 0 || hass_transport_busy();
   if (clients) *clients = count;
   pthread_mutex_unlock(&g_lock);
 }

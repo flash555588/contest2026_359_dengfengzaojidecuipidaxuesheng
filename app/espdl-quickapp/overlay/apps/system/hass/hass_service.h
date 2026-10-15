@@ -32,8 +32,11 @@ int hass_clear_configuration(uint32_t client);
 int hass_get(uint32_t client, const char *resource);
 int hass_get_state(uint32_t client, const char *entity);
 int hass_control(uint32_t client, const char *entity, bool on, int brightness);
+int hass_call_service(uint32_t client, const char *entity, const char *service,
+                      const char *body);
 int hass_poll(uint32_t client, struct hass_result_s *result);
 void hass_result_free(struct hass_result_s *result);
 void hass_status(bool *configured, bool *busy, unsigned *clients);
+uint32_t hass_configuration_revision(void);
 int hass_get_url(uint32_t client, char *url, size_t size);
 int hass_cache_info(uint32_t client, bool *available, uint32_t *age_ms);
