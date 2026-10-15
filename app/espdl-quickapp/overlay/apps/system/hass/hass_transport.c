@@ -29,6 +29,8 @@
 #include <unistd.h>
 
 #include "hass_transport.h"
+#include "hass_devices_template.h"
+#include "hass_scenes_template.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -39,7 +41,8 @@
 #define HA_TOKEN_MAX 512
 #define HA_BODY_MAX 2048
 #define HA_REQUEST_MAX 4096
-#define HA_RESPONSE_MAX 65536
+#define HA_RESPONSE_MAX (256 * 1024 + 4096)
+#define HA_RESPONSE_INITIAL 16384
 #define HA_TIMEOUT_MS 5000
 #define HA_POLL_MS 100
 
@@ -471,6 +474,7 @@ static int ha_request_run(const struct ha_request_s *request, int *status,
   char message[HA_REQUEST_MAX];
   char *response = NULL;
   size_t used = 0;
+  size_t capacity = response_size < HA_RESPONSE_INITIAL ? response_size : HA_RESPONSE_INITIAL;
   ssize_t received;
   int fd = -1;
   int ret;
@@ -507,8 +511,8 @@ static int ha_request_run(const struct ha_request_s *request, int *status,
   freeaddrinfo(addresses);
   addresses = NULL;
   if (fd < 0) goto finished;
-  /* Do not retain a 64 KiB response allocation while DNS is still pending. */
-  response = malloc(response_size);
+  /* Start small; larger homes grow on demand, bounded including HTTP headers. */
+  response = malloc(capacity);
   if (response == NULL)
     {
       ret = -ENOMEM;
@@ -550,7 +554,15 @@ static int ha_request_run(const struct ha_request_s *request, int *status,
     {
       ret = ha_check(deadline);
       if (ret < 0) goto finished;
-      received = recv(fd, response + used, response_size - used - 1, 0);
+      if (used + 1 == capacity)
+        {
+          size_t next = capacity > response_size / 2 ? response_size : capacity * 2;
+          char *grown = realloc(response, next);
+          if (!grown) { ret = -ENOMEM; goto finished; }
+          response = grown;
+          capacity = next;
+        }
+      received = recv(fd, response + used, capacity - used - 1, 0);
       if (received == 0)
         {
           break;
@@ -730,6 +742,10 @@ int hass_transport_get(const char *base_url, const char *token, const char *reso
   const char *path;
 
   if (resource == NULL) return -EINVAL;
+  if (strcmp(resource, "devices") == 0)
+    return ha_start(base_url, token, "/api/template", g_hass_devices_template);
+  if (strcmp(resource, "scenes") == 0)
+    return ha_start(base_url, token, "/api/template", g_hass_scenes_template);
   if (strcmp(resource, "config") == 0)
     {
       path = "/api/config";
@@ -765,6 +781,14 @@ int hass_transport_call_service(const char *base_url, const char *token,
 
   snprintf(path, sizeof(path), "/api/services/%s/%s", domain, service);
   return ha_start(base_url, token, path, data);
+}
+
+bool hass_transport_busy(void)
+{
+  pthread_mutex_lock(&g_ha.lock);
+  bool busy = g_ha.running;
+  pthread_mutex_unlock(&g_ha.lock);
+  return busy;
 }
 
 void hass_transport_poll(struct hass_transport_result_s *result)

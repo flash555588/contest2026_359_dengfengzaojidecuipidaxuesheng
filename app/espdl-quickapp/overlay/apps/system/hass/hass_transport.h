@@ -37,6 +37,8 @@ int hass_transport_call_service(const char *base_url, const char *token,
                         const char *domain, const char *service,
                         const char *data);
 void hass_transport_poll(struct hass_transport_result_s *result);
+/* Read shared worker occupancy without consuming a completion/body. */
+bool hass_transport_busy(void);
 /* Nonblocking cancellation: no socket I/O, join or DNS wait on the caller.
  * Poll remains busy and submissions return -EBUSY until the old worker
  * finishes; cancelled results are discarded. The worker owns its socket.
