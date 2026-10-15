@@ -11,6 +11,7 @@
   },
   "changes": [
     "minimp4: composition timestamps, NAL prefix length, 4 MiB index allocator in caller",
-    "Helix: AAC-LC only, generic RV32 arithmetic and libc allocator; no Arduino C++ wrappers"
+    "Helix: AAC-LC only, generic RV32 arithmetic and libc allocator; no Arduino C++ wrappers",
+    "minimp4: preserve QuickTime media handler; parse AAC sound entry v1 and wave/esds; reject short/unsupported sound entries"
   ]
 }

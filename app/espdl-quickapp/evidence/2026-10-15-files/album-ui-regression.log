@@ -1,0 +1,28 @@
+CAPTURE dark album-grid
+CAPTURE dark album-photos
+CAPTURE dark album-photo
+CAPTURE dark album-portrait
+CAPTURE dark album-fullscreen
+CAPTURE dark album-videos
+CAPTURE dark album-video
+CAPTURE dark album-page2
+CAPTURE dark album-folder
+CAPTURE dark album-camera
+CAPTURE dark album-empty
+CAPTURE dark album-no-sd
+CAPTURE dark album-bad-photo
+CAPTURE light album-grid
+CAPTURE light album-photos
+CAPTURE light album-photo
+CAPTURE light album-portrait
+CAPTURE light album-fullscreen
+CAPTURE light album-videos
+CAPTURE light album-video
+CAPTURE light album-page2
+CAPTURE light album-folder
+CAPTURE light album-camera
+CAPTURE light album-empty
+CAPTURE light album-no-sd
+CAPTURE light album-bad-photo
+ALBUM_NATIVE_OK: both themes, real grid/viewer UI, filters, page navigation, folder/up and internal camera photos, photo next/swipe/fullscreen, video/back, empty/missing-SD/corrupt, 50 repeated reopen/cancel cycles
+ALL_UI_RENDER_OK /home/flash/vela-p4/out/album-boundaries-native-20261015

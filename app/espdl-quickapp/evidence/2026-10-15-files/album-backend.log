@@ -1,0 +1,1 @@
+ALBUM_BACKEND_OK: real PNG alpha / JPEG / RGB565 camera BMP / RGB888 BMP; signature-based HEIC/MOV and renamed-file detection, bounded thumbnails/viewer, portrait, invalid/corrupt/oversized/missing/symlink inputs, mixed scan, 256-entry limit, path confinement and 160 cancellation cycles

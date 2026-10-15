@@ -33,6 +33,7 @@
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 #include "../bilibili_live/bili_live.h"
 #include "../bilibili_live/local_video_ui.h"
+#include "../bilibili_live/local_album_ui.h"
 #include "../bilibili_live/local_video_media.h"
 #include "../bilibili_live/bili_cpu.h"
 #include "../bilibili_live/bili_ppa.h"
@@ -1517,8 +1518,8 @@ static void about_clicked(lv_event_t *e)
 static void launch_local_video(lv_event_t *e)
 {
   LV_UNUSED(e);
-  lv_obj_t *card = qapp_page_prepare("本地视频");
-  if (card) { local_video_show(card, zh_font(18)); qapp_page_commit(card); }
+  lv_obj_t *card = qapp_page_prepare("相册");
+  if (card) { local_album_show(card, zh_font(16)); qapp_page_commit(card); }
 }
 static void launch_bilibili(lv_event_t *e)
 {

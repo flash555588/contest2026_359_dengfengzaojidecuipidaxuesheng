@@ -1,0 +1,20 @@
+        irom_seg:     3275890 B        64 MB      4.88%
+        sram_seg:      444004 B     978880 B     45.36%
+        drom_seg:     8481836 B        64 MB     12.64%
+rev3_mspi_workaround_seg:           0 B          0 B
+      lp_ram_seg:         104 B      32744 B      0.32%
+ lp_reserved_seg:          24 B         24 B    100.00%
+  extern_ram_seg:           0 B        64 MB      0.00%
+CP: nuttx.hex
+MKIMAGE: NuttX binary
+esptool.py -c esp32p4 elf2image --ram-only-header --min-rev-full 301 --max-rev-full 399 -fs 16MB -fm dio -ff "80m" -o nuttx.bin nuttx
+[0;33mWarning:[0m DEPRECATED: 'esptool.py' is deprecated. Please use 'esptool' instead. The '.py' suffix will be removed in a future major release.
+esptool v5.2.0
+Creating ESP32-P4 image...
+Image has only RAM segments visible. ROM segments are hidden and SHA256 digest is not appended.
+Merged 2 ELF sections.
+Successfully created ESP32-P4 image.
+python3 tools/espressif/simple_boot_digest.py nuttx.bin
+Simple Boot RAM SHA256 added; mapped segment offsets unchanged
+Generated: nuttx.bin
+Build verified: /home/flash/vela-p4/out/files-modern-20261015 7b32fe51a14dd21433739bbb6c6d6ccd194dc62360d3f58cb8011fb973ba06c4

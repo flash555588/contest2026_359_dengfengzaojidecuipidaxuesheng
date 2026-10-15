@@ -70,7 +70,7 @@ def main():
     main=(desktop/'desktop_main.c').read_text().split('#include "glass_ui_probe.inc"')[0]
     main=main.replace('#include "../bilibili_live/', '#include "')
     (work/'production_desktop.inc').write_text(main)
-    ui=(desktop/'glass_ui.inc').read_text().replace('#include "glass_netboot.inc"','#include <arpa/inet.h>\n#include <netutils/netlib.h>\n#define C6NET_IFNAME "wlan0"\nstatic void glass_net_lease(bool wait) {(void)wait;}')
+    ui=(desktop/'glass_ui.inc').read_text().replace('#include "glass_netboot.inc"','#include <arpa/inet.h>\n#include <netutils/netlib.h>\n#define C6NET_IFNAME "wlan0"\nstatic void glass_net_lease(bool wait) {(void)wait;}\nstatic struct glass_status_network review_net;\nstatic void glass_status_network_get(struct glass_status_network *out) {*out=review_net;}')
     ui=ui.replace(function(ui,'desktop_ui_create'),'static void desktop_ui_create(void) {}')
     (work/'glass_ui.inc').write_text(ui)
     # The media constructors are unchanged; workers are replaced by inert
@@ -95,16 +95,18 @@ void bili_live_stop(void){}
     local=(repo/'app/bilibili_live/local_video_ui.c').read_text()
     media.append('''#define button local_button
 static lv_obj_t *page,*image,*label,*list,*path_label,*pause_button,*viewport,*metrics;
-static const lv_font_t *font;static lv_timer_t *timer;static unsigned volume=40;
+static const lv_font_t *font;static lv_timer_t *timer;static unsigned volume=40;static bool album_playback_view;
 static char directory[512]="/sdcard";
 static void refresh(lv_event_t *e){(void)e;}static void up(lv_event_t *e){(void)e;}
 static void pause_clicked(lv_event_t *e){(void)e;}static void fullscreen_clicked(lv_event_t *e){(void)e;}
 static void volume_changed(lv_event_t *e){(void)e;}static void update(lv_timer_t *t){(void)t;}
 void local_video_stop(void){}
+void local_video_play_path(const char *path){(void)path;}
 ''')
-    media += [function(local,'button'),function(local,'local_video_show'),'#undef button']
+    media += [function(local,'button'),function(local,'local_video_show'),function(local,'video_view_button'),function(local,'local_video_view'),'#undef button']
     (work/'media_pages.inc').write_text('\n'.join(media))
     runtime=(desktop/'qpk_runtime.c').read_text()
+    (work/'production_qpk_ha_navigation.inc').write_text(function(runtime,'qpk_runtime_open_ha_device'))
     binding_names=['qpk_arg_int','qpk_arg_color','qpk_arg_string','qpk_widget_deleted','qpk_add_widget','qpk_widget_current',
       'qpk_event_release','qpk_event_deleted','js_ui_text','qpk_number_style','js_ui_number','js_ui_set_text',
       'qpk_touch_call','qpk_event_touched','qpk_event_swiped',
@@ -130,7 +132,7 @@ void local_video_stop(void){}
     (work/'qrcodegen.h').write_text((qrdir/'qrcodegen.h').read_text().replace('"../../../lvgl.h"','<lvgl/lvgl.h>').replace('#if LV_USE_QRCODE','#if 1'))
     # A service header's exact prototypes are used for inert host definitions.
     headers=['qpk_runtime.h','qpk_storage.h','glass_qpk_builder.h','glass_portal.h',
-      'hass_portal.h','hass_service.h','glass_music.h','glass_chat.h','glass_ime.h',
+      'hass_portal.h','hass_service.h','glass_music.h','glass_lock_photo.h','glass_chat.h','glass_ime.h',
       'glass_weather.h','glass_settings_service.h','glass_file_service.h','glass_system_monitor.h','glass_voice.h','glass_pinyin.h',
       'glass_ble.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
     skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice'}
@@ -180,6 +182,7 @@ void local_video_stop(void){}
       apps/'netutils/cjson/cJSON/cJSON.c',work/'qrcodegen.c']
     sources += [desktop/name for name in ['camera_resource.c','recorder_resource.c','espdl_resource.c','ouo_resource.c','dafeiyu_resource.c','homeassistant_resource.c']]
     sources += [desktop/name for name in ['glass_grok.c','glass_grok_state.c']]
+    sources += [repo/'app/bilibili_live/local_album_ui.c',repo/'app/bilibili_live/album_formats.c']
     command=['gcc',*flags,*map(str,sources),*map(str,objects),'-Wl,--gc-sections','-lm','-o',str(out/'render-all-ui')]
     with (out/'compile.log').open('w') as log:
         result=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT)
@@ -188,7 +191,7 @@ void local_video_stop(void){}
     subprocess.run([str(out/'render-all-ui'),str(apps/'system/desktop/AlibabaPuHuiTi-3-55-Regular.otf'),str(out)],check=True)
     captures=[out/Path(row['file']).with_suffix('.rgb565') for row in json.loads((out/'screens.json').read_text()) if row['id'].startswith(a.png_prefix)]
     with ProcessPoolExecutor(max_workers=4) as pool:list(pool.map(png565,captures))
-    tracked=sources+[repo/'tools/render_all_ui.py',repo/'app/espdl-quickapp/tests/all_ui_fixture.js',desktop/'qpk_runtime.c']+list(desktop.glob('*.inc'))
+    tracked=sources+[repo/'tools/render_all_ui.py',repo/'app/espdl-quickapp/tests/all_ui_fixture.js',desktop/'qpk_runtime.c']+list(desktop.glob('*.inc'))+[desktop/'glass_file_types.h']
     records=[]
     for path in sorted(set(tracked)):
         try:name=str(path.relative_to(repo))

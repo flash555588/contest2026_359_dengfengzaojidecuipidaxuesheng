@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 include $(APPDIR)/Make.defs
 CSRCS = live_platform.c bili_api.c bili_flv.c bili_sps.c bili_http.c bili_live.c bili_av.c bili_cpu.c
+CSRCS += local_album.c local_album_ui.c album_formats.c album_png.c
 CSRCS += local_video_media.c local_video_ui.c bili_ppa.c
 CSRCS += $(filter-out $(wildcard local_vendor/helix/sbr*.c),$(wildcard local_vendor/helix/*.c))
 CXXEXT = .cpp
