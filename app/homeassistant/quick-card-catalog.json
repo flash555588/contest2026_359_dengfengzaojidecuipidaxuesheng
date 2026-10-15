@@ -1,0 +1,2102 @@
+{
+  "reference": "https://iot.mi.com/v2/new/doc/resources-and-services/design/feature-define/quick-card",
+  "types": [
+    "diffuser",
+    "air-conditioner",
+    "air-fresh",
+    "air-fryer",
+    "air-monitor",
+    "air-purifier",
+    "airer",
+    "bath-heater",
+    "camera",
+    "ceiling-fan",
+    "coffee-machine",
+    "cooker",
+    "curtain",
+    "dishwasher",
+    "fan",
+    "flowerpot",
+    "fridge",
+    "fruit-vegetable-purifier",
+    "garbage-can",
+    "gas-concentration",
+    "gas-sensor",
+    "gateway",
+    "health-pot",
+    "heater",
+    "hood",
+    "humidifier",
+    "illumination-sensor",
+    "induction-cooker",
+    "integrated-stove",
+    "juicer",
+    "kettle",
+    "light",
+    "magnet-sensor",
+    "massage",
+    "mirror",
+    "mosquito-dispeller",
+    "motion-sensor",
+    "moxibustion",
+    "outlet",
+    "oven",
+    "pet-drinking-fountain",
+    "plant-monitor",
+    "pressure-cooker",
+    "printer",
+    "relay",
+    "smoke-sensor",
+    "speaker",
+    "submersion-sensor",
+    "switch",
+    "temperature-humidity-sensor",
+    "towel-rack",
+    "treadmill",
+    "vacuum",
+    "video-doorbell",
+    "walking-pad",
+    "washer",
+    "water-dispenser",
+    "water-heater",
+    "water-purifier"
+  ],
+  "layouts": 25,
+  "variants": [
+    {
+      "type": "diffuser",
+      "name": "香薰机",
+      "variant": 1,
+      "layout": 1,
+      "size": [
+        872,
+        1000
+      ],
+      "requires": [
+        "diffuser.on",
+        "light.on",
+        "diffuser.Help Sleep",
+        "diffuser.Week Up",
+        "diffuser.Cheerful",
+        "diffuser.Sport Mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/260ed2c391b0f7fca5accde6bd3a72d0_1695195380279.jpg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=H+Z/Z04TlWP7A6xnmAWAOQ2lSIs=",
+      "file": "mijia-reference-001-diffuser.png"
+    },
+    {
+      "type": "air-conditioner",
+      "name": "空调",
+      "variant": 1,
+      "layout": 2,
+      "size": [
+        1000,
+        854
+      ],
+      "requires": [
+        "air-conditioner.on",
+        "air-conditioner.target-temperature",
+        "air-conditioner.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/dd64fe5980a4d7bb33e8ee9c11b2de7b_1695195419923.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=+6dsJ3vchjWo91WOlxKjImQ+3xk=",
+      "file": "mijia-reference-002-air-conditioner.png"
+    },
+    {
+      "type": "air-fresh",
+      "name": "新风机",
+      "variant": 1,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "air-fresh.on",
+        "environment.pm2.5-density",
+        "air-fresh.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=GqwvEM7MFY4On2zoY9yXCssihWw=",
+      "file": "mijia-reference-003-air-fresh.png"
+    },
+    {
+      "type": "air-fresh",
+      "name": "新风机",
+      "variant": 2,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "air-fresh.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-004-air-fresh.png"
+    },
+    {
+      "type": "air-fryer",
+      "name": "空气炸锅",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "air-fryer.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-005-air-fryer.png"
+    },
+    {
+      "type": "air-monitor",
+      "name": "空气检测仪",
+      "variant": 1,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "environment.hcho-density",
+        "environment.temperature",
+        "environment.relative-humidity"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-006-air-monitor.png"
+    },
+    {
+      "type": "air-monitor",
+      "name": "空气检测仪",
+      "variant": 2,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "environment.pm2.5-density",
+        "environment.temperature",
+        "environment.relative-humidity"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-007-air-monitor.png"
+    },
+    {
+      "type": "air-monitor",
+      "name": "空气检测仪",
+      "variant": 3,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "environment.tvoc-density",
+        "environment.temperature",
+        "environment.relative-humidity"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-008-air-monitor.png"
+    },
+    {
+      "type": "air-monitor",
+      "name": "空气检测仪",
+      "variant": 4,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "environment.temperature",
+        "environment.relative-humidity"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-009-air-monitor.png"
+    },
+    {
+      "type": "air-monitor",
+      "name": "空气检测仪",
+      "variant": 5,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "environment.pm2.5-density"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-010-air-monitor.png"
+    },
+    {
+      "type": "air-monitor",
+      "name": "空气检测仪",
+      "variant": 6,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "environment.hcho-density"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-011-air-monitor.png"
+    },
+    {
+      "type": "air-purifier",
+      "name": "空气净化器",
+      "variant": 1,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "air-purifier.on",
+        "environment.pm2.5-density",
+        "air-purifier.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-012-air-purifier.png"
+    },
+    {
+      "type": "air-purifier",
+      "name": "空气净化器",
+      "variant": 2,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "air-purifier.on",
+        "environment.pm2.5-density",
+        "air-purifier.fan-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-013-air-purifier.png"
+    },
+    {
+      "type": "air-purifier",
+      "name": "空气净化器",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "air-purifier.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-014-air-purifier.png"
+    },
+    {
+      "type": "airer",
+      "name": "晾衣架",
+      "variant": 1,
+      "layout": 9,
+      "size": [
+        390,
+        320
+      ],
+      "requires": [
+        "airer.motor-control"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/38e424d1e07e6aaebe7068c27d7701a8_7.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=qPV65JEK6C7TvF2/HQBbH6kSx7Q=",
+      "file": "mijia-reference-015-airer.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 1,
+      "layout": 10,
+      "size": [
+        682,
+        772
+      ],
+      "requires": [
+        "light.on",
+        "ptc-bath-heater.ventilation",
+        "ptc-bath-heater.heating",
+        "ptc-bath-heater.target-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/eadd05f99827fde3c0adfb537a1c5e9e_8.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=N9fXQyTysK2eSo+ZpPd5y4gB9Nw=",
+      "file": "mijia-reference-016-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 2,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "light-bath-heater.on",
+        "ptc-bath-heater.status",
+        "light-bath-heater.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-017-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 3,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "ptc-bath-heater.on",
+        "ptc-bath-heater.status",
+        "ptc-bath-heater.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-018-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 4,
+      "layout": 11,
+      "size": [
+        886,
+        774
+      ],
+      "requires": [
+        "ptc-bath-heater.on",
+        "ptc-bath-heater.temperature",
+        "ptc-bath-heater.target-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/b7077d56e68202c9f0d8875b1737a363_9.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=+K+yf8kmKe+mbCq3WYT+RtyTEWk=",
+      "file": "mijia-reference-019-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 5,
+      "layout": 12,
+      "size": [
+        860,
+        614
+      ],
+      "requires": [
+        "ptc-bath-heater.on",
+        "light.on",
+        "fan-control.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/2dbbc542caf419f2aae110cd3ed0f46e_10.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=SZN3rIo7ndI6X/wFZd3XAMvMrS4=",
+      "file": "mijia-reference-020-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 6,
+      "layout": 12,
+      "size": [
+        860,
+        614
+      ],
+      "requires": [
+        "light-bath-heater.on",
+        "light.on",
+        "fan-control.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/2dbbc542caf419f2aae110cd3ed0f46e_10.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=SZN3rIo7ndI6X/wFZd3XAMvMrS4=",
+      "file": "mijia-reference-021-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 7,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "ptc-bath-heater.on",
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-022-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 8,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "light-bath-heater.on",
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-023-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 9,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "light.on",
+        "fan-control.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-024-bath-heater.png"
+    },
+    {
+      "type": "bath-heater",
+      "name": "浴霸",
+      "variant": 10,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-025-bath-heater.png"
+    },
+    {
+      "type": "camera",
+      "name": "摄像机",
+      "variant": 1,
+      "layout": 14,
+      "size": [
+        824,
+        664
+      ],
+      "requires": [
+        "camera-control.on",
+        "p2p-stream.start-p2p-stream"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/6471b20de9ee8edf4602f99d5542f16d_201.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=JClJRRHg9FwKyzBAqWq82NHISfs=",
+      "file": "mijia-reference-026-camera.png"
+    },
+    {
+      "type": "camera",
+      "name": "摄像机",
+      "variant": 2,
+      "layout": 15,
+      "size": [
+        824,
+        662
+      ],
+      "requires": [
+        "p2p-stream.start-p2p-stream"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/57412efee01bfd6c0bb6adea472bd046_202.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=7aGdZtxv6DpHqdzIFd5iUUUxw84=",
+      "file": "mijia-reference-027-camera.png"
+    },
+    {
+      "type": "camera",
+      "name": "摄像机",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "camera-control.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-028-camera.png"
+    },
+    {
+      "type": "ceiling-fan",
+      "name": "吊顶风扇",
+      "variant": 1,
+      "layout": 16,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "ceiling-fan.on",
+        "ceiling-fan.horizontal-swing",
+        "ceiling-fan.fan-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/11df0eeb04859e9e466fa409b72d565e_12.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=NbMDw+lZcUOAf3DxoeiubGzfg1A=",
+      "file": "mijia-reference-029-ceiling-fan.png"
+    },
+    {
+      "type": "ceiling-fan",
+      "name": "吊顶风扇",
+      "variant": 2,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "ceiling-fan.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-030-ceiling-fan.png"
+    },
+    {
+      "type": "coffee-machine",
+      "name": "咖啡机",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "coffee-machine.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-031-coffee-machine.png"
+    },
+    {
+      "type": "cooker",
+      "name": "电饭煲",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "cooker.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-032-cooker.png"
+    },
+    {
+      "type": "curtain",
+      "name": "窗帘",
+      "variant": 1,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "curtain.status",
+        "curtain.motor-control"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-033-curtain.png"
+    },
+    {
+      "type": "curtain",
+      "name": "窗帘",
+      "variant": 2,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "curtain.current-position",
+        "curtain.motor-control"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-034-curtain.png"
+    },
+    {
+      "type": "curtain",
+      "name": "窗帘",
+      "variant": 3,
+      "layout": 9,
+      "size": [
+        390,
+        320
+      ],
+      "requires": [
+        "curtain.motor-control"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/38e424d1e07e6aaebe7068c27d7701a8_7.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=qPV65JEK6C7TvF2/HQBbH6kSx7Q=",
+      "file": "mijia-reference-035-curtain.png"
+    },
+    {
+      "type": "dishwasher",
+      "name": "洗碗机",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "dishwasher.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-036-dishwasher.png"
+    },
+    {
+      "type": "fan",
+      "name": "风扇",
+      "variant": 1,
+      "layout": 16,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "fan.on",
+        "fan.horizontal-swing",
+        "fan.fan-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/11df0eeb04859e9e466fa409b72d565e_12.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=NbMDw+lZcUOAf3DxoeiubGzfg1A=",
+      "file": "mijia-reference-037-fan.png"
+    },
+    {
+      "type": "fan",
+      "name": "风扇",
+      "variant": 2,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "fan.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-038-fan.png"
+    },
+    {
+      "type": "flowerpot",
+      "name": "花盆",
+      "variant": 1,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "plant-monitor.relative-humidity",
+        "plant-monitor.illumination",
+        "plant-monitor.soil-ec"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-039-flowerpot.png"
+    },
+    {
+      "type": "flowerpot",
+      "name": "花盆",
+      "variant": 2,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "plant-monitor.relative-humidity",
+        "plant-monitor.temperature",
+        "plant-monitor.illumination"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-040-flowerpot.png"
+    },
+    {
+      "type": "flowerpot",
+      "name": "花盆",
+      "variant": 3,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "plant-monitor.relative-humidity",
+        "plant-monitor.soil-ec"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-041-flowerpot.png"
+    },
+    {
+      "type": "flowerpot",
+      "name": "花盆",
+      "variant": 4,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "plant-monitor.relative-humidity",
+        "plant-monitor.illumination"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-042-flowerpot.png"
+    },
+    {
+      "type": "fridge",
+      "name": "冰箱",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "fridge.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-043-fridge.png"
+    },
+    {
+      "type": "fruit-vegetable-purifier",
+      "name": "果蔬净化机",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "fruit-vegetable-purifier.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-044-fruit-vegetable-purifier.png"
+    },
+    {
+      "type": "garbage-can",
+      "name": "垃圾桶",
+      "variant": 1,
+      "layout": 17,
+      "size": [
+        1000,
+        922
+      ],
+      "requires": [
+        "battery.battery-level",
+        "garbage-can.target-lid-state",
+        "garbage-can.status",
+        "garbage-can.package"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/a12229c0c6878c669aa0c19e49cbfdc8_300.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=3ZqQQg0idA1ke5fqsOfydUSjICw=",
+      "file": "mijia-reference-045-garbage-can.png"
+    },
+    {
+      "type": "gas-concentration",
+      "name": "天然气报警器",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "gas-concentration.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-046-gas-concentration.png"
+    },
+    {
+      "type": "gas-sensor",
+      "name": "燃气传感器",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "gas-sensor.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-047-gas-sensor.png"
+    },
+    {
+      "type": "gateway",
+      "name": "网关",
+      "variant": 1,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "light.on",
+        "gateway.guard-mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-048-gateway.png"
+    },
+    {
+      "type": "gateway",
+      "name": "网关",
+      "variant": 2,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "gateway.guard-mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-049-gateway.png"
+    },
+    {
+      "type": "gateway",
+      "name": "网关",
+      "variant": 3,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "arming.arming-mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-050-gateway.png"
+    },
+    {
+      "type": "gateway",
+      "name": "网关",
+      "variant": 4,
+      "layout": 18,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on",
+        "light.brightness"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/cb142458af28d3e4a9ce3a3133d9d230_22.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=RoGPU8Kc+gD1itQ8KEf0+Ri/05g=",
+      "file": "mijia-reference-051-gateway.png"
+    },
+    {
+      "type": "health-pot",
+      "name": "养生壶",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "health-pot.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-052-health-pot.png"
+    },
+    {
+      "type": "heater",
+      "name": "电暖器",
+      "variant": 1,
+      "layout": 11,
+      "size": [
+        886,
+        774
+      ],
+      "requires": [
+        "heater.on",
+        "environment.temperature",
+        "heater.target-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/b7077d56e68202c9f0d8875b1737a363_9.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=+K+yf8kmKe+mbCq3WYT+RtyTEWk=",
+      "file": "mijia-reference-053-heater.png"
+    },
+    {
+      "type": "heater",
+      "name": "电暖器",
+      "variant": 2,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "heater.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-054-heater.png"
+    },
+    {
+      "type": "hood",
+      "name": "油烟机",
+      "variant": 1,
+      "layout": 12,
+      "size": [
+        860,
+        614
+      ],
+      "requires": [
+        "hood.on",
+        "light.on",
+        "fan-control.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/2dbbc542caf419f2aae110cd3ed0f46e_10.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=SZN3rIo7ndI6X/wFZd3XAMvMrS4=",
+      "file": "mijia-reference-055-hood.png"
+    },
+    {
+      "type": "hood",
+      "name": "油烟机",
+      "variant": 2,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "hood.on",
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-056-hood.png"
+    },
+    {
+      "type": "hood",
+      "name": "油烟机",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "hood.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-057-hood.png"
+    },
+    {
+      "type": "humidifier",
+      "name": "加湿器",
+      "variant": 1,
+      "layout": 19,
+      "size": [
+        1000,
+        872
+      ],
+      "requires": [
+        "humidifier.on",
+        "environment.relative-humidity",
+        "humidifier.fan-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/76966fc742d6d579dd737425510a88dd_500.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5wr3Plb0RNCYNB2OoRBEV3cPHNg=",
+      "file": "mijia-reference-058-humidifier.png"
+    },
+    {
+      "type": "humidifier",
+      "name": "加湿器",
+      "variant": 2,
+      "layout": 3,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "humidifier.on",
+        "environment.relative-humidity",
+        "humidifier.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/de8df58c49e5530ac80e9145658497af_1.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=5w/nY6uUmh7MagL3H/aY2QlfWqo=",
+      "file": "mijia-reference-059-humidifier.png"
+    },
+    {
+      "type": "humidifier",
+      "name": "加湿器",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "humidifier.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-060-humidifier.png"
+    },
+    {
+      "type": "illumination-sensor",
+      "name": "光照度传感器",
+      "variant": 1,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "illumination-sensor.illumination"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-061-illumination-sensor.png"
+    },
+    {
+      "type": "induction-cooker",
+      "name": "电磁炉",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "induction-cooker.status",
+        "induction-cooker.left-time"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-062-induction-cooker.png"
+    },
+    {
+      "type": "induction-cooker",
+      "name": "电磁炉",
+      "variant": 2,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "induction-cooker.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-063-induction-cooker.png"
+    },
+    {
+      "type": "integrated-stove",
+      "name": "集成灶",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "integrated-stove.mode",
+        "hood.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-064-integrated-stove.png"
+    },
+    {
+      "type": "integrated-stove",
+      "name": "集成灶",
+      "variant": 2,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-065-integrated-stove.png"
+    },
+    {
+      "type": "juicer",
+      "name": "榨汁机",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "juicer.status",
+        "juicer.left-time"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-066-juicer.png"
+    },
+    {
+      "type": "juicer",
+      "name": "榨汁机",
+      "variant": 2,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "juicer.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-067-juicer.png"
+    },
+    {
+      "type": "kettle",
+      "name": "热水壶",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "kettle.temperature",
+        "kettle.target-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-068-kettle.png"
+    },
+    {
+      "type": "kettle",
+      "name": "热水壶",
+      "variant": 2,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "kettle.temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-069-kettle.png"
+    },
+    {
+      "type": "light",
+      "name": "灯",
+      "variant": 1,
+      "layout": 20,
+      "size": [
+        682,
+        526
+      ],
+      "requires": [
+        "light.on",
+        "light.brightness",
+        "fan.on",
+        "fan.fan-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/9e91bffb7b08ddac7db323daf53d0d37_50.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=xXWzwR6me0ersRVle8UQQ7hZZiA=",
+      "file": "mijia-reference-070-light.png"
+    },
+    {
+      "type": "light",
+      "name": "灯",
+      "variant": 2,
+      "layout": 21,
+      "size": [
+        392,
+        358
+      ],
+      "requires": [
+        "light.on",
+        "light.brightness",
+        "light.color-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/9d28d7b894c543d67bda6bc460a6ed16_1000.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=NGBIs+45OQpdnbw/NGXGiF4GFUM=",
+      "file": "mijia-reference-071-light.png"
+    },
+    {
+      "type": "light",
+      "name": "灯",
+      "variant": 3,
+      "layout": 18,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on",
+        "light.brightness"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/cb142458af28d3e4a9ce3a3133d9d230_22.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=RoGPU8Kc+gD1itQ8KEf0+Ri/05g=",
+      "file": "mijia-reference-072-light.png"
+    },
+    {
+      "type": "light",
+      "name": "灯",
+      "variant": 4,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-073-light.png"
+    },
+    {
+      "type": "magnet-sensor",
+      "name": "门窗传感器",
+      "variant": 1,
+      "layout": 22,
+      "size": [
+        808,
+        532
+      ],
+      "requires": [
+        "magnet-sensor.contact-state"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/e466b5b8d4d0d12144eba69a2193bdfa_100.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=gCD23XBKFVXVuEnwp2mpvqMgu4k=",
+      "file": "mijia-reference-074-magnet-sensor.png"
+    },
+    {
+      "type": "massage",
+      "name": "按摩椅",
+      "variant": 1,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "massage.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-075-massage.png"
+    },
+    {
+      "type": "mirror",
+      "name": "智能镜",
+      "variant": 1,
+      "layout": 21,
+      "size": [
+        392,
+        358
+      ],
+      "requires": [
+        "light.on",
+        "light.brightness",
+        "light.color-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/9d28d7b894c543d67bda6bc460a6ed16_1000.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=NGBIs+45OQpdnbw/NGXGiF4GFUM=",
+      "file": "mijia-reference-076-mirror.png"
+    },
+    {
+      "type": "mirror",
+      "name": "智能镜",
+      "variant": 2,
+      "layout": 18,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on",
+        "light.brightness"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/cb142458af28d3e4a9ce3a3133d9d230_22.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=RoGPU8Kc+gD1itQ8KEf0+Ri/05g=",
+      "file": "mijia-reference-077-mirror.png"
+    },
+    {
+      "type": "mirror",
+      "name": "智能镜",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "light.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-078-mirror.png"
+    },
+    {
+      "type": "mosquito-dispeller",
+      "name": "驱蚊器",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "repellent.repellent-left-level",
+        "battery.battery-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-079-mosquito-dispeller.png"
+    },
+    {
+      "type": "mosquito-dispeller",
+      "name": "驱蚊器",
+      "variant": 2,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "repellent.repellent-left-level"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-080-mosquito-dispeller.png"
+    },
+    {
+      "type": "mosquito-dispeller",
+      "name": "驱蚊器",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "mosquito-dispeller.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-081-mosquito-dispeller.png"
+    },
+    {
+      "type": "motion-sensor",
+      "name": "人体传感器",
+      "variant": 1,
+      "layout": 22,
+      "size": [
+        808,
+        532
+      ],
+      "requires": [
+        "motion-sensor.motion-state"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/e466b5b8d4d0d12144eba69a2193bdfa_100.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=gCD23XBKFVXVuEnwp2mpvqMgu4k=",
+      "file": "mijia-reference-082-motion-sensor.png"
+    },
+    {
+      "type": "moxibustion",
+      "name": "艾灸盒",
+      "variant": 1,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "moxibustion.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-083-moxibustion.png"
+    },
+    {
+      "type": "outlet",
+      "name": "插排/插座",
+      "variant": 1,
+      "layout": 12,
+      "size": [
+        860,
+        614
+      ],
+      "requires": [
+        "switch.on",
+        "switch.on",
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/2dbbc542caf419f2aae110cd3ed0f46e_10.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=SZN3rIo7ndI6X/wFZd3XAMvMrS4=",
+      "file": "mijia-reference-084-outlet.png"
+    },
+    {
+      "type": "outlet",
+      "name": "插排/插座",
+      "variant": 2,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "switch.on",
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-085-outlet.png"
+    },
+    {
+      "type": "outlet",
+      "name": "插排/插座",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-086-outlet.png"
+    },
+    {
+      "type": "oven",
+      "name": "蒸烤箱",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "oven.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-087-oven.png"
+    },
+    {
+      "type": "pet-drinking-fountain",
+      "name": "宠物饮水机",
+      "variant": 1,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "pet-drinking-fountain.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-088-pet-drinking-fountain.png"
+    },
+    {
+      "type": "plant-monitor",
+      "name": "植物检测仪",
+      "variant": 1,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "plant-monitor.relative-humidity",
+        "plant-monitor.illumination",
+        "plant-monitor.soil-ec"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-089-plant-monitor.png"
+    },
+    {
+      "type": "plant-monitor",
+      "name": "植物检测仪",
+      "variant": 2,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "plant-monitor.relative-humidity",
+        "plant-monitor.soil-ec"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-090-plant-monitor.png"
+    },
+    {
+      "type": "pressure-cooker",
+      "name": "压力锅",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "pressure-cooker.status",
+        "pressure-cooker.left-time"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-091-pressure-cooker.png"
+    },
+    {
+      "type": "pressure-cooker",
+      "name": "压力锅",
+      "variant": 2,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "pressure-cooker.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-092-pressure-cooker.png"
+    },
+    {
+      "type": "printer",
+      "name": "打印机",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "printer.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-093-printer.png"
+    },
+    {
+      "type": "relay",
+      "name": "继电器",
+      "variant": 1,
+      "layout": 12,
+      "size": [
+        860,
+        614
+      ],
+      "requires": [
+        "switch.on",
+        "switch.on",
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/2dbbc542caf419f2aae110cd3ed0f46e_10.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=SZN3rIo7ndI6X/wFZd3XAMvMrS4=",
+      "file": "mijia-reference-094-relay.png"
+    },
+    {
+      "type": "relay",
+      "name": "继电器",
+      "variant": 2,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "switch.on",
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-095-relay.png"
+    },
+    {
+      "type": "relay",
+      "name": "继电器",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-096-relay.png"
+    },
+    {
+      "type": "smoke-sensor",
+      "name": "烟雾传感器",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "smoke-sensor.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-097-smoke-sensor.png"
+    },
+    {
+      "type": "speaker",
+      "name": "音箱",
+      "variant": 1,
+      "layout": 23,
+      "size": [
+        946,
+        1000
+      ],
+      "requires": [
+        "speaker.mute",
+        "microphone.mute",
+        "speaker.volume"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/adecba1994f1a58841adabebe8dbfefa_101.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=3SfUxV4nrXXjnYdG/Yd3qu0u1CU=",
+      "file": "mijia-reference-098-speaker.png"
+    },
+    {
+      "type": "speaker",
+      "name": "音箱",
+      "variant": 2,
+      "layout": 24,
+      "size": [
+        946,
+        1000
+      ],
+      "requires": [
+        "play-control.playing-state",
+        "play-control.play",
+        "play-control.pause",
+        "microphone.mute",
+        "speaker.volume"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/adecba1994f1a58841adabebe8dbfefa_101.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=3SfUxV4nrXXjnYdG/Yd3qu0u1CU=",
+      "file": "mijia-reference-099-speaker.png"
+    },
+    {
+      "type": "submersion-sensor",
+      "name": "水浸传感器",
+      "variant": 1,
+      "layout": 22,
+      "size": [
+        808,
+        532
+      ],
+      "requires": [
+        "submersion-sensor.submersion-state"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/e466b5b8d4d0d12144eba69a2193bdfa_100.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=gCD23XBKFVXVuEnwp2mpvqMgu4k=",
+      "file": "mijia-reference-100-submersion-sensor.png"
+    },
+    {
+      "type": "switch",
+      "name": "开关",
+      "variant": 1,
+      "layout": 12,
+      "size": [
+        860,
+        614
+      ],
+      "requires": [
+        "switch.on",
+        "switch.on",
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/2dbbc542caf419f2aae110cd3ed0f46e_10.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=SZN3rIo7ndI6X/wFZd3XAMvMrS4=",
+      "file": "mijia-reference-101-switch.png"
+    },
+    {
+      "type": "switch",
+      "name": "开关",
+      "variant": 2,
+      "layout": 13,
+      "size": [
+        540,
+        438
+      ],
+      "requires": [
+        "switch.on",
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/d1d6ded0898b7e79b75a63af73f3ab0b_11.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=KpE6ahV2+TQaiqpaDwe4KgntLmo=",
+      "file": "mijia-reference-102-switch.png"
+    },
+    {
+      "type": "switch",
+      "name": "开关",
+      "variant": 3,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "switch.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-103-switch.png"
+    },
+    {
+      "type": "temperature-humidity-sensor",
+      "name": "温湿度传感器",
+      "variant": 1,
+      "layout": 6,
+      "size": [
+        776,
+        512
+      ],
+      "requires": [
+        "temperature-humidity-sensor.temperature",
+        "temperature-humidity-sensor.relative-humidity",
+        "temperature-humidity-sensor.atmospheric-pressure"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/4761525336b9acb31cba3c4ddcef52b8_4.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=IVDxdCjn1o4Bv2u1R0k+gtATzo8=",
+      "file": "mijia-reference-104-temperature-humidity-sensor.png"
+    },
+    {
+      "type": "temperature-humidity-sensor",
+      "name": "温湿度传感器",
+      "variant": 2,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "temperature-humidity-sensor.temperature",
+        "temperature-humidity-sensor.relative-humidity"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-105-temperature-humidity-sensor.png"
+    },
+    {
+      "type": "towel-rack",
+      "name": "毛巾架",
+      "variant": 1,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "towel-rack.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-106-towel-rack.png"
+    },
+    {
+      "type": "treadmill",
+      "name": "跑步机",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "treadmill.working-time",
+        "treadmill.current-distance"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-107-treadmill.png"
+    },
+    {
+      "type": "vacuum",
+      "name": "扫地机器人",
+      "variant": 1,
+      "layout": 25,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "vacuum.status",
+        "vacuum.status",
+        "vacuum.start-sweep",
+        "vacuum.pause-sweeping",
+        "vacuum.status",
+        "battery.start-charge"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/16c971a5c87e834f12ca04c3ce12fea5_200.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=K/+fw2Z4GR6xQJTxlMqS3ORh0g0=",
+      "file": "mijia-reference-108-vacuum.png"
+    },
+    {
+      "type": "vacuum",
+      "name": "扫地机器人",
+      "variant": 2,
+      "layout": 25,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "vacuum.status",
+        "vacuum.status",
+        "vacuum.start-sweep",
+        "vacuum.pause",
+        "vacuum.status",
+        "vacuum.start-charge"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/16c971a5c87e834f12ca04c3ce12fea5_200.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=K/+fw2Z4GR6xQJTxlMqS3ORh0g0=",
+      "file": "mijia-reference-109-vacuum.png"
+    },
+    {
+      "type": "vacuum",
+      "name": "扫地机器人",
+      "variant": 3,
+      "layout": 25,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "vacuum.status",
+        "vacuum.status",
+        "vacuum.start-sweep",
+        "vacuum.stop-sweeping",
+        "battery.charging-state",
+        "battery.start-charge"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/16c971a5c87e834f12ca04c3ce12fea5_200.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=K/+fw2Z4GR6xQJTxlMqS3ORh0g0=",
+      "file": "mijia-reference-110-vacuum.png"
+    },
+    {
+      "type": "vacuum",
+      "name": "扫地机器人",
+      "variant": 4,
+      "layout": 25,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "vacuum.status",
+        "vacuum.status",
+        "vacuum.start-sweep",
+        "vacuum.stop-sweeping",
+        "vacuum.status",
+        "battery.start-charge"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/16c971a5c87e834f12ca04c3ce12fea5_200.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=K/+fw2Z4GR6xQJTxlMqS3ORh0g0=",
+      "file": "mijia-reference-111-vacuum.png"
+    },
+    {
+      "type": "vacuum",
+      "name": "扫地机器人",
+      "variant": 5,
+      "layout": 25,
+      "size": [
+        524,
+        540
+      ],
+      "requires": [
+        "vacuum.status",
+        "vacuum.status",
+        "vacuum.start-sweep",
+        "vacuum.stop-sweeping",
+        "vacuum.status",
+        "vacuum.start-charge"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/16c971a5c87e834f12ca04c3ce12fea5_200.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=K/+fw2Z4GR6xQJTxlMqS3ORh0g0=",
+      "file": "mijia-reference-112-vacuum.png"
+    },
+    {
+      "type": "vacuum",
+      "name": "扫地机器人",
+      "variant": 6,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "vacuum.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-113-vacuum.png"
+    },
+    {
+      "type": "video-doorbell",
+      "name": "可视门铃",
+      "variant": 1,
+      "layout": 22,
+      "size": [
+        808,
+        532
+      ],
+      "requires": [
+        "motion-detection.motion-detection"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/e466b5b8d4d0d12144eba69a2193bdfa_100.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=gCD23XBKFVXVuEnwp2mpvqMgu4k=",
+      "file": "mijia-reference-114-video-doorbell.png"
+    },
+    {
+      "type": "walking-pad",
+      "name": "走步机",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "walking-pad.working-time",
+        "walking-pad.current-distance"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-115-walking-pad.png"
+    },
+    {
+      "type": "washer",
+      "name": "洗衣机",
+      "variant": 1,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "washer.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-116-washer.png"
+    },
+    {
+      "type": "washer",
+      "name": "洗衣机",
+      "variant": 2,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "washer.mode"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-117-washer.png"
+    },
+    {
+      "type": "water-dispenser",
+      "name": "饮水机",
+      "variant": 1,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-dispenser.temperature",
+        "water-dispenser.target-temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-118-water-dispenser.png"
+    },
+    {
+      "type": "water-dispenser",
+      "name": "饮水机",
+      "variant": 2,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-dispenser.temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-119-water-dispenser.png"
+    },
+    {
+      "type": "water-heater",
+      "name": "热水器",
+      "variant": 1,
+      "layout": 4,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-heater.on"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/7ddd2f8740be92b6a2cfe379e2b8d076_2.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=bSHu/OxZ5It0rp6DiO5qH957ZV0=",
+      "file": "mijia-reference-120-water-heater.png"
+    },
+    {
+      "type": "water-heater",
+      "name": "热水器",
+      "variant": 2,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-heater.temperature",
+        "water-heater.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-121-water-heater.png"
+    },
+    {
+      "type": "water-heater",
+      "name": "热水器",
+      "variant": 3,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-heater.target-temperature",
+        "water-heater.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-122-water-heater.png"
+    },
+    {
+      "type": "water-heater",
+      "name": "热水器",
+      "variant": 4,
+      "layout": 7,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-heater.target-temperature",
+        "water-heater.temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/674e7e8f40f4bdab586938fb0f76068a_5.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=UmqM67KPpZs8aiGTt0+jOfO48lU=",
+      "file": "mijia-reference-123-water-heater.png"
+    },
+    {
+      "type": "water-heater",
+      "name": "热水器",
+      "variant": 5,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "water-heater.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-124-water-heater.png"
+    },
+    {
+      "type": "water-heater",
+      "name": "热水器",
+      "variant": 6,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "water-heater.temperature"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-125-water-heater.png"
+    },
+    {
+      "type": "water-purifier",
+      "name": "净水器",
+      "variant": 1,
+      "layout": 8,
+      "size": [
+        536,
+        354
+      ],
+      "requires": [
+        "tds-sensor.tds-out"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/1ad8ffe6f70950901fc233cbf450774e_6.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=fKhjcOLPOCicIJSJazJupFCuC34=",
+      "file": "mijia-reference-126-water-purifier.png"
+    },
+    {
+      "type": "water-purifier",
+      "name": "净水器",
+      "variant": 2,
+      "layout": 5,
+      "size": [
+        806,
+        532
+      ],
+      "requires": [
+        "water-purifier.status"
+      ],
+      "reference": "https://cdn.cnbj1.fds.api.mi-img.com/iotweb-user-center/fc737ce4d59bac41f13fa3767b72cbaf_3.jpeg?GalaxyAccessKeyId=AKVGLQWBOVIRQ3XLEW&Expires=9223372036854775807&Signature=a5EY+8fkLO3bLTaKJ0YmUbOVj5I=",
+      "file": "mijia-reference-127-water-purifier.png"
+    }
+  ]
+}
