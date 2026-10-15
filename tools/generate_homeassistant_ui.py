@@ -2,6 +2,7 @@
 """Synchronize the reviewed HA frontend and retain exact-source authorization."""
 from pathlib import Path
 import hashlib,json,re,runpy,shutil
+from ha_design_contract import read_design_contract
 
 repo=Path(__file__).resolve().parents[1]
 desktop=repo/'app/espdl-quickapp/overlay/apps/system/desktop'
@@ -16,6 +17,11 @@ assert set(covered)==set(types), 'Every registered device type needs a profile'
 for row in profiles:
     assert all(len(reading)==3 for reading in row.get('readings',[])), row['id']
 text=source.read_text(encoding='utf-8')
+contract=read_design_contract(repo/'app/homeassistant/preview/unified-device-cards.html')
+block='/* HA_DETAIL_DESIGN_BEGIN */\n  const detailDesign = '+json.dumps(contract,ensure_ascii=True,separators=(',',':'))+';\n  /* HA_DETAIL_DESIGN_END */\n'
+if '/* HA_DETAIL_DESIGN_BEGIN */' in text:
+    text=re.sub(r'/\* HA_DETAIL_DESIGN_BEGIN \*/.*?/\* HA_DETAIL_DESIGN_END \*/\n',lambda _:block,text,flags=re.S)
+else:text=text.replace('  function renderProfileDetail(', '  '+block+'  function renderProfileDetail(',1)
 text,count=re.subn(r'/\* HA_COMMON_PROFILES_BEGIN \*/.*?/\* HA_COMMON_PROFILES_END \*/',
     lambda _: '/* HA_COMMON_PROFILES_BEGIN */\n  const commonCardProfiles = '+json.dumps(profiles,ensure_ascii=True,separators=(',',':'))+';\n  /* HA_COMMON_PROFILES_END */',text,flags=re.S)
 assert count==1

@@ -122,6 +122,7 @@ void local_video_stop(void){}
       'polygon':('js_ui_polygon',5),'polygonSet':('js_ui_polygon_set',6),
       'polygonBuffer':('js_ui_polygon_buffer',5),'polygonSetBuffer':('js_ui_polygon_set_buffer',6),'front':('js_ui_front',1),
       'grokSprite':('js_ui_grok_sprite',6),'grokControl':('js_ui_grok_control',3)}
+    registration['colorWheel']=('js_ui_color_wheel',3)
     (work/'production_qpk_registration.inc').write_text('\n'.join(f'JS_SetPropertyStr(c,ui,"{name}",JS_NewCFunction(c,{fn},"{name}",{count}));' for name,(fn,count) in registration.items()))
     qrdir=apps/'graphics/lvgl/lvgl/src/libs/qrcode'
     qr=(qrdir/'qrcodegen.c').read_text().replace('#if LV_USE_QRCODE','#if 1').replace('"../../misc/lv_assert.h"','<lvgl/src/misc/lv_assert.h>')

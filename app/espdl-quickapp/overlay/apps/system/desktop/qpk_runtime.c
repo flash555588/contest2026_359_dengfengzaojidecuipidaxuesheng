@@ -794,6 +794,7 @@ static uint32_t qpk_arg_color(JSContext *context, int argc,
                               uint32_t fallback);
 
 #include "qpk_grok.inc"
+#include "qpk_color_wheel.inc"
 
 static JSValue js_ui_arc(JSContext *context, JSValueConst this_value,
                          int argc, JSValueConst *argv)
@@ -1488,17 +1489,17 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
 {
   static const char *names[] = {"radius", "borderColor", "borderWidth",
     "borderOpacity", "textColor", "fontSize", "center", "ellipsis", "enabled", "icon",
-    "gradientEnd", "gradientHorizontal", "gradientVertical"};
-  static const int limits[] = {64, 0xffffff, 8, 255, 0xffffff, 48, 1, 1, 1, 3, 0xffffff, 1, 1};
-  int32_t values[13];
-  bool present[13];
+    "gradientEnd", "gradientHorizontal", "gradientVertical", "gradientMainStop", "gradientEndStop", "rightAlign"};
+  static const int limits[] = {64, 0xffffff, 8, 255, 0xffffff, 48, 1, 1, 1, 3, 0xffffff, 1, 1, 255, 255, 1};
+  int32_t values[16];
+  bool present[16];
   int handle = qpk_arg_int(context, argc, argv, 0, 0);
   if (handle <= 0 || handle > g_qpk.widget_capacity || !g_qpk.widgets[handle - 1])
     return JS_ThrowRangeError(context, "invalid widget handle");
   if (argc < 2 || !JS_IsObject(argv[1]))
     return JS_ThrowTypeError(context, "style must be an object");
   uint64_t generation = g_qpk.widget_generations[handle - 1];
-  for (unsigned i = 0; i < 13; i++)
+  for (unsigned i = 0; i < 16; i++)
     {
       JSValue value = JS_GetPropertyStr(context, argv[1], names[i]);
       if (JS_IsException(value)) return JS_EXCEPTION;
@@ -1524,6 +1525,8 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
   if (present[11]) lv_obj_set_style_bg_grad_dir(obj, values[11] ? LV_GRAD_DIR_HOR : LV_GRAD_DIR_NONE, 0);
   if (present[12] && (values[12] || !present[11]))
     lv_obj_set_style_bg_grad_dir(obj, values[12] ? LV_GRAD_DIR_VER : LV_GRAD_DIR_NONE, 0);
+  if (present[13]) lv_obj_set_style_bg_main_stop(obj, values[13], 0);
+  if (present[14]) lv_obj_set_style_bg_grad_stop(obj, values[14], 0);
   if (label)
     {
       if (present[4]) lv_obj_set_style_text_color(label, lv_color_hex(values[4]), 0);
@@ -1532,8 +1535,9 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
       if (present[9] && values[9] > 0)
         lv_obj_set_style_text_font(label, glass_icon_font(values[9] == 2 ? 64 :
                                                        values[9] == 3 ? 32 : 24), 0);
-      if (present[6]) lv_obj_set_style_text_align(label,
-        values[6] ? LV_TEXT_ALIGN_CENTER : LV_TEXT_ALIGN_LEFT, 0);
+      if (present[6] || present[15]) lv_obj_set_style_text_align(label,
+        present[15] && values[15] ? LV_TEXT_ALIGN_RIGHT :
+        present[6] && values[6] ? LV_TEXT_ALIGN_CENTER : LV_TEXT_ALIGN_LEFT, 0);
       if (present[7]) lv_label_set_long_mode(label,
         values[7] ? LV_LABEL_LONG_DOT : LV_LABEL_LONG_WRAP);
     }
@@ -1624,7 +1628,9 @@ static JSValue js_ui_set_size(JSContext *context, JSValueConst this_value,
       (argc > 2 && JS_ToInt32(context, &height, argv[2]) < 0)) return JS_EXCEPTION;
   if (!qpk_widget_current(handle, generation))
     return JS_ThrowRangeError(context, "widget changed during size conversion");
-  lv_obj_set_size(g_qpk.widgets[handle - 1], width, height);
+  int wheel=qpk_color_wheel_resize(g_qpk.widgets[handle - 1],width,height);
+  if(wheel<0)return JS_ThrowRangeError(context,"invalid color wheel size");
+  if(!wheel)lv_obj_set_size(g_qpk.widgets[handle - 1], width, height);
   return JS_UNDEFINED;
 }
 
@@ -3828,6 +3834,7 @@ static void qpk_install_api(JSContext *context)
   JS_SetPropertyStr(context, object, "front",
                     JS_NewCFunction(context, js_ui_front, "front", 1));
   JS_SetPropertyStr(context, object, "grokSprite",JS_NewCFunction(context,js_ui_grok_sprite,"grokSprite",6));
+  JS_SetPropertyStr(context, object, "colorWheel",JS_NewCFunction(context,js_ui_color_wheel,"colorWheel",3));
   JS_SetPropertyStr(context, object, "grokControl",JS_NewCFunction(context,js_ui_grok_control,"grokControl",3));
   JS_SetPropertyStr(context, object, "primary",
                     JS_NewUint32(context, g_qpk.primary_color));

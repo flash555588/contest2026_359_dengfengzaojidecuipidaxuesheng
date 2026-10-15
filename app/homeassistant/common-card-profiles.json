@@ -7,7 +7,7 @@
     {"id":"fan","name":"风扇","types":["fan","ceiling-fan"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":["oscillating"],"quick":"percentage"},
     {"id":"air-conditioner","name":"空调","types":["air-conditioner"],"domains":["climate"],"primary":["temperature","hvac_mode"],"secondary":["fan_mode","swing_mode","preset_mode"],"quick":"temperature"},
     {"id":"curtain","name":"窗帘","types":["curtain","airer"],"domains":["cover"],"primary":["position","open_cover","stop_cover","close_cover"],"secondary":[],"quick":"position"},
-    {"id":"air-purifier","name":"空气净化器","types":["air-purifier","air-fresh"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","reading":"pm25"},
+    {"id":"air-purifier","name":"空气净化器","types":["air-purifier","air-fresh"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","reading":"pm25","readings":[["pm2.5-density","PM2.5","ug/m3"],["filter-life-level","滤芯余量","%"]]},
     {"id":"humidifier","name":"加湿器","types":["humidifier","diffuser"],"domains":["humidifier"],"primary":["humidity","mode"],"secondary":[],"quick":"humidity","reading":"current_humidity"},
     {"id":"speaker","name":"音箱","types":["speaker"],"domains":["media_player"],"primary":["volume_level","media_play","media_pause"],"secondary":["is_volume_muted","source","media_previous_track","media_next_track","media_stop"],"quick":"volume_level"},
     {"id":"vacuum","name":"扫地机器人","types":["vacuum"],"domains":["vacuum"],"primary":["start","pause","return_to_base"],"secondary":["fan_speed","stop"],"quick":"actions"},

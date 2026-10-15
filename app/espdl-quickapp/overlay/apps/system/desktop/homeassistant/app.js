@@ -83,6 +83,8 @@
   let detailOpen = false;
   let functionPage=0,controlPage=0,detailRenderKey='',controlGrant=null;
   let optionPicker=null,optionPickerUi=null;
+  let lampWheelDrag=null;
+  let lampAuxEntity='';
   let quickDrag = null, quickGestureOwned = false;
   let brightnessIntent = null;
   let controlQueue=[],controlTargets=Object.create(null),controlSequence=0,controlRevision=0;
@@ -537,6 +539,11 @@
     if(nav==='scenes'&&selectedId&&!next.some(item=>item.entity_id===selectedId)){selectedId='';detailOpen=false;}
   }
 
+  function brightnessPercent(value) {
+    if(typeof value!=='number'||!Number.isFinite(value)||value<0||value>255)return null;
+    return value>0?Math.max(1,Math.round(value*100/255)):0;
+  }
+
   function normalize(raw, expectedId) {
     if (!raw || typeof raw !== 'object' || !validEntity(raw.entity_id) ||
         typeof raw.state !== 'string' ||
@@ -547,10 +554,7 @@
       attributes.supported_color_modes : [];
     const supportedFeatures = typeof attributes.supported_features === 'number' &&
       Number.isFinite(attributes.supported_features) ? attributes.supported_features : 0;
-    const brightness = typeof attributes.brightness === 'number' &&
-      Number.isFinite(attributes.brightness) &&
-      attributes.brightness >= 0 && attributes.brightness <= 255 ?
-      Math.round(attributes.brightness * 100 / 255) : null;
+    const brightness = brightnessPercent(attributes.brightness);
     function numeric(name, minimum, maximum) {
       const value = attributes[name];
       if (typeof value !== 'number' || !Number.isFinite(value) ||
@@ -572,6 +576,11 @@
       quick_values: quickPropertyValues(raw, attributes),
       members: Array.isArray(attributes.entity_id) ? attributes.entity_id.filter(validEntity).slice(0,4) : [],
       brightness,
+      color_modes:modes.filter(mode=>typeof mode==='string').slice(0,10),
+      color_mode:clean(attributes.color_mode,24),
+      color_capable:modes.some(mode=>['hs','xy','rgb','rgbw','rgbww'].includes(mode)) ||
+        (!modes.length&&(supportedFeatures&16)!==0),
+      rgb_color:validRgb(attributes.rgb_color)?attributes.rgb_color.slice():null,
       color_temp_kelvin: numeric('color_temp_kelvin',1000,20000) ||
         (numeric('color_temp',50,1000)!==null?Math.round(1000000/attributes.color_temp):null),
       color_temperature: modes.includes('color_temp') || (supportedFeatures&2)!==0 || numeric('color_temp_kelvin',1000,20000)!==null,
@@ -643,12 +652,11 @@
     failures = 0;
     lastSync = Date.now();
     nextRefresh = steadyNow() + REFRESH_INTERVAL;
-    message = limited ? '已达 512 个实体上限，可切换关注同步' :
-      '已同步 ' + entities.length + ' 个实体' +
-      (lastCached ? ' · 本地缓存' : '');
+    message = limited ? '部分设备未同步，可切换关注同步' :
+      '已同步 ' + groupedDeviceCards().length + ' 台设备';
     if (serviceDiscoveryLimited) message = '只读 · 服务目录超过 256 KiB' +
       (lastCached ? ' · 本地缓存' : '');
-    if(changed||!wasConnected)appendActivity('状态同步',entities.length+' 个实体'+(changed?' · 数据已更新':' · 连接已恢复'));
+    if(changed||!wasConnected)appendActivity('状态同步',entities.length+' 个实体 · '+groupedDeviceCards().length+' 台设备'+(lastCached?' · 本地缓存':'')+(limited?' · 已达实体上限':'')+(changed?' · 数据已更新':' · 连接已恢复'));
     if(nav==='scenes'&&supportsSceneSync())schedule('scenes');
     /* tick() renders once after complete(); a second render here can push a
      * large state synchronization past the callback deadline. */
@@ -939,12 +947,14 @@
   }
 
   function requestControl(item,service,brightness,params,expected) {
-    if(layoutEditing||!item||!connected||!available(item)||!controllable(item)||!supports(item,service))return;
+    if(layoutEditing||!item||!connected||!available(item)||!controllable(item))return;
     if(isSceneCommand(item)&&controlTargets[item.entity_id])return;
     if (brightness !== undefined) {
       if (!item.dimmable || !Number.isFinite(brightness)) return;
-      brightness=Math.max(1,Math.min(100,Math.round(brightness)));
+      brightness=Math.max(0,Math.min(100,Math.round(brightness)));
+      service=brightness===0?'turn_off':'turn_on';
     }
+    if(!supports(item,service))return;
     const parameterKey=params?Object.keys(params).sort().join(','):'power';
     const commandKey=item.entity_id+'|'+(brightness!==undefined?'brightness':parameterKey);
     const index=controlQueue.findIndex(command=>command.key===commandKey);
@@ -953,7 +963,7 @@
     appendActivity('提交操作',item.name+' · '+service);
     recordUsage(item);
     if(queued&&queued.kind==='service'&&queued.entityId===item.entity_id&&queued.data.key===commandKey){
-      const body=Object.assign({entity_id:item.entity_id},params||{});if(brightness!==undefined)body.brightness_pct=brightness;
+      const body=Object.assign({entity_id:item.entity_id},params||{});if(brightness>0)body.brightness_pct=brightness;
       queued.data={domain:item.domain,service,body,expected,key:commandKey,sequence:command.sequence};
     }else if(index<0)controlQueue.push(command);else controlQueue[index]=command;
     controlTargets[item.entity_id]=command;controlRevision++;
@@ -973,7 +983,7 @@
         if(brightnessIntent&&brightnessIntent.sequence===command.sequence)brightnessIntent=null;
         controlRevision++;continue;
       }
-      const body=Object.assign({entity_id:command.entity},command.params||{});if(command.brightness!==undefined)body.brightness_pct=command.brightness;
+      const body=Object.assign({entity_id:command.entity},command.params||{});if(command.brightness>0)body.brightness_pct=command.brightness;
       controlRevision++;message='正在发送：'+item.name;
       schedule('service',command.entity,{domain:item.domain,service:command.service,body,expected:command.expected,key:command.key,sequence:command.sequence});
       startQueued();return;
@@ -982,7 +992,13 @@
 
   function matchesExpected(item,expected){
     if(!expected)return true;
-    return Object.keys(expected).every(key=>{const value=expected[key];return typeof value==='number'?
+    return Object.keys(expected).every(key=>{const value=expected[key];
+      if(key==='rgb_color'){
+        if(!validRgb(item.rgb_color)||item.color_mode==='color_temp')return false;
+        const a=Math.max(...item.rgb_color),b=Math.max(...value);
+        return a>0&&b>0&&value.every((v,i)=>Math.abs(item.rgb_color[i]*255/a-v*255/b)<=16);
+      }
+      return typeof value==='number'?
       Number.isFinite(Number(item[key]))&&Math.abs(Number(item[key])-value)<= (key==='color_temp_kelvin'?50:key==='volume_level'?0.02:0.01):item[key]===value;});
   }
   function deviceFunctions(){
@@ -1005,7 +1021,7 @@
     const action=(title,service)=>add(title,'action',service);
     const feature=bit=>!item.has_supported_features||!!(item.supported_features&bit);
     if(item.domain==='light'){
-      if(item.dimmable)range('亮度','turn_on','brightness_pct',displayBrightness(item),1,100,1,'brightness');
+      if(item.dimmable)range('亮度','turn_on','brightness_pct',displayBrightness(item),0,100,1,'brightness');
       if(item.color_temperature)range('色温','turn_on','color_temp_kelvin',item.color_temp_kelvin,item.min_color_temp_kelvin,item.max_color_temp_kelvin,1,'color_temp_kelvin');
       if(feature(4))opts('灯光效果','turn_on','effect',item.effect,item.effects,'effect');
     }
@@ -1081,6 +1097,15 @@
   function temperatureColor(kelvin){
     const t=Math.max(0,Math.min(1,(kelvin-2000)/4500));
     return (255<<16)|(Math.round(205+50*t)<<8)|Math.round(130+125*t);
+  }
+  function validRgb(value){return Array.isArray(value)&&value.length===3&&value.every(v=>typeof v==='number'&&Number.isInteger(v)&&v>=0&&v<=255);}
+  function rgbColor(rgb){return (rgb[0]<<16)|(rgb[1]<<8)|rgb[2];}
+  function lampCanColor(item){return !!item&&item.domain==='light'&&item.color_capable&&(!sharedReady||typeof nativeService.callService==='function')&&supports(item,'turn_on');}
+  function lampRgb(item){const target=controlTargets[item.entity_id];return target&&validRgb(target.params&&target.params.rgb_color)?target.params.rgb_color:validRgb(item.rgb_color)?item.rgb_color:[255,150,46];}
+  function setLampRgb(entity,rgb){
+    const item=lookupEntity(entity);
+    if(!lampCanColor(item)||!validRgb(rgb))return;
+    requestControl(item,'turn_on',undefined,{rgb_color:rgb.slice()},{rgb_color:rgb.slice()});
   }
 
   function changeBrightness(delta) {
@@ -2177,6 +2202,7 @@
       light: '\uf0eb', switch: '\uf011', input_boolean: '\uf011', fan: '\uf2dc',
       sensor: '\uf06e', binary_sensor: '\uf071', cover: '\uf0c9', climate: '\uf0e7',
       media_player: '\uf04b', person: '\uf124', device_tracker: '\uf124', weather: '\uf043',
+      humidifier:'\uf043',water_heater:'\uf0e7',
       sun: '\uf06e', update: '\uf019', lock: '\uf00c', vacuum: '\uf079', camera: '\uf03e',
       alarm_control_panel: '\uf071', automation: '\uf074', script: '\uf15b', scene: '\ue001',
       button: '\uf011', number: '\uf00b', select: '\uf00b', group: '\uf00b'
@@ -2220,7 +2246,7 @@
   registerQuickCards('air-fryer coffee-machine cooker fruit-vegetable-purifier health-pot hood induction-cooker integrated-stove juicer kettle oven pressure-cooker water-purifier', 'kitchen', 'status');
   registerQuickCards('fridge garbage-can gateway massage mirror mosquito-dispeller moxibustion printer treadmill walking-pad', 'generic', 'status');
   /* HA_COMMON_PROFILES_BEGIN */
-  const commonCardProfiles = [{"id":"bedside-light","name":"\u706f\u5177","types":["light"],"domains":["light"],"primary":["brightness_pct","color_temp_kelvin"],"secondary":["effect"],"quick":"brightness_pct"},{"id":"outlet","name":"\u63d2\u5ea7","types":["outlet","switch","relay"],"domains":["switch","input_boolean"],"primary":[],"secondary":[],"quick":"power"},{"id":"fan","name":"\u98ce\u6247","types":["fan","ceiling-fan"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":["oscillating"],"quick":"percentage"},{"id":"air-conditioner","name":"\u7a7a\u8c03","types":["air-conditioner"],"domains":["climate"],"primary":["temperature","hvac_mode"],"secondary":["fan_mode","swing_mode","preset_mode"],"quick":"temperature"},{"id":"curtain","name":"\u7a97\u5e18","types":["curtain","airer"],"domains":["cover"],"primary":["position","open_cover","stop_cover","close_cover"],"secondary":[],"quick":"position"},{"id":"air-purifier","name":"\u7a7a\u6c14\u51c0\u5316\u5668","types":["air-purifier","air-fresh"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","reading":"pm25"},{"id":"humidifier","name":"\u52a0\u6e7f\u5668","types":["humidifier","diffuser"],"domains":["humidifier"],"primary":["humidity","mode"],"secondary":[],"quick":"humidity","reading":"current_humidity"},{"id":"speaker","name":"\u97f3\u7bb1","types":["speaker"],"domains":["media_player"],"primary":["volume_level","media_play","media_pause"],"secondary":["is_volume_muted","source","media_previous_track","media_next_track","media_stop"],"quick":"volume_level"},{"id":"vacuum","name":"\u626b\u5730\u673a\u5668\u4eba","types":["vacuum"],"domains":["vacuum"],"primary":["start","pause","return_to_base"],"secondary":["fan_speed","stop"],"quick":"actions"},{"id":"water-heater","name":"\u70ed\u6c34\u5668","types":["water-heater"],"domains":["water_heater"],"primary":["temperature","operation_mode"],"secondary":[],"quick":"temperature","reading":"current_temperature"},{"id":"temperature-humidity","name":"\u6e29\u6e7f\u5ea6\u4f20\u611f\u5668","types":["temperature-humidity-sensor"],"domains":["sensor"],"primary":[],"secondary":[],"quick":"reading","readonly":true},{"id":"air-fryer","name":"\u7a7a\u6c14\u70b8\u9505","types":["air-fryer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"air-monitor","name":"\u7a7a\u6c14\u8d28\u91cf\u76d1\u6d4b","types":["air-monitor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["pm2.5-density","PM2.5","\u00b5g/m\u00b3"],["co2-density","\u4e8c\u6c27\u5316\u78b3","ppm"],["hcho-density","\u7532\u919b","mg/m\u00b3"],["tvoc-density","TVOC","mg/m\u00b3"],["temperature","\u6e29\u5ea6","\u00b0C"],["relative-humidity","\u6e7f\u5ea6","%"]]},{"id":"bath-heater","name":"\u6d74\u9738","types":["bath-heater"],"domains":["climate","switch"],"layout":"climate","primary":["temperature","hvac_mode"],"secondary":["fan_mode","preset_mode"],"quick":"temperature","readings":[["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"camera","name":"\u6444\u50cf\u5934","types":["camera"],"domains":["camera","switch"],"layout":"camera","primary":[],"secondary":[],"quick":"reading","notice":"\u6682\u65e0\u9884\u89c8\u753b\u9762","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"coffee-machine","name":"\u5496\u5561\u673a","types":["coffee-machine"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u5236\u4f5c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["water-level","\u6c34\u91cf","%"]]},{"id":"cooker","name":"\u7535\u996d\u7172","types":["cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"dishwasher","name":"\u6d17\u7897\u673a","types":["dishwasher"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6d17\u6da4\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6c34\u6e29","\u00b0C"]]},{"id":"flowerpot","name":"\u667a\u80fd\u82b1\u76c6","types":["flowerpot"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["relative-humidity","\u571f\u58e4\u6e7f\u5ea6","%"],["illumination","\u5149\u7167","lx"],["soil-ec","\u571f\u58e4\u7535\u5bfc\u7387","\u00b5S/cm"],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"fridge","name":"\u51b0\u7bb1","types":["fridge"],"domains":[],"layout":"metrics","primary":["temperature","option"],"secondary":[],"quick":"reading","readings":[["temperature","\u51b7\u85cf\u6e29\u5ea6","\u00b0C"],["freezer-temperature","\u51b7\u51bb\u6e29\u5ea6","\u00b0C"],["mode","\u8fd0\u884c\u6a21\u5f0f",""]]},{"id":"fruit-vegetable-purifier","name":"\u679c\u852c\u51c0\u6d17\u673a","types":["fruit-vegetable-purifier"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u51c0\u6d17\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"garbage-can","name":"\u667a\u80fd\u5783\u573e\u6876","types":["garbage-can"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["target-lid-state","\u6876\u76d6\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gas-concentration","name":"\u71c3\u6c14\u6d53\u5ea6","types":["gas-concentration"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["$value","\u71c3\u6c14\u6d53\u5ea6",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gas-sensor","name":"\u71c3\u6c14\u62a5\u8b66\u5668","types":["gas-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u89e6\u53d1\u62a5\u8b66","\u68c0\u6d4b\u5230\u71c3\u6c14"],"readings":[["$state","\u62a5\u8b66\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gateway","name":"\u7f51\u5173","types":["gateway"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["guard-mode","\u8b66\u6212\u6a21\u5f0f",""]]},{"id":"health-pot","name":"\u517b\u751f\u58f6","types":["health-pot"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u6c34\u6e29","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"heater","name":"\u53d6\u6696\u5668","types":["heater"],"domains":["climate","switch"],"layout":"climate","primary":["temperature","hvac_mode"],"secondary":["preset_mode"],"quick":"temperature","readings":[["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"hood","name":"\u6cb9\u70df\u673a","types":["hood"],"domains":["fan","switch"],"layout":"status","primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["mode","\u5de5\u4f5c\u6a21\u5f0f",""]]},{"id":"illumination-sensor","name":"\u5149\u7167\u4f20\u611f\u5668","types":["illumination-sensor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["illumination","\u5149\u7167\u5ea6","lx"],["battery-level","\u7535\u91cf","%"]]},{"id":"induction-cooker","name":"\u7535\u78c1\u7089","types":["induction-cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"integrated-stove","name":"\u96c6\u6210\u7076","types":["integrated-stove"],"domains":["fan","switch"],"layout":"appliance","primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","readings":[["mode","\u5de5\u4f5c\u6a21\u5f0f",""],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"juicer","name":"\u6599\u7406\u673a","types":["juicer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"kettle","name":"\u7535\u6c34\u58f6","types":["kettle"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u5f53\u524d\u6c34\u6e29","\u00b0C"],["target-temperature","\u76ee\u6807\u6c34\u6e29","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"magnet-sensor","name":"\u95e8\u7a97\u4f20\u611f\u5668","types":["magnet-sensor"],"domains":["binary_sensor","sensor"],"layout":"status","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u95e8\u7a97\u5df2\u5173\u95ed","\u95e8\u7a97\u5df2\u6253\u5f00"],"readings":[["$state","\u95e8\u7a97\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"massage","name":"\u6309\u6469\u8bbe\u5907","types":["massage"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"mirror","name":"\u667a\u80fd\u955c","types":["mirror"],"domains":["light","switch"],"layout":"status","primary":["brightness_pct","color_temp_kelvin"],"secondary":["effect"],"quick":"brightness_pct","readings":[["$state","\u7167\u660e\u72b6\u6001",""]]},{"id":"mosquito-dispeller","name":"\u9a71\u868a\u5668","types":["mosquito-dispeller"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["repellent-left-level","\u8017\u6750\u4f59\u91cf","%"],["battery-level","\u7535\u91cf","%"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"motion-sensor","name":"\u4eba\u4f53\u4f20\u611f\u5668","types":["motion-sensor"],"domains":["binary_sensor","sensor"],"layout":"status","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u68c0\u6d4b\u5230\u6d3b\u52a8","\u68c0\u6d4b\u5230\u6d3b\u52a8"],"readings":[["$state","\u6d3b\u52a8\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"moxibustion","name":"\u827e\u7078\u8bbe\u5907","types":["moxibustion"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"oven","name":"\u70e4\u7bb1","types":["oven"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"pet-drinking-fountain","name":"\u5ba0\u7269\u996e\u6c34\u673a","types":["pet-drinking-fountain"],"domains":["switch"],"layout":"status","primary":[],"secondary":[],"quick":"power","readings":[["$state","\u4f9b\u6c34\u72b6\u6001",""],["water-level","\u6c34\u91cf","%"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"]]},{"id":"plant-monitor","name":"\u690d\u7269\u76d1\u6d4b\u4eea","types":["plant-monitor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["relative-humidity","\u571f\u58e4\u6e7f\u5ea6","%"],["illumination","\u5149\u7167","lx"],["soil-ec","\u571f\u58e4\u7535\u5bfc\u7387","\u00b5S/cm"],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"pressure-cooker","name":"\u7535\u538b\u529b\u9505","types":["pressure-cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"printer","name":"\u6253\u5370\u673a","types":["printer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6253\u5370\u72b6\u6001",""],["progress","\u4efb\u52a1\u8fdb\u5ea6","%"]]},{"id":"smoke-sensor","name":"\u70df\u96fe\u62a5\u8b66\u5668","types":["smoke-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u89e6\u53d1\u62a5\u8b66","\u68c0\u6d4b\u5230\u70df\u96fe"],"readings":[["$state","\u62a5\u8b66\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"submersion-sensor","name":"\u6c34\u6d78\u4f20\u611f\u5668","types":["submersion-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u68c0\u6d4b\u5230\u6f0f\u6c34","\u68c0\u6d4b\u5230\u6f0f\u6c34"],"readings":[["$state","\u6c34\u6d78\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"towel-rack","name":"\u7535\u70ed\u6bdb\u5dfe\u67b6","types":["towel-rack"],"domains":["climate","switch"],"layout":"climate","primary":["temperature"],"secondary":[],"quick":"temperature","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"treadmill","name":"\u8dd1\u6b65\u673a","types":["treadmill"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["current-distance","\u8fd0\u52a8\u8ddd\u79bb","km"],["working-time","\u8fd0\u52a8\u65f6\u957f","min"],["speed","\u5f53\u524d\u901f\u5ea6","km/h"]]},{"id":"video-doorbell","name":"\u53ef\u89c6\u95e8\u94c3","types":["video-doorbell"],"domains":["camera","binary_sensor"],"layout":"camera","primary":[],"secondary":[],"quick":"reading","notice":"\u6682\u65e0\u9884\u89c8\u753b\u9762","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"walking-pad","name":"\u8d70\u6b65\u673a","types":["walking-pad"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["current-distance","\u8fd0\u52a8\u8ddd\u79bb","km"],["working-time","\u8fd0\u52a8\u65f6\u957f","min"],["speed","\u5f53\u524d\u901f\u5ea6","km/h"]]},{"id":"washer","name":"\u6d17\u8863\u673a","types":["washer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6d17\u6da4\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["progress","\u4efb\u52a1\u8fdb\u5ea6","%"]]},{"id":"water-dispenser","name":"\u996e\u6c34\u673a","types":["water-dispenser"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u5f53\u524d\u6c34\u6e29","\u00b0C"],["target-temperature","\u76ee\u6807\u6c34\u6e29","\u00b0C"],["water-level","\u6c34\u91cf","%"]]},{"id":"water-purifier","name":"\u51c0\u6c34\u5668","types":["water-purifier"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["tds-out","\u51fa\u6c34 TDS","ppm"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"],["$state","\u8fd0\u884c\u72b6\u6001",""]]}];
+  const commonCardProfiles = [{"id":"bedside-light","name":"\u706f\u5177","types":["light"],"domains":["light"],"primary":["brightness_pct","color_temp_kelvin"],"secondary":["effect"],"quick":"brightness_pct"},{"id":"outlet","name":"\u63d2\u5ea7","types":["outlet","switch","relay"],"domains":["switch","input_boolean"],"primary":[],"secondary":[],"quick":"power"},{"id":"fan","name":"\u98ce\u6247","types":["fan","ceiling-fan"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":["oscillating"],"quick":"percentage"},{"id":"air-conditioner","name":"\u7a7a\u8c03","types":["air-conditioner"],"domains":["climate"],"primary":["temperature","hvac_mode"],"secondary":["fan_mode","swing_mode","preset_mode"],"quick":"temperature"},{"id":"curtain","name":"\u7a97\u5e18","types":["curtain","airer"],"domains":["cover"],"primary":["position","open_cover","stop_cover","close_cover"],"secondary":[],"quick":"position"},{"id":"air-purifier","name":"\u7a7a\u6c14\u51c0\u5316\u5668","types":["air-purifier","air-fresh"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","reading":"pm25","readings":[["pm2.5-density","PM2.5","ug/m3"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"]]},{"id":"humidifier","name":"\u52a0\u6e7f\u5668","types":["humidifier","diffuser"],"domains":["humidifier"],"primary":["humidity","mode"],"secondary":[],"quick":"humidity","reading":"current_humidity"},{"id":"speaker","name":"\u97f3\u7bb1","types":["speaker"],"domains":["media_player"],"primary":["volume_level","media_play","media_pause"],"secondary":["is_volume_muted","source","media_previous_track","media_next_track","media_stop"],"quick":"volume_level"},{"id":"vacuum","name":"\u626b\u5730\u673a\u5668\u4eba","types":["vacuum"],"domains":["vacuum"],"primary":["start","pause","return_to_base"],"secondary":["fan_speed","stop"],"quick":"actions"},{"id":"water-heater","name":"\u70ed\u6c34\u5668","types":["water-heater"],"domains":["water_heater"],"primary":["temperature","operation_mode"],"secondary":[],"quick":"temperature","reading":"current_temperature"},{"id":"temperature-humidity","name":"\u6e29\u6e7f\u5ea6\u4f20\u611f\u5668","types":["temperature-humidity-sensor"],"domains":["sensor"],"primary":[],"secondary":[],"quick":"reading","readonly":true},{"id":"air-fryer","name":"\u7a7a\u6c14\u70b8\u9505","types":["air-fryer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"air-monitor","name":"\u7a7a\u6c14\u8d28\u91cf\u76d1\u6d4b","types":["air-monitor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["pm2.5-density","PM2.5","\u00b5g/m\u00b3"],["co2-density","\u4e8c\u6c27\u5316\u78b3","ppm"],["hcho-density","\u7532\u919b","mg/m\u00b3"],["tvoc-density","TVOC","mg/m\u00b3"],["temperature","\u6e29\u5ea6","\u00b0C"],["relative-humidity","\u6e7f\u5ea6","%"]]},{"id":"bath-heater","name":"\u6d74\u9738","types":["bath-heater"],"domains":["climate","switch"],"layout":"climate","primary":["temperature","hvac_mode"],"secondary":["fan_mode","preset_mode"],"quick":"temperature","readings":[["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"camera","name":"\u6444\u50cf\u5934","types":["camera"],"domains":["camera","switch"],"layout":"camera","primary":[],"secondary":[],"quick":"reading","notice":"\u6682\u65e0\u9884\u89c8\u753b\u9762","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"coffee-machine","name":"\u5496\u5561\u673a","types":["coffee-machine"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u5236\u4f5c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["water-level","\u6c34\u91cf","%"]]},{"id":"cooker","name":"\u7535\u996d\u7172","types":["cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"dishwasher","name":"\u6d17\u7897\u673a","types":["dishwasher"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6d17\u6da4\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6c34\u6e29","\u00b0C"]]},{"id":"flowerpot","name":"\u667a\u80fd\u82b1\u76c6","types":["flowerpot"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["relative-humidity","\u571f\u58e4\u6e7f\u5ea6","%"],["illumination","\u5149\u7167","lx"],["soil-ec","\u571f\u58e4\u7535\u5bfc\u7387","\u00b5S/cm"],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"fridge","name":"\u51b0\u7bb1","types":["fridge"],"domains":[],"layout":"metrics","primary":["temperature","option"],"secondary":[],"quick":"reading","readings":[["temperature","\u51b7\u85cf\u6e29\u5ea6","\u00b0C"],["freezer-temperature","\u51b7\u51bb\u6e29\u5ea6","\u00b0C"],["mode","\u8fd0\u884c\u6a21\u5f0f",""]]},{"id":"fruit-vegetable-purifier","name":"\u679c\u852c\u51c0\u6d17\u673a","types":["fruit-vegetable-purifier"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u51c0\u6d17\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"garbage-can","name":"\u667a\u80fd\u5783\u573e\u6876","types":["garbage-can"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["target-lid-state","\u6876\u76d6\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gas-concentration","name":"\u71c3\u6c14\u6d53\u5ea6","types":["gas-concentration"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["$value","\u71c3\u6c14\u6d53\u5ea6",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gas-sensor","name":"\u71c3\u6c14\u62a5\u8b66\u5668","types":["gas-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u89e6\u53d1\u62a5\u8b66","\u68c0\u6d4b\u5230\u71c3\u6c14"],"readings":[["$state","\u62a5\u8b66\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gateway","name":"\u7f51\u5173","types":["gateway"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["guard-mode","\u8b66\u6212\u6a21\u5f0f",""]]},{"id":"health-pot","name":"\u517b\u751f\u58f6","types":["health-pot"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u6c34\u6e29","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"heater","name":"\u53d6\u6696\u5668","types":["heater"],"domains":["climate","switch"],"layout":"climate","primary":["temperature","hvac_mode"],"secondary":["preset_mode"],"quick":"temperature","readings":[["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"hood","name":"\u6cb9\u70df\u673a","types":["hood"],"domains":["fan","switch"],"layout":"status","primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["mode","\u5de5\u4f5c\u6a21\u5f0f",""]]},{"id":"illumination-sensor","name":"\u5149\u7167\u4f20\u611f\u5668","types":["illumination-sensor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["illumination","\u5149\u7167\u5ea6","lx"],["battery-level","\u7535\u91cf","%"]]},{"id":"induction-cooker","name":"\u7535\u78c1\u7089","types":["induction-cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"integrated-stove","name":"\u96c6\u6210\u7076","types":["integrated-stove"],"domains":["fan","switch"],"layout":"appliance","primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","readings":[["mode","\u5de5\u4f5c\u6a21\u5f0f",""],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"juicer","name":"\u6599\u7406\u673a","types":["juicer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"kettle","name":"\u7535\u6c34\u58f6","types":["kettle"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u5f53\u524d\u6c34\u6e29","\u00b0C"],["target-temperature","\u76ee\u6807\u6c34\u6e29","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"magnet-sensor","name":"\u95e8\u7a97\u4f20\u611f\u5668","types":["magnet-sensor"],"domains":["binary_sensor","sensor"],"layout":"status","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u95e8\u7a97\u5df2\u5173\u95ed","\u95e8\u7a97\u5df2\u6253\u5f00"],"readings":[["$state","\u95e8\u7a97\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"massage","name":"\u6309\u6469\u8bbe\u5907","types":["massage"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"mirror","name":"\u667a\u80fd\u955c","types":["mirror"],"domains":["light","switch"],"layout":"status","primary":["brightness_pct","color_temp_kelvin"],"secondary":["effect"],"quick":"brightness_pct","readings":[["$state","\u7167\u660e\u72b6\u6001",""]]},{"id":"mosquito-dispeller","name":"\u9a71\u868a\u5668","types":["mosquito-dispeller"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["repellent-left-level","\u8017\u6750\u4f59\u91cf","%"],["battery-level","\u7535\u91cf","%"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"motion-sensor","name":"\u4eba\u4f53\u4f20\u611f\u5668","types":["motion-sensor"],"domains":["binary_sensor","sensor"],"layout":"status","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u68c0\u6d4b\u5230\u6d3b\u52a8","\u68c0\u6d4b\u5230\u6d3b\u52a8"],"readings":[["$state","\u6d3b\u52a8\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"moxibustion","name":"\u827e\u7078\u8bbe\u5907","types":["moxibustion"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"oven","name":"\u70e4\u7bb1","types":["oven"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"pet-drinking-fountain","name":"\u5ba0\u7269\u996e\u6c34\u673a","types":["pet-drinking-fountain"],"domains":["switch"],"layout":"status","primary":[],"secondary":[],"quick":"power","readings":[["$state","\u4f9b\u6c34\u72b6\u6001",""],["water-level","\u6c34\u91cf","%"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"]]},{"id":"plant-monitor","name":"\u690d\u7269\u76d1\u6d4b\u4eea","types":["plant-monitor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["relative-humidity","\u571f\u58e4\u6e7f\u5ea6","%"],["illumination","\u5149\u7167","lx"],["soil-ec","\u571f\u58e4\u7535\u5bfc\u7387","\u00b5S/cm"],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"pressure-cooker","name":"\u7535\u538b\u529b\u9505","types":["pressure-cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"printer","name":"\u6253\u5370\u673a","types":["printer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6253\u5370\u72b6\u6001",""],["progress","\u4efb\u52a1\u8fdb\u5ea6","%"]]},{"id":"smoke-sensor","name":"\u70df\u96fe\u62a5\u8b66\u5668","types":["smoke-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u89e6\u53d1\u62a5\u8b66","\u68c0\u6d4b\u5230\u70df\u96fe"],"readings":[["$state","\u62a5\u8b66\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"submersion-sensor","name":"\u6c34\u6d78\u4f20\u611f\u5668","types":["submersion-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u68c0\u6d4b\u5230\u6f0f\u6c34","\u68c0\u6d4b\u5230\u6f0f\u6c34"],"readings":[["$state","\u6c34\u6d78\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"towel-rack","name":"\u7535\u70ed\u6bdb\u5dfe\u67b6","types":["towel-rack"],"domains":["climate","switch"],"layout":"climate","primary":["temperature"],"secondary":[],"quick":"temperature","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"treadmill","name":"\u8dd1\u6b65\u673a","types":["treadmill"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["current-distance","\u8fd0\u52a8\u8ddd\u79bb","km"],["working-time","\u8fd0\u52a8\u65f6\u957f","min"],["speed","\u5f53\u524d\u901f\u5ea6","km/h"]]},{"id":"video-doorbell","name":"\u53ef\u89c6\u95e8\u94c3","types":["video-doorbell"],"domains":["camera","binary_sensor"],"layout":"camera","primary":[],"secondary":[],"quick":"reading","notice":"\u6682\u65e0\u9884\u89c8\u753b\u9762","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"walking-pad","name":"\u8d70\u6b65\u673a","types":["walking-pad"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["current-distance","\u8fd0\u52a8\u8ddd\u79bb","km"],["working-time","\u8fd0\u52a8\u65f6\u957f","min"],["speed","\u5f53\u524d\u901f\u5ea6","km/h"]]},{"id":"washer","name":"\u6d17\u8863\u673a","types":["washer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6d17\u6da4\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["progress","\u4efb\u52a1\u8fdb\u5ea6","%"]]},{"id":"water-dispenser","name":"\u996e\u6c34\u673a","types":["water-dispenser"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u5f53\u524d\u6c34\u6e29","\u00b0C"],["target-temperature","\u76ee\u6807\u6c34\u6e29","\u00b0C"],["water-level","\u6c34\u91cf","%"]]},{"id":"water-purifier","name":"\u51c0\u6c34\u5668","types":["water-purifier"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["tds-out","\u51fa\u6c34 TDS","ppm"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"],["$state","\u8fd0\u884c\u72b6\u6001",""]]}];
   /* HA_COMMON_PROFILES_END */
   const commonProfileTypes=Object.create(null);
   commonCardProfiles.forEach(profile=>profile.types.forEach(type=>commonProfileTypes[type]=profile));
@@ -2390,7 +2416,7 @@
       volume_level:'volume',temperature_unit:'temperature-unit'};
     Object.keys(aliases).forEach(key=>{if(attributes[key]!==undefined) {put(type+'.'+aliases[key],attributes[key]);put('environment.'+aliases[key],attributes[key]);}});
     if(attributes.temperature!==undefined)put(type+'.target-temperature',attributes.temperature);
-    if(typeof attributes.brightness==='number'&&Number.isFinite(attributes.brightness)&&attributes.brightness>=0&&attributes.brightness<=255)put('light.brightness',Math.round(attributes.brightness*100/255));
+    if(brightnessPercent(attributes.brightness)!==null)put('light.brightness',raw.state==='off'?0:brightnessPercent(attributes.brightness));
     if(domain==='cover')put(type+'.motor-control',raw.state);
     if(domain==='climate')put(type+'.mode',raw.state);
     if(domain==='media_player') {put('play-control.playing-state',raw.state);put('speaker.volume',attributes.volume_level);if(typeof attributes.is_volume_muted==='boolean')put('speaker.mute',attributes.is_volume_muted);}
@@ -2726,8 +2752,22 @@
     // An unrelated light/switch cannot act as the whole product's power.
     return 100+devicePrimaryRank(item);
   }
+  const nonDeviceDomains=new Set(['automation','calendar','conversation','device_tracker','event','notify','person','persistent_notification','scene','script','stt','sun','todo','tts','update','zone']);
+  function deviceGroupVisible(group,type){
+    const rows=group.items,meta=group.meta;
+    // HA registers software services as devices too. Do not classify by names.
+    if(meta&&meta.manufacturer==='Home Assistant'&&meta.model==='Home Assistant Backup')return false;
+    if(type)return true;
+    const candidates=rows.filter(row=>!nonDeviceDomains.has(row.domain));
+    if(!candidates.length)return false;
+    // Unregistered timestamp-only groups (for example Sun events) are not
+    // appliances. Keep known hardware and explicitly followed sensor entities.
+    return !!(meta&&(meta.model||meta.manufacturer))||candidates.some(row=>
+      row.domain!=='sensor'||!['timestamp','date'].includes(row.device_class)||favorites.includes(row.entity_id));
+  }
   function groupedDeviceCards() {
-    if(deviceCardsKey===entityRevision)return deviceCards;
+    const cacheKey=entityRevision+'|'+favorites.join(',');
+    if(deviceCardsKey===cacheKey)return deviceCards;
     const groups=Object.create(null),order=[];
     entities.forEach(item=>{
       const meta=entityDevices[item.entity_id];
@@ -2738,6 +2778,7 @@
     });
     deviceCards=order.map(key=>{
       const group=groups[key],productType=registeredDeviceType(group.meta,group.items);
+      if(!deviceGroupVisible(group,productType))return null;
       const ranks=Object.create(null);group.items.forEach(item=>ranks[item.entity_id]=productPrimaryRank(item,productType));
       const rows=group.items.slice().sort((a,b)=>ranks[a.entity_id]-ranks[b.entity_id]);
       const primary=rows[0],card=Object.assign({},primary,{
@@ -2777,8 +2818,8 @@
           card.members=switches.map(r=>r.entity_id);card.quick_values['switch.on']=switches.map(r=>available(r)&&r.state==='on');}
       }
       return card;
-    });
-    deviceCardsKey=entityRevision;return deviceCards;
+    }).filter(Boolean);
+    deviceCardsKey=cacheKey;return deviceCards;
   }
 
   function currentDeviceCard() {
@@ -2788,16 +2829,16 @@
   }
 
   function dashboardStats() {
-    const key=entityRevision+'|'+generation;
+    const key=entityRevision+'|'+generation+'|'+favorites.join(',');
     if(dashboardStatsKey===key)return dashboardStatsValue;
-    const cards=groupedDeviceCards(),registered=cards.filter(card=>card.device_id).length;
+    const cards=groupedDeviceCards();
     const running=new Set(entities.filter(item=>available(item)&&controllable(item)&&item.state==='on').map(item=>item.entity_id));
     let online=0,active=0;
-    cards.forEach(card=>{if(registered&&!card.device_id)return;
+    cards.forEach(card=>{
       if(card.device_online)online++;
       if(card.device_entities.some(id=>running.has(id)))active++;
     });
-    dashboardStatsValue=[registered?'设备 '+registered:'实体 '+entities.length,'在线 '+online,'运行 '+active];
+    dashboardStatsValue=['设备 '+cards.length,'在线 '+online,'运行 '+active];
     dashboardStatsKey=key;return dashboardStatsValue;
   }
 
@@ -3021,7 +3062,7 @@
   }
 
   function buildDetailUi(out) {
-    const dx=GRID_X+18,dy=HEADER_H+18,dw=GRID_W-36,dh=H-HEADER_H-36;
+    const dx=GRID_X+18,dy=HEADER_H+12,dw=GRID_W-36,dh=H-HEADER_H-36;
     const leftW=Math.min(224,Math.round(dw*.29)),cx=dx,cw=dw;
     expandButtonPool();out.detailWidgets=[];
     out.detailBox={x:cx,y:dy,w:cw,h:dh};
@@ -3090,18 +3131,47 @@
       prompt.input({title:spec.title,value:item.state,maxLength:128},value=>{if(revision!==generation||value===null||value===undefined)return;requestFunction(entities.find(e=>e.entity_id===entity),spec,value);});
     }else requestFunction(item,spec);
   }
-  function optionLabel(value){const names={quiet:'安静',silent:'静音',sleep:'睡眠',normal:'标准',natural:'自然风',boost:'强力',eco:'节能',comfort:'舒适',low:'低',medium:'中',high:'高',vertical:'上下',horizontal:'左右',both:'全向',none:'无'};return value===true?'开启':value===false?'关闭':names[String(value)]||STATE_WORDS[String(value)]||String(value);}
+  function optionLabel(value){const names={day:'日间',night:'夜间',relax:'放松',quiet:'安静',silent:'静音',sleep:'睡眠',normal:'标准',natural:'自然风',boost:'强力',eco:'节能',comfort:'舒适',low:'低',medium:'中',high:'高',vertical:'上下',horizontal:'左右',both:'全向',none:'无'};return value===true?'开启':value===false?'关闭':names[String(value).toLowerCase()]||STATE_WORDS[String(value)]||String(value);}
+  function detailText(id,value,x,y,w,h,font,color,center){
+    hide(id,false);pushPos(id,Math.round(x),Math.round(y));pushSize(id,Math.floor(w),Math.floor(h));
+    pushStyle(id,'L',{fontSize:font,center:center?1:0,icon:0,ellipsis:1});pushColor(id,color);pushText(id,String(value));
+  }
+  function detailIcon(id,value,x,y,w,h,mode,color){
+    // Icon fonts paint from the top; text alignment only centers horizontally.
+    const pixels=mode===3?32:24;
+    detailText(id,value,x,y+(h-pixels)/2,w,pixels+4,pixels,color,true);
+    pushStyle(id,'I',{icon:mode,fontSize:pixels,center:1});
+  }
+  function paintDetailButton(button,caption,x,y,w,h,active,usable,font=14){
+    const out=widgets;
+    if(!button.face){
+      button.face=panel(0,0,4,4,pal.track,12);button.caption=label('',0,0,4,4,16,pal.ink);
+      out.detailWidgets.push(button.face,button.caption);
+      (out.detailDecorations||(out.detailDecorations=[])).push(button.face,button.caption);
+    }
+    Object.assign(button,{x:Math.round(x),y:Math.round(y),w:Math.floor(w),h:Math.floor(h),color:active?pal.blueSoft:pal.track,
+      style:{radius:12,borderWidth:0,fontSize:font,enabled:usable?1:0}});buttonText(button,caption);hide(button,!usable);
+    hide(button.face,false);pushPos(button.face,x,y);pushSize(button.face,w,h);pushColor(button.face,button.color);
+    detailText(button.caption,caption,x+4,y+(h-26)/2,w-8,26,font,!usable?pal.muted:active?pal.blue:pal.ink,true);
+    if(typeof ui.front==='function'){ui.front(button.face);ui.front(button.caption);}
+  }
   function renderDirectOptions(row,item,spec,x,y,w,h){
-    if(spec.kind!=='options'||spec.options.length>4)return false;
-    const gap=6,width=(w-gap*(spec.options.length-1))/spec.options.length,font=Math.min(16,w<250?14:16);
-    if(spec.options.some(value=>fit(optionLabel(value),width-12,font)!==optionLabel(value)))return false;
+    const actions=spec.kind==='actions',presets=spec.kind==='presets',values=actions?spec.actions:spec.options;
+    if(!actions&&!presets&&spec.kind!=='options'||!values||values.length>4)return false;
+    const gap=6,width=(w-gap*(values.length-1))/values.length,font=14;
+    const caption=(value,index)=>actions?value.title:presets?spec.labels[index]:optionLabel(value);
+    if(values.some((value,index)=>fit(caption(value,index),width-12,font)!==caption(value,index)))return false;
     if(!row.optionButtons)row.optionButtons=Array.from({length:4},(_,index)=>{
-      const button=createButton('',0,0,4,4,()=>{if(row.item&&row.spec)requestFunction(entities.find(e=>e.entity_id===row.item.entity_id),row.spec,row.spec.options[index]);},pal.track,{radius:12,borderWidth:0,fontSize:16});button.section='detail';hide(button,true);return button;
+      const button=createButton('',0,0,4,4,()=>{if(row.item&&row.spec){const current=entities.find(e=>e.entity_id===row.item.entity_id);if(row.spec.kind==='actions')requestFunction(current,row.spec.actions[index]);else requestFunction(current,row.spec.kind==='presets'?row.spec.target:row.spec,row.spec.options[index]);}},pal.track,{radius:12,borderWidth:0,fontSize:14});button.section='detail';hide(button,true);return button;
     });
-    const value=controlValue(item,spec);
-    row.optionButtons.forEach((button,index)=>{const visible=index<spec.options.length;hide(button,!visible);if(!visible)return;
-      Object.assign(button,{x:Math.round(x+index*(width+gap)),y,w:Math.floor(width),h,color:spec.options[index]===value?pal.blueSoft:pal.track});
-      button.style={radius:12,borderWidth:0,fontSize:font,enabled:connected&&available(item)&&!layoutEditing?1:0};buttonText(button,optionLabel(spec.options[index]));
+    const value=controlValue(item,presets?spec.target:spec);
+    row.optionButtons.forEach((button,index)=>{const visible=index<values.length;hide(button,!visible);hide(button.face,!visible);hide(button.caption,!visible);if(!visible)return;
+      paintDetailButton(button,caption(values[index],index),x+index*(width+gap),y,width,h,!actions&&values[index]===value,connected&&available(item)&&!layoutEditing);
+      if(actions){
+        const code={open_cover:'\uf077',stop_cover:'\uf04d',close_cover:'\uf078',media_previous_track:'\uf048',media_play:'\uf04b',media_pause:'\uf04c',media_next_track:'\uf051',start:'\uf04b',pause:'\uf04c',return_to_base:'\uf015'}[values[index].service];
+        if(code){const tw=typeof ui.measureText==='function'?ui.measureText(caption(values[index],index),font).width:caption(values[index],index).length*font;const offset=Math.max(2,(width-tw-25)/2);
+          const glyph=detailExtra(button,'actionGlyph');detailIcon(glyph,code,button.x+offset,y,22,h,1,pal.ink);pushPos(button.caption,button.x+offset+25,y+(h-26)/2);pushSize(button.caption,Math.max(20,width-offset-27),26);pushStyle(button.caption,'L',{center:0});}
+      }
     });
     return true;
   }
@@ -3113,7 +3183,7 @@
     if(!optionPicker)return;
     const item=entities.find(row=>row.entity_id===optionPicker.entity),spec=item&&functionControls(item).find(row=>row.service===optionPicker.service&&row.key===optionPicker.key);
     if(optionPicker.generation!==generation||!item||!spec||!available(item)||settingsOpen||!detailOpen){optionPicker=null;return;}
-    const out=widgets,box=out.detailBox;if(!box){optionPicker=null;return;}
+    const out=widgets,box=out.activeDetailBox||out.detailBox;if(!box){optionPicker=null;return;}
     if(!optionPickerUi){
       const make=(text,action)=>{const button=createButton(text,0,0,4,4,action,pal.track,{radius:12,borderWidth:0,fontSize:18});button.section='picker';hide(button,true);return button;};
       optionPickerUi={choices:Array.from({length:4},(_,index)=>make('',()=>{
@@ -3122,75 +3192,189 @@
       })),previous:make('<',()=>{optionPicker.page--;render();}),next:make('>',()=>{optionPicker.page++;render();}),close:make('返回',()=>{optionPicker=null;detailRenderKey='';render();})};
     }
     out.detailWidgets.forEach(id=>hide(id,true));hide(out.detailPanel,false);hide(out.detailName,false);hide(out.detailState,false);
+    pushPos(out.detailName,box.x+20,box.y+16);pushSize(out.detailName,box.w-40,36);
+    pushPos(out.detailState,box.x+20,box.y+54);pushSize(out.detailState,box.w-40,24);
     pushText(out.detailName,spec.title);pushText(out.detailState,item.name+' · 直接选择');
     const pages=Math.ceil(spec.options.length/4);optionPicker.page=Math.min(optionPicker.page,pages-1);
     const rowH=Math.min(58,Math.floor((box.h-150)/4)),y=box.y+90;
     optionPickerUi.choices.forEach((button,index)=>{const value=spec.options[optionPicker.page*4+index];hide(button,value===undefined);if(value===undefined)return;
-      Object.assign(button,{x:box.x+20,y:y+index*rowH,w:box.w-40,h:rowH-8,color:value===controlValue(item,spec)?pal.blueSoft:pal.track});buttonText(button,optionLabel(value));});
+      paintDetailButton(button,optionLabel(value),box.x+20,y+index*rowH,box.w-40,rowH-8,value===controlValue(item,spec),true);});
     const bottom=box.y+box.h-52;
     Object.assign(optionPickerUi.previous,{x:box.x+20,y:bottom,w:48,h:40});hide(optionPickerUi.previous,optionPicker.page===0);
     Object.assign(optionPickerUi.next,{x:box.x+80,y:bottom,w:48,h:40});hide(optionPickerUi.next,optionPicker.page+1>=pages);
     Object.assign(optionPickerUi.close,{x:box.x+box.w-108,y:bottom,w:88,h:40});hide(optionPickerUi.close,false);
+    [optionPickerUi.previous,optionPickerUi.next,optionPickerUi.close].forEach(b=>{if(!b.hidden)paintDetailButton(b,b.text,b.x,b.y,b.w,b.h,false,true);});
+  }
+  function lampUi(){
+    const out=widgets;if(out.lampUi)return out.lampUi;
+    const keep=id=>{out.detailWidgets.push(id);hide(id,true);return id;};
+    const u={buttons:[],swatches:[],entity:'',specs:[]};
+    u.marker=keep(panel(0,0,14,14,0xffffff,7));pushStyle(u.marker,'S',{radius:7,borderWidth:2,borderColor:0x20262c});
+    u.icon=keep(panel(0,0,50,50,dark?0x1f3b50:pal.blueSoft,18));
+    u.glyph=keep(label('\uf0eb',0,0,50,50,32,pal.blue,1));
+    u.paletteTitle=keep(label('',0,0,200,28,18,pal.ink));
+    u.effectTitle=keep(label('',0,0,200,28,18,pal.ink));
+    u.notice=keep(label('',0,0,200,44,14,pal.muted));
+    u.preview=keep(panel(0,0,44,44,0xff962e,12));
+    u.colorLabel=keep(label('自选颜色',0,0,150,32,18,pal.ink));
+    const make=action=>{const b=createButton('',0,0,4,4,action,pal.track,{radius:12,borderWidth:0,fontSize:16});b.section='detail';hide(b,true);u.buttons.push(b);return b;};
+    const decorate=b=>{b.face=keep(panel(0,0,4,4,pal.track,12));b.caption=keep(label('',0,0,4,4,16,pal.ink));return b;};
+    for(let i=0;i<8;i++){
+      const s={face:keep(panel(0,0,44,44,0xffffff,22)),value:null};
+      s.button=make(()=>{
+        const current=lookupEntity(u.entity);if(!current||!s.value)return;
+        if(s.value.rgb)setLampRgb(u.entity,s.value.rgb);
+        else requestFunction(current,functionControls(current).find(c=>c.key==='color_temp_kelvin'),s.value.kelvin);
+      });u.swatches.push(s);
+    }
+    u.extra=decorate(make(()=>{lampAuxEntity=lampAuxEntity===u.entity?'':u.entity;detailRenderKey='';render();}));
+    u.effects=Array.from({length:1},()=>decorate(make(()=>{
+      const current=lookupEntity(u.entity),spec=current&&functionControls(current).find(c=>c.key==='effect');
+      if(spec)openOptionPicker(current,spec);
+    })));
+    out.lampUi=u;return u;
+  }
+  function rgbHsv(rgb){
+    const values=rgb.map(v=>v/255),max=Math.max(...values),min=Math.min(...values),delta=max-min;
+    let h=0;if(delta){const i=values.indexOf(max);h=(i===0?(values[1]-values[2])/delta:i===1?2+(values[2]-values[0])/delta:4+(values[0]-values[1])/delta)*60;}
+    return {h:(h+360)%360,s:max?delta/max:0};
+  }
+  function wheelRgb(rect,x,y){
+    const dx=(x-rect.x-rect.w/2)/(rect.w/2-1),dy=(y-rect.y-rect.h/2)/(rect.h/2-1);
+    const h=((Math.atan2(dy,dx)*180/Math.PI+90+360)%360)/60,s=Math.min(1,Math.hypot(dx,dy)),c=s,m=1-c;
+    const v=c*(1-Math.abs(h%2-1)),parts=h<1?[c,v,0]:h<2?[v,c,0]:h<3?[0,c,v]:h<4?[0,v,c]:h<5?[v,0,c]:[c,0,v];
+    return parts.map(value=>Math.round((value+m)*255));
+  }
+  function placeWheelMarker(u,rgb){
+    if(!u.wheelRect)return;const r=u.wheelRect,hsv=rgbHsv(rgb),angle=(hsv.h-90)*Math.PI/180;
+    const radius=hsv.s*(r.w/2-7);hide(u.marker,false);
+    pushPos(u.marker,Math.round(r.x+r.w/2+Math.cos(angle)*radius-7),Math.round(r.y+r.h/2+Math.sin(angle)*radius-7));
+    if(typeof ui.front==='function')ui.front(u.marker);
+  }
+  function handleLampWheel(state,nx,ny){
+    const u=widgets&&widgets.lampUi,r=detailOpen&&u&&u.wheelRect;
+    if(disposed||settingsOpen||optionPicker||!r||!Number.isFinite(nx)||!Number.isFinite(ny)){lampWheelDrag=null;return false;}
+    const x=nx*W,y=ny*H;
+    if(state==='down'){
+      lampWheelDrag=null;
+      if(Math.hypot(x-r.x-r.w/2,y-r.y-r.h/2)>r.w/2)return false;
+      quickGestureOwned=true;quickDrag=null;
+      const item=lookupEntity(r.entity);
+      if(connected&&available(item)&&lampCanColor(item)&&!layoutEditing)lampWheelDrag={generation,entity:r.entity};
+      else return true;
+    }
+    if(!lampWheelDrag)return false;
+    if(lampWheelDrag.generation!==generation||lampWheelDrag.entity!==r.entity){lampWheelDrag=null;return true;}
+    if(state==='down'||state==='move'){
+      const rgb=wheelRgb(r,x,y);placeWheelMarker(u,rgb);pushColor(u.preview,rgbColor(rgb));
+      pushText(u.colorLabel,'#'+rgbColor(rgb).toString(16).padStart(6,'0').toUpperCase());
+    }
+    if(state==='up'){const rgb=wheelRgb(r,x,y);lampWheelDrag=null;detailRenderKey='';setLampRgb(r.entity,rgb);render();}
+    if(state==='cancel'){lampWheelDrag=null;detailRenderKey='';render();}
+    return true;
   }
   function renderLampDetail(item,specs){
-    const out=widgets,box=out.detailMainBox,ranges=specs.filter(spec=>spec.kind==='range').slice(0,2);
-    const power=specs.find(spec=>spec.kind==='action'),effect=specs.find(spec=>spec.key==='effect');
-    out.detailAuxRowHeight=Math.min(110,Math.floor((box.h-150)/ranges.length));
-    hide(out.detailEntity,true);hide(out.detailAvailability,true);
-    pushSize(out.detailName,box.w-100,32);
-    out.detailControlRows.forEach(row=>{
-      row.item=item;row.spec=null;
-      [row.title,row.track,row.fill,row.thumb,row.value,row.minusGlyph,row.plusGlyph].forEach(id=>hide(id,true));
-    });
-    const usable=connected&&available(item)&&!layoutEditing;
+    const out=widgets,u=lampUi(),box=out.detailBox;
+    const pad=detailDesign.padding,left=box.x+pad,top=box.y+pad+detailDesign.headerHeight+detailDesign.headerGap+1,gap=detailDesign.columnGap;
+    const column=(box.w-2*pad-gap)*detailDesign.columnRatio/(detailDesign.columnRatio+1),rw=Math.min(detailDesign.primaryMax,Math.floor(column)),right=left+column+gap,auxW=box.x+box.w-pad-right;
+    const ranges=specs.filter(s=>s.kind==='range').slice(0,2),temperature=specs.find(s=>s.key==='color_temp_kelvin');
+    const effect=specs.find(s=>s.key==='effect'),power=specs.find(s=>s.kind==='action');
+    const usable=connected&&available(item)&&!layoutEditing&&!item.product_readonly;
+    const color=lampCanColor(item);
+    u.entity=item.entity_id;
+    const text=(id,value,x,y,w,h,font,ink)=>{hide(id,false);pushPos(id,x,y);pushSize(id,w,h);pushStyle(id,'L',{fontSize:font,center:0,ellipsis:1});pushColor(id,ink===undefined?pal.ink:ink);pushText(id,value);};
+    const button=(b,caption,x,y,w,h,active)=>{
+      Object.assign(b,{x:Math.round(x),y:Math.round(y),w:Math.floor(w),h:Math.floor(h),color:active?pal.blueSoft:pal.track,style:{radius:12,borderWidth:0,fontSize:16,enabled:usable?1:0}});buttonText(b,caption);hide(b,!usable);
+      if(b.face){hide(b.face,false);pushPos(b.face,x,y);pushSize(b.face,w,h);pushColor(b.face,b.color);
+        text(b.caption,caption,x,y+(h-24)/2,w,24,16,!usable?pal.muted:active?pal.blue:pal.ink);pushStyle(b.caption,'L',{fontSize:16,center:1});}
+    };
+    hide(u.icon,false);pushPos(u.icon,left,box.y+25);pushSize(u.icon,46,46);pushColor(u.icon,pal.blueSoft);pushStyle(u.icon,'S',{radius:15});
+    detailIcon(u.glyph,'\uf0eb',left,box.y+25,46,46,1,pal.blue);
+    text(out.detailName,fit(currentDeviceCard().name,box.w-180,23),left+58,box.y+20,box.w-160,33,23);
+    const area=entityDevices[item.entity_id]&&entityDevices[item.entity_id].area;
+    text(out.detailState,(area?area+' · ':'')+'设备功能',left+58,box.y+56,box.w-160,22,14,pal.muted);
+    out.detailControlRows.forEach(row=>{row.item=item;row.spec=null;[row.title,row.track,row.fill,row.thumb,row.value,row.minusGlyph,row.plusGlyph].forEach(id=>hide(id,true));});
+    const rh=detailDesign.rangeHeight,rowGap=92+detailDesign.fieldGap;
     ranges.forEach((spec,index)=>{
-      const row=out.detailControlRows[index],rx=box.x+20,rw=Math.min(400,box.w-64);
-      const rowH=Math.min(110,Math.floor((box.h-150)/ranges.length)),ty=box.y+84+index*rowH,ry=ty+30,rh=52;
-      const value=controlValue(item,spec),numeric=Number.isFinite(value)?value:spec.min;
-      const percent=Math.max(0,Math.min(100,(numeric-spec.min)*100/(spec.max-spec.min)));
-      const temperature=spec.key==='color_temp_kelvin',filled=20+(rw-20)*percent/100;
-      row.spec=spec;
-      hide(row.title,false);pushPos(row.title,rx,ty);pushSize(row.title,rw,24);
-      pushStyle(row.title,'L',{fontSize:18,center:0,ellipsis:1});pushText(row.title,spec.title+' '+formatControl(spec,value));pushColor(row.title,pal.ink);
-      hide(row.track,false);pushPos(row.track,rx,ry);pushSize(row.track,rw,rh);pushStyle(row.track,'S',{radius:18});
-      pushColor(row.track,temperature?temperatureColor(spec.min):dark?0x303740:0xeef0f2);
-      pushStyle(row.track,'G',{gradientHorizontal:temperature?1:0,gradientVertical:0,gradientEnd:temperature?temperatureColor(spec.max):0xffffff});
-      hide(row.fill,temperature);pushPos(row.fill,rx,ry);pushSize(row.fill,filled,rh);
-      pushStyle(row.fill,'S',{radius:18});pushColor(row.fill,pal.blue);
-      hide(row.thumb,false);pushSize(row.thumb,6,32);pushPos(row.thumb,rx+filled-18,ry+10);
-      pushStyle(row.thumb,'S',{radius:3,borderWidth:temperature?1:0,borderColor:0x65717f});
-      const rect={x:rx,y:ry,w:rw,h:rh,inputX:rx+5,inputW:rw-20,minFill:20,fill:row.fill,thumb:row.thumb,label:row.title,labelColor:pal.ink,spec,item,gradient:temperature};
+      const row=out.detailControlRows[index],ty=top+index*rowGap,ry=ty+40;
+      const value=controlValue(item,spec),v=Number.isFinite(value)?value:spec.min,percent=Math.max(0,Math.min(100,(v-spec.min)*100/(spec.max-spec.min))),warm=spec.key==='color_temp_kelvin';row.spec=spec;
+      text(row.title,spec.title,left,ty,rw-104,31,detailDesign.label);
+      const caption=formatControl(spec,value);
+      text(row.value,caption,left+rw-104,ty-1,104,32,detailDesign.value);pushStyle(row.value,'L',{fontSize:detailDesign.value,center:0,rightAlign:1});
+      let rect;
+      if(warm){
+        hide(row.fill,true);hide(row.track,false);pushPos(row.track,left,ry);pushSize(row.track,rw,rh);pushColor(row.track,0xffb16e);pushStyle(row.track,'S',{radius:18,borderWidth:0});pushStyle(row.track,'G',{gradientHorizontal:1,gradientVertical:0,gradientEnd:0xfffdfa,gradientMainStop:0,gradientEndStop:255});
+        hide(row.thumb,false);pushPos(row.thumb,left+12+(rw-30)*percent/100,ry+12);pushSize(row.thumb,6,28);pushStyle(row.thumb,'S',{radius:4,borderWidth:1,borderColor:0x6d8092});
+        rect={x:left,y:ry,w:rw,h:rh,inputX:left+15,inputW:rw-30,thumbTrack:true,thumbH:28,fill:row.fill,thumb:row.thumb,label:row.value,valueOnly:true,labelColor:pal.ink,spec,item,gradient:true};
+      }else rect=designSlider(row,row.track,row.value,item,spec,left,ry,rw,rh,percent,0xffa64e);
       out.detailDragGroup.sliderRects.push(rect);if(usable)out.detailDragGroup.controlRects.push(rect);
     });
-    const owner=out.detailControlRows[0],px=out.detailBox.x+out.detailBox.w-60,py=box.y+14;
-    hide(out.detailLampPowerFace,!power);pushColor(out.detailLampPowerFace,item.state==='on'?quickPalette.green:pal.track);
-    hide(owner.minusGlyph,!power);pushPos(owner.minusGlyph,px+6,py+6);pushSize(owner.minusGlyph,24,24);
-    pushStyle(owner.minusGlyph,'I',{fontSize:24,icon:1,center:1});pushText(owner.minusGlyph,'\uf011');
-    pushColor(owner.minusGlyph,item.state==='on'?0xffffff:pal.muted);
-    Object.assign(owner.minus,{x:px-6,y:py-6,w:48,h:48});buttonText(owner.minus,'');hide(owner.minus,!power||!usable);
-    owner.minusAction=()=>toggleItem(entities.find(e=>e.entity_id===item.entity_id));
-    const row=out.detailControlRows[2],fy=box.y+box.h-64;
-    if(effect){
-      const value=controlValue(item,effect);row.spec=effect;
-      hide(row.value,false);pushPos(row.value,box.x+76,fy+10);pushSize(row.value,box.w-152,28);
-      pushStyle(row.value,'L',{fontSize:18,center:1,ellipsis:1});pushText(row.value,'灯光效果 · '+(value||'未选择'));
-      hide(row.minusGlyph,false);hide(row.plusGlyph,false);pushText(row.minusGlyph,'<');pushText(row.plusGlyph,'>');
-      pushPos(row.minusGlyph,box.x+20,fy+10);pushPos(row.plusGlyph,box.x+box.w-68,fy+10);
-      pushSize(row.minusGlyph,48,28);pushSize(row.plusGlyph,48,28);
-      pushStyle(row.minusGlyph,'L',{fontSize:20,center:1,icon:0});pushStyle(row.plusGlyph,'L',{fontSize:20,center:1,icon:0});
-      Object.assign(row.minus,{x:box.x+20,y:fy,w:48,h:48});Object.assign(row.plus,{x:box.x+box.w-68,y:fy,w:48,h:48});
-      buttonText(row.minus,'');buttonText(row.plus,'');hide(row.minus,!usable);hide(row.plus,!usable);
-      if(renderDirectOptions(row,item,effect,box.x+20,fy,box.w-40,48)){
-        [row.value,row.minusGlyph,row.plusGlyph].forEach(id=>hide(id,true));hide(row.minus,true);hide(row.plus,true);
+    const owner=out.detailControlRows[0],px=box.x+box.w-64,py=box.y+25;
+    hide(out.detailLampPowerFace,!power);pushPos(out.detailLampPowerFace,px,py);pushSize(out.detailLampPowerFace,46,46);pushStyle(out.detailLampPowerFace,'S',{radius:23});pushColor(out.detailLampPowerFace,item.state==='on'?(dark?0x204b39:0xdff5e7):pal.track);
+    if(power){
+      detailIcon(owner.minusGlyph,'\uf011',px,py,46,46,1,item.state==='on'?0xb9f0d0:pal.muted);
+      Object.assign(owner.minus,{x:px-1,y:py-1,w:48,h:48});buttonText(owner.minus,'');hide(owner.minus,!usable);
+      owner.minusAction=()=>toggleItem(lookupEntity(item.entity_id));
+    }
+    const extras=deviceFunctions().filter(member=>member.entity_id!==item.entity_id);
+    if(extras.length){
+      const sideControls=temperature||color||effect;
+      if(sideControls)button(u.extra,lampAuxEntity===item.entity_id?'返回灯光配色':'其他设备功能',right,box.y+box.h-44,auxW,34,false);
+      if(lampAuxEntity===item.entity_id||!sideControls){
+        out.detailAuxBox={x:right,y:top,w:auxW,h:box.h-172};
+        out.detailAuxCount=out.detailControlCount;renderAuxFields(extras);return;
       }
     }
+    let nextY=top;
+    if(temperature||color){
+      text(u.paletteTitle,temperature?(color?'常用色温 · 颜色':'常用色温'):'常用颜色',right,nextY,auxW,28,18);
+      const values=[];
+      if(temperature)for(let i=0;i<4;i++){
+        const k=Math.round(temperature.min+(temperature.max-temperature.min)*i/3);values.push({kelvin:k,color:[0xffaf59,0xffd2af,0xffebd6,0xfffdfa][i]});
+      }
+      if(color)for(const rgb of [[127,172,255],[215,150,255],[255,158,243],[255,110,84]])values.push({rgb,color:rgbColor(rgb)});
+      const d=Math.min(44,Math.floor((auxW-3*12)/4)),stride=d+12,sy=nextY+28;
+      u.swatches.forEach((s,index)=>{
+        const value=values[index];s.value=value;if(!value)return;
+        const x=right+index%4*stride,y=sy+Math.floor(index/4)*(d+12);
+        const currentValue=temperature&&controlValue(item,temperature);
+        const selected=value.rgb?validRgb(item.rgb_color)&&item.color_mode!=='color_temp'&&item.rgb_color.every((v,i)=>Math.abs(v-value.rgb[i])<8):item.color_mode!=='rgb'&&item.color_mode!=='hs'&&item.color_mode!=='xy'&&Math.abs(currentValue-value.kelvin)<60;
+        hide(s.face,false);pushPos(s.face,x,y);pushSize(s.face,d,d);pushColor(s.face,value.color);pushStyle(s.face,'S',{radius:Math.ceil(d/2),borderWidth:selected?2:0,borderColor:pal.blue});
+        button(s.button,'',x-2,y-2,d+4,d+4,false);s.button.style.radius=Math.ceil(d/2);
+      });
+      nextY=sy+Math.ceil(values.length/4)*(d+12)-12+8;
+      if(color&&typeof ui.colorWheel==='function'){
+        const directEffect=effect&&effect.options.length<=4&&effect.options.every(v=>fit(optionLabel(v),(auxW-6*(effect.options.length-1))/effect.options.length-12,14)===optionLabel(v));
+        const reserved=(effect?directEffect?78:54:12)+(extras.length?38:0);
+        const diameter=Math.max(64,Math.min(160,auxW-82,box.y+box.h-20-nextY-reserved-10));
+        if(u.wheel===undefined){u.wheel=ui.colorWheel(right,nextY,Math.round(diameter));out.detailWidgets.push(u.wheel);}
+        hide(u.wheel,false);pushPos(u.wheel,right,nextY);pushSize(u.wheel,Math.round(diameter),Math.round(diameter));
+        u.wheelRect={x:right,y:nextY,w:diameter,h:diameter,entity:item.entity_id};
+        text(u.colorLabel,'颜色选择',right+diameter+12,nextY+diameter/2-13,auxW-diameter-12,28,16);
+        hide(u.preview,false);pushPos(u.preview,right+diameter+12,nextY+diameter/2+23);pushSize(u.preview,28,18);pushColor(u.preview,rgbColor(lampRgb(item)));
+        placeWheelMarker(u,lampRgb(item));nextY+=diameter+10;
+      }
+    }
+    if(effect){
+      const row=u.effectRow||(u.effectRow={});row.item=item;row.spec=effect;
+      if(renderDirectOptions(row,item,effect,right,nextY+32,auxW,detailDesign.buttonHeight)){
+        text(u.effectTitle,'灯光效果',right,nextY,auxW,26,detailDesign.label,pal.ink);
+        if(typeof ui.front==='function')ui.front(u.effectTitle);
+      }else{
+        button(u.effects[0],'',right,nextY,auxW,44,false);
+        text(u.effectTitle,'灯光效果',right+12,nextY+10,auxW-128,26,16,pal.muted);
+        text(u.effects[0].caption,fit(optionLabel(controlValue(item,effect)||'选择'),106,16)+'  v',right+auxW-120,nextY+10,108,26,16);
+        pushStyle(u.effects[0].caption,'L',{fontSize:16,center:1});
+        if(typeof ui.front==='function'){ui.front(u.effectTitle);ui.front(u.effects[0].caption);}
+      }
+    }else if(!temperature&&!color){text(u.notice,'此灯具未提供色温、颜色或灯光效果',right,top,auxW,60,14,pal.muted);}
   }
 
   function deviceFields(members){
     const card=currentDeviceCard(),profile=commonCardProfile(card);
     const readings=profileReadings(card),represented=new Set(readings.map(row=>row.source));
     const summary=readings.map(row=>({item:card,spec:{title:row.title,kind:'read',value:row.display,
-      profileReading:true,alert:row.alert,key:row.key}}));
+      profileReading:true,alert:row.alert,key:row.key,numeric:row.numeric,number:row.value,unit:row.unit}}));
     const fields=[];
     members.forEach(item=>{
       const specs=profileControls(item);
@@ -3226,11 +3410,11 @@
       }
       if(range){
         const v=Number.isFinite(value)?value:spec.min,percent=Math.max(0,Math.min(100,(v-spec.min)*100/(spec.max-spec.min)));
-        const width=16+(box.w-16)*percent/100;
+      const width=27+(box.w-27)*percent/100;
         pushPos(row.fill,box.x,y+30);pushSize(row.fill,width,52);pushColor(row.fill,pal.blue);pushStyle(row.fill,'S',{radius:18});
-        pushPos(row.thumb,box.x+width-12,y+40);pushSize(row.thumb,5,32);
-        const rect={x:box.x,y:y+30,w:box.w,h:52,minFill:16,inputX:box.x+4,inputW:box.w-16,
-          fill:row.fill,thumb:row.thumb,thumbH:32,thumbInset:12,label:row.name,labelColor:pal.ink,labelName:item.name,spec,item};
+        pushPos(row.thumb,box.x+12+(box.w-30)*percent/100,y+40);pushSize(row.thumb,6,32);
+        const rect={x:box.x,y:y+30,w:box.w,h:52,minFill:27,inputX:box.x+15,inputW:box.w-30,thumbTrack:true,
+          fill:row.fill,thumb:row.thumb,thumbH:32,label:row.name,labelColor:pal.ink,labelName:item.name,spec,item};
         out.detailDragGroup.sliderRects.push(rect);if(usable)out.detailDragGroup.controlRects.push(rect);
       }else{
         if(renderDirectOptions(row,item,spec,box.x,y+30,box.w,52)){
@@ -3242,17 +3426,182 @@
     });
   }
 
+  /* HA_DETAIL_DESIGN_BEGIN */
+  const detailDesign = {"padding":20,"minHeight":384,"headerHeight":54,"headerGap":22,"icon":46,"title":23,"columnGap":36,"primaryMax":400,"fieldGap":23,"label":15,"value":22,"labelGap":9,"rangeHeight":52,"rangeRadius":18,"thumbHeight":28,"buttonHeight":46,"buttonFont":14,"buttonGap":6,"stepHeight":58,"stepFont":30,"metricFont":43,"layouts":{"bedside":{"left":[["brightness","\u4eae\u5ea6"],["kelvin","\u8272\u6e29"]],"right":[["effect","\u706f\u5149\u6548\u679c"]],"readings":[]},"outlet":{"left":[["watt","\u5f53\u524d\u529f\u7387"]],"right":[["today","\u4eca\u65e5\u7528\u7535"],["voltage","\u7535\u538b"]],"readings":[]},"fan":{"left":[["speed","\u98ce\u901f"],["preset","\u8fd0\u884c\u6a21\u5f0f"]],"right":[["swing","\u6446\u98ce"]],"readings":[]},"climate":{"left":[["target","\u76ee\u6807\u6e29\u5ea6"],["mode","\u8fd0\u884c\u6a21\u5f0f"]],"right":[["fan","\u98ce\u901f"],["swing","\u6446\u98ce"]],"readings":[["room-temp","\u5ba4\u6e29"]]},"cover":{"left":[["position","\u5f00\u542f\u7a0b\u5ea6"],["move","\u7a97\u5e18\u63a7\u5236"]],"right":[["favorite","\u5e38\u7528\u4f4d\u7f6e"]],"readings":[]},"purifier":{"left":[["pm25","PM2.5"],["speed","\u98ce\u901f"]],"right":[["preset","\u51c0\u5316\u6a21\u5f0f"],["filter","\u6ee4\u82af\u4f59\u91cf"]],"readings":[]},"humidifier":{"left":[["humidity","\u76ee\u6807\u6e7f\u5ea6"],["current","\u5f53\u524d\u6e7f\u5ea6"]],"right":[["mode","\u52a0\u6e7f\u6a21\u5f0f"]],"readings":[]},"speaker":{"left":[["volume","\u97f3\u91cf"],["playback","\u64ad\u653e\u63a7\u5236"]],"right":[["mute","\u9759\u97f3"],["source","\u97f3\u6e90"]],"readings":[]},"vacuum":{"left":[["state","\u5f53\u524d\u72b6\u6001"],["clean","\u6e05\u626b\u63a7\u5236"]],"right":[["suction","\u5438\u529b"],["battery","\u7535\u91cf"]],"readings":[]},"heater":{"left":[["target","\u76ee\u6807\u6c34\u6e29"],["current","\u5f53\u524d\u6c34\u6e29"]],"right":[["mode","\u52a0\u70ed\u6a21\u5f0f"]],"readings":[]},"sensor":{"left":[["temperature","\u6e29\u5ea6"],["humidity","\u6e7f\u5ea6"]],"right":[["battery","\u7535\u91cf"],["state","\u8bbe\u5907\u72b6\u6001"]],"readings":[]}},"columnRatio":1.45};
+  /* HA_DETAIL_DESIGN_END */
+  function detailExtra(row,name,color){
+    if(row[name]===undefined){row[name]=color===undefined?label('',0,0,4,4,15,pal.ink):panel(0,0,4,4,color,12);widgets.detailWidgets.push(row[name]);(widgets.detailDecorations||(widgets.detailDecorations=[])).push(row[name]);}
+    return row[name];
+  }
+  function paintSliderTrack(track,percent,accent){
+    const stop=Math.max(0,Math.min(255,Math.round(percent*255/100)));
+    // Equal gradient stops still paint an endpoint pixel in LVGL.
+    pushColor(track,percent<=0?pal.track:accent);
+    pushStyle(track,'G',{gradientHorizontal:1,gradientVertical:0,gradientEnd:percent>=100?accent:pal.track,gradientMainStop:stop,gradientEndStop:stop});
+  }
+  function designSlider(row,track,valueLabel,item,spec,x,y,w,h,percent,accent){
+    hide(track,false);pushPos(track,x,y);pushSize(track,w,h);
+    pushStyle(track,'S',{radius:h===48?16:detailDesign.rangeRadius,borderWidth:0});
+    paintSliderTrack(track,percent,accent);
+    hide(row.fill,true);hide(row.thumb,false);pushPos(row.thumb,Math.round(x+12+(w-30)*percent/100),Math.round(y+(h-detailDesign.thumbHeight)/2));pushSize(row.thumb,6,detailDesign.thumbHeight);pushColor(row.thumb,0xffffff);pushStyle(row.thumb,'S',{radius:4,borderWidth:0});
+    return {x,y,w,h,inputX:x+15,inputW:w-30,cssRange:true,track,accent,fill:row.fill,thumb:row.thumb,thumbTrack:true,thumbH:detailDesign.thumbHeight,label:valueLabel,valueOnly:true,labelColor:pal.ink,spec,item};
+  }
+  function renderProfileDetail(item,device,profile,members){
+    const out=widgets,D=detailDesign,box=Object.assign({},out.detailBox,{h:Math.min(out.detailBox.h,D.minHeight)}),left=box.x+D.padding;
+    const inner=box.w-2*D.padding,column=(inner-D.columnGap)*D.columnRatio/(D.columnRatio+1),width=Math.min(D.primaryMax,Math.floor(column)),right=left+column+D.columnGap,auxWidth=inner-column-D.columnGap;
+    out.activeDetailBox=box;pushSize(out.detailPanel,box.w,box.h);pushColor(out.detailPanel,pal.card);pushStyle(out.detailPanel,'S',{radius:24,borderWidth:0});
+    if(!out.profileUi){
+      const keep=id=>{out.detailWidgets.push(id);return id;};
+      const u={icon:keep(panel(0,0,D.icon,D.icon,pal.blueSoft,15)),glyph:keep(label('',0,0,D.icon,42,28,pal.blue,1)),powerGlyph:keep(label('',0,0,44,36,26,pal.muted,1)),entity:''};
+      u.power=createButton('',0,0,48,48,()=>toggleItem(lookupEntity(u.entity)),pal.track,{radius:24,borderWidth:0});u.power.section='detail';out.profileUi=u;
+    }
+    const u=out.profileUi;u.entity=item.entity_id;
+    hide(u.icon,false);pushPos(u.icon,left,box.y+25);pushSize(u.icon,D.icon,D.icon);pushColor(u.icon,pal.blueSoft);
+    detailIcon(u.glyph,dashboardIcon(device),left,box.y+25,D.icon,D.icon,3,pal.blue);
+    detailText(out.detailName,device.name,left+D.icon+12,box.y+20,box.w-160,33,D.title,pal.ink);
+    const area=entityDevices[item.entity_id]&&entityDevices[item.entity_id].area;
+    detailText(out.detailState,(area?area+' · ':'')+(profile.readonly?'传感器只读':'设备功能'),left+D.icon+12,box.y+56,box.w-160,22,14,pal.muted);
+    const all=deviceFields(members),used=new Set(),own=field=>field.item.entity_id===item.entity_id;
+    const power=all.find(f=>own(f)&&f.spec.kind==='action'&&['turn_on','turn_off'].includes(f.spec.service));if(power)used.add(power);
+    const usable=connected&&available(item)&&!layoutEditing&&!item.product_readonly,px=box.x+box.w-D.padding-44,py=box.y+25;
+    hide(out.detailLampPowerFace,!power);hide(u.power,!power||!usable);hide(u.powerGlyph,!power);
+    if(power){Object.assign(u.power,{x:px-2,y:py-2,w:48,h:48});pushPos(out.detailLampPowerFace,px,py);pushSize(out.detailLampPowerFace,44,44);pushStyle(out.detailLampPowerFace,'S',{radius:22});pushColor(out.detailLampPowerFace,powerIsOn(item)?dark?0x234936:0xdcf7e8:pal.track);detailIcon(u.powerGlyph,'\uf011',px,py,44,44,1,powerIsOn(item)?dark?0xc7ffdf:0x13744d:pal.muted);}
+    const find=key=>{const f=all.find(f=>!used.has(f)&&own(f)&&(f.spec.key||f.spec.service)===key);if(f)used.add(f);return f;};
+    const reading=(key,title,unit)=>{
+      const existing=all.find(f=>!used.has(f)&&f.spec.kind==='read'&&(f.spec.key===key||f.item.device_class===key));
+      if(existing){used.add(existing);return Object.assign({},existing,{spec:Object.assign({},existing.spec,{title})});}
+      const value=item[key];return typeof value==='number'&&Number.isFinite(value)?{item,spec:{title,kind:'read',value:available(item)?numberText(value)+(unit==='%'?'':' ')+unit:'--',numeric:true,number:numberText(value),unit}}:null;
+    };
+    const grouped=services=>{const actions=services.map(key=>find(key)).filter(Boolean).map(f=>f.spec);return actions.length?{item,spec:{kind:'actions',actions}}:null;};
+    const layouts={light:'bedside',outlet:'outlet',switch:'outlet',relay:'outlet',fan:'fan','ceiling-fan':'fan','air-conditioner':'climate',curtain:'cover',airer:'cover','air-purifier':'purifier','air-fresh':'purifier',humidifier:'humidifier',diffuser:'humidifier',speaker:'speaker',vacuum:'vacuum','water-heater':'heater','temperature-humidity-sensor':'sensor'};
+    const layout=layouts[quickCardType(device)],recipe=D.layouts[layout],main=[],side=[];
+    const resolve=(id,title)=>{
+      let field;
+      const keys={speed:'percentage',fan:'fan_mode',preset:'preset_mode',target:'temperature',position:'position',humidity:'humidity',volume:'volume_level',mute:'is_volume_muted',source:'source',suction:'fan_speed',kelvin:'color_temp_kelvin',brightness:'brightness_pct'};
+      if(layout==='sensor'&&['temperature','humidity'].includes(id))field=reading(id,title,id==='humidity'?'%':'°C');
+      else if(keys[id])field=find(keys[id]);
+      else if(id==='mode')field=find(item.domain==='climate'?'hvac_mode':item.domain==='water_heater'?'operation_mode':'mode');
+      else if(id==='swing')field=find(item.domain==='fan'?'oscillating':'swing_mode');
+      else if(id==='current'||id==='room-temp')field=reading(item.domain==='humidifier'?'current_humidity':'current_temperature',title,item.domain==='humidifier'?'%':'°C');
+      else if(id==='pm25')field=reading('pm2.5-density',title,'ug/m3')||reading('pm25',title,'ug/m3');
+      else if(id==='filter')field=reading('filter-life-level',title,'%');
+      else if(id==='battery')field=reading('battery-level',title,'%')||reading('battery_level',title,'%')||reading('battery',title,'%');
+      else if(id==='temperature'||id==='humidity')field=reading(id,title,id==='humidity'?'%':'°C');
+      else if(id==='watt'||id==='voltage'||id==='today')field=reading(id==='watt'?'power':id==='today'?'daily_energy':'voltage',title,'');
+      else if(id==='move')field=grouped(['open_cover','stop_cover','close_cover']);
+      else if(id==='playback')field=grouped(['media_previous_track','media_play','media_pause','media_next_track']);
+      else if(id==='clean')field=grouped(['start','pause','return_to_base']);
+      else if(id==='state')field={item,spec:{kind:'read',status:true,value:available(item)?layout==='sensor'?'在线':friendlyState(item):'--'}};
+      else if(id==='favorite'){
+        const target=functionControls(item).find(s=>s.key==='position');if(target)field={item,spec:{kind:'presets',target,options:[100,50,0],labels:['全开','半开','全关']}};
+      }
+      else if(id==='power'&&power)field={item,spec:{kind:'power',target:power.spec}};
+      if(field)field.spec=Object.assign({},field.spec,{title});return field;
+    };
+    if(recipe){
+      recipe.left.forEach(([id,title])=>{const f=resolve(id,title);if(f)main.push(f);});
+      recipe.right.forEach(([id,title])=>{const f=resolve(id,title);if(f)side.push(f);});
+      recipe.readings.forEach(([id,title])=>{const f=resolve(id,title);if(f){f.spec.compact=true;side.push(f);}});
+      if(layout==='outlet'&&power)main.unshift({item,spec:{title:'电源',kind:'power',target:power.spec}});
+    }else if(profile.layout==='camera'){
+      main.push({item,spec:{kind:'camera',title:'画面预览'}});all.filter(f=>f.spec.kind==='read').forEach(f=>{used.add(f);side.push(f);});
+    }else{
+      const fields=all.filter(f=>!used.has(f));fields.forEach(f=>used.add(f));
+      if(fields.every(f=>f.spec.kind==='read')){const half=Math.ceil(fields.length/2);main.push(...fields.slice(0,half));side.push(...fields.slice(half));}
+      else fields.forEach(f=>(profile.primary.includes(f.spec.key||f.spec.service)?main:side).push(f));
+    }
+    if(!main.length&&!side.length)main.push({item,spec:{title:'设备状态',kind:'read',status:true,value:available(item)?friendlyState(item):'--'}});
+    const extras=all.filter(f=>!used.has(f));
+    const grid=!!profile.readonly&&profile.layout&&profile.layout!=='camera';
+    const height=field=>field.spec.kind==='camera'?Math.round(width*9/16):field.spec.kind==='power'?156:field.spec.kind==='options'&&['oscillating','is_volume_muted'].includes(field.spec.key)?48:field.spec.kind==='read'?(field.spec.compact?52:grid?76:field.spec.status?81:96):field.spec.key==='temperature'?98:field.spec.kind==='range'?92:83;
+    const bodyY=box.y+D.padding+D.headerHeight+D.headerGap+1,bodyHeight=box.h-(bodyY-box.y)-D.padding;
+    const paginate=fields=>{const pages=[[]];let size=0;for(const f of fields){const h=height(f),gap=size?(grid?18:D.fieldGap):0;if(pages.at(-1).length===3||size+gap+h>bodyHeight&&size){pages.push([]);size=0;}pages.at(-1).push(f);size+= (size?(grid?18:D.fieldGap):0)+h;}return pages;};
+    const leftPages=paginate(main),rightPages=paginate(side),basePages=Math.max(leftPages.length,rightPages.length);
+    const extraPages=paginate(extras),pages=basePages+(extras.length?extraPages.length:0);controlPage=Math.min(controlPage,pages-1);
+    const paintRow=(row,field,x,y,w,aux)=>{
+      row.item=field&&field.item;row.spec=field&&field.spec;
+      const ids=aux?[row.face,row.name,row.state,row.fill,row.thumb]:[row.title,row.track,row.fill,row.thumb,row.value,row.minusGlyph,row.plusGlyph];ids.forEach(id=>hide(id,true));if(!field)return;
+      const entity=field.item,spec=field.spec,value=controlValue(entity,spec),enabled=connected&&available(entity)&&!layoutEditing&&spec.kind!=='read';
+      const title=aux?row.name:row.title,track=aux?row.face:row.track,valueLabel=aux?row.state:row.value;
+      const toggle=spec.kind==='options'&&['oscillating','is_volume_muted'].includes(spec.key);
+      if(toggle){
+        detailText(title,spec.title,x,y+11,w-146,28,16,pal.ink);
+        detailText(valueLabel,value?'已开启':'已关闭',x+w-134,y+15,80,22,13,pal.muted,true);
+        hide(track,false);pushPos(track,x+w-46,y+10);pushSize(track,46,28);pushColor(track,value?pal.blue:pal.track);pushStyle(track,'S',{radius:14,borderWidth:0});pushStyle(track,'G',{gradientHorizontal:0,gradientVertical:0});
+        hide(row.thumb,false);pushPos(row.thumb,x+w-46+(value?21:3),y+13);pushSize(row.thumb,22,22);pushStyle(row.thumb,'S',{radius:11,borderWidth:0});pushColor(row.thumb,value||!dark?0xffffff:0xbcc7d0);
+        const b=aux?row.button:row.plus;Object.assign(b,{x,y,w,h:48,style:{radius:0,borderWidth:0,enabled:enabled?1:0}});buttonText(b,'');hide(b,!enabled);
+        if(aux)row.plusAction=()=>requestFunction(lookupEntity(entity.entity_id),spec,!controlValue(entity,spec));else row.plusAction=()=>requestFunction(lookupEntity(entity.entity_id),spec,!controlValue(entity,spec));return;
+      }
+      if(spec.kind==='camera'){
+        hide(track,false);pushPos(track,x,y);pushSize(track,w,Math.round(w*9/16));pushColor(track,pal.page);pushStyle(track,'S',{radius:18,borderWidth:0});pushStyle(track,'G',{gradientHorizontal:0,gradientVertical:0});
+        detailIcon(valueLabel,'\ue002',x,y+w*9/32-47,w,64,3,pal.muted);detailText(title,'暂无预览画面',x,y+w*9/16-41,w,24,13,pal.muted,true);
+        if(typeof ui.front==='function'){ui.front(track);ui.front(valueLabel);ui.front(title);}return;
+      }
+      if(spec.kind==='power'){
+        hide(track,false);pushPos(track,x,y+8);pushSize(track,136,136);pushStyle(track,'S',{radius:64,borderWidth:0});pushStyle(track,'G',{gradientHorizontal:0,gradientVertical:0});pushColor(track,powerIsOn(entity)?dark?0x234936:0xdcf7e8:pal.track);
+        detailIcon(title,'\uf011',x,y+28,136,52,3,powerIsOn(entity)?dark?0xc7ffdf:0x13744d:pal.muted);detailText(valueLabel,powerIsOn(entity)?'已开启':'已关闭',x,y+88,136,28,16,powerIsOn(entity)?dark?0xc7ffdf:0x13744d:pal.muted,true);
+        row.plusAction=()=>toggleItem(lookupEntity(entity.entity_id));Object.assign(row.plus,{x,y:y+8,w:136,h:136});hide(row.plus,!enabled);buttonText(row.plus,'');return;
+      }
+      detailText(title,spec.title,x,y,w,grid?24:31,spec.compact?13:D.label,spec.kind==='read'?pal.muted:pal.ink);
+      if(spec.kind==='read'){
+        const numeric=spec.profileReading?spec.numeric:spec.numeric||entity.domain==='sensor'&&Number.isFinite(Number(entity.state)),unit=spec.unit||numeric&&entity.unit||'';
+        const raw=spec.number===undefined?numeric?String(entity.state):String(spec.value):spec.number;
+        const ry=y+(spec.compact?21:grid?30:40),font=spec.compact?22:grid?32:spec.status?29:D.metricFont;
+        const shown=available(entity)?numeric?String(Number(raw)):String(spec.value):'--';
+        detailText(valueLabel,shown+(spec.compact&&unit?' '+unit:''),x,ry,w,spec.compact?32:52,font,spec.alert?pal.warn:pal.ink);
+        if(numeric&&unit&&!spec.compact&&available(entity)){
+          const measured=typeof ui.measureText==='function'?ui.measureText(shown,font):null;
+          const uw=measured?measured.width:shown.length*font*.6;
+          const unitMetrics=profile.layout==='camera'&&measured?ui.measureText(unit,15):null;
+          const offset=unitMetrics?Math.max(0,measured.height-measured.baseline-unitMetrics.height+unitMetrics.baseline):Math.max(0,font-18);
+          detailText(detailExtra(row,'unitLabel'),unit,x+uw+7,ry+offset,Math.max(20,w-uw-7),24,15,pal.muted);
+        }
+        if(spec.key==='filter-life-level'&&numeric){const meter=detailExtra(row,'meter',pal.track),fill=detailExtra(row,'meterFill',pal.blue);hide(meter,false);pushPos(meter,x,ry+54);pushSize(meter,w,8);hide(fill,false);pushPos(fill,x,ry+54);pushSize(fill,w*Math.max(0,Math.min(100,Number(raw)))/100,8);}
+        return;
+      }
+      const ry=y+40;
+      if(spec.kind==='range'){
+        const v=Number.isFinite(value)?value:spec.min,percent=Math.max(0,Math.min(100,(v-spec.min)*100/(spec.max-spec.min))),stepper=spec.key==='temperature';
+        const caption=formatControl(spec,value);
+        detailText(valueLabel,caption,x+w-104,y-1,104,32,D.value,pal.ink);pushStyle(valueLabel,'L',{fontSize:D.value,center:0,rightAlign:1});pushSize(title,w-112,31);
+        let rect;
+        if(stepper){
+          const rx=x+55,rw=w-110;hide(track,false);pushPos(track,rx,ry);pushSize(track,rw,D.stepHeight);pushColor(track,pal.page);pushStyle(track,'S',{radius:14,borderWidth:1,borderColor:pal.line});pushStyle(track,'G',{gradientHorizontal:0,gradientVertical:0});
+          detailText(detailExtra(row,'stepValue'),numberText(value),rx,ry+9,rw,42,D.stepFont,pal.ink,true);
+          paintDetailButton(row.minus,'-',x,ry,48,D.stepHeight,false,enabled,23);paintDetailButton(row.plus,'+',x+w-48,ry,48,D.stepHeight,false,enabled,23);
+          rect={x:rx,y:ry,w:rw,h:D.stepHeight,inputX:rx,inputW:rw,noFill:true,extraValue:row.stepValue,fill:row.fill,label:valueLabel,valueOnly:true,labelColor:pal.ink,spec,item:entity};
+        }else rect=designSlider(row,track,valueLabel,entity,spec,x,ry,w,D.rangeHeight,percent,pal.blue);
+        out.detailDragGroup.sliderRects.push(rect);if(enabled)out.detailDragGroup.controlRects.push(rect);return;
+      }
+      if(renderDirectOptions(row,entity,spec,x,ry,w,D.buttonHeight))return;
+      const b=aux?row.button:row.plus;paintDetailButton(b,spec.kind==='options'?optionLabel(value===null||value===undefined?'选择':value)+'  >':spec.kind==='text'?'编辑内容':spec.title,x,ry,w,D.buttonHeight,false,enabled);
+    };
+    const draw=(rows,fields,x,w,aux)=>{let y=bodyY;rows.forEach((row,index)=>{const f=fields[index];paintRow(row,f,x,y,w,aux);if(f)y+=height(f)+(grid?18:D.fieldGap);});};
+    draw(out.detailControlRows,controlPage<basePages?leftPages[controlPage]||[]:extraPages[controlPage-basePages]||[],left,width,false);
+    draw(out.detailMembers,controlPage<basePages?rightPages[controlPage]||[]:[],right,auxWidth,true);
+    const pagerY=box.y+box.h+8;[out.detailPrevious,out.detailNext].forEach((b,i)=>Object.assign(b,{x:box.x+box.w-118+i*52,y:pagerY,w:44,h:36}));
+    pushPos(out.detailPagerPreviousGlyph,box.x+box.w-118,pagerY+5);pushPos(out.detailPagerNextGlyph,box.x+box.w-66,pagerY+5);pushPos(out.detailFunctionIndex,right,pagerY+6);
+    hide(out.detailPrevious,controlPage===0);hide(out.detailNext,controlPage+1>=pages);hide(out.detailPagerPreviousGlyph,controlPage===0);hide(out.detailPagerNextGlyph,controlPage+1>=pages);hide(out.detailFunctionIndex,pages===1);pushText(out.detailFunctionIndex,(controlPage+1)+' / '+pages);
+  }
+
   function renderDetail(selected,visible){
+    if(lampWheelDrag&&visible&&lampWheelDrag.generation===generation&&lampWheelDrag.entity===selectedId&&connected&&available(selected))return;
+
     const key=[visible,selected&&selected.entity_id,generation,entityRevision,controlRevision,controlPage,connected,layoutEditing].join('|');
     if(detailRenderKey===key)return;
     detailRenderKey=key;
     const out=widgets;out.detailWidgets.forEach(id=>hide(id,!visible));
+    (out.detailDecorations||[]).forEach(id=>hide(id,true));
+    if(out.profileUi){[out.profileUi.icon,out.profileUi.glyph,out.profileUi.powerGlyph,out.profileUi.power].forEach(id=>hide(id,true));}
+    if(out.lampUi){out.lampUi.wheelRect=null;hide(out.lampUi.wheel,true);hide(out.lampUi.marker,true);}
+    if(out.lampUi){out.lampUi.buttons.forEach(b=>{hide(b,true);hide(b.face,true);hide(b.caption,true);});[out.lampUi.icon,out.lampUi.glyph,out.lampUi.paletteTitle,out.lampUi.effectTitle,out.lampUi.notice,out.lampUi.preview,out.lampUi.colorLabel].concat(out.lampUi.swatches.map(s=>s.face)).forEach(id=>hide(id,true));}
+    if(out.lampUi&&out.lampUi.effectRow)(out.lampUi.effectRow.optionButtons||[]).forEach(b=>hide(b,true));
     out.detailMembers.concat(out.detailControlRows).forEach(row=>(row.optionButtons||[]).forEach(button=>hide(button,true)));
-    out.detailMembers.forEach(row=>hide(row.button,!visible));
+    out.detailMembers.forEach(row=>{row.minusAction=row.plusAction=null;hide(row.button,!visible);});
     out.detailControlRows.forEach(row=>{row.minusAction=row.plusAction=null;hide(row.minus,true);hide(row.plus,true);});
     hide(out.detailLampPowerFace,true);
     hide(out.detailPagerPreviousGlyph,true);hide(out.detailPagerNextGlyph,true);
-    out.detailAuxRowHeight=0;
+    out.detailAuxRowHeight=0;out.activeDetailBox=out.detailBox;pushSize(out.detailPanel,out.detailBox.w,out.detailBox.h);
     [out.detailPrevious,out.detailNext,out.detailControlPrevious,out.detailControlNext].forEach(id=>hide(id,true));
     out.detailDragGroup={item:selected,brightnessRect:null,sliderRects:[],controlRects:[]};
     if(!visible)return;
@@ -3271,7 +3620,12 @@
     hide(out.detailFunctionIndex,true);
     hide(out.detailEntity,true);hide(out.detailAvailability,true);
     const specs=functionControls(selected);
-    if(selected.domain==='light'&&specs.some(spec=>spec.kind==='range')){renderLampDetail(selected,specs);renderAuxFields(members.filter(item=>item.entity_id!==selected.entity_id));return;}
+    pushPos(out.detailName,out.detailBox.x+20,out.detailBox.y+16);pushStyle(out.detailName,'L',{fontSize:24,center:0});
+    pushPos(out.detailState,out.detailBox.x+20,out.detailBox.y+50);
+    out.detailAuxBox={x:out.detailBox.x+out.detailBox.w-Math.min(224,Math.round(out.detailBox.w*.29))-20,y:out.detailBox.y+84,w:Math.min(224,Math.round(out.detailBox.w*.29)),h:out.detailBox.h-148};
+    out.detailAuxCount=out.detailControlCount;
+    if(selected.domain==='light'&&specs.length){renderLampDetail(selected,specs);return;}
+    if(profile){renderProfileDetail(selected,device,profile,members);return;}
     pushSize(out.detailName,out.detailBox.w-100,32);
     const fields=deviceFields(members),readOnlyProfile=profile&&profile.layout&&fields.every(field=>field.spec.kind==='read');
     const mainCount=readOnlyProfile?Math.min(out.detailControlCount,Math.ceil(fields.length/2)):out.detailControlCount;
@@ -3302,7 +3656,7 @@
         const fw=Math.min(400,row.w),fh=Math.round(fw*9/16);
         [row.fill,row.thumb,row.minusGlyph,row.plusGlyph,row.minus,row.plus].forEach(id=>hide(id,true));
         hide(row.track,false);pushPos(row.track,row.x,row.y);pushSize(row.track,fw,fh);pushColor(row.track,pal.page);pushStyle(row.track,'S',{radius:18,borderWidth:0});
-        hide(row.value,false);pushPos(row.value,row.x,row.y+Math.round(fh/2)-48);pushSize(row.value,fw,64);pushStyle(row.value,'I',{fontSize:32,icon:3,center:1});pushText(row.value,'\ue002');pushColor(row.value,pal.muted);
+        detailIcon(row.value,'\ue002',row.x,row.y+Math.round(fh/2)-48,fw,64,3,pal.muted);
         hide(row.title,false);pushPos(row.title,row.x,row.y+fh-40);pushSize(row.title,fw,28);pushStyle(row.title,'L',{fontSize:16,center:1,icon:0});pushText(row.title,'暂无预览画面');
         if(typeof ui.front==='function'){ui.front(row.value);ui.front(row.title);}return;
       }
@@ -3385,10 +3739,10 @@
     }
 
     hide(widgets.sidebar, false); hide(widgets.brand, false); hide(widgets.note, false);
-    pushText(widgets.note,deviceRegistryReady?entities.length+' 个实体 · 自动同步':'设备状态自动同步');
+    pushText(widgets.note,groupedDeviceCards().length+' 台设备 · '+(connected?'已同步':'未连接'));
     hide(widgets.header, false); hide(widgets.title, false);
     widgets.menu.forEach(row => {
-      const active = row.key === nav;
+      const active = row.key === (detailRequested?'devices':nav);
       hide(row.panel, settingsOpen); hide(row.icon, settingsOpen); hide(row.text, settingsOpen);
       hide(row.button, settingsOpen);
       pushColor(row.panel, active ? pal.blueSoft : pal.card);
@@ -3401,7 +3755,7 @@
       pushText(entry.text,statistics[index]);
     });
     pushText(widgets.title, settingsOpen ? '\u8fde\u63a5\u8bbe\u7f6e' :
-      detailRequested ? fit(selected.name, 280, 20) : sectionNames[nav]);
+      detailRequested ? '更多功能' : sectionNames[nav]);
     pushText(widgets.status, connected ? '\u5df2\u540c\u6b65' : '\u672a\u8fde\u63a5');
     pairHidden(widgets.back, !settingsOpen && !detailRequested);
     pairHidden(widgets.refresh, !listView);
@@ -3430,7 +3784,7 @@
         card.state, card.track, card.fill].forEach(id => hide(id, hidden));
       hide(card.thumb,true);
       hide(card.switchFace,true);
-      [card.moreLabel,card.minusGlyph,card.plusGlyph,card.minus,card.plus].forEach(id=>hide(id,true));
+      [card.moreLabel,card.minusGlyph,card.plusGlyph,card.minus,card.plus,card.cameraGlyph].forEach(id=>hide(id,true));
       card.button._cardVisible = !!item;
       card.iconButton._cardVisible = !!item && controllable(item);
       hide(card.button, hidden);
@@ -3542,6 +3896,7 @@
       nativeManaged,
       favorites: favorites.slice(), filter, search, page, nav, roomPage, layoutStyle,
       functionControls:detailOpen?deviceFields(deviceFunctions()).map(f=>({entity:f.item.entity_id,title:f.spec.title,key:f.spec.key,kind:f.spec.kind,service:f.spec.service,min:f.spec.min,max:f.spec.max,options:f.spec.options})):[],
+      colorWheel:widgets&&detailOpen&&widgets.lampUi&&widgets.lampUi.wheelRect?Object.assign({},widgets.lampUi.wheelRect):null,
       parameterControls:widgets?([widgets.detailDragGroup].concat(widgets.quickGroups||[],widgets.cards||[])).filter(Boolean).flatMap(q=>(q.controlRects||[]).map(r=>({entity:(r.item||q.item).entity_id,key:r.spec.key,vertical:!!r.vertical,x:r.inputX||r.x,y:r.y,w:r.inputW||r.w,h:r.h,min:r.spec.min,max:r.spec.max}))):[],
       settingsOpen, detailOpen, detailAdvanced:detailOpen, layoutEditing, layoutSaveError,selectedId, limited, serviceDiscoveryLimited, lastSync, lastCached,
       optionPicker:optionPicker?{entity:optionPicker.entity,key:optionPicker.key,page:optionPicker.page}:null,
@@ -3562,7 +3917,7 @@
         .filter(q=>q&&q.item&&q.brightnessRect).map(q=>({entity:q.item.entity_id,
           x:q.brightnessRect.inputX===undefined?q.brightnessRect.x:q.brightnessRect.inputX,
           y:q.brightnessRect.y,w:q.brightnessRect.inputW===undefined?q.brightnessRect.w:q.brightnessRect.inputW,h:q.brightnessRect.h,
-          value:q.item.brightness})),
+          value:displayBrightness(q.item)})),
       deviceCards:groupedDeviceCards().map(card=>({card_id:card.card_id,device_id:card.device_id,
         entity_id:card.entity_id,name:card.name,model:card.device_model,readonly:!!card.product_readonly,
         members:card.device_entities,quickReference:selectQuickReference(card),cardSize:cardSize(card),commonProfile:commonCardProfile(card)?.id||null,
@@ -3604,13 +3959,15 @@
     const r=drag.rect;drag.percent=percent;
     const width=(r.minFill||0)+(r.w-(r.minFill||0))*percent/100;
     const height=(r.minFill||0)+(r.h-(r.minFill||0))*percent/100;
-    if(!r.gradient){
+    if(r.cssRange)paintSliderTrack(r.track,percent,r.accent);
+    if(!r.gradient&&!r.noFill&&!r.cssRange){
       if(r.vertical){pushSize(r.fill,r.w,Math.round(height));pushPos(r.fill,r.x,Math.round(r.y+r.h-height));}
-      else pushSize(r.fill,Math.max(1,Math.round(width)),Math.round(r.h));hide(r.fill,false);
+      else pushSize(r.fill,Math.max(1,Math.round(width)),Math.round(r.h));hide(r.fill,percent===0);
     }
     pushText(r.label,r.spec?(r.valueOnly?'':(r.labelName||r.spec.title)+' ')+formatControl(r.spec,rangeValue(r,percent)):(r.labelPrefix===undefined?'亮度 ':r.labelPrefix)+percent+'%');
+    if(r.extraValue!==undefined)pushText(r.extraValue,numberText(rangeValue(r,percent)));
     pushColor(r.label,r.labelColor===undefined?(percent>30?0xffffff:quickPalette.muted):r.labelColor);
-    if(r.thumb)pushPos(r.thumb,r.vertical?Math.round(r.x+(r.w-40)/2):Math.round(r.x+width-(r.thumbInset||18)),r.vertical?Math.round(r.y+r.h-height+10):Math.round(r.y+(r.h-(r.thumbH||32))/2));
+    if(r.thumb)pushPos(r.thumb,r.vertical?Math.round(r.x+(r.w-40)/2):Math.round(r.thumbTrack?r.x+12+(r.w-30)*percent/100:r.x+width-(r.thumbInset||18)),r.vertical?Math.round(r.y+r.h-height+10):Math.round(r.y+(r.h-(r.thumbH||32))/2));
   }
   function canAdjustBrightness(item) {
     return !!item&&item.domain==='light'&&item.dimmable&&!item.product_readonly&&!layoutEditing&&
@@ -3618,8 +3975,12 @@
   }
   function displayBrightness(item) {
     const target=controlTargets[item.entity_id];
-    return target&&target.generation===generation&&target.brightness!==undefined?
-      target.brightness:item.brightness===null?0:item.brightness;
+    if(target&&target.generation===generation){
+      if(target.brightness!==undefined)return target.brightness;
+      if(target.service==='turn_off')return 0;
+      if(target.service==='turn_on')return item.brightness===null?0:item.brightness;
+    }
+    return item.state==='off'||item.brightness===null?0:item.brightness;
   }
   function renderCardEditor(card,item,entry) {
     const {x,y,w,h}=entry,large=cardSize(item)==='large';
@@ -3656,7 +4017,7 @@
     const {x,y,w,h}=entry,main=lookupEntity(item.entity_id)||item;
     const model=quickCardModel(item),light=item.domain==='light',candidate=profileQuickControl(item);
     const spec=light&&candidate&&candidate.key==='brightness_pct'?null:candidate;
-    const brightness=light&&item.dimmable&&item.brightness!==null&&!item.product_readonly,range=!!spec||brightness;
+    const brightness=light&&item.dimmable&&!item.product_readonly,range=!!spec||brightness;
     const stepper=spec&&spec.key==='temperature',usable=connected&&available(main);
     const service=powerIsOn(item)?'turn_off':'turn_on',power=!isSceneCommand(item)&&controllable(item)&&supports(item,service);
     const on=powerIsOn(item),body=y+82,rw=w-32,rh=48;
@@ -3706,6 +4067,15 @@
       }else{pushStyle(card.value,'L',{fontSize:20});pushText(card.value,'暂不可执行');}
       return;
     }
+    if(commonCardProfile(item)?.layout==='camera'){
+      pushText(card.state,fit(available(item)?friendlyState(item):'设备离线',w-82,14));
+      hide(card.track,false);pushPos(card.track,x+16,body);pushSize(card.track,rw,48);pushColor(card.track,pal.page);
+      pushStyle(card.track,'S',{radius:12,borderWidth:0});pushStyle(card.track,'G',{gradientHorizontal:0,gradientVertical:0});
+      if(!card.cameraGlyph)card.cameraGlyph=label('',0,0,32,36,32,pal.muted,3);
+      detailIcon(card.cameraGlyph,'\ue002',x+24,body,32,48,3,pal.muted);
+      pushPos(card.value,x+66,body+15);pushSize(card.value,rw-58,24);pushStyle(card.value,'L',{fontSize:13,center:0,icon:0,ellipsis:1});pushColor(card.value,pal.muted);pushText(card.value,'暂无预览画面');
+      if(typeof ui.front==='function'){ui.front(card.track);ui.front(card.cameraGlyph);ui.front(card.value);}return;
+    }
     if(!range){pushText(card.value,fit(model.value||friendlyState(item),rw,28));return;}
     if(stepper){
       const bw=40,center=rw-2*bw-12;pushPos(card.track,x+16+bw+6,body);pushSize(card.track,center,44);
@@ -3719,11 +4089,9 @@
     }
     hide(card.value,true);
     const value=spec?controlValue(main,spec):displayBrightness(item),percent=spec?(value-spec.min)*100/(spec.max-spec.min):value;
-    const pct=Math.max(0,Math.min(100,Number.isFinite(percent)?percent:0)),width=20+(rw-20)*pct/100,accent=light?0xffa64e:pal.blue;
-    pushPos(card.track,x+16,body);pushSize(card.track,rw,rh);pushColor(card.track,pal.track);pushStyle(card.track,'S',{radius:16,borderWidth:0});
-    pushPos(card.fill,x+16,body);pushSize(card.fill,width,rh);pushColor(card.fill,accent);pushStyle(card.fill,'S',{radius:16});
-    pushPos(card.thumb,Math.round(x+16+width-18),body+10);pushSize(card.thumb,6,28);pushColor(card.thumb,0xffffff);pushStyle(card.thumb,'S',{radius:3,borderWidth:0});
-    const rect={x:x+16,y:body,w:rw,h:rh,inputX:x+21,inputW:rw-20,minFill:20,fill:card.fill,thumb:card.thumb,thumbH:28,label:card.state,labelPrefix:'',labelColor:pal.muted,spec,item:main};
+    const pct=Math.max(0,Math.min(100,Number.isFinite(percent)?percent:0));
+    const rect=designSlider(card,card.track,card.state,main,spec,x+16,body,rw,rh,pct,light?0xffa64e:pal.blue);
+    Object.assign(rect,{valueOnly:false,labelPrefix:'',labelColor:pal.muted});
     card.sliderRects=[rect];if(spec){if(usable)card.controlRects=[rect];}else if(canAdjustBrightness(item))card.brightnessRect=rect;
   }
 
@@ -3732,7 +4100,7 @@
     const active=available(item)&&item.state==='on',accent=dark?0xffaa60:0xee9748;
     const allowed=connected&&available(item)&&supports(item,item.state==='on'?'turn_off':'turn_on')&&
       !layoutEditing;
-    const percent=displayBrightness(item),hasSlider=item.dimmable&&item.brightness!==null;
+    const percent=displayBrightness(item),hasSlider=item.dimmable;
     if(hasSlider&&!card.thumb)card.thumb=panel(0,0,6,32,0xffffff,3);
     if(!card.switchFace){card.switchFace=panel(0,0,36,36,pal.track,18);if(typeof ui.front==='function')ui.front(card.icon);}
     hide(card.iconBase,true);hide(card.unit,true);hide(card.state,!layoutEditing);hide(card.icon,true);hide(card.powerGlyph,false);
@@ -3802,9 +4170,10 @@
   function pointerBrightness(rect,x,y) {
     if(rect.vertical)return Math.max(0,Math.min(100,Math.round((rect.y+rect.h-y)*100/rect.h)));
     const start=rect.inputX===undefined?rect.x:rect.inputX,width=rect.inputW===undefined?rect.w:rect.inputW;
-    return Math.max(rect.spec?0:1,Math.min(100,Math.round((x-start)*100/width)));
+    return Math.max(0,Math.min(100,Math.round((x-start)*100/width)));
   }
   ui.onTouch((state,nx,ny) => {
+    if(handleLampWheel(state,nx,ny))return;
     if(state==='down')quickGestureOwned=false;
     if(disposed||settingsOpen||optionPicker||!Number.isFinite(nx)||!Number.isFinite(ny)){quickDrag=null;return;}
     const px=nx*W,py=ny*H;

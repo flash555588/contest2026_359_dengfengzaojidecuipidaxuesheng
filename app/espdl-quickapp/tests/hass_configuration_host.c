@@ -64,15 +64,28 @@ int main(void)
     "{\"entity_id\":\"light.desk\",\"area_id\":\"all\"}",
     "{\"entity_id\":\"light.desk\",\"color_temp_kelvin\":4600,\"color_temp_kelvin\":5000}",
     "{\"entity_id\":\"light.desk\",\"entity_id\":\"light.desk\"}",
-    "{\"entity_id\":\"light.desk\"}trailing"};
+    "{\"entity_id\":\"light.desk\"}trailing",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,255]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,255,0,0]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,256,0]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[-1,255,0]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,1.5,255]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,\"255\",0]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,{},0]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":{\"r\":0,\"g\":1,\"b\":2}}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,1,2],\"rgb_color\":[2,1,0]}",
+    "{\"entity_id\":\"light.desk\",\"rgb_color\":[0,1,2],\"color_temp_kelvin\":2700}"};
   for(unsigned i=0;i<sizeof(invalid)/sizeof(invalid[0]);i++)
     assert(hass_call_service(action_admin,"light.desk","turn_on",invalid[i])==-EINVAL);
   assert(hass_call_service(action_admin,"light.desk","../restart","{\"entity_id\":\"light.desk\"}")==-EINVAL);
   assert(hass_call_service(action_admin,"sensor.temp","turn_on","{\"entity_id\":\"sensor.temp\"}")==-EINVAL);
   assert(hass_call_service(action_admin,"number.limit","set_value","{\"entity_id\":\"number.limit\"}")==-EINVAL);
+
     assert(hass_call_service(action_admin,"scene.evening","turn_off","{\"entity_id\":\"scene.evening\"}")==-EINVAL);
     assert(hass_call_service(action_admin,"scene.evening","turn_on","{\"entity_id\":\"scene.evening\",\"brightness_pct\":50}")==-EINVAL);
     assert(hass_call_service(action_admin,"script.sleep","turn_on","{\"entity_id\":\"script.other\"}")==-EINVAL);
+  assert(hass_call_service(action_admin,"light.desk","turn_on","{\"entity_id\":\"light.desk\",\"rgb_color\":[0,128,255]}")>0);
+  assert(!strcmp(last_data,"{\"entity_id\":\"light.desk\",\"rgb_color\":[0,128,255]}"));
   assert(hass_close(action_admin)==0);
     const char *entities[]={"light.desk","number.limit","select.mode","button.test","fan.air","climate.room","cover.blind","humidifier.room","media_player.room","vacuum.bot","water_heater.tank","lock.door","text.label","scene.evening","script.sleep"};
     const char *actions[]={"turn_on","set_value","select_option","press","oscillate","set_temperature","set_cover_position","set_humidity","volume_set","return_to_base","set_operation_mode","lock","set_value","turn_on","turn_on"};
