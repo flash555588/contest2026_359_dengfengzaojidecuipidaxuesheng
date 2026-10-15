@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "local_video_ui.h"
+#include "local_album.h"
 #include "local_video_media.h"
 #include "bili_ppa.h"
 #include "bili_perf.h"
@@ -59,6 +60,7 @@ static unsigned volume=40;
 static struct entry displayed[FILES];
 static unsigned displayed_count;
 static uint32_t status_updated;
+static bool album_playback_view;
 /* Display-only scaling: decoder and RGB565 buffers retain their native size. */
 static void picture_layout(void)
 {
@@ -84,7 +86,7 @@ static void fullscreen_exit(lv_event_t *e)
   (void)e;if(!fullscreen)return;
   lv_obj_t *overlay=fullscreen;fullscreen=NULL;
   if(image&&viewport){lv_obj_set_parent(image,viewport);picture_layout();}
-  if(metrics&&page){lv_obj_set_parent(metrics,page);lv_obj_set_pos(metrics,10,486);lv_obj_set_style_text_color(metrics,lv_color_black(),0);lv_obj_set_style_bg_opa(metrics,LV_OPA_TRANSP,0);}
+  if(metrics&&page){lv_obj_set_parent(metrics,page);lv_obj_set_pos(metrics,10,476);lv_obj_set_style_text_color(metrics,lv_color_black(),0);lv_obj_set_style_bg_opa(metrics,LV_OPA_TRANSP,0);}
   lv_obj_delete(overlay);
 }
 static void fullscreen_clicked(lv_event_t *e)
@@ -198,16 +200,15 @@ static void release(void)
 static bool video_extension(const char *p)
 {
   const char *ext=strrchr(p,'.');
-  return ext&&!strcasecmp(ext,".mp4");
+  return ext&&(!strcasecmp(ext,".mp4")||!strcasecmp(ext,".mov")||!strcasecmp(ext,".m4v")||!strcasecmp(ext,".qt"));
 }
 static bool valid_path(const char *p)
 {
-  return p&&!strncmp(p,"/sdcard/",8)&&strlen(p)<512&&!strstr(p,"/../")&&!strstr(p,"/./")&&!strchr(p,'\n')&&!strchr(p,'\r')&&
-         video_extension(p);
+  return local_album_valid_path(p) && strrchr(p,'/') && strlen(p)<512;
 }
 void local_video_play_path(const char *path)
 {
-  if(!page||!valid_path(path)){status("请选择 SD 卡中的 MP4 文件");return;}
+  if(!page||!valid_path(path)){status("请选择可播放的视频文件");return;}
   if(session&&!atomic_load(&session->done)){
     snprintf(requested,sizeof(requested),"%s",path);local_video_cancel(session->media);status("正在停止当前视频…");return;
   }
@@ -321,12 +322,14 @@ static void tick(lv_timer_t *t)
         printf("[video-fps] kind=local decode_x100=%u lvgl_x100=%u pure_decode_ms=%u convert_ms=%u decoded=%u submitted=%u lvgl=%u render_skip=%u overwritten=%u lag=%u\n",
           p->decode_fps_x100,p->display_fps_x100,p->decode_ms,p->convert_ms,st.decoded,st.frames,session->displayed,st.dropped,overwritten,st.late_ms);
       }
-      if(st.running && lv_tick_elaps(status_updated)>=250){status_updated=lv_tick_get();char text[192];snprintf(text,sizeof(text),"%s %02u:%02u / %02u:%02u · %s · 显示 %u 帧 · 落后 %u ms",st.paused?"已暂停":"播放中",st.position_ms/60000,st.position_ms/1000%60,st.duration_ms/60000,st.duration_ms/1000%60,st.has_audio?(st.mjpeg?"MJPEG · AAC":"AAC 音频"):"无音轨",st.frames,st.late_ms);status(text);}
+      if(st.running && lv_tick_elaps(status_updated)>=250){status_updated=lv_tick_get();char text[192];snprintf(text,sizeof(text),"%s %02u:%02u / %02u:%02u · %s · 显示 %u 帧 · 落后 %u ms",st.paused?"已暂停":"播放中",st.position_ms/60000,st.position_ms/1000%60,st.duration_ms/60000,st.duration_ms/1000%60,st.has_audio?(st.mjpeg?"MJPEG · AAC":"AAC 音频"):"无音轨",st.frames,st.late_ms);
+        if(album_playback_view)snprintf(text,sizeof(text),"%s  %02u:%02u / %02u:%02u",st.paused?"已暂停":"播放中",st.position_ms/60000,st.position_ms/1000%60,st.duration_ms/60000,st.duration_ms/1000%60);
+        status(text);}
       if(pause_button){lv_obj_t *l=lv_obj_get_child(pause_button,0);const char *text=st.paused?"继续":"暂停";if(strcmp(lv_label_get_text(l),text))lv_label_set_text(l,text);}
     }
     if(atomic_load(&session->done)){
       if(page){int r=session->result;
-        status(r==0?"播放结束":r==-ECANCELED?"已停止":r==-ENOTSUP?"编码不支持，请使用 H.264/MJPEG + AAC MP4":r==-EFBIG?"视频过大，最高支持 1280×720":r==-EBUSY?"音频设备正被其他应用使用":r==-ENOENT?"文件不存在或 SD 卡已拔出":"播放失败，请检查视频文件或 SD 卡");
+        status(r==0?"播放结束":r==-ECANCELED?"已停止":r==-ENOTSUP?"编码不支持，需 H.264/MJPEG 视频和 AAC 音频":r==-EFBIG?"视频过大，最高支持 1280×720":r==-EBUSY?"音频设备正被其他应用使用":r==-ENOENT?"文件不存在或 SD 卡已拔出":"播放失败，请检查视频文件或 SD 卡");
       }
       /* Keep the final picture until stop, next play, or page exit. */
       if(!page||requested[0]){
@@ -343,7 +346,7 @@ static lv_obj_t *button(lv_obj_t *p,const char *text,int x,int y,lv_event_cb_t c
 }
 void local_video_show(lv_obj_t *parent,const lv_font_t *zh)
 {
-  local_video_stop();release();page=parent;font=zh;
+  local_video_stop();release();page=parent;font=zh;album_playback_view=false;
   lv_obj_add_event_cb(parent,deleted,LV_EVENT_DELETE,NULL);if(font)lv_obj_set_style_text_font(parent,font,0);
   lv_obj_set_style_pad_all(parent,0,0);lv_obj_remove_flag(parent,LV_OBJ_FLAG_SCROLLABLE);
   button(parent,"刷新",10,12,refresh);button(parent,"上一级",110,12,up);
@@ -356,8 +359,54 @@ void local_video_show(lv_obj_t *parent,const lv_font_t *zh)
   viewport=lv_obj_create(parent);lv_obj_set_pos(viewport,310,80);lv_obj_set_size(viewport,W,H);lv_obj_set_style_pad_all(viewport,0,0);lv_obj_set_style_border_width(viewport,0,0);lv_obj_set_style_bg_color(viewport,lv_color_black(),0);lv_obj_remove_flag(viewport,LV_OBJ_FLAG_SCROLLABLE);
   image=lv_image_create(viewport);lv_obj_set_size(image,W,H);
   label=lv_label_create(parent);lv_obj_set_pos(label,10,452);lv_obj_set_width(label,940);lv_label_set_text(label,"MP4 · H.264/MJPEG + AAC");
-  metrics=lv_label_create(parent);lv_obj_set_pos(metrics,10,486);lv_obj_set_width(metrics,1000);lv_label_set_long_mode(metrics,LV_LABEL_LONG_DOT);
+  metrics=lv_label_create(parent);lv_obj_set_pos(metrics,10,476);lv_obj_set_width(metrics,1000);lv_label_set_long_mode(metrics,LV_LABEL_LONG_DOT);
   lv_label_set_text(metrics,"解码 FPS / 画面 FPS · 每 2 秒采样，画面统计为 LVGL 提交");
   if(!timer)timer=lv_timer_create(tick,33,NULL);
   refresh(NULL);
+}
+
+
+/* Album playback retains the established decoder/session ownership, with a
+ * quiet viewer instead of a second file browser. The old entry stays usable. */
+static lv_obj_t *video_view_button(lv_obj_t *parent,const char *text,int x,int y,
+                                  lv_event_cb_t cb,uint32_t soft,uint32_t ink)
+{
+  lv_obj_t *b=button(parent,text,x,y,cb);
+  lv_obj_set_style_bg_color(b,lv_color_hex(soft),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
+  lv_obj_set_style_border_width(b,0,0);lv_obj_set_style_shadow_width(b,0,0);lv_obj_set_style_radius(b,10,0);
+  lv_obj_t *l=lv_obj_get_child(b,0);lv_obj_set_style_text_color(l,lv_color_hex(ink),0);
+  if(font)lv_obj_set_style_text_font(l,font,0);
+  return b;
+}
+void local_video_view(lv_obj_t *parent,const lv_font_t *zh,const char *path,lv_event_cb_t back)
+{
+  local_video_stop();release();page=parent;font=zh;album_playback_view=true;
+  lv_obj_add_event_cb(parent,deleted,LV_EVENT_DELETE,NULL);
+  if(font)lv_obj_set_style_text_font(parent,font,0);
+  lv_obj_set_style_pad_all(parent,0,0);lv_obj_remove_flag(parent,LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_update_layout(parent);int width=lv_obj_get_width(parent),height=lv_obj_get_height(parent);
+  bool light=lv_color_brightness(lv_obj_get_style_bg_color(parent,0))>128;
+  uint32_t ink=light?0x292734:0xefedf5,soft=light?0xeeecf2:0x2c2a35;
+  video_view_button(parent,"返回相册",16,10,back,soft,ink);
+  video_view_button(parent,"全屏",width-106,10,fullscreen_clicked,soft,ink);
+  const char *name=strrchr(path,'/');path_label=lv_label_create(parent);
+  lv_label_set_text(path_label,name?name+1:path);lv_obj_set_pos(path_label,132,21);lv_obj_set_width(path_label,width-256);
+  lv_label_set_long_mode(path_label,LV_LABEL_LONG_DOT);lv_obj_set_style_text_color(path_label,lv_color_hex(ink),0);
+  viewport=lv_obj_create(parent);lv_obj_remove_style_all(viewport);
+  lv_obj_set_pos(viewport,(width-W)/2,60);lv_obj_set_size(viewport,W,H);
+  lv_obj_set_style_bg_color(viewport,lv_color_black(),0);lv_obj_set_style_bg_opa(viewport,LV_OPA_COVER,0);
+  lv_obj_remove_flag(viewport,LV_OBJ_FLAG_SCROLLABLE);image=lv_image_create(viewport);lv_obj_set_size(image,W,H);
+  pause_button=video_view_button(parent,"暂停",(width-196)/2,height-68,pause_clicked,soft,ink);
+  video_view_button(parent,"停止",(width+16)/2,height-68,stop_clicked,soft,ink);
+  lv_obj_t *vol=lv_slider_create(parent);lv_obj_set_pos(vol,width-220,height-48);lv_obj_set_size(vol,180,6);
+  lv_slider_set_range(vol,0,100);lv_slider_set_value(vol,volume,LV_ANIM_OFF);
+  lv_obj_set_style_bg_color(vol,lv_color_hex(soft),LV_PART_MAIN);
+  lv_obj_set_style_bg_color(vol,lv_color_hex(ink),LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(vol,lv_color_hex(ink),LV_PART_KNOB);
+  lv_obj_add_event_cb(vol,volume_changed,LV_EVENT_VALUE_CHANGED,NULL);
+  label=lv_label_create(parent);lv_obj_set_pos(label,24,height-22);lv_obj_set_width(label,width-48);
+  lv_label_set_long_mode(label,LV_LABEL_LONG_DOT);lv_obj_set_style_text_color(label,lv_color_hex(ink),0);
+  metrics=lv_label_create(parent);lv_obj_add_flag(metrics,LV_OBJ_FLAG_HIDDEN);
+  if(!timer)timer=lv_timer_create(tick,33,NULL);
+  local_video_play_path(path);
 }

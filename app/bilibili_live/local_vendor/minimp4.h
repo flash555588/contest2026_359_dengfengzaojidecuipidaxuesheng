@@ -577,6 +577,7 @@ enum
     BOX_sync    = FOUR_CHAR_INT( 's', 'y', 'n', 'c' ),//OCRReferenceAtomType
     BOX_ipir    = FOUR_CHAR_INT( 'i', 'p', 'i', 'r' ),//IPIReferenceAtomType
     BOX_mp4s    = FOUR_CHAR_INT( 'm', 'p', '4', 's' ),//MPEGSampleEntryAtomType
+    BOX_wave    = FOUR_CHAR_INT( 'w', 'a', 'v', 'e' ), // QuickTime sound extensions
     BOX_mp4a    = FOUR_CHAR_INT( 'm', 'p', '4', 'a' ),//MPEGAudioSampleEntryAtomType
     BOX_sowt    = FOUR_CHAR_INT( 's', 'o', 'w', 't' ),//QuickTime uncompressed 16-bit little-endian PCM sample entry
     BOX_chan    = FOUR_CHAR_INT( 'c', 'h', 'a', 'n' ),//QuickTime channel layout box (inside 'sowt')
@@ -2725,6 +2726,7 @@ int MP4D_open(MP4D_demux_t *mp4, int (*read_callback)(int64_t offset, void *buff
             {BOX_stbl, BOX_ATOM},
             {BOX_stsd, BOX_ATOM},
             {BOX_mp4a, BOX_ATOM},
+            {BOX_wave, BOX_ATOM},
             {BOX_mp4s, BOX_ATOM},
 #if MP4D_AVC_SUPPORTED
             {BOX_mp4v, BOX_ATOM},
@@ -3111,8 +3113,12 @@ broken_android_meta_hack:
         case BOX_hdlr:
             if (tr) // When this box is within 'meta' box, the track may not be avaialable
             {
-                SKIP(4); // pre_defined
-                tr->handler_type = READ(4);
+                unsigned component = READ(4); // ISO pre_defined / QuickTime component type
+                unsigned handler = READ(4);
+                // A QuickTime minf data handler follows the media handler.
+                // Its url/alis subtype must not replace vide/soun.
+                if (component != FOUR_CHAR_INT('d','h','l','r'))
+                    tr->handler_type = handler;
             }
             // typically hdlr box does not contain any useful info.
             // the rest of this box is skipped by default ...
@@ -3151,19 +3157,46 @@ broken_android_meta_hack:
             break;
 
         case BOX_mp4a:
+        {
+            unsigned sound_version;
             if (!tr)
             {
                 ERROR("broken file structure!");
             }
+            // QuickTime wave contains a four-byte mp4a format marker.
+            if (payload_bytes == 4)
+            {
+                SKIP(4);
+                break;
+            }
+            if (payload_bytes < 28)
+            {
+                ERROR("short audio sample entry");
+            }
+            SKIP(8); // Base SampleEntry
+            sound_version = READ(2);
+            SKIP(6); // revision + vendor
 #if MP4D_INFO_SUPPORTED
-            SKIP(6*1+2/*Base SampleEntry*/  + 4*2);
             tr->SampleDescription.audio.channelcount = READ(2);
             SKIP(2/*samplesize*/ + 2 + 2);
             tr->SampleDescription.audio.samplerate_hz = READ(4) >> 16;
 #else
-            SKIP(28);
+            SKIP(12);
 #endif
+            if (sound_version == 1)
+            {
+                if (payload_bytes < 44)
+                {
+                    ERROR("short QuickTime sound extension");
+                }
+                SKIP(16); // samples/packet, bytes/packet, bytes/frame, bytes/sample
+            }
+            else if (sound_version != 0)
+            {
+                ERROR("unsupported QuickTime sound version");
+            }
             break;
+        }
 
 #if MP4D_AVC_SUPPORTED
         case BOX_avc1:  // AVCSampleEntry extends VisualSampleEntry

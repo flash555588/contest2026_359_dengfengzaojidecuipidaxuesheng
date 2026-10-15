@@ -1,0 +1,44 @@
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/bitstream.c:92:36: runtime error: left shift of 222 by 24 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:250:7: runtime error: left shift of 8454 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:251:7: runtime error: left shift of 8454 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:207:7: runtime error: left shift of 2216 by 22 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:208:7: runtime error: left shift of 2216 by 27 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:161:7: runtime error: left shift of 568 by 23 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:162:7: runtime error: left shift of 568 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:163:7: runtime error: left shift of 568 by 29 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 1073741808 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/stproc.c:119:9: runtime error: left shift of negative value -2048
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 1073741808 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 916907200 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/pns.c:113:33: runtime error: left shift of negative value -229226800
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/pns.c:209:27: runtime error: left shift of negative value -11828
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/huffman.c:160:7: runtime error: left shift of 17553 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 16777215 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 16252927 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 9560743 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/bilibili_live/local_vendor/helix/assembly.h:479:52: runtime error: left shift of 268369920 by 4 places cannot be represented in type 'int'
+[local-video] index ready in 1 ms, SD reads=1 tracks=2
+[local-video] H264 320x180 samples=75 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=88 render=0 wait=2249 ms frames=57 drop=0 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+result=0 frames=75 samples=145408 energy=530442117
+[local-video] index ready in 0 ms, SD reads=1 tracks=2
+[local-video] H264 320x180 samples=75 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=84 render=0 wait=2244 ms frames=57 drop=0 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+result=0 frames=75 samples=145408 energy=530442117
+[local-video] index ready in 0 ms, SD reads=1 tracks=2
+[local-video] H264 320x180 samples=75 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=84 render=0 wait=2244 ms frames=57 drop=0 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+result=0 frames=75 samples=145408 energy=530442117
+[local-video] index ready in 1 ms, SD reads=1 tracks=2
+[local-video] H264 320x180 samples=75 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=76 render=0 wait=747 ms frames=24 drop=33 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+PASS late-video starvation: rendered=42 dropped=33
+[local-video] index ready in 1 ms, SD reads=1 tracks=2
+[local-video] H264 320x180 samples=75 duration=3000 ms
+[local-video] finished error=-125 index_remaining=0
+PASS local AV decode, pause/resume, cancellation and repeated cleanup
+MOV_HOST_OK: actual H.264/AAC MOV decoded; no hardware playback performed

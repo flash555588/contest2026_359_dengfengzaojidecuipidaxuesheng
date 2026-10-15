@@ -1,0 +1,32 @@
+CAPTURE dark files-grid
+CAPTURE dark files-page2
+CAPTURE dark files-document
+CAPTURE dark files-page3
+CAPTURE dark files-single-page
+CAPTURE dark files-png
+CAPTURE dark files-heic
+CAPTURE dark files-mov
+CAPTURE dark files-details
+CAPTURE dark files-rename
+CAPTURE dark files-copy
+CAPTURE dark files-delete
+CAPTURE dark files-sd
+[grok] SD asset unavailable (-2): /sdcard/grok/home-black.gbs
+FILES_BOUNDARY_OK: queued image close; EBUSY retry; pending close/cancel; directory error recovery; mutation error retained; 204-byte media filename; direct viewer does not scan directories
+CAPTURE light files-grid
+CAPTURE light files-page2
+CAPTURE light files-document
+CAPTURE light files-page3
+CAPTURE light files-single-page
+CAPTURE light files-png
+CAPTURE light files-heic
+CAPTURE light files-mov
+CAPTURE light files-details
+CAPTURE light files-rename
+CAPTURE light files-copy
+CAPTURE light files-delete
+CAPTURE light files-sd
+[grok] SD asset unavailable (-2): /sdcard/grok/home-white.gbs
+FILES_BOUNDARY_OK: queued image close; EBUSY retry; pending close/cancel; directory error recovery; mutation error retained; 204-byte media filename; direct viewer does not scan directories
+FILES_NATIVE_OK: both themes; all file types stay visible; PNG/view return, HEIC explanation, MOV player, long-press management, rename/copy/delete confirmation dispatch, centered capsule first/middle/last/single-page navigation; source/folder navigation and 40 cleanup cycles; 200 warm browser refreshes reused every tile without deletion; viewer entry freed tile pools; all filesystem mutations mocked
+ALL_UI_RENDER_OK /home/flash/vela-p4/out/files-modern-native-20261015

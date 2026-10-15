@@ -1,0 +1,36 @@
+{
+  "reproduced_before_fix": "queue media open then close; page recreated after close",
+  "fixed": [
+    "cancel queued media callback when leaving file manager",
+    "clear recovered directory read error, retain mutation errors through reload",
+    "open direct media without scanning directories",
+    "keep full direct media path and derive format from full name",
+    "keep album directory selection when returning to file manager"
+  ],
+  "boundary_test_themes": [
+    "light",
+    "dark"
+  ],
+  "boundary_cases": [
+    "queued image open immediately followed by close",
+    "three EBUSY submission retries",
+    "close while request polling is still pending",
+    "directory ENODEV then successful refresh",
+    "rename EACCES preserved through successful LIST",
+    "204-byte filename reaches decoder unchanged",
+    "direct viewer performs no directory scan"
+  ],
+  "ui_regression": {
+    "file_pages": 26,
+    "album_pages": 26,
+    "appearance_change": false
+  },
+  "source_sha256": {
+    "app\\bilibili_live\\local_album_ui.c": "896ed27740110aacb8888f69569ba0d24684877859a62e1c96a0f262a4369f79",
+    "app\\espdl-quickapp\\overlay\\apps\\system\\desktop\\glass_files.inc": "097c80650b6fa8103478d21aedbd454720fa8d1704109340d3ed88195db07546",
+    "app\\espdl-quickapp\\tests\\render_files_modern.c": "68bf3744bd7714ab24cf399e765089da0fe8df633f83ba08f0639305f5345146",
+    "app\\espdl-quickapp\\tests\\all_ui_services.c": "1a5dfd4cb0f295ab4890e34f33352da25e9631a9adbbcaae2894fb919068d8c7"
+  },
+  "board_tested": false,
+  "flashed": false
+}

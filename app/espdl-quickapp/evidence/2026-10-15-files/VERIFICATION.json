@@ -1,0 +1,34 @@
+{
+  "firmware_bytes": 8707188,
+  "firmware_sha256": "7b32fe51a14dd21433739bbb6c6d6ccd194dc62360d3f58cb8011fb973ba06c4",
+  "previous_firmware_bytes": 8607732,
+  "delta_bytes": 99456,
+  "source_hashes_checked": 489,
+  "reused_libraries_checked": 15,
+  "speech_sources_checked": 22,
+  "native_captures": 26,
+  "file_materials": {
+    "categories": 14,
+    "extensions": 92,
+    "new_shared_pixel_bytes": 39936,
+    "per_card_pixel_allocations": 0
+  },
+  "backend_test": "real PNG alpha/JPEG/BMP, signature detection, malformed and oversized input, confinement,160 cancellation cycles",
+  "native_test": "queued media close, busy retry and pending cancellation, read recovery and mutation error preservation, 204-byte direct media path with no scan; 200 refreshes reuse every tile; viewer entry frees tile pool; mixed file grid, photo/player return, HEIC info, copy/rename/delete dispatch, centered capsule first/middle/last/single page;40 cleanup cycles; filesystem mocked",
+  "mov_mp4_test": "current H264/AAC decode, three complete plays, pause/resume/cancel and late frames; known Helix signed-shift UBSan diagnostics remain in logs; no ASan memory/leak errors",
+  "board_tested": false,
+  "flashed": false,
+  "preview": "actual LVGL screenshots; synthetic test file and media fixtures",
+  "local_test_source_sha256": {
+    "tools/test_file_types.py": "fbc5fac12d279a183940afd29d7841e1acd9799ccb1178dc5db0693e298844c9",
+    "app/espdl-quickapp/tests/test_file_types.c": "9786dbc63a780407a9f40537d2a448ca8ce8b5266a62e01673c32f2cdb9f7d7d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_file_types.h": "b51677e40a2f9d733a85559dd1938cef988aa6116d98f195d6d19fc9a65ac9ef",
+    "tools/test_local_album.py": "97d5749831f457b5fcb1cccf471f82c0184a4a3fe285145d382fea6cb59635d1",
+    "tools/test_local_mov.py": "6959856753a09ea28ef9f267193dd6d5007be5acef83492cc28537c94ca15b45",
+    "tools/render_all_ui.py": "7929231e2892908d8cbd0cbe147196e7907abd771fa1805cad724bfae525849f",
+    "app/espdl-quickapp/tests/render_files_modern.c": "68bf3744bd7714ab24cf399e765089da0fe8df633f83ba08f0639305f5345146",
+    "app/espdl-quickapp/tests/all_ui_services.c": "1a5dfd4cb0f295ab4890e34f33352da25e9631a9adbbcaae2894fb919068d8c7",
+    "app/bilibili_live/tests/test_local_album.c": "0ca057a94cca18f7a871075b89960e10f14a297eca1b0c40bd50e939d8f9fb88",
+    "app/bilibili_live/local_vendor/minimp4.h": "ac47eb2b64691a5b4776925507b4555b25b61d2a1535f4c8fd76d72ed57a2825"
+  }
+}

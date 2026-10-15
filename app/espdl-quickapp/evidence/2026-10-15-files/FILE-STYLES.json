@@ -1,0 +1,475 @@
+{
+  "categories_including_folder": 14,
+  "extensions": 92,
+  "new_shared_pixel_bytes": 39936,
+  "folder_pixel_bytes": 3840,
+  "classification": "extension appearance only; decoder support is separate",
+  "per_file_pixel_allocation": false,
+  "styles": [
+    {
+      "extension": ".3gp",
+      "kind": "video",
+      "label": "3GP"
+    },
+    {
+      "extension": ".7z",
+      "kind": "archive",
+      "label": "7Z · 压缩包"
+    },
+    {
+      "extension": ".aac",
+      "kind": "audio",
+      "label": "AAC · 音频"
+    },
+    {
+      "extension": ".aiff",
+      "kind": "audio",
+      "label": "AIFF · 音频"
+    },
+    {
+      "extension": ".apk",
+      "kind": "package",
+      "label": "APK · 应用"
+    },
+    {
+      "extension": ".avi",
+      "kind": "video",
+      "label": "AVI"
+    },
+    {
+      "extension": ".avif",
+      "kind": "image",
+      "label": "AVIF"
+    },
+    {
+      "extension": ".bin",
+      "kind": "generic",
+      "label": "BIN"
+    },
+    {
+      "extension": ".bmp",
+      "kind": "image",
+      "label": "BMP"
+    },
+    {
+      "extension": ".bz2",
+      "kind": "archive",
+      "label": "BZ2 · 压缩包"
+    },
+    {
+      "extension": ".c",
+      "kind": "code",
+      "label": "C · 代码"
+    },
+    {
+      "extension": ".cfg",
+      "kind": "code",
+      "label": "CFG · 配置"
+    },
+    {
+      "extension": ".cjs",
+      "kind": "code",
+      "label": "CJS · 代码"
+    },
+    {
+      "extension": ".conf",
+      "kind": "code",
+      "label": "CONF · 配置"
+    },
+    {
+      "extension": ".cpp",
+      "kind": "code",
+      "label": "C++ · 代码"
+    },
+    {
+      "extension": ".css",
+      "kind": "code",
+      "label": "CSS · 代码"
+    },
+    {
+      "extension": ".csv",
+      "kind": "spreadsheet",
+      "label": "CSV · 表格"
+    },
+    {
+      "extension": ".dat",
+      "kind": "generic",
+      "label": "DAT"
+    },
+    {
+      "extension": ".dng",
+      "kind": "image",
+      "label": "DNG"
+    },
+    {
+      "extension": ".doc",
+      "kind": "document",
+      "label": "DOC · 文档"
+    },
+    {
+      "extension": ".docx",
+      "kind": "document",
+      "label": "DOCX · 文档"
+    },
+    {
+      "extension": ".elf",
+      "kind": "generic",
+      "label": "ELF"
+    },
+    {
+      "extension": ".flac",
+      "kind": "audio",
+      "label": "FLAC · 音频"
+    },
+    {
+      "extension": ".flv",
+      "kind": "video",
+      "label": "FLV"
+    },
+    {
+      "extension": ".gif",
+      "kind": "image",
+      "label": "GIF"
+    },
+    {
+      "extension": ".gitignore",
+      "kind": "code",
+      "label": "配置 · 代码"
+    },
+    {
+      "extension": ".gz",
+      "kind": "archive",
+      "label": "GZIP · 压缩包"
+    },
+    {
+      "extension": ".h",
+      "kind": "code",
+      "label": "H · 代码"
+    },
+    {
+      "extension": ".heic",
+      "kind": "image",
+      "label": "HEIC"
+    },
+    {
+      "extension": ".heif",
+      "kind": "image",
+      "label": "HEIF"
+    },
+    {
+      "extension": ".hpp",
+      "kind": "code",
+      "label": "C++ · 代码"
+    },
+    {
+      "extension": ".htm",
+      "kind": "code",
+      "label": "HTML · 代码"
+    },
+    {
+      "extension": ".html",
+      "kind": "code",
+      "label": "HTML · 代码"
+    },
+    {
+      "extension": ".ico",
+      "kind": "image",
+      "label": "ICO"
+    },
+    {
+      "extension": ".ini",
+      "kind": "code",
+      "label": "INI · 配置"
+    },
+    {
+      "extension": ".jpe",
+      "kind": "image",
+      "label": "JPEG"
+    },
+    {
+      "extension": ".jpeg",
+      "kind": "image",
+      "label": "JPEG"
+    },
+    {
+      "extension": ".jpg",
+      "kind": "image",
+      "label": "JPEG"
+    },
+    {
+      "extension": ".js",
+      "kind": "code",
+      "label": "JS · 代码"
+    },
+    {
+      "extension": ".json",
+      "kind": "code",
+      "label": "JSON · 配置"
+    },
+    {
+      "extension": ".jsx",
+      "kind": "code",
+      "label": "JSX · 代码"
+    },
+    {
+      "extension": ".log",
+      "kind": "text",
+      "label": "LOG · 日志"
+    },
+    {
+      "extension": ".m4a",
+      "kind": "audio",
+      "label": "M4A · 音频"
+    },
+    {
+      "extension": ".m4v",
+      "kind": "video",
+      "label": "M4V"
+    },
+    {
+      "extension": ".md",
+      "kind": "text",
+      "label": "Markdown"
+    },
+    {
+      "extension": ".mjs",
+      "kind": "code",
+      "label": "MJS · 代码"
+    },
+    {
+      "extension": ".mkv",
+      "kind": "video",
+      "label": "MKV"
+    },
+    {
+      "extension": ".mov",
+      "kind": "video",
+      "label": "MOV"
+    },
+    {
+      "extension": ".mp3",
+      "kind": "audio",
+      "label": "MP3 · 音频"
+    },
+    {
+      "extension": ".mp4",
+      "kind": "video",
+      "label": "MP4"
+    },
+    {
+      "extension": ".odp",
+      "kind": "presentation",
+      "label": "ODP · 演示"
+    },
+    {
+      "extension": ".ods",
+      "kind": "spreadsheet",
+      "label": "ODS · 表格"
+    },
+    {
+      "extension": ".odt",
+      "kind": "document",
+      "label": "ODT · 文档"
+    },
+    {
+      "extension": ".ogg",
+      "kind": "audio",
+      "label": "OGG · 音频"
+    },
+    {
+      "extension": ".opus",
+      "kind": "audio",
+      "label": "Opus · 音频"
+    },
+    {
+      "extension": ".otf",
+      "kind": "font",
+      "label": "OTF · 字体"
+    },
+    {
+      "extension": ".pdf",
+      "kind": "pdf",
+      "label": "PDF"
+    },
+    {
+      "extension": ".png",
+      "kind": "image",
+      "label": "PNG"
+    },
+    {
+      "extension": ".ppt",
+      "kind": "presentation",
+      "label": "PPT · 演示"
+    },
+    {
+      "extension": ".pptx",
+      "kind": "presentation",
+      "label": "PPTX · 演示"
+    },
+    {
+      "extension": ".py",
+      "kind": "code",
+      "label": "Python · 代码"
+    },
+    {
+      "extension": ".qpk",
+      "kind": "package",
+      "label": "QPK · 快应用"
+    },
+    {
+      "extension": ".qt",
+      "kind": "video",
+      "label": "MOV"
+    },
+    {
+      "extension": ".rar",
+      "kind": "archive",
+      "label": "RAR · 压缩包"
+    },
+    {
+      "extension": ".raw",
+      "kind": "image",
+      "label": "RAW"
+    },
+    {
+      "extension": ".rtf",
+      "kind": "document",
+      "label": "RTF · 文档"
+    },
+    {
+      "extension": ".sh",
+      "kind": "code",
+      "label": "Shell · 代码"
+    },
+    {
+      "extension": ".sql",
+      "kind": "code",
+      "label": "SQL · 代码"
+    },
+    {
+      "extension": ".svg",
+      "kind": "image",
+      "label": "SVG"
+    },
+    {
+      "extension": ".tar",
+      "kind": "archive",
+      "label": "TAR · 压缩包"
+    },
+    {
+      "extension": ".tgz",
+      "kind": "archive",
+      "label": "TGZ · 压缩包"
+    },
+    {
+      "extension": ".tif",
+      "kind": "image",
+      "label": "TIFF"
+    },
+    {
+      "extension": ".tiff",
+      "kind": "image",
+      "label": "TIFF"
+    },
+    {
+      "extension": ".toml",
+      "kind": "code",
+      "label": "TOML · 配置"
+    },
+    {
+      "extension": ".ts",
+      "kind": "code",
+      "label": "TS · 代码"
+    },
+    {
+      "extension": ".tsx",
+      "kind": "code",
+      "label": "TSX · 代码"
+    },
+    {
+      "extension": ".ttf",
+      "kind": "font",
+      "label": "TTF · 字体"
+    },
+    {
+      "extension": ".txt",
+      "kind": "text",
+      "label": "TXT · 文本"
+    },
+    {
+      "extension": ".vue",
+      "kind": "code",
+      "label": "Vue · 代码"
+    },
+    {
+      "extension": ".wav",
+      "kind": "audio",
+      "label": "WAV · 音频"
+    },
+    {
+      "extension": ".webm",
+      "kind": "video",
+      "label": "WebM"
+    },
+    {
+      "extension": ".webp",
+      "kind": "image",
+      "label": "WebP"
+    },
+    {
+      "extension": ".wma",
+      "kind": "audio",
+      "label": "WMA · 音频"
+    },
+    {
+      "extension": ".woff",
+      "kind": "font",
+      "label": "WOFF · 字体"
+    },
+    {
+      "extension": ".woff2",
+      "kind": "font",
+      "label": "WOFF2 · 字体"
+    },
+    {
+      "extension": ".xls",
+      "kind": "spreadsheet",
+      "label": "XLS · 表格"
+    },
+    {
+      "extension": ".xlsx",
+      "kind": "spreadsheet",
+      "label": "XLSX · 表格"
+    },
+    {
+      "extension": ".xml",
+      "kind": "code",
+      "label": "XML · 代码"
+    },
+    {
+      "extension": ".xz",
+      "kind": "archive",
+      "label": "XZ · 压缩包"
+    },
+    {
+      "extension": ".yaml",
+      "kind": "code",
+      "label": "YAML · 配置"
+    },
+    {
+      "extension": ".yml",
+      "kind": "code",
+      "label": "YAML · 配置"
+    },
+    {
+      "extension": ".zip",
+      "kind": "archive",
+      "label": "ZIP · 压缩包"
+    }
+  ],
+  "asset_source_sha256": {
+    "project\\tools\\generate_file_icons.py": "a3a740262d5a0efce77fe778b034d4c9e56d02e8d5cf274dec3724db5525531d",
+    "project\\app\\espdl-quickapp\\overlay\\apps\\system\\desktop\\glass_file_icons.inc": "9d71e1ca55a42c1fb8925a7d819ca00e604a5b9f7e30e6c952b56aec6d4cf31b"
+  },
+  "lookup": "sorted case-insensitive binary search; maximum 7 comparisons"
+}

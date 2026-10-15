@@ -115,3 +115,14 @@ separately from this P1 provenance record.
   `app/bilibili_live/local_vendor/HELIX-UPSTREAM-LICENSE.txt`; revision and local
   adaptations are recorded in the same manifest. No Arduino wrapper is linked.
 - TLS remains the existing desktop glass_https / mbedTLS implementation.
+
+## Album PNG decoder
+
+- LodePNG: https://github.com/lvandeve/lodepng, commit
+  `e584a8490db1b76b81bf298c11c09d3b55d9c270`, zlib license.
+- Unmodified upstream source is under `app/bilibili_live/local_vendor/lodepng/`;
+  `lodepng.cpp` is stored as `lodepng.c` and compiled as C. Original notices,
+  license and per-file SHA-256 hashes are preserved beside the source.
+- `album_png.c` enables decoding only, supplies bounded allocation and converts
+  RGBA to RGB565 in the album worker. HEIC/AVIF recognition does not include
+  those codecs or imply playback support.

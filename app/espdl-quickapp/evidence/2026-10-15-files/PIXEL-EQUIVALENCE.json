@@ -1,0 +1,136 @@
+{
+  "excluded": "top32 clock/status pixels",
+  "content_area": "1024x568 RGB565",
+  "pages": [
+    {
+      "name": "dark-files-grid.rgb565",
+      "content_sha256": "9fd95ebf140181d44e41d26c8a181efd4a22b8212d8f86f8d0a775d13a6dbbef",
+      "equal": true
+    },
+    {
+      "name": "dark-files-page2.rgb565",
+      "content_sha256": "30321ddc23960061685e719bd25bab1f808cb125fa1a30c8322556a5017919cb",
+      "equal": true
+    },
+    {
+      "name": "dark-files-document.rgb565",
+      "content_sha256": "909861a7026f6f2566f17a000e522cd392919ca8a72cff3cffa2611ba1c8da32",
+      "equal": true
+    },
+    {
+      "name": "dark-files-page3.rgb565",
+      "content_sha256": "53de1ebf09ad4499a67e0dd614861a2df26d5ff2516d45101d8f256d4caa6907",
+      "equal": true
+    },
+    {
+      "name": "dark-files-single-page.rgb565",
+      "content_sha256": "241c2d489589fc8669f1537be5e73db27056fc79f659847a48a30856a9fad5f2",
+      "equal": true
+    },
+    {
+      "name": "dark-files-png.rgb565",
+      "content_sha256": "1701ef9b6676a2af0e7c71c720d02c8e28569cf49d708230b584f534013b1fad",
+      "equal": true
+    },
+    {
+      "name": "dark-files-heic.rgb565",
+      "content_sha256": "19f42081b5fdcc864a63cec00bd8c36fccb2b0f0cad11848df1247d9c50f9d8a",
+      "equal": true
+    },
+    {
+      "name": "dark-files-mov.rgb565",
+      "content_sha256": "8d9947f859c2c4fa5b887c85213662541617e719149c09eb35000a825fbdb3ef",
+      "equal": true
+    },
+    {
+      "name": "dark-files-details.rgb565",
+      "content_sha256": "94d37c22880f747a7588313cda0088723ce27342e0be0839f5e1c195004c6eea",
+      "equal": true
+    },
+    {
+      "name": "dark-files-rename.rgb565",
+      "content_sha256": "1476cb5946d5199571c079c3471f37c00b7928fbfb8748a9b3098dd3e0a4ded2",
+      "equal": true
+    },
+    {
+      "name": "dark-files-copy.rgb565",
+      "content_sha256": "138cc754e0db00d5a06715afc10e16451c3328a849e0bb99b3b00596d2d43ae3",
+      "equal": true
+    },
+    {
+      "name": "dark-files-delete.rgb565",
+      "content_sha256": "90474edacd1e6a1ceed61953d0abd2d3fb0290d8a4177758552cc0268ed25d1f",
+      "equal": true
+    },
+    {
+      "name": "dark-files-sd.rgb565",
+      "content_sha256": "6b591360a81af8a65b1c7fb70fdef4fed7ec97945d5e70d80d3720f4d786e37a",
+      "equal": true
+    },
+    {
+      "name": "light-files-grid.rgb565",
+      "content_sha256": "9884a6f84127097ef76c7c606bde609c42145d048f507fedcd2d192723f7060f",
+      "equal": true
+    },
+    {
+      "name": "light-files-page2.rgb565",
+      "content_sha256": "709dd77768c99dcdd16eaf69d3c62a2e49b20e1268a5c000c2bf1d24959dead1",
+      "equal": true
+    },
+    {
+      "name": "light-files-document.rgb565",
+      "content_sha256": "d2f09a334840ab278ef7e7b265f28783544c3938602f070701a77af42f5d292d",
+      "equal": true
+    },
+    {
+      "name": "light-files-page3.rgb565",
+      "content_sha256": "aa58e54d15e6678b1199d3330b1d047c65b223bbde39c544ae0accd75dbbb2c4",
+      "equal": true
+    },
+    {
+      "name": "light-files-single-page.rgb565",
+      "content_sha256": "016632ea5959871fc2102ec930d5976b9accf77723c1ec519f21f46b497daa60",
+      "equal": true
+    },
+    {
+      "name": "light-files-png.rgb565",
+      "content_sha256": "1701ef9b6676a2af0e7c71c720d02c8e28569cf49d708230b584f534013b1fad",
+      "equal": true
+    },
+    {
+      "name": "light-files-heic.rgb565",
+      "content_sha256": "19f42081b5fdcc864a63cec00bd8c36fccb2b0f0cad11848df1247d9c50f9d8a",
+      "equal": true
+    },
+    {
+      "name": "light-files-mov.rgb565",
+      "content_sha256": "8d9947f859c2c4fa5b887c85213662541617e719149c09eb35000a825fbdb3ef",
+      "equal": true
+    },
+    {
+      "name": "light-files-details.rgb565",
+      "content_sha256": "866244aa36c5d7adfb5f1df066d4c7391a44f999afc738ffe5761876923ebf04",
+      "equal": true
+    },
+    {
+      "name": "light-files-rename.rgb565",
+      "content_sha256": "936b14c145c4cd26caa6bf08e5e10e05f2adc57d72fe1d0c541df90c66d1239d",
+      "equal": true
+    },
+    {
+      "name": "light-files-copy.rgb565",
+      "content_sha256": "692d58a95f00e326eff0c0b0381399118af4350cb4e53450d9b4fabdde3f2f2c",
+      "equal": true
+    },
+    {
+      "name": "light-files-delete.rgb565",
+      "content_sha256": "b3cc09dd0132de15eb04f8e38a1eeb6c083345668ea0071055710c885bd06bad",
+      "equal": true
+    },
+    {
+      "name": "light-files-sd.rgb565",
+      "content_sha256": "cbd0c56c131295165791e4c4a28b6c731327cd5b930b370a204d3303ba5ce764",
+      "equal": true
+    }
+  ]
+}

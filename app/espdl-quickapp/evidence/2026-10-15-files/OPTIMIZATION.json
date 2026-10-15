@@ -1,0 +1,19 @@
+{
+  "type_extensions": 92,
+  "maximum_lookup_comparisons": 7,
+  "classifier_test_names": 20194,
+  "classifier_linear_comparisons": 1849008,
+  "classifier_binary_comparisons": 132900,
+  "warm_browser_refreshes": 200,
+  "tile_recreations_during_warm_refreshes": 0,
+  "retained_tiles_limit": 32,
+  "pager_slots_limit": 5,
+  "extra_static_pointer_index_bytes_rv32": 556,
+  "release_tile_pool_on_viewer_entry": true,
+  "appearance_identical_native_pages": 26,
+  "board_frame_rate_measured": false,
+  "direct_media_path_buffer_bytes": 512,
+  "firmware_size_before": 8705668,
+  "firmware_size_after": 8707188,
+  "firmware_delta_bytes": 1520
+}

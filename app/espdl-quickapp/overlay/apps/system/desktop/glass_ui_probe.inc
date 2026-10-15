@@ -193,7 +193,7 @@ static void desktop_ui_probe_service(void)
   else if (!strcmp(command, "bilibili")) launch_bilibili(NULL);
   else if (!strcmp(command, "local-video")) launch_local_video(NULL);
   else if (!strncmp(command, "local-play:", 11)) {
-    launch_local_video(NULL); local_video_play_path(command + 11);
+    launch_local_video(NULL); local_album_open_path(command + 11);
   }
   else if (!strcmp(command, "local-stop")) panel_hide(NULL);
   else if (!strncmp(command, "bilibili-play:", 14)) {
