@@ -1,0 +1,4 @@
+GROK_SD_HOST_OK: 160 palette/state checks; spin/gaze; stream reducer; completion once; hidden/reduced pause; missing/truncated banks; 24 in-flight reader teardowns
+[grok] SD asset unavailable (-2): /nonexistent/grok.gbs
+[grok] SD asset unavailable (-5): /home/flash/vela-p4/out/pr-stack-20261015/grok/bad.gbs
+

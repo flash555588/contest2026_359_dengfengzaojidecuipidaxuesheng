@@ -1,0 +1,10 @@
+wsl: �hKm0R localhost �NtM�n�FO*g\��P0R WSL0NAT !j_N�v WSL 
+N/ec localhost �Nt0
+
+GROK_SD_HOST_OK: 160 palette/state checks; spin/gaze; stream reducer; completion once; hidden/reduced pause; missing/truncated banks; 24 in-flight reader teardowns
+[grok] SD asset unavailable (-2): /nonexistent/grok.gbs
+[grok] SD asset unavailable (-5): /home/flash/vela-p4/out/grok-sd-final-test/bad.gbs
+
+CHAT_ACTIVITY_HOST_OK: real service stream events drive original expression IDs; passive getter; usage retention; stale/cancelled/clearing event rejection; terminal states
+
+

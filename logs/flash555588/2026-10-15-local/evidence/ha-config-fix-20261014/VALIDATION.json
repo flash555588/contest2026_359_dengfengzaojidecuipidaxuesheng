@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-14",
+  "firmware_sha256": "12ae8a15103f3a6e4c2292eb6e309e1d5b5a4522bfadc9e5e5c7085834e9fb32",
+  "firmware_bytes": 8047628,
+  "flash_offset": "0x2000",
+  "flash_hash_verified": true,
+  "board_tested": true,
+  "homeassistant": {
+    "endpoint": "http://[REDACTED:ipv4]:8123",
+    "stored_token_preserved": true,
+    "authenticated_server_responses": {
+      "config": {
+        "status": 200,
+        "bytes": 2763
+      },
+      "services": {
+        "status": 200,
+        "bytes": 53496
+      },
+      "states": {
+        "status": 200,
+        "bytes": 90487
+      }
+    },
+    "displayed_entities": 128,
+    "entity_limit": 128,
+    "response_body_limit_bytes": 262144,
+    "checks": [
+      {
+        "test": "saved_endpoint_and_token_after_flash",
+        "passed": true,
+        "url": "http://[REDACTED:ipv4]:8123",
+        "token_set": true
+      },
+      {
+        "test": "real_server_device_list_loaded",
+        "passed": true,
+        "counts": [
+          "实体 128",
+          "在线 49",
+          "运行 1"
+        ]
+      },
+      {
+        "test": "invalid_slash_port_preserves_saved_config",
+        "passed": true
+      },
+      {
+        "test": "oversize_token_rejected_without_change",
+        "passed": true
+      },
+      {
+        "test": "open_page_invalidates_old_home_on_remote_change",
+        "passed": true
+      },
+      {
+        "test": "restore_url_without_token_reconnects_open_page",
+        "passed": true,
+        "token_preserved": true
+      },
+      {
+        "test": "reboot_retains_address_and_token_and_syncs",
+        "passed": true
+      }
+    ],
+    "appliances_actuated": false
+  },
+  "model_partition": {
+    "offset": "0x800000",
+    "bytes": 4194304,
+    "matches_pre_flash_backup": true,
+    "sha256": "a3ed305a66a0c913527cd951e960c6c50d3bcdcc0f927658ce4e9f0cbdfec483"
+  },
+  "host_tests": {
+    "frontend_passed": 34,
+    "production_native_suites_passed": 3
+  },
+  "screenshot": "board-ha-connected.png",
+  "sources_match_build": true,
+  "board_screenshot": {
+    "method": "actual board framebuffer / lossless RLE / USB console",
+    "rle_bytes": 95300,
+    "rgb565_sha256": "00c424c83c79ad38971f49ebe5ea3b8f976be60d9ca2c4093ef6f27d141b3603"
+  }
+}

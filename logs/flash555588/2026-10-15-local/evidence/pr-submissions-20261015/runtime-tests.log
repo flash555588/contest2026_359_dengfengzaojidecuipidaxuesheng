@@ -1,0 +1,18 @@
+DEADLINE_NESTING_OK
+COMPILE_EXECUTION_SEPARATION_OK
+[qpk] callback used 20 ms of its 20 ms budget
+[qpk] unresponsive: a JavaScript entry ran past 5000 ms
+SCRIPT_RUNAWAY_INTERRUPTED_OK
+[qpk] unresponsive: a JavaScript entry ran past 5000 ms
+[qpk] callback used 20 ms of its 20 ms budget
+PROMISE_RUNAWAY_INTERRUPTED_OK
+[qpk] unresponsive: a JavaScript entry ran past 5000 ms
+[qpk] callback used 31 ms of its 25 ms budget
+CALLBACK_AND_JOBS_SHARE_BUDGET_OK
+NO_PHANTOM_TIMEOUT_WITH_EMPTY_JOB_QUEUE_OK
+ASYNC_ERROR_PROPAGATION_OK
+QPK_DEADLINES_OK
+HTTPS_REQUEST_DEADLINE_CAP_OK
+HTTPS_EINTR_DOES_NOT_RESTART_TIMEOUT_OK
+HTTPS_NONBLOCKING_POLL_OK
+HTTPS_CANCELLATION_OK

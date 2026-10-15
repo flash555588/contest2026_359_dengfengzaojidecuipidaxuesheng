@@ -1,0 +1,103 @@
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/bitstream.c:92:36: runtime error: left shift of 222 by 24 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:250:7: runtime error: left shift of 8454 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:251:7: runtime error: left shift of 8454 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:207:7: runtime error: left shift of 1248 by 22 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:208:7: runtime error: left shift of 1248 by 27 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 1073741808 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 765888880 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/pns.c:113:33: runtime error: left shift of negative value -191472220
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/pns.c:209:27: runtime error: left shift of negative value -11828
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:161:7: runtime error: left shift of 583 by 23 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:162:7: runtime error: left shift of 583 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:163:7: runtime error: left shift of 583 by 29 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:160:7: runtime error: left shift of 16969 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 15659136 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:479:52: runtime error: left shift of 167772159 by 4 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:274:3: runtime error: left shift of negative value -1268
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:278:3: runtime error: left shift of negative value -36239
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:289:3: runtime error: left shift of negative value -3799
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:293:3: runtime error: left shift of negative value -36128
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 16777215 by 8 places cannot be represented in type 'int'
+PASS live single decoder AAC/PCM pass=0: video=17 shown=16 audio=142 skip=56 resync=3 lag=1089 audio_skip=0; one audio open; stop joins and closes audio
+PASS live single decoder AAC/PCM pass=1: video=73 shown=73 audio=142 skip=0 resync=0 lag=0 audio_skip=0; one audio open; stop joins and closes audio
+PASS live single decoder AAC/PCM pass=2: video=4 shown=4 audio=142 skip=67 resync=3 lag=4036 audio_skip=0; one audio open; stop joins and closes audio
+PASS live single decoder AAC/PCM pass=3: video=5 shown=2 audio=23 skip=68 resync=3 lag=6531 audio_skip=396; one audio open; stop joins and closes audio
+PASS live single decoder AAC/PCM pass=4: video=15 shown=15 audio=142 skip=58 resync=3 lag=1206 audio_skip=0; one audio open; stop joins and closes audio
+PASS live single decoder AAC/PCM pass=5: video=5 shown=2 audio=23 skip=68 resync=3 lag=6514 audio_skip=396; one audio open; stop joins and closes audio
+PASS live single decoder AAC/PCM pass=6: video=5 shown=2 audio=23 skip=68 resync=3 lag=268 audio_skip=108; one audio open; stop joins and closes audio
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/bitstream.c:92:36: runtime error: left shift of 222 by 24 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:250:7: runtime error: left shift of 8454 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:251:7: runtime error: left shift of 8454 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:207:7: runtime error: left shift of 2216 by 22 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:208:7: runtime error: left shift of 2216 by 27 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:161:7: runtime error: left shift of 568 by 23 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:162:7: runtime error: left shift of 568 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:163:7: runtime error: left shift of 568 by 29 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 1073741808 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/stproc.c:119:9: runtime error: left shift of negative value -2048
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 1073741808 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 916907200 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/pns.c:113:33: runtime error: left shift of negative value -229226800
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/pns.c:209:27: runtime error: left shift of negative value -11828
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:160:7: runtime error: left shift of 17553 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 16777215 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 16252927 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 9560743 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:479:52: runtime error: left shift of 268369920 by 4 places cannot be represented in type 'int'
+[local-video] index ready in 5 ms, SD reads=2 tracks=2
+[local-video] H264 320x180 samples=72 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=92 render=0 wait=2410 ms frames=58 drop=0 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+result=0 frames=72 samples=145408 energy=530442117
+[local-video] index ready in 0 ms, SD reads=2 tracks=2
+[local-video] H264 320x180 samples=72 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=90 render=0 wait=2392 ms frames=58 drop=0 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+result=0 frames=72 samples=145408 energy=530442117
+[local-video] index ready in 0 ms, SD reads=2 tracks=2
+[local-video] H264 320x180 samples=72 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=88 render=0 wait=2390 ms frames=58 drop=0 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+result=0 frames=72 samples=145408 energy=530442117
+[local-video] index ready in 0 ms, SD reads=2 tracks=2
+[local-video] H264 320x180 samples=72 duration=3000 ms
+[local-video] profile samples=60 read=0 decode=79 render=0 wait=871 ms frames=27 drop=31 lag=0 ms
+[local-video] finished error=0 index_remaining=0
+PASS late-video starvation: rendered=41 dropped=31
+[local-video] index ready in 1 ms, SD reads=2 tracks=2
+[local-video] H264 320x180 samples=72 duration=3000 ms
+[local-video] finished error=-125 index_remaining=0
+PASS local AV decode, pause/resume, cancellation and repeated cleanup
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/bitstream.c:92:36: runtime error: left shift of 222 by 24 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:250:7: runtime error: left shift of 8454 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:251:7: runtime error: left shift of 8454 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:207:7: runtime error: left shift of 1248 by 22 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:208:7: runtime error: left shift of 1248 by 27 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 1073741808 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:480:52: runtime error: left shift of 825278192 by 2 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/pns.c:113:33: runtime error: left shift of negative value -206319548
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/pns.c:209:27: runtime error: left shift of negative value -11828
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:160:7: runtime error: left shift of 4104 by 20 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:161:7: runtime error: left shift of 4104 by 23 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:162:7: runtime error: left shift of 4104 by 26 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/huffman.c:163:7: runtime error: left shift of 4104 by 29 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 8725399 by 8 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:479:52: runtime error: left shift of 167772159 by 4 places cannot be represented in type 'int'
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:274:3: runtime error: left shift of negative value -1268
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:278:3: runtime error: left shift of negative value -36230
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:289:3: runtime error: left shift of negative value -3799
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/dct4.c:293:3: runtime error: left shift of negative value -36116
+/mnt/c/Users/11937/Documents/ChatGPT/vela/output/pr-submissions-20261015/checkouts/1/app/bilibili_live/local_vendor/helix/assembly.h:478:52: runtime error: left shift of 16777215 by 8 places cannot be represented in type 'int'
+[local-video] index ready in 1 ms, SD reads=2 tracks=2
+[local-video] MJPEG 320x180 samples=72 duration=3000 ms
+[local-video] finished error=0 index_remaining=0
+PASS MP4 MJPEG frames=72 PCM=145408 JPEG_energy=129745007980 audio_energy=375078182
+[local-video] index ready in 0 ms, SD reads=2 tracks=2
+[local-video] MJPEG 320x180 samples=72 duration=3000 ms
+[local-video] finished error=0 index_remaining=0
+PASS MP4 MJPEG frames=72 PCM=145408 JPEG_energy=129745007980 audio_energy=375078182
+[local-video] index ready in 0 ms, SD reads=2 tracks=2
+[local-video] MJPEG 320x180 samples=72 duration=3000 ms
+[local-video] finished error=-125 index_remaining=0
+PASS MP4 native MJPEG/AAC, pause/resume/cancel
+PASS requested host functional assertions; inspect sanitizer diagnostics separately (known Helix signed-shift UB); no device playback performed

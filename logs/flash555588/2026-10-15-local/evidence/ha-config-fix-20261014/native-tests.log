@@ -1,0 +1,7 @@
+wsl: �hKm0R localhost �NtM�n�FO*g\��P0R WSL0NAT !j_N�v WSL 
+N/ec localhost �Nt0
+
+HA portal tests passed: validation, failed-save preservation, immediate URL/token apply, cancellation, bootstrap, secret redaction
+HA configuration host tests passed
+HA real transport growth tests passed: small, 90 KB, 256 KB, chunked, bounded overflow
+

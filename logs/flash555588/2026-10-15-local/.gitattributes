@@ -1,0 +1,2 @@
+# Keep sanitized evidence byte-identical for manifest SHA256 verification.
+evidence/** -text -whitespace

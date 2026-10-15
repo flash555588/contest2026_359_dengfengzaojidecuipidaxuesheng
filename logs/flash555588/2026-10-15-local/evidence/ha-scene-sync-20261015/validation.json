@@ -1,0 +1,10 @@
+{
+  "frontend_tests": 70,
+  "template_tests": 2,
+  "native_screens": 8,
+  "firmware_bytes": 8181276,
+  "sha256": "0806851c2d4e199d60702d6f5f3088408dd68f2f26fd3a768dfbd2327ca3f433",
+  "source_embedded_exactly": true,
+  "flashed": false,
+  "live_ha_tested": false
+}
