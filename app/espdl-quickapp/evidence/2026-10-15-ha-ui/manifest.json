@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-15",
+  "purpose": "Home Assistant UI build/test/flash evidence; not AI session records",
+  "redactions": [
+    "local workspace paths",
+    "build workspace paths",
+    "IP addresses",
+    "device MAC addresses",
+    "ANSI terminal control sequences"
+  ],
+  "records": [
+    {
+      "file": "frontend-tests.log",
+      "source": "output/ha-device-summary-flash-20261015/frontend-tests.log",
+      "source_sha256": "8c4a8c2647cac537a15e119ea1f6d0052a4809281a043cad60cddb4f1efc6f62",
+      "published_sha256": "abb7b34c29264b350665d884818fe43d2d0daebe40fb17493c3932340330dfd4"
+    },
+    {
+      "file": "build.log",
+      "source": "output/ha-device-summary-flash-20261015/build.log",
+      "source_sha256": "5b97d52727adde2366b5d16458bf16096efef086a8032d547323d2c56cb1cf4f",
+      "published_sha256": "94dd5279ec1393998785c840f9258e62c55d258764bb4f7de6eaf67aec02b243"
+    },
+    {
+      "file": "flash.log",
+      "source": "output/ha-device-summary-flash-20261015/flash.log",
+      "source_sha256": "b6924cb9ff357c3fd0f4d483103a3f6b4c78992fcab6d2660ab6a91f8dd009f3",
+      "published_sha256": "0c3701419f4deaca063133e252e0ce063020bd635feaf6322158f7eaf681b5d9"
+    },
+    {
+      "file": "flash-validation.json",
+      "source": "output/ha-device-summary-flash-20261015/flash-validation.json",
+      "source_sha256": "6be7db1712c5793d20e0e2a21dea4faa8b23544a3d1c5a52ffb5744a1304347c",
+      "published_sha256": "6be7db1712c5793d20e0e2a21dea4faa8b23544a3d1c5a52ffb5744a1304347c"
+    },
+    {
+      "file": "firmware-validation.json",
+      "source": "output/ha-device-summary-flash-20261015/firmware-validation.json",
+      "source_sha256": "58259c87a2f83e657b9c6e183aeb52dd38195265a228fdb971afd3ce2b6dd8cc",
+      "published_sha256": "58259c87a2f83e657b9c6e183aeb52dd38195265a228fdb971afd3ce2b6dd8cc"
+    },
+    {
+      "file": "ui-validation.json",
+      "source": "output/ha-device-summary-flash-20261015/ui-validation.json",
+      "source_sha256": "d51cb2dbd2d361dd2f19fb44ac2b81a4fc064ffb5f7af3c57bae59169a73ec7c",
+      "published_sha256": "d51cb2dbd2d361dd2f19fb44ac2b81a4fc064ffb5f7af3c57bae59169a73ec7c"
+    },
+    {
+      "file": "native-real-home.log",
+      "source": "output/ha-device-summary-flash-20261015/native.log",
+      "source_sha256": "c270cd5b5bf2bc47bfed56843c3e6fde16dd547d17de81be666f54dc30faae34",
+      "published_sha256": "ae7480da0108b6afdf1d42bc937700ea7085581fc5fc49094408af7cb83285b3"
+    },
+    {
+      "file": "ha-service-tests.log",
+      "source": "output/ha-ui-push-20261015/ha-service-tests.log",
+      "source_sha256": "e897d7294690d2d20b1c37ac623bc0c3d431e674d2908a23d7372739b1af6c4c",
+      "published_sha256": "6ae995508f2c51f38d22b95220e778cc0651bda449589aec0807809b19f1bf3f"
+    },
+    {
+      "file": "icon-pixels.json",
+      "source": "output/ha-detail-icons-20261015/header-icon-pixel-validation.json",
+      "source_sha256": "d1a5b9c8aaf65831bf7eda2065e0ce5a1687992184189ffb4bd05d0725cdd3bd",
+      "published_sha256": "d1a5b9c8aaf65831bf7eda2065e0ce5a1687992184189ffb4bd05d0725cdd3bd"
+    },
+    {
+      "file": "slider-endpoints.json",
+      "source": "output/ha-slider-zero-20261015/slider-pixel-validation.json",
+      "source_sha256": "2a1d5274f69ad91cd285377274672350ac4908caa84372a669b5393727c9eb48",
+      "published_sha256": "2a1d5274f69ad91cd285377274672350ac4908caa84372a669b5393727c9eb48"
+    },
+    {
+      "file": "small-card-pixels.json",
+      "source": "output/ha-small-slider-zero-20261015/small-card-pixels.json",
+      "source_sha256": "8e0b8b41d21bf6d444904e424c8f6260ecc67cdebafb87c02850c44e10c0e88b",
+      "published_sha256": "8e0b8b41d21bf6d444904e424c8f6260ecc67cdebafb87c02850c44e10c0e88b"
+    },
+    {
+      "file": "camera-validation.json",
+      "source": "output/ha-camera-layout-20261015/ui-validation.json",
+      "source_sha256": "172760bc6e14563b217fa6c5326899ff60e81ac0dca9f4cf6d0849c6824c624c",
+      "published_sha256": "172760bc6e14563b217fa6c5326899ff60e81ac0dca9f4cf6d0849c6824c624c"
+    }
+  ]
+}

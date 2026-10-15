@@ -1,0 +1,18 @@
+{
+  "frontend_tests": 96,
+  "native_captures": 236,
+  "native_source_hashes_verified": 54,
+  "changed_native_screens": [
+    "light-device-camera-small.png",
+    "light-device-camera-detail.png",
+    "light-device-video-doorbell-small.png",
+    "light-device-video-doorbell-detail.png",
+    "dark-device-camera-small.png",
+    "dark-device-camera-detail.png",
+    "dark-device-video-doorbell-small.png",
+    "dark-device-video-doorbell-detail.png"
+  ],
+  "unchanged_non_camera_screens": 228,
+  "camera_notice_visible_in_both_themes": true,
+  "flashed": false
+}

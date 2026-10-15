@@ -1,0 +1,6 @@
+CAPTURE light real-home-overview
+CAPTURE light real-home-devices
+CAPTURE dark real-home-overview
+CAPTURE dark real-home-devices
+REAL_HOME_CARDS_OK: 200 entities, four appliance cards, four theme/page captures
+ALL_UI_RENDER_OK [BUILD_WORKSPACE]/out/ha-device-summary-flash-20261015/native-all

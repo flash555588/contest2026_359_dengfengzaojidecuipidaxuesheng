@@ -1,0 +1,710 @@
+[
+  {
+    "file": "dark-device-air-conditioner-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-air-fresh-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-air-fryer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-air-monitor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-air-purifier-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-airer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-bath-heater-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-camera-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-ceiling-fan-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-coffee-machine-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-cooker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-curtain-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-diffuser-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-dishwasher-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-fan-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-flowerpot-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-fridge-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-fruit-vegetable-purifier-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-garbage-can-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-gas-concentration-detail.png",
+    "old_center": 15.0,
+    "new_center": 21.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-gas-sensor-detail.png",
+    "old_center": 15.0,
+    "new_center": 21.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-gateway-detail.png",
+    "old_center": 16.5,
+    "new_center": 22.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-health-pot-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-heater-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-hood-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-humidifier-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-illumination-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-induction-cooker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-integrated-stove-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-juicer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-kettle-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-light-detail.png",
+    "old_center": 11.5,
+    "new_center": 21.5,
+    "moved_down": 10.0
+  },
+  {
+    "file": "dark-device-magnet-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-massage-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-mirror-detail.png",
+    "old_center": 11.5,
+    "new_center": 21.5,
+    "moved_down": 10.0
+  },
+  {
+    "file": "dark-device-mosquito-dispeller-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-motion-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-moxibustion-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-outlet-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-oven-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-pet-drinking-fountain-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-plant-monitor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-pressure-cooker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-printer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-relay-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-smoke-sensor-detail.png",
+    "old_center": 15.0,
+    "new_center": 21.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-speaker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-submersion-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-switch-detail.png",
+    "old_center": 14.5,
+    "new_center": 20.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-temperature-humidity-sensor-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-towel-rack-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-treadmill-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-vacuum-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-video-doorbell-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-walking-pad-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-washer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-water-dispenser-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-water-heater-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "dark-device-water-purifier-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-air-conditioner-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-air-fresh-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-air-fryer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-air-monitor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-air-purifier-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-airer-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-bath-heater-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-camera-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-ceiling-fan-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-coffee-machine-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-cooker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-curtain-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-diffuser-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-dishwasher-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-fan-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-flowerpot-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-fridge-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-fruit-vegetable-purifier-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-garbage-can-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-gas-concentration-detail.png",
+    "old_center": 15.0,
+    "new_center": 21.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-gas-sensor-detail.png",
+    "old_center": 15.0,
+    "new_center": 21.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-gateway-detail.png",
+    "old_center": 17.0,
+    "new_center": 23.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-health-pot-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-heater-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-hood-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-humidifier-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-illumination-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-induction-cooker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-integrated-stove-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-juicer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-kettle-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-light-detail.png",
+    "old_center": 11.0,
+    "new_center": 21.0,
+    "moved_down": 10.0
+  },
+  {
+    "file": "light-device-magnet-sensor-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-massage-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-mirror-detail.png",
+    "old_center": 11.0,
+    "new_center": 21.0,
+    "moved_down": 10.0
+  },
+  {
+    "file": "light-device-mosquito-dispeller-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-motion-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-moxibustion-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-outlet-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-oven-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-pet-drinking-fountain-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-plant-monitor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-pressure-cooker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-printer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-relay-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-smoke-sensor-detail.png",
+    "old_center": 15.0,
+    "new_center": 21.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-speaker-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-submersion-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-switch-detail.png",
+    "old_center": 14.0,
+    "new_center": 20.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-temperature-humidity-sensor-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-towel-rack-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-treadmill-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-vacuum-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-video-doorbell-detail.png",
+    "old_center": 16.0,
+    "new_center": 22.0,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-walking-pad-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-washer-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-water-dispenser-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-water-heater-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  },
+  {
+    "file": "light-device-water-purifier-detail.png",
+    "old_center": 15.5,
+    "new_center": 21.5,
+    "moved_down": 6.0
+  }
+]

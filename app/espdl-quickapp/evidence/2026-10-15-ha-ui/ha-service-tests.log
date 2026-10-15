@@ -1,0 +1,4 @@
+HA portal tests passed: validation, failed-save preservation, immediate URL/token apply, cancellation, bootstrap, secret redaction
+HA_TYPED_ACTIONS_OK: 15 domains, bounds, grants, exact targets, duplicate rejection
+HA configuration host tests passed
+HA real transport growth tests passed: small, 90 KB, 256 KB, chunked, bounded overflow

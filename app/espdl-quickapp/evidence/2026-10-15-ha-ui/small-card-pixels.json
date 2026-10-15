@@ -1,0 +1,178 @@
+[
+  {
+    "file": "light-lamp-small-set-0.png",
+    "percent": 0,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 0,
+    "thumb_center": 14.5
+  },
+  {
+    "file": "light-lamp-small-drag-0.png",
+    "percent": 0,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 0,
+    "thumb_center": 14.5
+  },
+  {
+    "file": "light-lamp-small-set-1.png",
+    "percent": 1,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 86,
+    "thumb_center": 16.5
+  },
+  {
+    "file": "light-lamp-small-drag-1.png",
+    "percent": 1,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 86,
+    "thumb_center": 16.5
+  },
+  {
+    "file": "light-lamp-small-set-50.png",
+    "percent": 50,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 5444,
+    "thumb_center": 116.5
+  },
+  {
+    "file": "light-lamp-small-drag-50.png",
+    "percent": 50,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 5444,
+    "thumb_center": 116.5
+  },
+  {
+    "file": "light-lamp-small-set-100.png",
+    "percent": 100,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 10848,
+    "thumb_center": 218.5
+  },
+  {
+    "file": "light-lamp-small-drag-100.png",
+    "percent": 100,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 10848,
+    "thumb_center": 218.5
+  },
+  {
+    "file": "dark-lamp-small-set-0.png",
+    "percent": 0,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 0,
+    "thumb_center": 14.5
+  },
+  {
+    "file": "dark-lamp-small-drag-0.png",
+    "percent": 0,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 0,
+    "thumb_center": 14.5
+  },
+  {
+    "file": "dark-lamp-small-set-1.png",
+    "percent": 1,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 82,
+    "thumb_center": 16.5
+  },
+  {
+    "file": "dark-lamp-small-drag-1.png",
+    "percent": 1,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 82,
+    "thumb_center": 16.5
+  },
+  {
+    "file": "dark-lamp-small-set-50.png",
+    "percent": 50,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 5436,
+    "thumb_center": 116.5
+  },
+  {
+    "file": "dark-lamp-small-drag-50.png",
+    "percent": 50,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 5436,
+    "thumb_center": 116.5
+  },
+  {
+    "file": "dark-lamp-small-set-100.png",
+    "percent": 100,
+    "drag": false,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 10832,
+    "thumb_center": 218.5
+  },
+  {
+    "file": "dark-lamp-small-drag-100.png",
+    "percent": 100,
+    "drag": true,
+    "x": 197,
+    "y": 221,
+    "w": 234,
+    "h": 48,
+    "orange_pixels": 10832,
+    "thumb_center": 218.5
+  }
+]

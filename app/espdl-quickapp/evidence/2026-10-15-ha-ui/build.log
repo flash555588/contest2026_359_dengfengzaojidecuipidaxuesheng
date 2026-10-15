@@ -1,0 +1,4616 @@
+Loaded configuration '.config'
+No change to configuration in '.config'
+Create version.h
+LN: platform/board to [BUILD_WORKSPACE]/v3-media-current/apps/platform/dummy
+Register: ha_panel
+Register: c6ble
+Register: c6probe
+Register: desktop
+Register: dumpstack
+Register: espclaw
+Register: hass
+Register: nsh
+Register: sh
+Register: nxcamera
+Generating unified Rust library from registered crates...
+No valid Rust crates found to build
+
+CC:  clock/clock.c
+CC:  clock/clock_initialize.c
+CC:  clock/clock_settime.c
+
+CC:  clock/clock_gettime.c
+CC:  drivers_initialize.c
+
+CC:  clock/clock_systime_ticks.c
+
+CC:  clock/clock_systime_timespec.c
+
+CC:  clock/clock_perf.c
+
+CC:  clock/clock_realtime2absticks.c
+
+CC:  clock/clock_getres.c
+
+CC:  audio/es8311.c
+
+CC:  clock/clock_notifier.c In file included from [BUILD_WORKSPACE]/v3-media-current/nuttx/include/debug.h:44,
+                 from audio/es8311.c:35:
+audio/es8311.c: In function 'es8311_getcoeff':
+audio/es8311.c:533:19: warning: format '%d' expects argument of type 'int', but argument 3 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  533 |           audinfo("MCLK: %d, samplerate: %d\n", priv->mclk, samplerate);
+      |                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~
+      |                                                     |
+      |                                                     uint32_t {aka long unsigned int}
+audio/es8311.c:533:27: note: format string is defined here
+  533 |           audinfo("MCLK: %d, samplerate: %d\n", priv->mclk, samplerate);
+      |                          ~^
+      |                           |
+      |                           int
+      |                          %ld
+audio/es8311.c:533:19: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  533 |           audinfo("MCLK: %d, samplerate: %d\n", priv->mclk, samplerate);
+      |                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~              ~~~~~~~~~~
+      |                                                             |
+      |                                                             uint32_t {aka long unsigned int}
+audio/es8311.c:533:43: note: format string is defined here
+  533 |           audinfo("MCLK: %d, samplerate: %d\n", priv->mclk, samplerate);
+      |                                          ~^
+      |                                           |
+      |                                           int
+      |                                          %ld
+audio/es8311.c: In function 'es8311_setsamplerate':
+audio/es8311.c:811:15: warning: format '%d' expects argument of type 'int', but argument 3 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  811 |       audinfo("Sample rate set to: %d.\n", priv->samprate);
+      |               ^~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~
+      |                                                |
+      |                                                uint32_t {aka long unsigned int}
+audio/es8311.c:811:37: note: format string is defined here
+  811 |       audinfo("Sample rate set to: %d.\n", priv->samprate);
+      |                                    ~^
+      |                                     |
+      |                                     int
+      |                                    %ld
+
+
+CC:  group/group_create.c
+
+CC:  group/group_join.c
+
+CC:  group/group_leave.c
+
+
+CC:  group/group_setupidlefiles.c
+CC:  group/group_setuptaskfiles.c
+
+
+CC:  group/group_foreachchild.c
+CC:  group/group_killchildren.c
+
+CC:  group/group_signal.c
+
+CC:  group/group_malloc.c
+
+CC:  group/group_realloc.c
+
+CC:  group/group_zalloc.c
+
+CC:  audio/audio_i2s.c
+
+CC:  group/group_free.c
+
+
+CC:  group/group_memalign.c
+CC:  init/nx_start.c
+
+CC:  init/nx_bringup.c
+
+CC:  init/nx_smpstart.c
+
+CC:  bch/bchlib_setup.c
+
+CC:  instrument/instrument.c
+
+CC:  irq/irq_initialize.c
+
+CC:  irq/irq_attach.c
+
+CC:  irq/irq_dispatch.c
+
+CC:  bch/bchlib_teardown.c
+
+CC:  irq/irq_unexpectedisr.c
+
+CC:  irq/irq_attach_thread.c
+
+CC:  irq/irq_attach_wqueue.c
+
+CC:  bch/bchlib_read.c
+
+CC:  irq/irq_csection.c
+
+CC:  irq/irq_spinlock.c
+
+CC:  bch/bchlib_write.c
+
+
+CC:  misc/assert.c
+CC:  bch/bchlib_cache.c
+
+CC:  misc/panic_notifier.c
+
+CC:  bch/bchdev_register.c
+
+CC:  bch/bchdev_unregister.c
+
+CC:  misc/reboot_notifier.c
+
+
+
+CC:  bch/bchdev_driver.c
+CC:  i2c/i2c_read.c
+CC:  mqueue/mq_initialize.c
+
+CC:  i2c/i2c_write.c
+
+
+CC:  mqueue/mq_waitirq.c
+CC:  i2c/i2c_writeread.c
+
+CC:  mqueue/mq_recover.c
+
+CC:  input/touchscreen_upper.c
+
+CC:  mqueue/mq_send.c
+
+CC:  input/gt9xx.c
+
+CC:  mqueue/mq_sndinternal.c
+
+CC:  mqueue/mq_receive.c
+
+CC:  mqueue/mq_rcvinternal.c
+
+CC:  loop/losetup.c
+
+CC:  misc/dev_null.c
+
+
+CC:  mqueue/mq_getattr.c
+CC:  mqueue/mq_msgfree.c
+
+CC:  misc/dev_zero.c
+
+CC:  misc/ramdisk.c
+
+CC:  mqueue/mq_msgqalloc.c
+
+CC:  mqueue/mq_msgqfree.c
+
+CC:  misc/mkrd.c
+
+
+CC:  mqueue/mq_setattr.c
+CC:  mmcsd/mmcsd_sdio.c
+
+CC:  mqueue/mq_notify.c
+
+CC:  mmcsd/sdio.c
+
+CC:  mqueue/msgctl.c
+
+CC:  mqueue/msgget.c
+
+CC:  mqueue/msginternal.c
+
+CC:  mmcsd/mmcsd_spi.c
+
+CC:  mqueue/msgrcv.c
+
+CC:  mqueue/msgsnd.c
+
+CC:  pthread/pthread_create.c
+
+CC:  pthread/pthread_exit.c
+
+CC:  pthread/pthread_join.c
+
+CC:  pthread/pthread_detach.c
+
+CC:  mmcsd/mmcsd_debug.c
+
+CC:  mtd/ftl.c
+
+CC:  pthread/pthread_getschedparam.c
+
+CC:  mtd/mtd_partition.c
+
+CC:  pthread/pthread_setschedparam.c
+
+CC:  pthread/pthread_sigmask.c
+
+CC:  pthread/pthread_cancel.c
+
+CC:  pthread/pthread_completejoin.c
+
+CC:  mtd/smart.c
+
+
+CC:  pthread/pthread_findjoininfo.c
+CC:  net/netdev_upperhalf.c
+
+
+CC:  pthread/pthread_release.c
+CC:  pthread/pthread_setschedprio.c
+
+
+CC:  pthread/pthread_setaffinity.c
+CC:  pthread/pthread_getaffinity.c
+
+
+CC:  sched/sched_getfiles.c
+CC:  sched/sched_profil.c
+
+CC:  net/phy_notify.c
+
+CC:  sched/sched_addreadytorun.c
+
+CC:  sched/sched_removereadytorun.c
+
+CC:  pipes/pipe.c
+
+CC:  sched/sched_addblocked.c
+
+CC:  sched/sched_removeblocked.c
+
+CC:  pipes/fifo.c
+
+CC:  pipes/pipe_common.c
+
+
+CC:  sched/sched_gettcb.c
+CC:  sched/sched_verifytcb.c
+
+CC:  serial/serial.c
+
+CC:  serial/serial_io.c
+
+CC:  sched/sched_releasetcb.c
+
+CC:  sched/sched_setparam.c
+
+
+CC:  sched/sched_setpriority.c
+CC:  spi/spi_transfer.c
+
+CC:  sched/sched_getparam.c
+
+CC:  spi/spi_driver.c
+
+CC:  sched/sched_setscheduler.c
+
+CC:  sched/sched_getscheduler.c
+
+CC:  sched/sched_yield.c
+
+CC:  syslog/syslog_initialize.c
+
+CC:  sched/sched_rrgetinterval.c
+
+
+CC:  syslog/setlogmask.c
+CC:  sched/sched_foreach.c
+
+CC:  syslog/vsyslog.c
+
+CC:  sched/sched_lock.c
+
+
+CC:  sched/sched_unlock.c
+CC:  syslog/syslog_channel.c
+
+
+CC:  syslog/syslog_write.c
+CC:  sched/sched_lockcount.c
+
+
+CC:  syslog/syslog_flush.c
+CC:  sched/sched_idletask.c
+
+CC:  sched/sched_self.c
+
+CC:  syslog/syslog_device.c
+
+CC:  timers/pwm.c
+
+CC:  sched/sched_get_stackinfo.c
+
+CC:  sched/sched_get_tls.c
+
+CC:  video/fb.c
+
+CC:  sched/sched_sysinfo.c
+
+CC:  sched/sched_get_stateinfo.c
+
+CC:  video/v4l2_core.c
+
+CC:  sched/sched_getcpu.c
+
+CC:  sched/sched_switchcontext.c
+
+CC:  sched/sched_process_delivered.c
+
+CC:  video/video_framebuff.c
+
+CC:  sched/sched_getaffinity.c
+
+
+CC:  video/v4l2_cap.c
+CC:  sched/sched_setaffinity.c
+
+CC:  sched/sched_waitpid.c
+
+CC:  sched/sched_roundrobin.c
+
+CC:  sched/sched_cpuload.c
+
+CC:  video/v4l2_m2m.c
+
+CC:  sched/sched_processtimer.c
+
+CC:  sched/sched_backtrace.c
+
+CC:  sched/sched_smp.c
+
+CC:  semaphore/sem_destroy.c
+
+CC:  semaphore/sem_wait.c
+
+CC:  semaphore/sem_trywait.c
+
+CC:  video/sc2336.c
+
+CC:  semaphore/sem_clockwait.c
+
+CC:  semaphore/sem_tickwait.c
+
+CC:  video/mipidsi/mipi_dsi_device.c
+
+CC:  semaphore/sem_timeout.c
+
+CC:  semaphore/sem_post.c
+
+CC:  video/mipidsi/mipi_dsi_host.c
+
+
+CC:  semaphore/sem_recover.c
+CC:  video/mipidsi/mipi_dsi_packet.c
+
+
+CC:  semaphore/sem_reset.c
+
+
+CC:  semaphore/sem_waitirq.c
+
+CC:  semaphore/sem_rw.c
+
+CC:  signal/sig_action.c
+CC:  boardctl.c
+
+
+CC:  signal/sig_allocpendingsigaction.c
+
+CC:  signal/sig_cleanup.c
+CC:  assert/lib_assert.c
+
+CC:  signal/sig_deliver.c
+
+CC:  signal/sig_findaction.c
+
+CC:  assert/lib_stackchk.c
+CC:  mm_heap/mm_initialize.c
+
+CC:  signal/sig_initialize.c
+
+CC:  audio/lib_buffer.c
+
+CC:  signal/sig_pending.c
+
+CC:  signal/sig_releasependingsigaction.c
+
+
+CC:  mm_heap/mm_malloc_size.c
+CC:  signal/sig_releasependingsignal.c
+
+CC:  builtin/lib_builtin_getname.c
+
+CC:  builtin/lib_builtin_isavail.c
+
+CC:  signal/sig_removependingsignal.c
+
+
+CC:  signal/sig_unmaskpendingsignal.c
+CC:  mm_heap/mm_shrinkchunk.c
+
+CC:  builtin/lib_builtin_forindex.c
+
+
+CC:  ctype/lib_isalnum.c
+CC:  ctype/lib_isalpha.c
+
+CC:  signal/sig_dispatch.c
+
+
+CC:  ctype/lib_isascii.c
+
+CC:  mm_heap/mm_brkaddr.c
+CC:  mm_heap/mm_calloc.c
+
+CC:  ctype/lib_isblank.c
+
+
+CC:  mm_heap/mm_extend.c
+CC:  mm_heap/mm_free.c
+
+CC:  ctype/lib_iscntrl.c
+
+CC:  ctype/lib_isdigit.c
+
+CC:  ctype/lib_isgraph.c
+
+
+CC:  signal/sig_kill.c
+CC:  mm_heap/mm_mallinfo.c
+
+CC:  mm_heap/mm_malloc.c
+
+CC:  ctype/lib_islower.c
+
+CC:  ctype/lib_isprint.c
+
+CC:  signal/sig_lowest.c
+
+CC:  mm_heap/mm_foreach.c
+
+CC:  ctype/lib_ispunct.c
+
+
+CC:  signal/sig_nanosleep.c
+CC:  signal/sig_notification.c
+
+CC:  ctype/lib_isspace.c
+
+CC:  ctype/lib_isupper.c
+
+
+CC:  mm_heap/mm_memalign.c
+CC:  signal/sig_pause.c
+
+
+CC:  signal/sig_ppoll.c c
+
+CC:  ctype/lib_tolower.c
+
+CC:  signal/sig_procmask.c
+
+CC:  ctype/lib_toupper.c
+
+CC:  signal/sig_pselect.c
+
+CC:  mm_heap/mm_realloc.c
+
+CC:  ctype/lib_ctype.c
+
+CC:  dirent/lib_readdirr.c
+
+CC:  dirent/lib_telldir.c
+
+CC:  signal/sig_queue.c
+
+CC:  dirent/lib_alphasort.c
+
+CC:  dirent/lib_scandir.c
+
+CC:  dirent/lib_ftw.c
+
+CC:  signal/sig_sleep.c
+
+CC:  mm_heap/mm_zalloc.c
+
+CC:  dirent/lib_nftw.c
+
+CC:  dirent/lib_opendir.c
+
+CC:  signal/sig_suspend.c
+
+CC:  mm_heap/mm_heapmember.c
+
+CC:  dirent/lib_fdopendir.c
+
+CC:  dirent/lib_closedir.c
+
+CC:  mm_heap/mm_memdump.c
+
+
+CC:  signal/sig_tgkill.c
+CC:  dirent/lib_readdir.c
+
+CC:  dirent/lib_rewinddir.c
+
+CC:  dirent/lib_seekdir.c
+
+CC:  signal/sig_timedwait.c
+
+
+CC:  dirent/lib_dirfd.c
+CC:  mm_heap/mm_checkcorruption.c
+
+CC:  dirent/lib_versionsort.c
+
+CC:  dlfcn/lib_dlfind_object.c
+
+
+CC:  environ/env_getenvironptr.c
+CC:  environ/env_dup.c
+
+CC:  umm_heap/umm_globals.c
+
+CC:  umm_heap/umm_initialize.c
+
+CC:  environ/env_release.c
+
+CC:  signal/sig_usleep.c
+
+CC:  environ/env_findvar.c
+
+CC:  umm_heap/umm_addregion.c
+
+CC:  environ/env_removevar.c
+
+CC:  signal/sig_waitinfo.c
+
+CC:  environ/env_clearenv.c
+
+CC:  umm_heap/umm_malloc_size.c
+
+CC:  task/task_argvstr.c
+
+CC:  environ/env_getenv.c
+
+CC:  environ/env_putenv.c
+
+CC:  umm_heap/umm_brkaddr.c
+
+CC:  task/task_create.c
+
+CC:  environ/env_setenv.c
+
+CC:  environ/env_unsetenv.c
+
+CC:  umm_heap/umm_calloc.c
+
+CC:  task/task_init.c
+
+CC:  umm_heap/umm_extend.c
+
+CC:  environ/env_foreach.c
+CC:  errno/lib_errno.c
+
+CC:  umm_heap/umm_free.c
+
+
+
+CC:  fixedmath/lib_fixedmath.c
+CC:  task/task_setup.c in.c
+
+CC:  fixedmath/lib_b16cos.c
+
+CC:  umm_heap/umm_mallinfo.c
+
+CC:  fixedmath/lib_b16atan2.c
+
+CC:  fixedmath/lib_ubsqrt.c
+
+CC:  grp/lib_getgrgid.c
+
+CC:  umm_heap/umm_malloc.c
+
+CC:  grp/lib_getgrgidr.c
+
+CC:  task/task_activate.c
+
+CC:  grp/lib_getgrnam.c
+
+CC:  grp/lib_getgrnamr.c
+
+CC:  umm_heap/umm_memalign.c
+
+CC:  grp/lib_initgroups.c
+
+CC:  grp/lib_getgrbuf.c
+
+CC:  task/task_start.c
+
+CC:  umm_heap/umm_realloc.c
+
+CC:  grp/lib_getgrbufr.c
+
+CC:  inttypes/lib_imaxabs.c
+
+CC:  inttypes/lib_imaxdiv.c
+
+CC:  umm_heap/umm_zalloc.c
+
+CC:  task/task_delete.c
+
+CC:  inttypes/lib_strtoimax.c
+
+CC:  inttypes/lib_strtoumax.c
+
+CC:  umm_heap/umm_heapmember.c
+
+CC:  libgen/lib_basename.c
+
+
+CC:  task/task_exit.c
+CC:  libgen/lib_dirname.c
+
+CC:  umm_heap/umm_memdump.c
+
+
+CC:  misc/lib_bitmap.c
+CC:  misc/lib_circbuf.c
+
+CC:  task/task_exithook.c
+
+CC:  umm_heap/umm_checkcorruption.c
+
+CC:  misc/lib_creat.c
+
+CC:  misc/lib_mknod.c
+
+
+CC:  misc/lib_umask.c
+CC:  kmm_heap/kmm_initialize.c
+
+CC:  task/task_prctl.c
+
+
+CC:  kmm_heap/kmm_addregion.c
+CC:  misc/lib_utsname.c
+
+CC:  misc/lib_getrandom.c
+
+CC:  task/task_recover.c
+
+
+CC:  kmm_heap/kmm_malloc_size.c
+CC:  task/task_restart.c
+
+CC:  misc/lib_xorshift128.c
+
+
+CC:  task/task_spawnparms.c
+CC:  misc/lib_tea_encrypt.c
+
+CC:  kmm_heap/kmm_brkaddr.c
+
+CC:  misc/lib_tea_decrypt.c
+
+CC:  task/task_cancelpt.c
+
+CC:  kmm_heap/kmm_calloc.c
+
+CC:  misc/lib_cxx_initialize.c
+
+CC:  task/task_terminate.c
+
+CC:  kmm_heap/kmm_extend.c
+
+CC:  task/exit.c
+
+CC:  misc/lib_impure.c
+
+
+
+CC:  misc/lib_memfd.c
+CC:  kmm_heap/kmm_free.c
+CC:  task/task_join.c
+
+CC:  task/task_fork.c
+
+CC:  misc/lib_fchmodat.c
+
+CC:  kmm_heap/kmm_mallinfo.c
+
+CC:  task/task_spawn.c
+
+CC:  misc/lib_fstatat.c
+
+CC:  kmm_heap/kmm_malloc.c
+
+CC:  timer/timer_initialize.c
+
+CC:  timer/timer_create.c
+
+CC:  misc/lib_getfullpath.c
+
+CC:  kmm_heap/kmm_memalign.c
+
+CC:  misc/lib_openat.c
+
+CC:  timer/timer_delete.c
+
+
+CC:  kmm_heap/kmm_realloc.c
+CC:  timer/timer_getoverrun.c
+
+CC:  misc/lib_mkdirat.c
+
+CC:  timer/timer_getitimer.c
+
+CC:  kmm_heap/kmm_zalloc.c
+
+CC:  timer/timer_gettime.c
+
+CC:  misc/lib_utimensat.c
+
+
+CC:  kmm_heap/kmm_heapmember.c
+CC:  timer/timer_setitimer.c
+
+CC:  timer/timer_settime.c
+
+CC:  misc/lib_mallopt.c
+
+CC:  kmm_heap/kmm_memdump.c
+
+CC:  misc/lib_idr.c
+
+CC:  timer/timer_release.c
+
+CC:  kmm_heap/kmm_checkcorruption.c
+
+CC:  iob/iob_add_queue.c
+
+CC:  iob/iob_alloc.c
+
+CC:  tls/task_initinfo.c
+
+CC:  iob/iob_alloc_qentry.c
+
+CC:  tls/task_uninitinfo.c
+
+CC:  iob/iob_clone.c
+
+CC:  misc/lib_getnprocs.c
+
+CC:  iob/iob_concat.c
+
+CC:  misc/lib_ratelimit.c
+
+CC:  tls/tls_initinfo.c
+
+CC:  iob/iob_copyin.c
+
+CC:  iob/iob_copyout.c
+
+CC:  misc/lib_lrucache.c
+
+CC:  tls/tls_dupinfo.c
+
+CC:  iob/iob_contig.c
+
+CC:  iob/iob_free.c
+
+CC:  wdog/wd_initialize.c
+
+
+CC:  iob/iob_free_chain.c
+CC:  iob/iob_free_qentry.c
+
+CC:  wdog/wd_start.c
+
+CC:  iob/iob_free_queue.c
+
+CC:  iob/iob_initialize.c
+
+CC:  wdog/wd_cancel.c
+
+CC:  iob/iob_pack.c
+
+CC:  iob/iob_peek_queue.c
+
+CC:  wdog/wd_gettime.c
+
+CC:  iob/iob_remove_queue.c
+
+CC:  iob/iob_statistics.c
+
+CC:  wqueue/kwork_queue.c
+
+CC:  misc/lib_sem_mutex_noinline.c
+
+CC:  iob/iob_trimhead.c
+
+
+CC:  iob/iob_trimhead_queue.c
+CC:  misc/lib_tempbuffer.c
+
+CC:  wqueue/kwork_thread.c
+
+CC:  iob/iob_trimtail.c
+
+
+CC:  iob/iob_navail.c
+CC:  misc/lib_umul32.c
+
+CC:  misc/lib_umul64.c
+
+CC:  iob/iob_free_queue_qentry.c
+
+CC:  iob/iob_tailroom.c
+
+CC:  misc/lib_umul32x64.c
+
+
+CC:  misc/lib_uadd32x64.c
+CC:  iob/iob_get_queue_info.c
+
+CC:  wqueue/kwork_cancel.c
+
+CC:  iob/iob_reserve.c
+
+CC:  misc/lib_uadd64.c
+
+CC:  iob/iob_update_pktlen.c
+
+CC:  misc/lib_usub64x32.c
+
+CC:  iob/iob_count.c
+
+
+CC:  misc/lib_usub64.c
+
+
+CC:  iob/iob_dump.c
+CC:  mempool/mempool.c
+
+CC:  misc/lib_dumpbuffer.c
+
+CC:  misc/lib_dumpvbuffer.c
+
+CC:  mempool/mempool_multiple.c
+
+CC:  misc/lib_fnmatch.c
+
+CC:  mempool/mempool_procfs.c
+
+CC:  misc/lib_debug.c
+
+CC:  misc/lib_crc64.c
+
+CC:  kasan/hook.c
+
+CC:  misc/lib_crc32.c
+
+CC:  map/mm_map.c
+
+
+CC:  misc/lib_crc16.c
+
+CC:  misc/lib_crc16ccitt.c
+
+CC:  misc/lib_crc8.c
+AS:  common/espressif/esp_vectors.S
+
+AS:  common/riscv_exception_common.S
+
+CC:  misc/lib_crc8ccitt.c
+
+AS:  common/riscv_mhartid.S
+
+
+CC:  misc/lib_crc8table.c
+AS:  common/riscv_saveusercontext.S
+
+
+AS:  common/fork.S
+
+CC:  misc/lib_crc8rohc.c
+
+AS:  common/riscv_fpu.S
+
+CC:  misc/lib_crc8h1d.c
+
+CC:  common/espressif/esp_allocateheap.c
+
+CC:  misc/lib_crc8h2f.c
+
+CC:  misc/lib_crc16h1021.c
+
+CC:  misc/lib_crc16h8005.c
+
+CC:  common/espressif/esp_start.c
+
+CC:  misc/lib_crc32h04c11db7.c
+CC:  socket/accept.c
+CC:  builtin_list.c
+
+CC:  misc/lib_crc32hf4acfb13.c
+
+
+CC:  misc/lib_crc64emac.c
+
+CC:  socket/bind.c
+
+CC:  misc/lib_backtrace.c
+
+CC:  socket/connect.c
+
+CC:  misc/lib_ftok.c
+
+CC:  socket/getsockname.c
+
+CC:  misc/lib_err.c
+
+CC:  socket/getpeername.c
+
+CC:  misc/lib_instrument.c
+
+CC:  socket/listen.c
+
+CC:  common/espressif/esp_idle.c
+
+CC:  misc/lib_glob.c
+
+CC:  socket/recv.c
+
+CC:  common/espressif/esp_irq.c
+
+CC:  socket/recvfrom.c
+
+CC:  misc/lib_fdcheck.c
+
+CC:  socket/send.c
+
+CC:  net/lib_addrconfig.c
+
+
+CC:  socket/sendto.c
+CC:  net/lib_base64.c
+
+CC:  common/espressif/esp_gpio.c
+
+
+CC:  socket/socket.c
+CC:  net/lib_htons.c
+
+CC:  net/lib_htonl.c
+
+
+CC:  socket/socketpair.c
+CC:  net/lib_htonq.c
+
+CC:  net/lib_inetaddr.c
+
+CC:  socket/net_close.c
+
+CC:  net/lib_inetaton.c
+
+CC:  common/espressif/esp_rtc_gpio.c
+
+CC:  net/lib_inetntoa.c
+
+CC:  socket/recvmsg.c
+
+CC:  net/lib_inetntop.c
+
+CC:  socket/sendmsg.c
+
+CC:  net/lib_inetpton.c
+
+CC:  socket/shutdown.c
+
+CC:  common/espressif/esp_libc_stubs.c
+
+CC:  net/lib_inetnetwork.c
+
+CC:  socket/net_dup2.c common/espressif/esp_libc_stubs.c: In function '__assert_func':
+common/espressif/esp_libc_stubs.c:358:1: warning: 'noreturn' function does return
+  358 | }
+      | ^
+
+
+CC:  net/lib_accept.c
+
+CC:  net/lib_etherntoa.c
+
+CC:  socket/net_sockif.c
+
+CC:  net/lib_etheraton.c
+
+CC:  common/espressif/esp_lowputc.c
+
+CC:  socket/net_poll.c
+
+CC:  net/lib_getifaddrs.c
+
+CC:  socket/net_fstat.c
+
+CC:  net/lib_freeifaddrs.c
+
+CC:  socket/net_mmap.c
+
+CC:  net/lib_indextoname.c
+
+CC:  common/espressif/esp_serial.c
+
+CC:  socket/setsockopt.c
+
+CC:  net/lib_nametoindex.c
+
+CC:  net/lib_nameindex.c
+
+CC:  socket/getsockopt.c
+
+CC:  net/lib_freenameindex.c
+
+CC:  netdb/lib_netdb.c
+
+
+CC:  common/espressif/esp_systemreset.c
+CC:  socket/net_timeo.c
+
+CC:  netdb/lib_h_errno.c
+
+CC:  inet/inet_txdrain.c
+
+CC:  common/espressif/esp_timerisr.c
+CC:  configfat.c
+
+CC:  netdb/lib_gethostbyname.c
+
+CC:  inet/inet_sockif.c
+
+CC:  netdb/lib_gethostbynamer.c
+
+CC:  netdb/lib_gethostbyname2.c
+
+CC:  common/espressif/esp_random.c
+
+CC:  mkfatfs.c
+
+CC:  netdb/lib_gethostbyname2r.c
+
+CC:  common/espressif/esp_timer_adapter.c
+
+CC:  inet/inet_globals.c
+
+
+CC:  writefat.c
+CC:  netdb/lib_gethostentbynamer.c
+
+CC:  inet/ipv4_setsockopt.c
+
+
+CC:  common/espressif/esp_ets_timer_legacy.c
+CC:  netdb/lib_gethostbyaddr.c
+
+
+CC:  inet/ipv4_getsockopt.c
+
+CC:  netdb/lib_gethostbyaddrr.c
+
+CC:  common/espressif/esp_ledc.c
+
+
+CC:  inet/ipv4_getsockname.c c
+
+CC:  netdb/lib_getservbynamer.c
+
+CC:  inet/ipv4_getpeername.c
+
+CC:  netdb/lib_getservbyport.c
+
+CC:  inet/ipv4_build_header.c
+
+CC:  netdb/lib_getservbyportr.c
+
+CC:  tcp/tcp_connect.c
+
+CC:  netdb/lib_gaistrerror.c
+
+CC:  netdb/lib_freeaddrinfo.c
+
+CC:  common/espressif/esp_usbserial.c
+
+CC:  netdb/lib_getaddrinfo.c
+
+CC:  tcp/tcp_accept.c
+
+CC:  netdb/lib_getnameinfo.c
+
+CC:  tcp/tcp_recvfrom.c
+
+CC:  netdb/lib_rexec.c
+
+CC:  common/espressif/esp_ldo.c
+
+CC:  netdb/lib_dn.c
+
+CC:  tcp/tcp_send_unbuffered.c
+
+CC:  netdb/lib_proto.c
+
+CC:  common/espressif/esp_mipi_dsi.c
+
+CC:  netdb/lib_protor.c
+
+CC:  udp/udp_recvfrom.c
+
+CC:  netdb/lib_dnsinit.c
+
+CC:  netdb/lib_dnsbind.c
+
+CC:  udp/udp_sendto_unbuffered.c
+
+CC:  netdb/lib_dnsquery.c
+CC:  mksmartfs.c
+
+CC:  bluetooth/bluetooth_sockif.c
+
+
+CC:  netdb/lib_dnsaddserver.c
+
+CC:  bluetooth/bluetooth_sendmsg.c
+
+CC:  common/espressif/esp_mipi_csi.c
+
+CC:  netdb/lib_dnsdefaultserver.c
+
+CC:  netdb/lib_dnsforeach.c
+
+CC:  bluetooth/bluetooth_recvmsg.c
+
+CC:  netdb/lib_dnsnotify.c
+
+CC:  common/espressif/esp_i2c.c
+
+CC:  netdev/netdev_register.c
+
+CC:  netdb/lib_dnsqueryfamily.c
+
+CC:  netdb/lib_dnscache.c
+
+CC:  netdev/netdev_ioctl.c
+
+CC:  obstack/lib_obstack_init.c
+
+CC:  obstack/lib_obstack_alloc.c
+
+CC:  common/espressif/esp_i2s.c
+
+CC:  obstack/lib_obstack_copy.c
+
+CC:  obstack/lib_obstack_free.c
+
+CC:  obstack/lib_obstack_make_room.c
+
+CC:  netdev/netdev_txnotify.c common/espressif/esp_i2s.c: In function 'i2s_ioctl':
+common/espressif/esp_i2s.c:3529:18: warning: format '%u' expects argument of type 'unsigned int', but argument 7 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+ 3529 |           printf("[audio-state] i2s start tx=%d/%d rx=%d/%d rate=%" PRIu32
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+......
+ 3532 |                  priv->data_width);
+      |                  ~~~~~~~~~~~~~~~~
+      |                      |
+      |                      uint32_t {aka long unsigned int}
+common/espressif/esp_i2s.c:3530:27: note: format string is defined here
+ 3530 |                  " width=%u\n", priv->tx_started, priv->tx_dma_armed,
+      |                          ~^
+      |                           |
+      |                           unsigned int
+      |                          %lu
+
+
+CC:  obstack/lib_obstack_blank.c
+
+CC:  netdev/netdev_findbyname.c
+
+CC:  obstack/lib_obstack_grow.c
+
+CC:  obstack/lib_obstack_finish.c
+
+CC:  netdev/netdev_findbyaddr.c
+
+CC:  obstack/lib_obstack_object_size.c
+
+CC:  obstack/lib_obstack_room.c
+
+CC:  netdev/netdev_findbyindex.c
+
+CC:  obstack/lib_obstack_printf.c
+
+CC:  obstack/lib_obstack_vprintf.c
+
+CC:  netdev/netdev_count.c
+
+CC:  obstack/lib_obstack_malloc.c
+
+CC:  netdev/netdev_ifconf.c
+
+CC:  pthread/pthread_keycreate.c
+
+CC:  netdev/netdev_foreach.c
+
+CC:  pthread/pthread_setspecific.c
+
+CC:  netdev/netdev_unregister.c
+
+CC:  pthread/pthread_getspecific.c
+
+CC:  common/espressif/esp_spi.c
+
+CC:  netdev/netdev_carrier.c
+CC:  ha_b64.c
+
+CC:  pthread/pthread_keydelete.c
+
+CC:  ha_client.c
+
+CC:  netdev/netdev_default.c
+
+CC:  pthread/pthread_attr_init.c
+
+CC:  netdev/netdev_verify.c
+
+CC:  pthread/pthread_attr_destroy.c
+
+CC:  netdev/netdev_lladdrsize.c
+
+CC:  ha_config.c
+
+CC:  pthread/pthread_attr_setschedpolicy.c
+
+CC:  common/espressif/esp_spiflash.c
+
+CC:  netdev/netdev_input.c
+
+CC:  pthread/pthread_attr_getschedpolicy.c
+
+CC:  ha_entities.c
+
+CC:  netdev/netdev_iob.c
+
+CC:  pthread/pthread_attr_setinheritsched.c
+
+
+CC:  pthread/pthread_attr_getinheritsched.c
+CC:  netdev/netdev_checksum.c
+
+CC:  pthread/pthread_attr_setdetachstate.c
+
+CC:  net_initialize.c
+
+CC:  common/espressif/esp_spiflash_mtd.c
+
+CC:  pthread/pthread_attr_getdetachstate.c
+
+CC:  ha_panel_main.c
+
+CC:  arp/arp_input.c
+
+CC:  pthread/pthread_attr_setstackaddr.c
+
+
+
+CC:  arp/arp_out.c
+CC:  common/espressif/esp_emac.c
+CC:  pthread/pthread_attr_getstackaddr.c
+
+CC:  pthread/pthread_attr_setstacksize.c
+
+CC:  ha_sha1.c
+
+CC:  arp/arp_format.c
+
+CC:  pthread/pthread_attr_getstacksize.c
+
+CC:  ha_ui.c
+
+CC:  arp/arp_table.c
+
+CC:  pthread/pthread_attr_setstack.c
+
+CC:  chip/esp_chip_rev.c
+
+CC:  pthread/pthread_attr_getstack.c
+
+CC:  arp/arp_send.c
+
+CC:  chip/esp_atomic64.c
+
+CC:  pthread/pthread_attr_setschedparam.c
+
+CC:  pthread/pthread_attr_getschedparam.c
+
+CC:  chip/esp32p4_ppa.c
+
+CC:  arp/arp_poll.c
+
+CC:  pthread/pthread_attr_setscope.c
+
+CC:  arp/arp_notify.c
+
+
+CC:  ha_ws.c
+CC:  pthread/pthread_attr_getscope.c
+
+CC:  pthread/pthread_attr_setguardsize.c
+
+CC:  icmp/icmp_input.c
+
+CC:  pthread/pthread_attr_getguardsize.c
+
+CC:  pthread/pthread_barrierattr_init.c
+
+
+
+CC:  ha_ws_frame.c
+CC:  icmp/icmp_reply.c
+CC:  chip/esp32p4_extctx.c
+
+CC:  pthread/pthread_barrierattr_destroy.c
+
+
+CC:  chip/esp32p4_sdmmc.c
+
+CC:  tcp/tcp_conn.c
+
+CC:  pthread/pthread_barrierattr_getpshared.c
+
+CC:  pthread/pthread_barrierattr_setpshared.c
+
+CC:  pthread/pthread_barrierinit.c
+
+CC:  pthread/pthread_barrierdestroy.c
+
+CC:  tcp/tcp_seqno.c
+
+CC:  pthread/pthread_barrierwait.c
+
+CC:  tcp/tcp_devpoll.c
+
+CC:  pthread/pthread_condattr_init.c
+
+CC:  chip/esp32p4_smp.c
+
+
+CC:  tcp/tcp_finddev.c
+CC:  pthread/pthread_condattr_destroy.c
+
+CC:  pthread/pthread_condattr_getpshared.c
+
+CC:  tcp/tcp_timer.c
+
+CC:  pthread/pthread_condattr_setpshared.c
+
+CC:  common/riscv_initialize.c
+
+CC:  pthread/pthread_condattr_setclock.c
+
+CC:  common/riscv_swint.c
+
+CC:  tcp/tcp_send.c
+
+CC:  pthread/pthread_condattr_getclock.c
+
+CC:  pthread/pthread_condinit.c
+
+CC:  common/riscv_allocateheap.c
+
+CC:  tcp/tcp_input.c
+
+CC:  pthread/pthread_conddestroy.c
+
+CC:  common/riscv_createstack.c
+
+CC:  pthread/pthread_condtimedwait.c
+
+CC:  pthread/pthread_condbroadcast.c
+
+CC:  common/riscv_cpuinfo.c
+
+
+CC:  pthread/pthread_condclockwait.c
+CC:  tcp/tcp_appsend.c
+
+CC:  common/riscv_cpuidlestack.c
+
+CC:  pthread/pthread_condsignal.c
+
+CC:  tcp/tcp_listen.c
+
+CC:  common/riscv_doirq.c
+
+CC:  pthread/pthread_condwait.c
+
+
+CC:  pthread/pthread_create.c
+CC:  common/riscv_exit.c
+CC:  quickjs/cutils.c
+
+CC:  tcp/tcp_close.c
+
+CC:  pthread/pthread_equal.c
+
+CC:  common/riscv_exception.c
+
+CC:  pthread/pthread_exit.c
+
+CC:  tcp/tcp_monitor.c
+
+CC:  pthread/pthread_kill.c
+
+CC:  quickjs/libbf.c
+
+CC:  common/riscv_getnewintctx.c
+
+CC:  pthread/pthread_setname_np.c
+
+CC:  tcp/tcp_callback.c
+
+
+CC:  pthread/pthread_getname_np.c
+CC:  common/riscv_getintstack.c
+
+CC:  pthread/pthread_get_stackaddr_np.c
+
+CC:  common/riscv_initialstate.c
+
+CC:  tcp/tcp_backlog.c
+
+CC:  pthread/pthread_get_stacksize_np.c
+
+CC:  common/riscv_modifyreg32.c
+
+CC:  pthread/pthread_mutexattr_init.c
+
+CC:  tcp/tcp_ipselect.c
+
+CC:  pthread/pthread_mutexattr_destroy.c
+
+CC:  common/riscv_nputs.c
+
+CC:  pthread/pthread_mutexattr_getpshared.c
+
+CC:  tcp/tcp_recvwindow.c
+
+CC:  common/riscv_releasestack.c
+
+CC:  pthread/pthread_mutexattr_setpshared.c
+
+CC:  tcp/tcp_netpoll.c
+
+CC:  pthread/pthread_mutexattr_setprotocol.c
+
+CC:  common/riscv_registerdump.c
+
+CC:  pthread/pthread_mutexattr_getprotocol.c
+
+CC:  tcp/tcp_ioctl.c
+
+
+CC:  pthread/pthread_mutexattr_settype.c
+CC:  common/riscv_stackframe.c
+
+CC:  pthread/pthread_mutexattr_gettype.c
+
+CC:  tcp/tcp_shutdown.c
+
+CC:  common/riscv_switchcontext.c
+
+CC:  pthread/pthread_mutexattr_setrobust.c
+
+CC:  pthread/pthread_mutexattr_getrobust.c
+
+
+CC:  tcp/tcp_dump.c
+CC:  common/riscv_usestack.c
+
+CC:  pthread/pthread_mutexattr_setprioceiling.c
+
+CC:  udp/udp_conn.c
+
+CC:  pthread/pthread_mutexattr_getprioceiling.c
+
+CC:  common/riscv_tcbinfo.c
+
+CC:  pthread/pthread_mutex_destroy.c
+
+CC:  common/riscv_schedulesigaction.c
+
+CC:  pthread/pthread_mutex_init.c
+
+CC:  udp/udp_devpoll.c
+
+
+CC:  common/riscv_sigdeliver.c
+CC:  pthread/pthread_mutex_trylock.c
+
+CC:  udp/udp_send.c
+
+CC:  pthread/pthread_mutex_timedlock.c
+
+CC:  common/riscv_idle.c
+
+CC:  udp/udp_input.c
+
+CC:  pthread/pthread_mutex.c
+
+CC:  quickjs/libregexp.c
+
+CC:  common/riscv_mdelay.c
+
+CC:  udp/udp_finddev.c
+
+CC:  common/riscv_udelay.c
+
+CC:  pthread/pthread_mutex_unlock.c
+
+CC:  udp/udp_close.c
+
+CC:  pthread/pthread_mutex_lock.c
+
+CC:  common/riscv_smpcall.c
+
+CC:  udp/udp_callback.c
+
+CC:  pthread/pthread_mutex_setprioceiling.c
+
+
+CC:  common/riscv_cpustart.c
+CC:  pthread/pthread_mutex_getprioceiling.c
+
+CC:  udp/udp_ipselect.c
+
+CC:  pthread/pthread_once.c
+
+CC:  common/riscv_backtrace.c
+
+CC:  udp/udp_netpoll.c
+
+CC:  pthread/pthread_yield.c
+
+CC:  pthread/pthread_atfork.c
+
+CC:  common/riscv_checkstack.c
+
+
+CC:  quickjs/libunicode.c
+CC:  pthread/pthread_rwlockattr_init.c
+
+CC:  udp/udp_ioctl.c
+
+CC:  pthread/pthread_rwlockattr_destroy.c
+
+CC:  common/riscv_fork.c
+
+CC:  bluetooth/bluetooth_initialize.c
+
+CC:  pthread/pthread_rwlockattr_getpshared.c
+
+CC:  bluetooth/bluetooth_conn.c
+
+CC:  pthread/pthread_rwlockattr_setpshared.c
+
+CC:  common/riscv_fpucmp.c
+
+CC:  pthread/pthread_rwlock.c
+
+CC:  common/riscv_pmp.c
+
+CC:  bluetooth/bluetooth_container.c
+
+CC:  pthread/pthread_rwlock_rdlock.c
+
+CC:  pthread/pthread_rwlock_wrlock.c
+
+CC:  bluetooth/bluetooth_input.c
+
+
+
+CC:  pthread/pthread_setcancelstate.c
+CC:  qjs_nuttx_compat.c
+
+CC:  bluetooth/bluetooth_callback.c
+
+
+CC:  quickjs/quickjs.c
+CC:  pthread/pthread_setcanceltype.c
+
+CC:  pthread/pthread_testcancel.c
+
+CC:  bluetooth/bluetooth_poll.c
+
+CC:  pthread/pthread_getcpuclockid.c
+
+CC:  bluetooth/bluetooth_finddev.c
+
+CC:  pthread/pthread_self.c
+
+CC:  devif/devif_callback.c
+
+CC:  pthread/pthread_gettid_np.c
+
+CC:  pthread/pthread_concurrency.c
+
+CC:  devif/devif_send.c
+
+CC:  pthread/pthread_attr_getaffinity.c
+
+CC:  devif/devif_loopback.c
+
+CC:  pthread/pthread_attr_setaffinity.c
+
+CC:  devif/ipv4_input.c
+
+CC:  pthread/pthread_mutex_consistent.c
+
+CC:  pthread/pthread_mutex_inconsistent.c
+
+CC:  devif/devif_poll.c
+
+CC:  pwd/lib_getpwnam.c
+
+CC:  pwd/lib_getpwnamr.c
+
+CC:  pwd/lib_getpwuid.c
+
+CC:  pwd/lib_getpwuidr.c
+
+CC:  devif/devif_iobsend.c
+
+CC:  pwd/lib_getpwent.c
+
+CC:  devif/devif_filesend.c
+
+CC:  pwd/lib_getspnam.c
+
+CC:  pwd/lib_getpwbuf.c
+
+CC:  procfs/net_procfs.c
+
+CC:  pwd/lib_getpwbufr.c
+
+CC:  queue/queue.c
+
+
+CC:  procfs/netdev_statistics.c
+CC:  sched/sched_getprioritymax.c
+
+CC:  sched/sched_getprioritymin.c
+
+CC:  utils/net_dsec2tick.c
+
+CC:  sched/clock_getcpuclockid.c
+
+CC:  utils/net_dsec2timeval.c
+
+CC:  sched/task_cancelpt.c
+
+CC:  utils/net_timeval2dsec.c
+
+CC:  sched/task_setcancelstate.c
+
+CC:  utils/net_chksum.c
+
+CC:  sched/task_setcanceltype.c
+
+CC:  sched/task_testcancel.c
+
+CC:  utils/net_ipchksum.c
+
+CC:  sched/task_getpid.c
+
+CC:  utils/net_incr32.c
+
+CC:  sched/sched_cpucount.c
+
+CC:  sched/sched_dumpstack.c
+
+CC:  utils/net_lock.c
+
+CC:  sched/sched_backtrace.c
+
+CC:  sched/task_startup.c
+
+CC:  search/hcreate_r.c
+
+CC:  utils/net_snoop.c
+
+CC:  search/hcreate.c
+
+
+CC:  utils/net_cmsg.c
+CC:  search/hash_func.c
+
+
+CC:  utils/net_iob_concat.c
+CC:  semaphore/sem_init.c
+
+CC:  utils/net_mask2pref.c
+
+CC:  semaphore/sem_setprotocol.c
+CC:  fs_initialize.c
+
+CC:  utils/net_tcpchksum.c
+
+CC:  semaphore/sem_getprotocol.c
+
+CC:  fs_heap.c
+
+
+CC:  semaphore/sem_getvalue.c
+CC:  utils/net_udpchksum.c
+
+CC:  inode/fs_files.c
+
+CC:  utils/net_icmpchksum.c
+
+CC:  semaphore/sem_destroy.c
+
+CC:  semaphore/sem_wait.c
+
+
+CC:  semaphore/sem_trywait.c
+
+CC:  inode/fs_foreachinode.c
+
+CC:  semaphore/sem_timedwait.c
+
+
+CC:  semaphore/sem_clockwait.c
+CC:  inode/fs_inode.c
+
+
+CC:  semaphore/sem_post.c
+CC:  inode/fs_inodeaddref.c
+
+CC:  inode/fs_inodebasename.c
+
+CC:  signal/sig_ignore.c
+
+CC:  signal/sig_interrupt.c
+
+CC:  inode/fs_inodefind.c
+
+CC:  signal/sig_set.c
+
+CC:  signal/sig_signal.c
+
+CC:  inode/fs_inodefree.c
+
+CC:  signal/sig_addset.c
+CC:  binfmt_globals.c
+
+CC:  inode/fs_inodegetpath.c
+
+CC:  signal/sig_altstack.c
+
+
+CC:  binfmt_initialize.c
+CC:  inode/fs_inoderelease.c
+
+CC:  signal/sig_andset.c
+
+CC:  signal/sig_delset.c
+
+
+CC:  inode/fs_inoderemove.c
+CC:  binfmt_register.c
+
+CC:  signal/sig_emptyset.c
+
+CC:  inode/fs_inodereserve.c
+
+CC:  binfmt_unregister.c
+
+CC:  signal/sig_fillset.c
+
+CC:  binfmt_loadmodule.c
+
+CC:  inode/fs_inodesearch.c
+
+CC:  signal/sig_hold.c
+
+
+CC:  signal/sig_isemptyset.c
+CC:  binfmt_unloadmodule.c
+
+CC:  vfs/fs_chstat.c
+
+CC:  signal/sig_ismember.c
+
+CC:  binfmt_execmodule.c
+
+CC:  signal/sig_killpg.c
+
+CC:  vfs/fs_close.c
+
+CC:  signal/sig_nandset.c
+
+CC:  binfmt_exec.c
+
+CC:  vfs/fs_dup.c
+
+CC:  signal/sig_orset.c
+
+CC:  binfmt_copyargv.c
+
+CC:  signal/sig_pause.c
+
+CC:  vfs/fs_dup2.c
+
+CC:  binfmt_copyactions.c
+
+CC:  signal/sig_psignal.c
+
+CC:  binfmt_dumpmodule.c
+
+CC:  vfs/fs_dup3.c
+
+CC:  signal/sig_raise.c
+
+CC:  binfmt_copyattr.c
+
+
+CC:  vfs/fs_fcntl.c
+CC:  signal/sig_relse.c
+
+
+CC:  builtin.c
+CC:  signal/sig_xorset.c
+
+CC:  vfs/fs_epoll.c
+
+CC:  signal/sig_wait.c
+
+
+CC:  spawn/lib_psfa_addaction.c
+
+CC:  spawn/lib_psfa_addclose.c
+
+CC:  spawn/lib_psfa_adddup2.c
+CC:  audio.c
+
+CC:  spawn/lib_psfa_addopen.c
+
+CC:  spawn/lib_psfa_destroy.c
+
+CC:  vfs/fs_fchstat.c
+
+CC:  spawn/lib_psfa_init.c
+
+CC:  spawn/lib_psa_getflags.c
+
+
+CC:  spawn/lib_psa_getschedparam.c
+CC:  vfs/fs_fstat.c
+
+CC:  spawn/lib_psa_getschedpolicy.c
+
+CC:  spawn/lib_psa_init.c
+
+CC:  vfs/fs_fstatfs.c
+
+CC:  pcm_decode.c
+
+CC:  spawn/lib_psa_setflags.c
+
+CC:  vfs/fs_ioctl.c
+
+CC:  spawn/lib_psa_setschedparam.c
+
+CC:  spawn/lib_psa_setschedpolicy.c
+
+
+CC:  vfs/fs_lseek.c
+
+CC:  spawn/lib_psa_getsigmask.c
+
+CC:  spawn/lib_psa_setsigmask.c
+
+CC:  vfs/fs_mkdir.c
+
+CC:  spawn/lib_psa_getstacksize.c
+
+CC:  spawn/lib_psa_setstacksize.c
+
+CC:  vfs/fs_open.c
+
+CC:  spawn/lib_psa_destroy.c
+
+CC:  spawn/lib_psa_getpriority.c
+
+
+CC:  spawn/lib_psa_setpriority.c
+CC:  vfs/fs_poll.c
+
+CC:  spawn/lib_psa_getstackaddr.c
+
+CC:  spawn/lib_psa_setstackaddr.c
+CC:  bluetooth/bt_buf.c
+
+CC:  spawn/lib_psfa_dump.c
+
+CC:  vfs/fs_pread.c
+
+CC:  spawn/lib_psa_dump.c
+
+CC:  vfs/fs_pwrite.c
+
+CC:  bluetooth/bt_netdev.c
+
+CC:  stdio/lib_fileno.c
+
+CC:  vfs/fs_read.c
+
+CC:  stdio/lib_printf.c
+
+CC:  vfs/fs_rename.c
+
+CC:  bluetooth/bt_queue.c
+
+CC:  stdio/lib_sprintf.c In file included from bluetooth/bt_queue.c:38:
+bluetooth/bt_queue.h:61:4: warning: #warning WARNING: not enough pre-allocated messages [-Wcpp]
+   61 | #  warning WARNING: not enough pre-allocated messages
+      |    ^~~~~~~
+
+
+CC:  stdio/lib_asprintf.c
+
+
+CC:  vfs/fs_rmdir.c
+CC:  bluetooth/bt_hcicore.c In file included from bluetooth/bt_hcicore.c:66:
+bluetooth/bt_queue.h:61:4: warning: #warning WARNING: not enough pre-allocated messages [-Wcpp]
+   61 | #  warning WARNING: not enough pre-allocated messages
+      |    ^~~~~~~
+
+
+CC:  stdio/lib_snprintf.c
+
+CC:  vfs/fs_select.c
+
+CC:  stdio/lib_vsprintf.c
+
+
+CC:  stdio/lib_vasprintf.c
+
+CC:  vfs/fs_sendfile.c
+
+CC:  stdio/lib_vsnprintf.c
+
+CC:  vfs/fs_stat.c
+
+CC:  stdio/lib_dprintf.c
+
+CC:  stdio/lib_vdprintf.c
+
+CC:  vfs/fs_statfs.c
+CC:  board/esp32p4_boot.c
+
+CC:  stdio/lib_vprintf.c
+
+CC:  vfs/fs_uio.c
+
+
+CC:  stdio/lib_perror.c
+CC:  board/esp32p4_bringup.c
+
+CC:  stdio/lib_putchar.c
+
+CC:  vfs/fs_unlink.c
+
+CC:  board/esp32p4_appinit.c
+
+CC:  stdio/lib_getchar.c
+
+
+CC:  board/esp32p4_reset.c
+CC:  vfs/fs_write.c
+
+CC:  stdio/lib_puts.c
+
+CC:  board/esp32p4_ethernet.c
+
+CC:  vfs/fs_dir.c
+
+CC:  stdio/lib_gets_s.c
+
+CC:  board/esp32p4_lcd.c
+
+CC:  stdio/lib_gets.c
+
+CC:  vfs/fs_fsync.c
+
+CC:  stdio/lib_libdgets.c
+
+CC:  board/esp32p4_touch.c
+
+CC:  vfs/fs_syncfs.c
+
+CC:  stdio/lib_sscanf.c
+
+CC:  board/esp32p4_camera.c
+
+CC:  vfs/fs_truncate.c
+
+CC:  stdio/lib_vsscanf.c
+
+CC:  board/board_microphone.c
+
+CC:  vfs/fs_link.c
+
+CC:  stdio/lib_remove.c
+
+CC:  vfs/fs_symlink.c
+
+
+CC:  board/p4_microphone.c
+CC:  stdio/lib_tempnam.c
+
+CC:  vfs/fs_readlink.c
+
+CC:  src/esp_board_ledc.c
+
+CC:  stdio/lib_tmpnam.c
+
+CC:  driver/fs_registerdriver.c
+
+CC:  stdio/lib_renameat.c
+
+CC:  src/esp_board_spi.c
+
+CC:  driver/fs_unregisterdriver.c
+
+CC:  stdio/lib_putwchar.c
+
+CC:  src/esp_board_spidev.c
+
+CC:  driver/fs_registerpipedriver.c
+
+CC:  stdio/lib_fopen.c
+
+CC:  driver/fs_unregisterpipedriver.c
+
+CC:  src/esp_board_i2s.c src/esp_board_i2s.c: In function 'board_i2sdev_initialize':
+src/esp_board_i2s.c:72:7: warning: 'ret' may be used uninitialized [-Wmaybe-uninitialized]
+   72 |   int ret;
+      |       ^~~
+
+
+CC:  driver/fs_registerblockdriver.c
+
+
+CC:  src/esp_board_spiflash.c
+CC:  stdio/lib_freopen.c
+
+CC:  driver/fs_unregisterblockdriver.c
+
+CC:  stdio/lib_fclose.c
+
+CC:  src/esp_board_mmcsd.c
+
+CC:  driver/fs_findblockdriver.c
+
+
+CC:  stdio/lib_fread.c
+
+CC:  driver/fs_openblockdriver.c
+
+CC:  stdio/lib_libfread_unlocked.c
+
+CC:  driver/fs_closeblockdriver.c
+IN: sched/libsched.a -> staging/libsched.a
+
+CC:  stdio/lib_fseek.c
+
+CC:  driver/fs_blockpartition.c
+
+CC:  stdio/lib_fseeko.c
+
+CC:  driver/fs_findmtddriver.c
+
+CC:  stdio/lib_ftell.c
+
+
+CC:  stdio/lib_ftello.c
+
+CC:  driver/fs_closemtddriver.c
+IN: drivers/libdrivers.a -> staging/libdrivers.a
+
+CC:  stdio/lib_fsetpos.c
+
+CC:  driver/fs_blockmerge.c
+
+
+CC:  stdio/lib_getdelim.c
+
+CC:  stdio/lib_fgetpos.c
+IN: boards/libboards.a -> staging/libboards.a
+
+
+CC:  driver/fs_registermtddriver.c
+
+CC:  stdio/lib_getc.c
+
+CC:  driver/fs_unregistermtddriver.c
+IN: mm/libmm.a -> staging/libmm.a
+
+CC:  stdio/lib_fgetc.c
+
+CC:  driver/fs_mtdproxy.c
+
+CC:  stdio/lib_fgets.c
+
+
+CC:  stdio/lib_libfgets.c
+
+CC:  driver/fs_mtdpartition.c
+IN: arch/risc-v/src/libarch.a -> staging/libarch.a
+
+
+CC:  stdio/lib_fwrite.c
+CC:  driver/fs_blockproxy.c
+
+CC:  stdio/lib_libfwrite.c
+
+CC:  mmap/fs_mmap.c
+
+CC:  stdio/lib_fflush.c
+
+CC:  mmap/fs_munmap.c
+
+CC:  stdio/lib_libflushall.c
+
+CC:  mmap/fs_mmisc.c
+
+CC:  stdio/lib_libfflush.c
+
+CC:  mmap/fs_msync.c
+
+CC:  stdio/lib_rdflush_unlocked.c
+
+CC:  mmap/fs_anonmap.c
+
+CC:  stdio/lib_wrflush_unlocked.c
+
+CC:  mqueue/mq_open.c
+
+CC:  stdio/lib_putc.c
+
+CC:  stdio/lib_fputc.c
+
+
+
+CC:  mqueue/mq_close.c
+CC:  stdio/lib_fputs.c
+IN: net/libnet.a -> staging/libnet.a
+
+
+CC:  stdio/lib_ungetc.c
+
+CC:  stdio/lib_fprintf.c
+
+CC:  socket/socket.c
+
+
+CC:  stdio/lib_vfprintf.c
+IN: binfmt/libbinfmt.a -> staging/libbinfmt.a
+
+CC:  stdio/lib_feof.c
+
+
+CC:  socket/accept.c
+
+CC:  stdio/lib_ferror.c
+IN: audio/libaudio.a -> staging/libaudio.a
+
+
+CC:  socket/socketpair.c
+
+CC:  stdio/lib_rewind.c
+
+CC:  stdio/lib_clearerr.c
+IN: wireless/libwireless.a -> staging/libwireless.a
+
+
+CC:  mount/fs_mount.c
+CC:  stdio/lib_scanf.c
+
+CC:  stdio/lib_vscanf.c
+
+CC:  stdio/lib_fscanf.c
+
+CC:  stdio/lib_vfscanf.c
+
+CC:  mount/fs_umount2.c
+
+CC:  stdio/lib_tmpfile.c
+
+CC:  stdio/lib_setbuf.c
+
+
+CC:  mount/fs_foreachmountpoint.c
+CC:  stdio/lib_setvbuf.c
+
+CC:  stdio/lib_libfilelock.c
+
+
+CC:  stdio/lib_libgetstreams.c
+CC:  mount/fs_procfs_mount.c
+
+CC:  stdio/lib_setbuffer.c
+
+CC:  mount/fs_gettype.c
+
+CC:  stdio/lib_fputwc.c
+
+
+CC:  partition/fs_partition.c
+CC:  fat/fs_fat32.c
+
+CC:  stdio/lib_putwc.c
+
+CC:  fat/fs_fat32dirent.c
+
+CC:  stdio/lib_fputws.c
+
+CC:  stdio/lib_fopencookie.c
+
+CC:  stdio/lib_fmemopen.c
+
+CC:  stdio/lib_open_memstream.c
+
+CC:  fat/fs_fat32attrib.c
+
+CC:  stdio/lib_fgetwc.c
+
+CC:  fat/fs_fat32util.c
+
+CC:  stdio/lib_getwc.c
+
+CC:  stdio/lib_ungetwc.c
+
+CC:  tmpfs/fs_tmpfs.c
+
+CC:  stdlib/lib_abs.c
+
+CC:  stdlib/lib_abort.c
+
+CC:  stdlib/lib_atof.c
+
+CC:  stdlib/lib_atoi.c
+
+CC:  smartfs/smartfs_smart.c
+
+CC:  stdlib/lib_getprogname.c
+
+CC:  stdlib/lib_atol.c
+
+CC:  stdlib/lib_atoll.c
+
+CC:  stdlib/lib_div.c
+
+CC:  stdlib/lib_ldiv.c
+
+CC:  stdlib/lib_lldiv.c
+
+CC:  stdlib/lib_exit.c
+
+CC:  stdlib/lib_itoa.c
+
+CC:  smartfs/smartfs_utils.c
+
+CC:  stdlib/lib_labs.c
+
+CC:  stdlib/lib_llabs.c
+
+CC:  stdlib/lib_realpath.c
+
+CC:  smartfs/smartfs_procfs.c
+
+CC:  stdlib/lib_bsearch.c
+
+CC:  stdlib/lib_rand.c
+
+CC:  procfs/fs_procfs.c
+
+CC:  procfs/fs_procfscpuinfo.c
+
+CC:  stdlib/lib_rand48.c
+
+CC:  procfs/fs_procfscpuload.c
+
+CC:  stdlib/lib_qsort.c
+
+CC:  procfs/fs_procfscritmon.c
+
+CC:  procfs/fs_procfsfdt.c
+
+CC:  stdlib/lib_srand.c
+
+CC:  procfs/fs_procfsiobinfo.c
+
+CC:  procfs/fs_procfsmeminfo.c
+
+CC:  stdlib/lib_strtol.c
+
+CC:  procfs/fs_procfsproc.c
+
+CC:  stdlib/lib_strtoll.c
+
+CC:  procfs/fs_procfstcbinfo.c
+
+CC:  stdlib/lib_strtoul.c
+
+CC:  procfs/fs_procfsuptime.c
+
+CC:  stdlib/lib_strtoull.c
+
+CC:  procfs/fs_procfsutil.c
+
+CC:  procfs/fs_procfsversion.c
+
+CC:  stdlib/lib_strtold.c
+
+
+CC:  stdlib/lib_checkbase.c
+
+CC:  stdlib/lib_mktemp.c
+
+CC:  stdlib/lib_mkstemp.c
+
+
+CC:  stdlib/lib_mkdtemp.c
+IN: arch/risc-v/src/board/libboard.a -> staging/libboard.a
+
+
+CC:  stdlib/lib_aligned_alloc.c
+
+CC:  stdlib/lib_posix_memalign.c
+
+CC:  stdlib/lib_valloc.c
+
+CC:  stdlib/lib_mblen.c
+CC:  dhcpc.c
+
+CC:  stdlib/lib_mbtowc.c
+CC:  stdlib/lib_wctomb.c
+
+
+CC:  stdlib/lib_mbstowcs.c
+CC:  stdlib/lib_wcstombs.c
+
+
+CC:  stdlib/lib_atexit.c
+CC:  stdlib/lib_reallocarray.c
+
+
+CC:  stdlib/lib_arc4random.c
+
+CC:  stream/lib_meminstream.c
+
+CC:  stream/lib_memoutstream.c
+
+CC:  stream/lib_memsistream.c
+
+CC:  stream/lib_memsostream.c
+
+CC:  stream/lib_lowoutstream.c
+
+CC:  stream/lib_rawinstream.c
+
+CC:  stream/lib_rawoutstream.c
+
+CC:  stream/lib_rawsistream.c
+
+CC:  stream/lib_rawsostream.c
+
+CC:  stream/lib_zeroinstream.c
+
+CC:  stream/lib_nullinstream.c
+
+CC:  stream/lib_nulloutstream.c
+
+CC:  stream/lib_mtdoutstream.c
+
+CC:  stream/lib_libnoflush.c
+
+CC:  stream/lib_libsnoflush.c
+
+CC:  stream/lib_syslogstream.c
+
+CC:  stream/lib_bufferedoutstream.c
+
+CC:  stream/lib_hexdumpstream.c
+
+CC:  stream/lib_base64outstream.c
+
+CC:  stream/lib_mtdsostream.c
+
+
+CC:  stream/lib_filesistream.c
+IN: fs/libfs.a -> staging/libfs.a
+
+CC:  stream/lib_fileoutstream.c
+
+CC:  stream/lib_libosprintf.c
+
+CC:  stream/lib_libbsprintf.c
+
+CC:  stream/lib_libvscanf.c
+
+CC:  stream/lib_libvsprintf.c
+
+CC:  stream/lib_ultoa_invert.c
+
+CC:  stream/lib_syslograwstream.c
+
+CC:  stream/lib_dtoa_engine.c
+
+CC:  stream/lib_dtoa_data.c
+
+CC:  stream/lib_stdinstream.c
+
+CC:  stream/lib_stdoutstream.c
+
+CC:  stream/lib_stdsistream.c
+
+CC:  stream/lib_stdsostream.c
+CC:  netinit.c
+
+CC:  stream/lib_blkoutstream.c
+
+CC:  string/lib_isbasedigit.c
+
+
+CC:  string/lib_memmem.c
+
+CC:  string/lib_popcount.c
+
+CC:  string/lib_popcountl.c
+
+CC:  string/lib_popcountll.c
+
+CC:  string/lib_skipspace.c
+
+CC:  string/lib_strcasecmp.c
+
+CC:  string/lib_strcspn.c
+
+CC:  string/lib_strdup.c
+
+CC:  string/lib_strerror.c
+
+CC:  string/lib_strncasecmp.c
+
+CC:  string/lib_strncat.c
+
+CC:  string/lib_strndup.c
+
+CC:  string/lib_strcasestr.c
+
+CC:  string/lib_strpbrk.c
+
+CC:  string/lib_strspn.c
+
+CC:  string/lib_strstr.c
+
+CC:  string/lib_strtok.c
+
+CC:  string/lib_strtokr.c
+
+
+CC:  string/lib_strsep.c
+CC:  string/lib_strerrorr.c
+
+CC:  string/lib_explicit_bzero.c
+
+CC:  string/lib_strsignal.c
+
+CC:  string/lib_index.c
+
+CC:  string/lib_rindex.c
+
+CC:  string/lib_timingsafe_bcmp.c
+
+CC:  string/lib_strverscmp.c
+
+CC:  string/lib_mempcpy.c
+
+CC:  string/lib_rawmemchr.c
+
+CC:  string/lib_bzero.c
+
+
+CC:  string/lib_memmove.c
+CC:  string/lib_strlcat.c
+
+CC:  string/lib_strlcpy.c
+
+CC:  string/lib_strnlen.c
+
+CC:  string/lib_bsdmemcpy.c
+
+CC:  string/lib_bsdmemccpy.c
+
+CC:  string/lib_bsdmemcmp.c
+
+CC:  string/lib_bsdmemrchr.c
+
+CC:  string/lib_bsdstpncpy.c
+
+CC:  string/lib_bsdstrchr.c
+
+CC:  string/lib_bsdstrcmp.c
+
+
+CC:  netlib_checkhttpconnectivity.c
+CC:  string/lib_bsdstrlen.c
+CC:  string/lib_bsdstrncpy.c
+
+
+CC:  string/lib_bsdmemchr.c
+CC:  string/lib_bsdstpcpy.c
+
+CC:  netlib_cleardnsaddr.c
+
+CC:  string/lib_bsdstrcat.c
+
+CC:  string/lib_bsdstrchrnul.c
+
+CC:  string/lib_bsdstrcpy.c
+
+CC:  string/lib_bsdstrncmp.c
+
+CC:  netlib_delarp.c
+
+CC:  string/lib_bsdstrrchr.c
+
+CC:  string/lib_bsdmemset.c
+
+
+CC:  symtab/symtab_findbyname.c
+CC:  netlib_ethaddrconv.c
+
+CC:  symtab/symtab_findbyvalue.c
+
+CC:  symtab/symtab_sortbyname.c
+
+CC:  netlib_getarp.c
+
+CC:  syslog/lib_syslog.c
+
+CC:  syslog/lib_setlogmask.c
+
+CC:  netlib_getdripv4addr.c
+
+CC:  termios/lib_cfspeed.c
+
+CC:  termios/lib_cfmakeraw.c
+
+CC:  termios/lib_isatty.c
+
+
+CC:  termios/lib_tcflush.c
+CC:  netlib_getifstatus.c
+
+CC:  netlib_getiobinfo.c
+
+CC:  termios/lib_tcdrain.c
+
+CC:  netlib_getipv4addr.c
+
+CC:  termios/lib_tcflow.c
+
+CC:  netlib_getipv4netmask.c
+
+CC:  termios/lib_tcgetattr.c
+
+CC:  netlib_getmacaddr.c
+
+CC:  termios/lib_tcsetattr.c
+
+CC:  netlib_ipv4adaptor.c
+
+CC:  termios/lib_tcsendbreak.c
+
+CC:  netlib_ipv4addrconv.c
+
+CC:  termios/lib_ttyname.c
+
+CC:  netlib_listenon.c
+
+CC:  netlib_obtainipv4addr.c
+
+CC:  termios/lib_ttynamer.c
+
+CC:  netlib_parsehttpurl.c
+
+CC:  netlib_parseurl.c
+
+CC:  time/lib_strftime.c
+
+CC:  netlib_server.c
+
+CC:  netlib_setarp.c
+
+
+CC:  netlib_setdripv4addr.c
+CC:  time/lib_calendar2utc.c
+
+CC:  netlib_setifstatus.c
+
+CC:  time/lib_daysbeforemonth.c
+
+CC:  netlib_setipv4addr.c
+
+CC:  time/lib_gettimeofday.c
+
+CC:  netlib_setipv4dnsaddr.c
+
+CC:  netlib_setipv4netmask.c
+
+CC:  time/lib_isleapyear.c
+
+CC:  netlib_setmacaddr.c
+
+CC:  time/lib_settimeofday.c
+
+CC:  netlib_setmtu.c
+
+CC:  time/lib_time.c
+
+
+CC:  time/lib_timespec_get.c
+
+CC:  time/lib_nanosleep.c
+
+CC:  time/lib_difftime.c
+
+CC:  time/lib_dayofweek.c
+
+CC:  time/lib_asctime.c
+
+CC:  time/lib_asctimer.c
+
+CC:  time/lib_ctime.c
+
+CC:  time/lib_ctimer.c
+
+CC:  time/lib_gethrtime.c
+
+CC:  time/lib_timegm.c
+
+CC:  time/lib_gmtime.c
+
+
+CC:  time/lib_gmtimer.c
+CC:  tls/tls_getinfo.c
+
+CC:  tls/tls_destruct.c
+
+CC:  uio/lib_preadv.c
+
+CC:  uio/lib_pwritev.c
+
+CC:  unistd/lib_access.c
+
+CC:  unistd/lib_daemon.c
+
+CC:  unistd/lib_swab.c
+
+CC:  unistd/lib_pathconf.c
+
+CC:  unistd/lib_sysconf.c
+
+CC:  unistd/lib_getcwd.c
+
+CC:  unistd/lib_getentropy.c
+
+CC:  unistd/lib_getopt_common.c
+
+CC:  unistd/lib_getopt.c
+
+CC:  unistd/lib_getopt_long.c
+
+CC:  unistd/lib_getopt_longonly.c
+
+CC:  unistd/lib_getoptvars.c
+
+CC:  unistd/lib_getoptargp.c
+
+CC:  unistd/lib_getopterrp.c
+
+CC:  unistd/lib_getoptindp.c
+
+CC:  unistd/lib_getoptoptp.c
+
+CC:  unistd/lib_times.c
+
+CC:  unistd/lib_alarm.c
+
+CC:  unistd/lib_fstatvfs.c
+
+CC:  unistd/lib_statvfs.c
+
+CC:  unistd/lib_sleep.c
+
+CC:  unistd/lib_nice.c
+
+CC:  unistd/lib_setreuid.c
+
+CC:  unistd/lib_setregid.c
+
+
+CC:  unistd/lib_getrusage.c
+
+CC:  unistd/lib_utime.c
+CC:  ntpclient.c
+
+CC:  unistd/lib_utimes.c
+
+CC:  unistd/lib_setrlimit.c
+CC:  webclient.c
+
+CC:  unistd/lib_getrlimit.c
+
+CC:  unistd/lib_setpriority.c
+
+
+CC:  unistd/lib_getpriority.c
+
+CC:  unistd/lib_futimes.c
+
+CC:  unistd/lib_lutimes.c
+
+CC:  unistd/lib_gethostname.c
+
+
+CC:  unistd/lib_sethostname.c
+
+CC:  unistd/lib_fchownat.c
+
+CC:  unistd/lib_linkat.c
+
+CC:  unistd/lib_readlinkat.c
+
+CC:  unistd/lib_symlinkat.c
+
+CC:  unistd/lib_unlinkat.c
+
+CC:  unistd/lib_usleep.c
+
+CC:  unistd/lib_getpgrp.c
+
+CC:  unistd/lib_getpgid.c
+
+CC:  unistd/lib_lockf.c
+
+CC:  unistd/lib_flock.c
+
+CC:  unistd/lib_getpass.c
+
+CC:  unistd/lib_confstr.c
+
+CC:  unistd/lib_ulimit.c
+
+CC:  unistd/lib_setuid.c
+
+CC:  unistd/lib_setgid.c
+CC:  nsh_alias.c
+
+CC:  unistd/lib_getuid.c
+
+CC:  unistd/lib_getgid.c
+
+CC:  nsh_command.c
+
+CC:  unistd/lib_seteuid.c
+
+CC:  unistd/lib_setegid.c
+
+CC:  nsh_console.c
+
+CC:  unistd/lib_geteuid.c
+
+CC:  unistd/lib_getegid.c
+
+CC:  nsh_consolemain.c
+
+CC:  unistd/lib_chdir.c
+
+CC:  nsh_dbgcmds.c
+
+CC:  unistd/lib_fchdir.c
+
+CC:  nsh_ddcmd.c
+
+CC:  unistd/lib_restoredir.c
+
+CC:  unistd/lib_truncate.c
+
+CC:  nsh_envcmds.c
+
+CC:  unistd/lib_posix_fallocate.c
+
+CC:  unistd/lib_fork.c
+CC:  uuid/lib_uuid_compare.c
+
+CC:  nsh_fileapps.c
+
+CC:  uuid/lib_uuid_create.c
+
+CC:  uuid/lib_uuid_create_nil.c
+
+CC:  uuid/lib_uuid_equal.c
+
+CC:  uuid/lib_uuid_from_string.c
+
+CC:  nsh_fscmds.c
+
+CC:  uuid/lib_uuid_hash.c
+
+CC:  uuid/lib_uuid_is_nil.c
+
+CC:  uuid/lib_uuid_stream.c
+
+CC:  uuid/lib_uuid_to_string.c
+
+CC:  wchar/lib_wcscmp.c
+
+
+CC:  wchar/lib_wcslen.c
+
+CC:  wchar/lib_wmemchr.c
+
+CC:  wchar/lib_wmemcmp.c
+
+CC:  wchar/lib_wmemcpy.c
+
+
+CC:  wchar/lib_wmemmove.c
+CC:  nsh_fsutils.c
+
+CC:  wchar/lib_wmemset.c
+
+CC:  nsh_init.c
+
+CC:  wchar/lib_btowc.c
+
+CC:  nsh_mmcmds.c
+
+CC:  nsh_mntcmds.c
+
+CC:  wchar/lib_mbrtowc.c
+
+CC:  nsh_netcmds.c
+
+CC:  wchar/lib_wctob.c
+
+CC:  nsh_parse.c
+
+CC:  wchar/lib_wcslcpy.c
+
+CC:  wchar/lib_wcsxfrm.c
+
+CC:  wchar/lib_wcrtomb.c
+
+CC:  nsh_printf.c
+
+CC:  wchar/lib_wcsftime.c
+
+CC:  nsh_proccmds.c
+
+CC:  wchar/lib_wcscoll.c
+
+CC:  nsh_prompt.c
+
+CC:  wchar/lib_wcstol.c
+
+CC:  nsh_script.c
+
+CC:  wchar/lib_wcstoll.c
+
+CC:  wchar/lib_wcstoul.c
+
+CC:  nsh_session.c
+
+CC:  wchar/lib_wcstoull.c
+
+
+CC:  nsh_system.c
+CC:  nsh_syscmds.c
+
+CC:  wchar/lib_wcstold.c
+
+
+CC:  nsh_test.c
+CC:  wchar/lib_wcstof.c
+
+CC:  nsh_timcmds.c
+
+CC:  wchar/lib_wcstod.c
+
+CC:  wchar/lib_swprintf.c
+
+CC:  nsh_wait.c
+
+
+CC:  wchar/lib_mbsnrtowcs.c
+
+
+CC:  wchar/lib_wcsnrtombs.c
+
+CC:  wchar/lib_mbsinit.c
+CC:  ble_driver.c
+CC:  bili_api.c
+
+CC:  wchar/lib_mbrlen.c
+
+
+CC:  wchar/lib_mbsrtowcs.c
+CC:  ble_hosted.c
+
+CC:  wchar/lib_wcsrtombs.c
+
+CC:  bili_av.c
+
+CC:  wchar/lib_wcscpy.c
+
+CC:  ble_main.c In file included from bili_av.c:4:
+bili_catchup.h:66:13: warning: 'bili_pace_render' defined but not used [-Wunused-function]
+   66 | static bool bili_pace_render(struct bili_pacer *c,uint64_t pts,uint64_t now)
+      |             ^~~~~~~~~~~~~~~~
+bili_catchup.h:42:30: warning: 'bili_pace_packet' defined but not used [-Wunused-function]
+   42 | static enum bili_pace_action bili_pace_packet(struct bili_pacer *c,const struct bili_access_unit *a,
+      |                              ^~~~~~~~~~~~~~~~
+
+
+CC:  wchar/lib_wcscat.c
+
+CC:  ble_socket_register.c
+
+CC:  wchar/lib_wcslcat.c
+
+CC:  wchar/lib_wcsncat.c
+
+
+CC:  wchar/lib_wcsrchr.c
+
+CC:  wchar/lib_wcschr.c
+
+CC:  wchar/lib_wcsncpy.c
+
+CC:  bili_cpu.c
+
+CC:  wchar/lib_wcsncmp.c
+
+CXX:  bili_decoder.cpp
+
+CC:  wchar/lib_wcscspn.c
+
+CC:  wchar/lib_wcspbrk.c
+
+CC:  wchar/lib_wcsspn.c
+
+CC:  wchar/lib_wcsstr.c
+
+CC:  wchar/lib_wcstok.c
+CC:  wchar/lib_wcswcs.c
+
+CC:  wchar/lib_wcwidth.c
+
+CC:  wchar/lib_wcswidth.c
+
+CC:  wctype/lib_wctype.c
+
+CC:  wctype/lib_iswctype.c
+
+CC:  wctype/lib_towlower.c
+
+CC:  wctype/lib_towupper.c
+
+
+CC:  bili_flv.c bili_flv.c: In function 'bili_flv_run':
+bili_flv.c:118:9: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  118 |         if((r=exact(f,discard,bytes)))return r;left-=bytes;}
+      |         ^~
+bili_flv.c:118:48: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  118 |         if((r=exact(f,discard,bytes)))return r;left-=bytes;}
+      |                                                ^~~~
+
+CC:  c6net.c
+
+CC:  bili_http.c
+
+CC:  c6probe_main.c
+
+CC:  desktop_backend.c
+
+CC:  bili_live.c
+
+CC:  desktop_worker.c
+
+CC:  esp_hosted.c
+
+CC:  esp_hosted_rpc.c
+
+CC:  bili_ppa.c bili_ppa.c: In function 'bili_ppa_pixels':
+bili_ppa.c:35:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+   35 |   if(p)memset(p,0,bytes);return p;
+      |   ^~
+bili_ppa.c:35:26: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+   35 |   if(p)memset(p,0,bytes);return p;
+      |                          ^~~~~~
+bili_ppa.c: In function 'bili_ppa_frame':
+bili_ppa.c:49:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+   49 |   if(vertical<scale)scale=vertical;if(scale>256)scale=256;
+      |   ^~
+bili_ppa.c:49:36: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+   49 |   if(vertical<scale)scale=vertical;if(scale>256)scale=256;
+      |                                    ^~
+bili_ppa.c: In function 'color_test':
+bili_ppa.c:135:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  135 |     if(c>3)c=3;if(edge<8||edge>stripe-8)continue;
+      |     ^~
+bili_ppa.c:135:16: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  135 |     if(c>3)c=3;if(edge<8||edge>stripe-8)continue;
+      |                ^~
+bili_ppa.c:150:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  150 |   if(fd>=0)close(fd);free(raw);free(out);return ret;
+      |   ^~
+bili_ppa.c:150:22: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  150 |   if(fd>=0)close(fd);free(raw);free(out);return ret;
+      |                      ^~~~
+bili_ppa.c: In function 'planar_test':
+bili_ppa.c:181:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  181 |     if(c>3)c=3;if(edge<8||edge>stripe-8)continue;
+      |     ^~
+bili_ppa.c:181:16: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  181 |     if(c>3)c=3;if(edge<8||edge>stripe-8)continue;
+      |                ^~
+
+CC:  dafeiyu_resource.c
+
+CC:  desktop_font.c
+
+CC:  desktop_main.c
+
+CC:  esp_hosted_rpc.pb-c.c
+
+CC:  bili_sps.c
+CC:  live_platform.c
+
+CC:  local_video_media.c live_platform.c: In function 'md5':
+live_platform.c:57:3: warning: this 'for' clause does not guard... [-Wmisleading-indentation]
+   57 |   for(int i=0;i<16;i++)sprintf(out+i*2,"%02x",hash[i]);return 0;
+      |   ^~~
+live_platform.c:57:56: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'for'
+   57 |   for(int i=0;i<16;i++)sprintf(out+i*2,"%02x",hash[i]);return 0;
+      |                                                        ^~~~~~
+live_platform.c: In function 'huya_url':
+live_platform.c:85:56: warning: format '%u' expects argument of type 'unsigned int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+   85 |       switch(p[1]){case '0':snprintf(num,sizeof(num),"%u",!strcmp(t,"103")?uid:rot);v=num;break;case '1':v=name;break;case '2':v=hash;break;case '3':v=ws;break;}
+      |                                                       ~^  ~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                        |                      |
+      |                                                        unsigned int           uint32_t {aka long unsigned int}
+      |                                                       %lu
+live_platform.c:88:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+   88 |     if(pos+n>=sizeof(material))return -EFBIG;memcpy(material+pos,v,n);pos+=n;
+      |     ^~
+live_platform.c:88:46: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+   88 |     if(pos+n>=sizeof(material))return -EFBIG;memcpy(material+pos,v,n);pos+=n;
+      |                                              ^~~~~~
+live_platform.c:92:117: warning: format '%u' expects argument of type 'unsigned int', but argument 13 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+   92 |   int n=snprintf(out,BILI_URL_MAX,"https://%s/%s.flv?wsSecret=%s&wsTime=%s&seqid=%llu&ctype=%s&ver=1&fs=%s&t=%s&%s=%u&codec=264&ratio=%d%s",
+      |                                                                                                                    ~^
+      |                                                                                                                     |
+      |                                                                                                                     unsigned int
+      |                                                                                                                    %lu
+   93 |     hostname,name,secret,ws,seq,ctype,fs,t,!strcmp(t,"103")?"uid":"u",!strcmp(t,"103")?uid:rot,rate,!strcmp(t,"103")?"&uuid=1460000000":"");
+      |                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                                           |
+      |                                                                                           uint32_t {aka long unsigned int}
+In file included from local_video_media.c:50:
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h: In function 'mp4e_write_fragment_header':
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:1035:7: warning: unused variable 'e' [-Wunused-variable]
+ 1035 |     } e;
+      |       ^
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h: In function 'mp4e_flush_index':
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:763:25: warning: declaration of 'err' shadows a previous local [-Wshadow]
+  763 | #define ERR(func) { int err = func; if (err) return err; }
+      |                         ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:1245:9: note: in expansion of macro 'ERR'
+ 1245 |         ERR(write_pending_data(mux, tr));
+      |         ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:1223:12: note: shadowed declaration is here
+ 1223 |     int i, err;
+      |            ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:763:25: warning: declaration of 'err' shadows a previous local [-Wshadow]
+  763 | #define ERR(func) { int err = func; if (err) return err; }
+      |                         ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:1275:9: note: in expansion of macro 'ERR'
+ 1275 |         ERR(mux->write_callback(sizeof(box_ftyp), base, p - base, mux->token));
+      |         ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:1223:12: note: shadowed declaration is here
+ 1223 |     int i, err;
+      |            ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h: In function 'mp4_h26x_write_nal':
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:763:25: warning: declaration of 'err' shadows a previous local [-Wshadow]
+  763 | #define ERR(func) { int err = func; if (err) return err; }
+      |                         ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:2398:13: note: in expansion of macro 'ERR'
+ 2398 |             ERR(mp4_h265_write_nal(h, nal, sizeof_nal, timeStamp90kHz_next));
+      |             ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:2387:35: note: shadowed declaration is here
+ 2387 |     int payload_type, sizeof_nal, err = MP4E_STATUS_OK;
+      |                                   ^~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h: In function 'MP4D_open':
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:2785:5: warning: "MP4D_64BIT_SUPPORTED" is not defined, evaluates to 0 [-Wundef]
+ 2785 | #if MP4D_64BIT_SUPPORTED
+      |     ^~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:3046:20: warning: suggest explicit braces to avoid ambiguous 'else' [-Wdangling-else]
+ 3046 |                 if (!tr || !tr->timestamp_count || count > payload_bytes / 8)
+      |                    ^
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:3053:24: warning: suggest explicit braces to avoid ambiguous 'else' [-Wdangling-else]
+ 3053 |                     if (sc > tr->composition_count - sample) ERROR("composition count overflow");
+      |                        ^
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:3056:20: warning: suggest explicit braces to avoid ambiguous 'else' [-Wdangling-else]
+ 3056 |                 if (sample != tr->composition_count) ERROR("composition count mismatch");
+      |                    ^
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:3072:6: warning: "MP4D_64BIT_SUPPORTED" is not defined, evaluates to 0 [-Wundef]
+ 3072 | #if !MP4D_64BIT_SUPPORTED
+      |      ^~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:3345:16: warning: suggest explicit braces to avoid ambiguous 'else' [-Wdangling-else]
+ 3345 |             if (mp4->track_count >= 8) ERROR("too many tracks");
+      |                ^
+local_video_media.c: In function 'audio_worker':
+local_video_media.c:202:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  202 |   if(ret)goto done;opened=true;
+      |   ^~
+local_video_media.c:202:20: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  202 |   if(ret)goto done;opened=true;
+      |                    ^~~~~~
+local_video_media.c:222:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  222 |   if(dec)AACFreeDecoder(dec);if(fp)fclose(fp);free(reader.cache);free(input);free(pcm);
+      |   ^~
+local_video_media.c:222:30: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  222 |   if(dec)AACFreeDecoder(dec);if(fp)fclose(fp);free(reader.cache);free(input);free(pcm);
+      |                              ^~
+local_video_media.c: In function 'local_video_run':
+local_video_media.c:323:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  323 |     if(!p)break;if(n<1||n>65536){ret=-EPROTO;goto done;}
+      |     ^~
+local_video_media.c:323:17: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  323 |     if(!p)break;if(n<1||n>65536){ret=-EPROTO;goto done;}
+      |                 ^~
+local_video_media.c: In function 'local_video_pause':
+local_video_media.c:378:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  378 |   if(!s)return;pthread_mutex_lock(&s->lock);
+      |   ^~
+local_video_media.c:378:16: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  378 |   if(!s)return;pthread_mutex_lock(&s->lock);
+      |                ^~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h: At top level:
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/local_vendor/minimp4.h:890:29: warning: 'next_dsi' defined but not used [-Wunused-function]
+  890 | static const unsigned char *next_dsi(const unsigned char *p, const unsigned char *end, int *bytes)
+      |                             ^~~~~~~~
+In file included from desktop_main.c:1514:
+glass_ui_probe.inc: In function 'desktop_ui_probe_service':
+glass_ui_probe.inc:282:28: warning: initialization discards 'const' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  282 |         const char **map = lv_buttonmatrix_get_map(kb);
+      |                            ^~~~~~~~~~~~~~~~~~~~~~~
+desktop_main.c: In function 'desktop_main':
+desktop_main.c:1644:7: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+ 1644 |       if(!ret)printf("PORTAL_PAIR=%s\n",code);memset(code,0,sizeof(code));return ret;
+      |       ^~
+desktop_main.c:1644:47: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+ 1644 |       if(!ret)printf("PORTAL_PAIR=%s\n",code);memset(code,0,sizeof(code));return ret;
+      |                                               ^~~~~~
+desktop_main.c:1651:7: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+ 1651 |       if(!allowed)return 1;char path[96],digest[65];snprintf(path,sizeof(path),"/sdcard/grok/%s",argv[2]);
+      |       ^~
+desktop_main.c:1651:28: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+ 1651 |       if(!allowed)return 1;char path[96],digest[65];snprintf(path,sizeof(path),"/sdcard/grok/%s",argv[2]);
+      |                            ^~~~
+In file included from glass_ui.inc:943,
+                 from desktop_main.c:1513:
+glass_hass_ui.inc: At top level:
+glass_hass_ui.inc:1889:13: warning: 'glass_hass_app' defined but not used [-Wunused-function]
+ 1889 | static void glass_hass_app(lv_obj_t *card)
+      |             ^~~~~~~~~~~~~~
+glass_ui.inc:830:18: warning: 'glass_control_icon' defined but not used [-Wunused-function]
+  830 | static lv_obj_t *glass_control_icon(lv_obj_t *parent, const char *symbol,
+      |                  ^~~~~~~~~~~~~~~~~~
+glass_ui.inc:807:13: warning: 'glass_preferences_open' defined but not used [-Wunused-function]
+  807 | static void glass_preferences_open(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~~~~~
+glass_ui.inc:749:13: warning: 'glass_control_gesture' defined but not used [-Wunused-function]
+  749 | static void glass_control_gesture(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~~~~
+glass_ui.inc:744:13: warning: 'glass_control_slide' defined but not used [-Wunused-function]
+  744 | static void glass_control_slide(void *object, int32_t y)
+      |             ^~~~~~~~~~~~~~~~~~~
+glass_ui.inc:657:13: warning: 'glass_theme_toggle' defined but not used [-Wunused-function]
+  657 | static void glass_theme_toggle(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~
+glass_ui.inc:186:17: warning: 'glass_tint' defined but not used [-Wunused-function]
+  186 | static uint32_t glass_tint(void)
+      |                 ^~~~~~~~~~
+glass_ui.inc:30:13: warning: 'glass_brightness_changed' defined but not used [-Wunused-function]
+   30 | static void glass_brightness_changed(lv_event_t *e)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~
+In file included from glass_ui.inc:14:
+glass_settings_store.h:55:12: warning: 'glass_settings_save' defined but not used [-Wunused-function]
+   55 | static int glass_settings_save(const uint8_t values[4])
+      |            ^~~~~~~~~~~~~~~~~~~
+desktop_main.c:1422:18: warning: 'list_button' defined but not used [-Wunused-function]
+ 1422 | static lv_obj_t *list_button(lv_obj_t *parent, const char *title,
+      |                  ^~~~~~~~~~~
+
+
+CC:  local_video_ui.c
+
+CXX:  vendor/openh264/codec/common/src/WelsThreadLib.cpp
+
+CXX:  vendor/openh264/codec/common/src/mc.cpp
+
+CC:  protobuf-c.c protobuf-c.c: In function 'repeated_field_pack_to_buffer':
+protobuf-c.c:1919:24: warning: variable 'tmp' set but not used [-Wunused-but-set-variable]
+ 1919 |                 size_t tmp;
+      |                        ^~~
+desktop_main.c: In function 'external_qapp_clicked':
+desktop_main.c:1409:12: warning: '
+
+无法加载 JavaScript �...' directive output may be truncated writing 127 bytes into a region of size between 11 and 207 [-Wformat-truncation=]
+ 1409 |            "包名：%s\n版本：%s\n入口：%s\n目录：%s/%s\n\n"
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+desktop_main.c:1409:54: note: format string is defined here
+ 1409 |            "包名：%s\n版本：%s\n入口：%s\n目录：%s/%s\n\n"
+      |                                                      ^~~~~
+ 1410 |            "无法加载 JavaScript 入口。当前运行时支持 .js QPK；"
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1411 |            "MicroReactor 风格 .ux 解析器将在下一阶段接入。",
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+desktop_main.c:1408:3: note: 'snprintf' output between 177 and 373 bytes into a destination of size 256
+ 1408 |   snprintf(text, sizeof(text),
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1409 |            "包名：%s\n版本：%s\n入口：%s\n目录：%s/%s\n\n"
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1410 |            "无法加载 JavaScript 入口。当前运行时支持 .js QPK；"
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1411 |            "MicroReactor 风格 .ux 解析器将在下一阶段接入。",
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1412 |            qpk->package[0] ? qpk->package : "未声明",
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1413 |            qpk->version[0] ? qpk->version : "未声明",
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1414 |            qpk->entry[0] ? qpk->entry : "未声明", QPK_DIR, qpk->dir);
+      |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+CXX:  vendor/openh264/codec/common/src/memory_align.cpp vendor/openh264/codec/common/src/memory_align.cpp: In function 'void* WelsCommon::WelsMalloc(uint32_t, const char*, uint32_t)':
+vendor/openh264/codec/common/src/memory_align.cpp:75:60: warning: format '%u' expects argument of type 'unsigned int', but argument 4 has type 'long unsigned int' [-Wformat=]
+   75 |     fprintf(stderr, "OpenH264 allocation failed: %s bytes=%u\n", kpTag ? kpTag : "unknown", kiActualRequestedSize);
+      |                                                           ~^                                ~~~~~~~~~~~~~~~~~~~~~
+      |                                                            |                                |
+      |                                                            unsigned int                     long unsigned int
+      |                                                           %lu
+
+
+CXX:  vendor/openh264/codec/decoder/core/src/cabac_decoder.cpp
+
+CXX:  vendor/openh264/codec/decoder/core/src/decode_mb_aux.cpp
+
+CXX:  vendor/openh264/codec/decoder/core/src/decode_slice.cpp
+
+CXX:  vendor/openh264/codec/decoder/core/src/decoder.cpp
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsTargetSliceConstruction(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:123:55: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  123 |                  "WelsTargetSliceConstruction():::MB(%d, %d) construction error. pCurSlice_type:%d",
+      |                                                      ~^
+      |                                                       |
+      |                                                       int
+      |                                                      %ld
+  124 |                  pCurDqLayer->iMbX, pCurDqLayer->iMbY, pCurSlice->eSliceType);
+      |                  ~~~~~~~~~~~~~~~~~
+      |                               |
+      |                               int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:123:59: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  123 |                  "WelsTargetSliceConstruction():::MB(%d, %d) construction error. pCurSlice_type:%d",
+      |                                                          ~^
+      |                                                           |
+      |                                                           int
+      |                                                          %ld
+  124 |                  pCurDqLayer->iMbX, pCurDqLayer->iMbY, pCurSlice->eSliceType);
+      |                                     ~~~~~~~~~~~~~~~~~
+      |                                                  |
+      |                                                  int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:139:71: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  139 |                "WelsTargetSliceConstruction():::pCtx->iTotalNumMbRec:%d, iTotalMbTargetLayer:%d",
+      |                                                                      ~^
+      |                                                                       |
+      |                                                                       int
+      |                                                                      %ld
+  140 |                pCtx->iTotalNumMbRec, iTotalMbTargetLayer);
+      |                ~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:139:95: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  139 |                "WelsTargetSliceConstruction():::pCtx->iTotalNumMbRec:%d, iTotalMbTargetLayer:%d",
+      |                                                                                              ~^
+      |                                                                                               |
+      |                                                                                               int
+      |                                                                                              %ld
+  140 |                pCtx->iTotalNumMbRec, iTotalMbTargetLayer);
+      |                                      ~~~~~~~~~~~~~~~~~~~
+      |                                      |
+      |                                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsTargetMbConstruction(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:360:101: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  360 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "WelsTargetMbConstruction():::::Unknown MB type: %d",
+      |                                                                                                    ~^
+      |                                                                                                     |
+      |                                                                                                     int
+      |                                                                                                    %ld
+  361 |              pCurDqLayer->pDec->pMbType[pCurDqLayer->iMbXyIndex]);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                |
+      |                                                                uint32_t {aka long unsigned int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsDecodeAndConstructSlice(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:1726:53: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1726 |                "WelsTargetSliceConstruction():::MB(%d, %d) construction error. pCurSlice_type:%d",
+      |                                                    ~^
+      |                                                     |
+      |                                                     int
+      |                                                    %ld
+ 1727 |                pCurDqLayer->iMbX, pCurDqLayer->iMbY, pSlice->eSliceType);
+      |                ~~~~~~~~~~~~~~~~~
+      |                             |
+      |                             int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:1726:57: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1726 |                "WelsTargetSliceConstruction():::MB(%d, %d) construction error. pCurSlice_type:%d",
+      |                                                        ~^
+      |                                                         |
+      |                                                         int
+      |                                                        %ld
+ 1727 |                pCurDqLayer->iMbX, pCurDqLayer->iMbY, pSlice->eSliceType);
+      |                                   ~~~~~~~~~~~~~~~~~
+      |                                                |
+      |                                                int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:1758:71: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1758 |                "WelsTargetSliceConstruction():::pCtx->iTotalNumMbRec:%d, iTotalMbTargetLayer:%d",
+      |                                                                      ~^
+      |                                                                       |
+      |                                                                       int
+      |                                                                      %ld
+ 1759 |                pCtx->iTotalNumMbRec, iTotalMbTargetLayer);
+      |                ~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:1758:95: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1758 |                "WelsTargetSliceConstruction():::pCtx->iTotalNumMbRec:%d, iTotalMbTargetLayer:%d",
+      |                                                                                              ~^
+      |                                                                                               |
+      |                                                                                               int
+      |                                                                                              %ld
+ 1759 |                pCtx->iTotalNumMbRec, iTotalMbTargetLayer);
+      |                                      ~~~~~~~~~~~~~~~~~~~
+      |                                      |
+      |                                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsActualDecodeMbCavlcISlice(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:1846:13: warning: declaration of 'i' shadows a previous local [-Wshadow]
+ 1846 |     int32_t i;
+      |             ^
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:1810:11: note: shadowed declaration is here
+ 1810 |   int32_t i;
+      |           ^
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsDecodeMbCavlcISlice(PWelsDecoderContext, PNalUnit, uint32_t&)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2092:68: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2092 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "iBaseModeFlag (%d) != 0, inter-layer prediction not supported.",
+      |                                                                   ~^
+      |                                                                    |
+      |                                                                    int
+      |                                                                   %ld
+ 2093 |              iBaseModeFlag);
+      |              ~~~~~~~~~~~~~
+      |              |
+      |              int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2109:14: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2109 |              "WelsDecodeMbCavlcISlice()::::pBs incomplete, iUsedBits:%" PRId64 " > pBs->iBits:%d, MUST stop decoding.",
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 2110 |              (int64_t) iUsedBits, pBs->iBits);
+      |                                   ~~~~~~~~~~
+      |                                        |
+      |                                        int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsActualDecodeMbCavlcPSlice(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2187:15: warning: declaration of 'i' shadows a previous local [-Wshadow]
+ 2187 |       int32_t i;
+      |               ^
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2131:11: note: shadowed declaration is here
+ 2131 |   int32_t i;
+      |           ^
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsDecodeMbCavlcPSlice(PWelsDecoderContext, PNalUnit, uint32_t&)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2522:70: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2522 |       WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "iBaseModeFlag (%d) != 0, inter-layer prediction not supported.",
+      |                                                                     ~^
+      |                                                                      |
+      |                                                                      int
+      |                                                                     %ld
+ 2523 |                iBaseModeFlag);
+      |                ~~~~~~~~~~~~~
+      |                |
+      |                int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2539:14: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2539 |              "WelsDecodeMbCavlcISlice()::::pBs incomplete, iUsedBits:%" PRId64 " > pBs->iBits:%d, MUST stop decoding.",
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 2540 |              (int64_t) iUsedBits, pBs->iBits);
+      |                                   ~~~~~~~~~~
+      |                                        |
+      |                                        int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsDecodeMbCavlcBSlice(PWelsDecoderContext, PNalUnit, uint32_t&)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2639:70: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2639 |       WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "iBaseModeFlag (%d) != 0, inter-layer prediction not supported.",
+      |                                                                     ~^
+      |                                                                      |
+      |                                                                      int
+      |                                                                     %ld
+ 2640 |                iBaseModeFlag);
+      |                ~~~~~~~~~~~~~
+      |                |
+      |                int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2656:14: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2656 |              "WelsDecodeMbCavlcBSlice()::::pBs incomplete, iUsedBits:%" PRId64 " > pBs->iBits:%d, MUST stop decoding.",
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 2657 |              (int64_t)iUsedBits, pBs->iBits);
+      |                                  ~~~~~~~~~~
+      |                                       |
+      |                                       int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp: In function 'int32_t WelsDec::WelsActualDecodeMbCavlcBSlice(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2734:15: warning: declaration of 'i' shadows a previous local [-Wshadow]
+ 2734 |       int32_t i;
+      |               ^
+vendor/openh264/codec/decoder/core/src/decode_slice.cpp:2678:11: note: shadowed declaration is here
+ 2678 |   int32_t i;
+      |           ^
+vendor/openh264/codec/decoder/core/src/decoder.cpp: In function 'int32_t WelsDec::WelsRequestMem(PWelsDecoderContext, int32_t, int32_t, bool&)':
+vendor/openh264/codec/decoder/core/src/decoder.cpp:499:83: warning: format '%d' expects argument of type 'int', but argument 4 has type 'long int' [-Wformat=]
+  499 |              "WelsRequestMem(): memory re-alloc for no resolution change (size = %d * %d), ref list size change from %d to %d",
+      |                                                                                  ~^
+      |                                                                                   |
+      |                                                                                   int
+      |                                                                                  %ld
+  500 |              kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity, iPicQueueSize);
+      |              ~~~~~~~~~~
+      |              |
+      |              long int
+vendor/openh264/codec/decoder/core/src/decoder.cpp:499:88: warning: format '%d' expects argument of type 'int', but argument 5 has type 'long int' [-Wformat=]
+  499 |              "WelsRequestMem(): memory re-alloc for no resolution change (size = %d * %d), ref list size change from %d to %d",
+      |                                                                                       ~^
+      |                                                                                        |
+      |                                                                                        int
+      |                                                                                       %ld
+  500 |              kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity, iPicQueueSize);
+      |                          ~~~~~~~~~~~
+      |                          |
+      |                          long int
+vendor/openh264/codec/decoder/core/src/decoder.cpp:499:119: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  499 |              "WelsRequestMem(): memory re-alloc for no resolution change (size = %d * %d), ref list size change from %d to %d",
+      |                                                                                                                      ~^
+      |                                                                                                                       |
+      |                                                                                                                       int
+      |                                                                                                                      %ld
+  500 |              kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity, iPicQueueSize);
+      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                       |
+      |                                                       int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder.cpp:499:125: warning: format '%d' expects argument of type 'int', but argument 7 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  499 |              "WelsRequestMem(): memory re-alloc for no resolution change (size = %d * %d), ref list size change from %d to %d",
+      |                                                                                                                            ~^
+      |                                                                                                                             |
+      |                                                                                                                             int
+      |                                                                                                                            %ld
+  500 |              kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity, iPicQueueSize);
+      |                                                                  ~~~~~~~~~~~~~
+      |                                                                  |
+      |                                                                  int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder.cpp:511:92: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  511 |                "WelsRequestMem(): memory re-alloc for resolution change, size change from %d * %d to %d * %d, ref list size change from %d to %d",
+      |                                                                                           ~^
+      |                                                                                            |
+      |                                                                                            int
+      |                                                                                           %ld
+  512 |                pCtx->iImgWidthInPixel, pCtx->iImgHeightInPixel, kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity,
+      |                ~~~~~~~~~~~~~~~~~~~~~~
+      |                      |
+      |                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder.cpp:511:97: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  511 |                "WelsRequestMem(): memory re-alloc for resolution change, size change from %d * %d to %d * %d, ref list size change from %d to %d",
+      |                                                                                                ~^
+      |                                                                                                 |
+      |                                                                                                 int
+      |                                                                                                %ld
+  512 |                pCtx->iImgWidthInPixel, pCtx->iImgHeightInPixel, kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity,
+      |                                        ~~~~~~~~~~~~~~~~~~~~~~~
+      |                                              |
+      |                                              int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder.cpp:511:103: warning: format '%d' expects argument of type 'int', but argument 6 has type 'long int' [-Wformat=]
+  511 |                "WelsRequestMem(): memory re-alloc for resolution change, size change from %d * %d to %d * %d, ref list size change from %d to %d",
+      |                                                                                                      ~^
+      |                                                                                                       |
+      |                                                                                                       int
+      |                                                                                                      %ld
+  512 |                pCtx->iImgWidthInPixel, pCtx->iImgHeightInPixel, kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity,
+      |                                                                 ~~~~~~~~~~
+      |                                                                 |
+      |                                                                 long int
+vendor/openh264/codec/decoder/core/src/decoder.cpp:511:108: warning: format '%d' expects argument of type 'int', but argument 7 has type 'long int' [-Wformat=]
+  511 |                "WelsRequestMem(): memory re-alloc for resolution change, size change from %d * %d to %d * %d, ref list size change from %d to %d",
+      |                                                                                                           ~^
+      |                                                                                                            |
+      |                                                                                                            int
+      |                                                                                                           %ld
+  512 |                pCtx->iImgWidthInPixel, pCtx->iImgHeightInPixel, kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity,
+      |                                                                             ~~~~~~~~~~~
+      |                                                                             |
+      |                                                                             long int
+vendor/openh264/codec/decoder/core/src/decoder.cpp:511:138: warning: format '%d' expects argument of type 'int', but argument 8 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  511 |                "WelsRequestMem(): memory re-alloc for resolution change, size change from %d * %d to %d * %d, ref list size change from %d to %d",
+      |                                                                                                                                         ~^
+      |                                                                                                                                          |
+      |                                                                                                                                          int
+      |                                                                                                                                         %ld
+  512 |                pCtx->iImgWidthInPixel, pCtx->iImgHeightInPixel, kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity,
+      |                                                                                          ~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                                                          |
+      |                                                                                                          int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder.cpp:511:144: warning: format '%d' expects argument of type 'int', but argument 9 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  511 |                "WelsRequestMem(): memory re-alloc for resolution change, size change from %d * %d to %d * %d, ref list size change from %d to %d",
+      |                                                                                                                                               ~^
+      |                                                                                                                                                |
+      |                                                                                                                                                int
+      |                                                                                                                                               %ld
+  512 |                pCtx->iImgWidthInPixel, pCtx->iImgHeightInPixel, kiPicWidth, kiPicHeight, pCtx->pPicBuff->iCapacity,
+  513 |                iPicQueueSize);
+      |                ~~~~~~~~~~~~~
+      |                |
+      |                int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder.cpp:515:90: warning: format '%d' expects argument of type 'int', but argument 4 has type 'long int' [-Wformat=]
+  515 |       WelsLog (& (pCtx->sLogCtx), WELS_LOG_INFO, "WelsRequestMem(): memory alloc size = %d * %d, ref list size = %d",
+      |                                                                                         ~^
+      |                                                                                          |
+      |                                                                                          int
+      |                                                                                         %ld
+  516 |                kiPicWidth, kiPicHeight, iPicQueueSize);
+      |                ~~~~~~~~~~
+      |                |
+      |                long int
+vendor/openh264/codec/decoder/core/src/decoder.cpp:515:95: warning: format '%d' expects argument of type 'int', but argument 5 has type 'long int' [-Wformat=]
+  515 |       WelsLog (& (pCtx->sLogCtx), WELS_LOG_INFO, "WelsRequestMem(): memory alloc size = %d * %d, ref list size = %d",
+      |                                                                                              ~^
+      |                                                                                               |
+      |                                                                                               int
+      |                                                                                              %ld
+  516 |                kiPicWidth, kiPicHeight, iPicQueueSize);
+      |                            ~~~~~~~~~~~
+      |                            |
+      |                            long int
+vendor/openh264/codec/decoder/core/src/decoder.cpp:515:115: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  515 |       WelsLog (& (pCtx->sLogCtx), WELS_LOG_INFO, "WelsRequestMem(): memory alloc size = %d * %d, ref list size = %d",
+      |                                                                                                                  ~^
+      |                                                                                                                   |
+      |                                                                                                                   int
+      |                                                                                                                  %ld
+  516 |                kiPicWidth, kiPicHeight, iPicQueueSize);
+      |                                         ~~~~~~~~~~~~~
+      |                                         |
+      |                                         int32_t {aka long int}
+
+
+CC:  glass_chat_service.c
+
+CXX:  vendor/openh264/codec/decoder/core/src/decoder_core.cpp vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::DecodeFrameConstruction(PWelsDecoderContext, uint8_t**, SBufferInfo*)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:86: warning: format '%d' expects argument of type 'int', but argument 4 has type 'long int' [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                     ~^
+      |                                                                                      |
+      |                                                                                      int
+      |                                                                                     %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+      |                ~~~~~~~
+      |                |
+      |                long int
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:91: warning: format '%d' expects argument of type 'int', but argument 5 has type 'long int' [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                          ~^
+      |                                                                                           |
+      |                                                                                           int
+      |                                                                                          %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+      |                         ~~~~~~~~
+      |                         |
+      |                         long int
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:105: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                                        ~^
+      |                                                                                                         |
+      |                                                                                                         int
+      |                                                                                                        %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+      |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                    |
+      |                                                    int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:120: warning: format '%d' expects argument of type 'int', but argument 7 has type 'int32_t' {aka 'long int'} [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                                                       ~^
+      |                                                                                                                        |
+      |                                                                                                                        int
+      |                                                                                                                       %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+      |                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                                  |
+      |                                                                                  int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:133: warning: format '%d' expects argument of type 'int', but argument 8 has type 'int32_t' {aka 'long int'} [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                                                                    ~^
+      |                                                                                                                                     |
+      |                                                                                                                                     int
+      |                                                                                                                                    %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+      |                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                                                                 |
+      |                                                                                                                 int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:149: warning: format '%d' expects argument of type 'int', but argument 9 has type 'int32_t' {aka 'long int'} [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                                                                                    ~^
+      |                                                                                                                                                     |
+      |                                                                                                                                                     int
+      |                                                                                                                                                    %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+   70 |                pCtx->sFrameCrop.iBottomOffset, pCtx->iIgnoredErrorInfoPacketCount);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                 |
+      |                                 int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:68:174: warning: format '%d' expects argument of type 'int', but argument 10 has type 'int32_t' {aka 'long int'} [-Wformat=]
+   68 |                "DecodeFrameConstruction(): will output first frame of new sequence, %d x %d, crop_left:%d, crop_right:%d, crop_top:%d, crop_bottom:%d, ignored error packet:%d.",
+      |                                                                                                                                                                             ~^
+      |                                                                                                                                                                              |
+      |                                                                                                                                                                              int
+      |                                                                                                                                                                             %ld
+   69 |                kiWidth, kiHeight, pCtx->sFrameCrop.iLeftOffset, pCtx->sFrameCrop.iRightOffset, pCtx->sFrameCrop.iTopOffset,
+   70 |                pCtx->sFrameCrop.iBottomOffset, pCtx->iIgnoredErrorInfoPacketCount);
+      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                      |
+      |                                                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:115:110: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  115 |                      "DecodeFrameConstruction(): current NAL num (%d) plus sps & pps exceeds permitted num (%d). Will expand",
+      |                                                                                                             ~^
+      |                                                                                                              |
+      |                                                                                                              int
+      |                                                                                                             %ld
+  116 |                      pParser->iNalNum, pCtx->iMaxNalNum);
+      |                                        ~~~~~~~~~~~~~~~~
+      |                                              |
+      |                                              int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:148:64: warning: format '%d' expects argument of type 'int', but argument 4 has type 'long int' [-Wformat=]
+  148 |                  "DecodeFrameConstruction(): current NAL num (%d) exceeds permitted num (%d). Will expand",
+      |                                                               ~^
+      |                                                                |
+      |                                                                int
+      |                                                               %ld
+  149 |                  pParser->iNalNum + iEndIdx - iIdx + 1, pCtx->iMaxNalNum);
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                    |
+      |                                                    long int
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:148:91: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  148 |                  "DecodeFrameConstruction(): current NAL num (%d) exceeds permitted num (%d). Will expand",
+      |                                                                                          ~^
+      |                                                                                           |
+      |                                                                                           int
+      |                                                                                          %ld
+  149 |                  pParser->iNalNum + iEndIdx - iIdx + 1, pCtx->iMaxNalNum);
+      |                                                         ~~~~~~~~~~~~~~~~
+      |                                                               |
+      |                                                               int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:159:124: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  159 |                    "DecodeFrameConstruction(): composed output size (%ld) exceeds (%d). Failed to parse. current data pos %d out of %d:, previously accumulated num: %d, total num: %d, previously accumulated len: %d, current len: %d, current buf pos: %p, header buf pos: %p \n",
+      |                                                                                                                           ~^
+      |                                                                                                                            |
+      |                                                                                                                            int
+      |                                                                                                                           %ld
+  160 |                    (long) (pDstBuf - pParser->pDstBuff + iNalLen), MAX_ACCESS_UNIT_CAPACITY, iIdx, iEndIdx, iNum, pParser->iNalNum,
+      |                                                                                              ~~~~
+      |                                                                                              |
+      |                                                                                              int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:159:134: warning: format '%d' expects argument of type 'int', but argument 7 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  159 |                    "DecodeFrameConstruction(): composed output size (%ld) exceeds (%d). Failed to parse. current data pos %d out of %d:, previously accumulated num: %d, total num: %d, previously accumulated len: %d, current len: %d, current buf pos: %p, header buf pos: %p \n",
+      |                                                                                                                                     ~^
+      |                                                                                                                                      |
+      |                                                                                                                                      int
+      |                                                                                                                                     %ld
+  160 |                    (long) (pDstBuf - pParser->pDstBuff + iNalLen), MAX_ACCESS_UNIT_CAPACITY, iIdx, iEndIdx, iNum, pParser->iNalNum,
+      |                                                                                                    ~~~~~~~
+      |                                                                                                    |
+      |                                                                                                    int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:159:167: warning: format '%d' expects argument of type 'int', but argument 8 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  159 |                    "DecodeFrameConstruction(): composed output size (%ld) exceeds (%d). Failed to parse. current data pos %d out of %d:, previously accumulated num: %d, total num: %d, previously accumulated len: %d, current len: %d, current buf pos: %p, header buf pos: %p \n",
+      |                                                                                                                                                                      ~^
+      |                                                                                                                                                                       |
+      |                                                                                                                                                                       int
+      |                                                                                                                                                                      %ld
+  160 |                    (long) (pDstBuf - pParser->pDstBuff + iNalLen), MAX_ACCESS_UNIT_CAPACITY, iIdx, iEndIdx, iNum, pParser->iNalNum,
+      |                                                                                                             ~~~~
+      |                                                                                                             |
+      |                                                                                                             int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:159:214: warning: format '%d' expects argument of type 'int', but argument 10 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  159 |                    "DecodeFrameConstruction(): composed output size (%ld) exceeds (%d). Failed to parse. current data pos %d out of %d:, previously accumulated num: %d, total num: %d, previously accumulated len: %d, current len: %d, current buf pos: %p, header buf pos: %p \n",
+      |                                                                                                                                                                                                                     ~^
+      |                                                                                                                                                                                                                      |
+      |                                                                                                                                                                                                                      int
+      |                                                                                                                                                                                                                     %ld
+  160 |                    (long) (pDstBuf - pParser->pDstBuff + iNalLen), MAX_ACCESS_UNIT_CAPACITY, iIdx, iEndIdx, iNum, pParser->iNalNum,
+  161 |                    iTotalNalLen, iNalLen, pDstBuf, pParser->pDstBuff);
+      |                    ~~~~~~~~~~~~
+      |                    |
+      |                    int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:159:231: warning: format '%d' expects argument of type 'int', but argument 11 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  159 |                    "DecodeFrameConstruction(): composed output size (%ld) exceeds (%d). Failed to parse. current data pos %d out of %d:, previously accumulated num: %d, total num: %d, previously accumulated len: %d, current len: %d, current buf pos: %p, header buf pos: %p \n",
+      |                                                                                                                                                                                                                                      ~^
+      |                                                                                                                                                                                                                                       |
+      |                                                                                                                                                                                                                                       int
+      |                                                                                                                                                                                                                                      %ld
+  160 |                    (long) (pDstBuf - pParser->pDstBuff + iNalLen), MAX_ACCESS_UNIT_CAPACITY, iIdx, iEndIdx, iNum, pParser->iNalNum,
+  161 |                    iTotalNalLen, iNalLen, pDstBuf, pParser->pDstBuff);
+      |                                  ~~~~~~~
+      |                                  |
+      |                                  int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:194:58: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  194 |              "DecodeFrameConstruction(): iTotalNumMbRec:%d, total_num_mb_sps:%d, cur_layer_mb_width:%d, cur_layer_mb_height:%d ",
+      |                                                         ~^
+      |                                                          |
+      |                                                          int
+      |                                                         %ld
+  195 |              pCtx->iTotalNumMbRec, kiTotalNumMbInCurLayer, pCurDq->iMbWidth, pCurDq->iMbHeight);
+      |              ~~~~~~~~~~~~~~~~~~~~
+      |                    |
+      |                    int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:194:79: warning: format '%d' expects argument of type 'int', but argument 5 has type 'long int' [-Wformat=]
+  194 |              "DecodeFrameConstruction(): iTotalNumMbRec:%d, total_num_mb_sps:%d, cur_layer_mb_width:%d, cur_layer_mb_height:%d ",
+      |                                                                              ~^
+      |                                                                               |
+      |                                                                               int
+      |                                                                              %ld
+  195 |              pCtx->iTotalNumMbRec, kiTotalNumMbInCurLayer, pCurDq->iMbWidth, pCurDq->iMbHeight);
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~
+      |                                    |
+      |                                    long int
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:194:102: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  194 |              "DecodeFrameConstruction(): iTotalNumMbRec:%d, total_num_mb_sps:%d, cur_layer_mb_width:%d, cur_layer_mb_height:%d ",
+      |                                                                                                     ~^
+      |                                                                                                      |
+      |                                                                                                      int
+      |                                                                                                     %ld
+  195 |              pCtx->iTotalNumMbRec, kiTotalNumMbInCurLayer, pCurDq->iMbWidth, pCurDq->iMbHeight);
+      |                                                            ~~~~~~~~~~~~~~~~
+      |                                                                    |
+      |                                                                    int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:194:126: warning: format '%d' expects argument of type 'int', but argument 7 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  194 |              "DecodeFrameConstruction(): iTotalNumMbRec:%d, total_num_mb_sps:%d, cur_layer_mb_width:%d, cur_layer_mb_height:%d ",
+      |                                                                                                                             ~^
+      |                                                                                                                              |
+      |                                                                                                                              int
+      |                                                                                                                             %ld
+  195 |              pCtx->iTotalNumMbRec, kiTotalNumMbInCurLayer, pCurDq->iMbWidth, pCurDq->iMbHeight);
+      |                                                                              ~~~~~~~~~~~~~~~~~
+      |                                                                                      |
+      |                                                                                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:266:93: warning: format '%d' expects argument of type 'int', but argument 4 has type 'long int' [-Wformat=]
+  266 |                "DecodeFrameConstruction():New sequence detected, but freezed, correct MBs (%d) out of whole MBs (%d).",
+      |                                                                                            ~^
+      |                                                                                             |
+      |                                                                                             int
+      |                                                                                            %ld
+  267 |                kiTotalNumMbInCurLayer - pCtx->iMbEcedNum, kiTotalNumMbInCurLayer);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                       |
+      |                                       long int
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:266:115: warning: format '%d' expects argument of type 'int', but argument 5 has type 'long int' [-Wformat=]
+  266 |                "DecodeFrameConstruction():New sequence detected, but freezed, correct MBs (%d) out of whole MBs (%d).",
+      |                                                                                                                  ~^
+      |                                                                                                                   |
+      |                                                                                                                   int
+      |                                                                                                                  %ld
+  267 |                kiTotalNumMbInCurLayer - pCtx->iMbEcedNum, kiTotalNumMbInCurLayer);
+      |                                                           ~~~~~~~~~~~~~~~~~~~~~~
+      |                                                           |
+      |                                                           long int
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::ExpandBsBuffer(PWelsDecoderContext, int32_t)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:659:98: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  659 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_ERROR, "ExpandBsBuffer() Failed for malloc pNewBsBuff (%d)", iNewBuffLen);
+      |                                                                                                 ~^    ~~~~~~~~~~~
+      |                                                                                                  |    |
+      |                                                                                                  int  int32_t {aka long int}
+      |                                                                                                 %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:684:105: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  684 |       WelsLog (& (pCtx->sLogCtx), WELS_LOG_ERROR, "ExpandBsBuffer() Failed for malloc pNewSavedBsBuff (%d)", iNewBuffLen);
+      |                                                                                                        ~^    ~~~~~~~~~~~
+      |                                                                                                         |    |
+      |                                                                                                         int  int32_t {aka long int}
+      |                                                                                                        %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::ExpandBsLenBuffer(PWelsDecoderContext, int32_t)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:709:70: warning: format '%d' expects argument of type 'int', but argument 4 has type 'long int' [-Wformat=]
+  709 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "Current nal num (%d) exceededs %d.", kiCurrLen, MAX_MB_SIZE);
+      |                                                                     ~^                  ~~~~~~~~~
+      |                                                                      |                  |
+      |                                                                      int                long int
+      |                                                                     %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::CheckBsBuffer(PWelsDecoderContext, int32_t)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:735:109: warning: format '%d' expects argument of type 'int', but argument 5 has type 'long int' [-Wformat=]
+  735 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "Max AU size exceeded. Allowed size = %d, current size = %d",
+      |                                                                                                            ~^
+      |                                                                                                             |
+      |                                                                                                             int
+      |                                                                                                            %ld
+  736 |              MAX_ACCESS_UNIT_CAPACITY,
+  737 |              kiSrcLen);
+      |              ~~~~~~~~
+      |              |
+      |              long int
+In file included from [BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/vlc_decoder.h:37,
+                 from [BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/decoder_context.h:52,
+                 from [BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/decoder_core.h:46,
+                 from vendor/openh264/codec/decoder/core/src/decoder_core.cpp:34:
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::ParseSliceHeaderSyntaxs(PWelsDecoderContext, WelsCommon::PBitStringAux, bool)':
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:919:3: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+  919 |   WELS_CHECK_SE_UPPER_ERROR (uiCode, 36863u, "first_mb_in_slice", GENERATE_ERROR_NO (ERR_LEVEL_SLICE_HEADER,
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:926:81: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  926 |     WelsLog (pLogCtx, WELS_LOG_WARNING, "slice type too large (%d) at first_mb(%d)", uiSliceType,
+      |                                                                                ~^
+      |                                                                                 |
+      |                                                                                 int
+      |                                                                                %ld
+  927 |              pSliceHead->iFirstMbInSlice);
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                          |
+      |                          int32_t {aka long int}
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:948:3: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+  948 |   WELS_CHECK_SE_UPPER_ERROR (uiCode, (MAX_PPS_COUNT - 1), "iPpsId out of range",
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:957:51: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  957 |       WelsLog (pLogCtx, WELS_LOG_ERROR, "PPS id (%d) is invalid, previous id (%d) error ignored (%d)!", iPpsId,
+      |                                                  ~^                                                     ~~~~~~
+      |                                                   |                                                     |
+      |                                                   int                                                   int32_t {aka long int}
+      |                                                  %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:957:80: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  957 |       WelsLog (pLogCtx, WELS_LOG_ERROR, "PPS id (%d) is invalid, previous id (%d) error ignored (%d)!", iPpsId,
+      |                                                                               ~^
+      |                                                                                |
+      |                                                                                int
+      |                                                                               %ld
+  958 |                pCtx->sSpsPpsCtx.iPPSLastInvalidId, pCtx->sSpsPpsCtx.iPPSInvalidNum);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                 |
+      |                                 int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:957:99: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  957 |       WelsLog (pLogCtx, WELS_LOG_ERROR, "PPS id (%d) is invalid, previous id (%d) error ignored (%d)!", iPpsId,
+      |                                                                                                  ~^
+      |                                                                                                   |
+      |                                                                                                   int
+      |                                                                                                  %ld
+  958 |                pCtx->sSpsPpsCtx.iPPSLastInvalidId, pCtx->sSpsPpsCtx.iPPSInvalidNum);
+      |                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                     |
+      |                                                                     int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:983:57: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  983 |         WelsLog (pLogCtx, WELS_LOG_ERROR, "Sub SPS id (%d) is invalid, previous id (%d) error ignored (%d)!", pPps->iSpsId,
+      |                                                        ~^                                                     ~~~~~~~~~~~~
+      |                                                         |                                                           |
+      |                                                         int                                                         int32_t {aka long int}
+      |                                                        %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:983:86: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  983 |         WelsLog (pLogCtx, WELS_LOG_ERROR, "Sub SPS id (%d) is invalid, previous id (%d) error ignored (%d)!", pPps->iSpsId,
+      |                                                                                     ~^
+      |                                                                                      |
+      |                                                                                      int
+      |                                                                                     %ld
+  984 |                  pCtx->sSpsPpsCtx.iSubSPSLastInvalidId, pCtx->sSpsPpsCtx.iSubSPSInvalidNum);
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                   |
+      |                                   int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:983:105: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  983 |         WelsLog (pLogCtx, WELS_LOG_ERROR, "Sub SPS id (%d) is invalid, previous id (%d) error ignored (%d)!", pPps->iSpsId,
+      |                                                                                                        ~^
+      |                                                                                                         |
+      |                                                                                                         int
+      |                                                                                                        %ld
+  984 |                  pCtx->sSpsPpsCtx.iSubSPSLastInvalidId, pCtx->sSpsPpsCtx.iSubSPSInvalidNum);
+      |                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                          |
+      |                                                                          int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:998:53: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  998 |         WelsLog (pLogCtx, WELS_LOG_ERROR, "SPS id (%d) is invalid, previous id (%d) error ignored (%d)!", pPps->iSpsId,
+      |                                                    ~^                                                     ~~~~~~~~~~~~
+      |                                                     |                                                           |
+      |                                                     int                                                         int32_t {aka long int}
+      |                                                    %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:998:82: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  998 |         WelsLog (pLogCtx, WELS_LOG_ERROR, "SPS id (%d) is invalid, previous id (%d) error ignored (%d)!", pPps->iSpsId,
+      |                                                                                 ~^
+      |                                                                                  |
+      |                                                                                  int
+      |                                                                                 %ld
+  999 |                  pCtx->sSpsPpsCtx.iSPSLastInvalidId, pCtx->sSpsPpsCtx.iSPSInvalidNum);
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                   |
+      |                                   int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:998:101: warning: format '%d' expects argument of type 'int', but argument 6 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  998 |         WelsLog (pLogCtx, WELS_LOG_ERROR, "SPS id (%d) is invalid, previous id (%d) error ignored (%d)!", pPps->iSpsId,
+      |                                                                                                    ~^
+      |                                                                                                     |
+      |                                                                                                     int
+      |                                                                                                    %ld
+  999 |                  pCtx->sSpsPpsCtx.iSPSLastInvalidId, pCtx->sSpsPpsCtx.iSPSInvalidNum);
+      |                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                       |
+      |                                                                       int32_t {aka long int}
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1033:3: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+ 1033 |   WELS_CHECK_SE_UPPER_ERROR ((uint32_t) (pSliceHead->iFirstMbInSlice), (pSps->uiTotalMbCount - 1), "first_mb_in_slice",
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1051:67: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1051 |                "ParseSliceHeaderSyntaxs(), invaild frame number: %d due to IDR frame introduced!",
+      |                                                                  ~^
+      |                                                                   |
+      |                                                                   int
+      |                                                                  %ld
+ 1052 |                pSliceHead->iFrameNum);
+      |                ~~~~~~~~~~~~~~~~~~~~~
+      |                            |
+      |                            int32_t {aka long int}
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1057:5: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+ 1057 |     WELS_CHECK_SE_UPPER_ERROR (uiCode, SLICE_HEADER_IDR_PIC_ID_MAX, "idr_pic_id", GENERATE_ERROR_NO (ERR_LEVEL_SLICE_HEADER,
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1114:5: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+ 1114 |     WELS_CHECK_SE_UPPER_ERROR (uiCode, SLICE_HEADER_REDUNDANT_PIC_CNT_MAX, "redundant_pic_cnt",
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1142:7: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+ 1142 |       WELS_CHECK_SE_UPPER_ERROR (uiCode, MAX_NUM_REF_IDX_L0_ACTIVE_MINUS1, "num_ref_idx_l0_active_minus1",
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1147:9: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+ 1147 |         WELS_CHECK_SE_UPPER_ERROR (uiCode, MAX_NUM_REF_IDX_L1_ACTIVE_MINUS1, "num_ref_idx_l1_active_minus1",
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1202:7: note: in expansion of macro 'WELS_CHECK_SE_UPPER_ERROR'
+ 1202 |       WELS_CHECK_SE_UPPER_ERROR (uiCode, SLICE_HEADER_CABAC_INIT_IDC_MAX, "cabac_init_idc", ERR_INFO_INVALID_CABAC_INIT_IDC);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:264:78: note: format string is defined here
+  264 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1212:46: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1212 |     WelsLog (pLogCtx, WELS_LOG_WARNING, "QP %d out of range", pSliceHead->iSliceQp);
+      |                                             ~^                ~~~~~~~~~~~~~~~~~~~~
+      |                                              |                            |
+      |                                              int                          int32_t {aka long int}
+      |                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1232:73: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+ 1232 |       WelsLog (pLogCtx, WELS_LOG_WARNING, "disable_deblock_filter_idc (%d) out of range [0, 6]",
+      |                                                                        ~^
+      |                                                                         |
+      |                                                                         int
+      |                                                                        %ld
+ 1233 |                pSliceHead->uiDisableDeblockingFilterIdc);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                            |
+      |                            uint32_t {aka long unsigned int}
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1239:7: note: in expansion of macro 'WELS_CHECK_SE_BOTH_ERROR'
+ 1239 |       WELS_CHECK_SE_BOTH_ERROR (pSliceHead->iSliceAlphaC0Offset, SLICE_HEADER_ALPHAC0_BETA_OFFSET_MIN,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:78: note: format string is defined here
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1244:7: note: in expansion of macro 'WELS_CHECK_SE_BOTH_ERROR'
+ 1244 |       WELS_CHECK_SE_BOTH_ERROR (pSliceHead->iSliceBetaOffset, SLICE_HEADER_ALPHAC0_BETA_OFFSET_MIN,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:78: note: format string is defined here
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1279:99: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+ 1279 |           WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "disable_inter_layer_deblock_filter_idc (%d) out of range [0, 6]",
+      |                                                                                                  ~^
+      |                                                                                                   |
+      |                                                                                                   int
+      |                                                                                                  %ld
+ 1280 |                    pSliceHeadExt->uiDisableInterLayerDeblockingFilterIdc);
+      |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                   |
+      |                                   uint32_t {aka long unsigned int}
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1286:11: note: in expansion of macro 'WELS_CHECK_SE_BOTH_ERROR'
+ 1286 |           WELS_CHECK_SE_BOTH_ERROR (pSliceHeadExt->iInterLayerSliceAlphaC0Offset,
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:78: note: format string is defined here
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:45: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:1292:11: note: in expansion of macro 'WELS_CHECK_SE_BOTH_ERROR'
+ 1292 |           WELS_CHECK_SE_BOTH_ERROR (pSliceHeadExt->iInterLayerSliceBetaOffset, SLICE_HEADER_INTER_LAYER_ALPHAC0_BETA_OFFSET_MIN,
+      |           ^~~~~~~~~~~~~~~~~~~~~~~~
+[BUILD_WORKSPACE]/v3-media-current/apps/system/bilibili_live/vendor/openh264/codec/decoder/core/inc/dec_golomb.h:250:78: note: format string is defined here
+  250 |   WelsLog(&(pCtx->sLogCtx), WELS_LOG_ERROR, "invalid syntax " syntax_name " %d", val);\
+      |                                                                             ~^
+      |                                                                              |
+      |                                                                              int
+      |                                                                             %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::AllocPicBuffOnNewSeqBegin(PWelsDecoderContext)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2307:103: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2307 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_WARNING, "sync picture resolution ext failed,  the error is %d", iErr);
+      |                                                                                                      ~^   ~~~~
+      |                                                                                                       |   |
+      |                                                                                                       int int32_t {aka long int}
+      |                                                                                                      %ld
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::ConstructAccessUnit(PWelsDecoderContext, uint8_t**, SBufferInfo*)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2371:83: warning: format '%x' expects argument of type 'unsigned int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2371 |     WelsLog (& (pCtx->sLogCtx), WELS_LOG_DEBUG, "returned error from decoding:[0x%x]", iErr);
+      |                                                                                  ~^    ~~~~
+      |                                                                                   |    |
+      |                                                                                   |    int32_t {aka long int}
+      |                                                                                   unsigned int
+      |                                                                                  %lx
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp: In function 'int32_t WelsDec::DecodeCurrentAccessUnit(PWelsDecoderContext, uint8_t**, SBufferInfo*)':
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2588:90: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2588 |                  "DecodeCurrentAccessUnit()::::::PrefetchPic ERROR, pSps->iNumRefFrames:%d.",
+      |                                                                                         ~^
+      |                                                                                          |
+      |                                                                                          int
+      |                                                                                         %ld
+ 2589 |                  pCtx->pSps->iNumRefFrames);
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                              |
+      |                              int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2705:88: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2705 |                      "referencing pictures lost due frame gaps exist, prev_frame_num: %d, curr_frame_num: %d",
+      |                                                                                       ~^
+      |                                                                                        |
+      |                                                                                        int
+      |                                                                                       %ld
+ 2706 |                      iPrevFrameNum,
+      |                      ~~~~~~~~~~~~~
+      |                      |
+      |                      int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2705:108: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2705 |                      "referencing pictures lost due frame gaps exist, prev_frame_num: %d, curr_frame_num: %d",
+      |                                                                                                           ~^
+      |                                                                                                            |
+      |                                                                                                            int
+      |                                                                                                           %ld
+ 2706 |                      iPrevFrameNum,
+ 2707 |                      pSh->iFrameNum);
+      |                      ~~~~~~~~~~~~~~
+      |                           |
+      |                           int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2756:56: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2756 |                    "DecodeCurrentAccessUnit() failed (%d) in frame: %d uiDId: %d uiQId: %d",
+      |                                                       ~^
+      |                                                        |
+      |                                                        int
+      |                                                       %ld
+ 2757 |                    iRet, pSh->iFrameNum, iCurrIdD, iCurrIdQ);
+      |                    ~~~~
+      |                    |
+      |                    int32_t {aka long int}
+vendor/openh264/codec/decoder/core/src/decoder_core.cpp:2756:70: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 2756 |                    "DecodeCurrentAccessUnit() failed (%d) in frame: %d uiDId: %d uiQId: %d",
+      |                                                                     ~^
+      |                                                                      |
+      |                                                                      int
+      |                                                                     %ld
+ 2757 |                    iRet, pSh->iFrameNum, iCurrIdD, iCurrIdQ);
+      |                          ~~~~~~~~~~~~~~
+      |                               |
+      |                               int32_t {aka long int}
+
+
+CC:  glass_chat_store.c
+
+CC:  glass_file_service.c
+CXX:  vendor/openh264/codec/decoder/core/src/parse_mb_syn_cavlc.cpp
+
+CC:  glass_grok.c vendor/openh264/codec/decoder/core/src/parse_mb_syn_cavlc.cpp: In function 'int32_t WelsDec::ParseInterInfo(PWelsDecoderContext, int16_t (*)[30][2], int8_t (*)[30], WelsCommon::PBitStringAux)':
+vendor/openh264/codec/decoder/core/src/parse_mb_syn_cavlc.cpp:1280:16: warning: declaration of 'uiSubMbType' shadows a previous local [-Wshadow]
+ 1280 |       uint32_t uiSubMbType = pCurDqLayer->pSubMbType[iMbXy][i];
+      |                ^~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/parse_mb_syn_cavlc.cpp:1215:14: note: shadowed declaration is here
+ 1215 |     uint32_t uiSubMbType;
+      |              ^~~~~~~~~~~
+vendor/openh264/codec/decoder/core/src/parse_mb_syn_cavlc.cpp:1281:15: warning: declaration of 'iMv' shadows a previous local [-Wshadow]
+ 1281 |       int16_t iMv[2], iPartIdx, iBlockWidth = iPartWidth[i], iIdx = i << 2;
+      |               ^~~
+vendor/openh264/codec/decoder/core/src/parse_mb_syn_cavlc.cpp:1081:11: note: shadowed declaration is here
+ 1081 |   int16_t iMv[2];
+      |           ^~~
+In file included from glass_grok.c:1:
+glass_grok_player.inc: In function 'grok_tick':
+glass_grok_player.inc:97:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+   97 |   if(now-b->last_tick>500)b->due=now;b->last_tick=now;grok_poll_state(b,now);
+      |   ^~
+glass_grok_player.inc:97:38: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+   97 |   if(now-b->last_tick>500)b->due=now;b->last_tick=now;grok_poll_state(b,now);
+      |                                      ^
+glass_grok_player.inc: In function 'grok_create':
+glass_grok_player.inc:156:3: warning: this 'for' clause does not guard... [-Wmisleading-indentation]
+  156 |   for(unsigned i=0;i<8;i++)if(!instances[i]){instances[i]=b;break;}return b;
+      |   ^~~
+glass_grok_player.inc:156:68: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'for'
+  156 |   for(unsigned i=0;i<8;i++)if(!instances[i]){instances[i]=b;break;}return b;
+      |                                                                    ^~~~~~
+
+
+CC:  glass_grok_state.c
+
+CC:  glass_https.c In file included from [BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/include/mbedtls/ssl_ciphersuites.h:16,
+                 from [BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/include/mbedtls/ssl.h:20,
+                 from [BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/include/mbedtls/net_sockets.h:32,
+                 from glass_https.c:17:
+[BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/tf-psa-crypto/include/mbedtls/pk.h:83:5: warning: "MBEDTLS_ECDSA_MAX_LEN" is not defined, evaluates to 0 [-Wundef]
+   83 |     MBEDTLS_ECDSA_MAX_LEN > MBEDTLS_PK_SIGNATURE_MAX_SIZE
+      |     ^~~~~~~~~~~~~~~~~~~~~
+
+
+CC:  glass_icons.c
+
+CXX:  vendor/openh264/codec/decoder/core/src/pic_queue.cpp
+
+CC:  glass_ime.c
+
+CXX:  vendor/openh264/codec/decoder/core/src/wels_decoder_thread.cpp
+
+CC:  glass_music_http.c
+
+CXX:  vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp In file included from [BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/include/mbedtls/ssl_ciphersuites.h:16,
+                 from [BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/include/mbedtls/ssl.h:20,
+                 from [BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/include/mbedtls/net_sockets.h:32,
+                 from glass_music_http.c:16:
+[BUILD_WORKSPACE]/v3-espdl-baseline/standalone-tls/tf-psa-crypto/include/mbedtls/pk.h:83:5: warning: "MBEDTLS_ECDSA_MAX_LEN" is not defined, evaluates to 0 [-Wundef]
+   83 |     MBEDTLS_ECDSA_MAX_LEN > MBEDTLS_PK_SIGNATURE_MAX_SIZE
+      |     ^~~~~~~~~~~~~~~~~~~~~
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'void WelsDec::CWelsDecoder::UninitDecoderCtx(WelsDec::TagWelsDecoderContext*&)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:379:70: warning: format '%d' expects argument of type 'int', but argument 4 has type 'uint32_t' {aka 'long unsigned int'} [-Wformat=]
+  379 |                "CWelsDecoder::UninitDecoder(), verify memory usage (%d bytes) after free..",
+      |                                                                     ~^
+      |                                                                      |
+      |                                                                      int
+      |                                                                     %ld
+  380 |                pCtx->pMemAlign->WelsGetMemoryUsage());
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                   |
+      |                                                   uint32_t {aka long unsigned int}
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'int32_t WelsDec::CWelsDecoder::InitDecoder(const SDecodingParam*)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:398:85: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  398 |            "CWelsDecoder::init_decoder(), openh264 codec version = %s, ParseOnly = %d",
+      |                                                                                    ~^
+      |                                                                                     |
+      |                                                                                     int
+      |                                                                                    %ld
+  399 |            VERSION_NUMBER, (int32_t)pParam->bParseOnly);
+      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                            |
+      |                            int32_t {aka long int}
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'int32_t WelsDec::CWelsDecoder::InitDecoderCtx(WelsDec::TagWelsDecoderContext*&, const SDecodingParam*)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:425:85: warning: format '%d' expects argument of type 'int', but argument 5 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  425 |            "CWelsDecoder::init_decoder(), openh264 codec version = %s, ParseOnly = %d",
+      |                                                                                    ~^
+      |                                                                                     |
+      |                                                                                     int
+      |                                                                                    %ld
+  426 |            VERSION_NUMBER, (int32_t)pParam->bParseOnly);
+      |                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                            |
+      |                            int32_t {aka long int}
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'int32_t WelsDec::CWelsDecoder::ResetDecoder(WelsDec::TagWelsDecoderContext*&)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:467:97: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  467 |       WelsLog (&m_pWelsTrace->m_sLogCtx, WELS_LOG_INFO, "ResetDecoder(), context error code is %d",
+      |                                                                                                ~^
+      |                                                                                                 |
+      |                                                                                                 int
+      |                                                                                                %ld
+  468 |                pCtx->iErrorCode);
+      |                ~~~~~~~~~~~~~~~~
+      |                      |
+      |                      int32_t {aka long int}
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'int32_t WelsDec::CWelsDecoder::ThreadResetDecoder(WelsDec::TagWelsDecoderContext*&)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:487:95: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  487 |     WelsLog (&m_pWelsTrace->m_sLogCtx, WELS_LOG_INFO, "ResetDecoder(), context error code is %d", pCtx->iErrorCode);
+      |                                                                                              ~^   ~~~~~~~~~~~~~~~~
+      |                                                                                               |         |
+      |                                                                                               int       int32_t {aka long int}
+      |                                                                                              %ld
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'void WelsDec::CWelsDecoder::RetireUnqueuedPicture(WelsDec::PWelsDecoderThreadCTX)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:754:62: warning: format '%d' expects argument of type 'int', but argument 3 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  754 |     fprintf(stderr, "OpenH264 retired unqueued picture slot=%d state=%d\n", picture->iPicBuffIdx, thread->pCtx->iErrorCode);
+      |                                                             ~^              ~~~~~~~~~~~~~~~~~~~~
+      |                                                              |                       |
+      |                                                              int                     int32_t {aka long int}
+      |                                                             %ld
+
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:754:71: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  754 |     fprintf(stderr, "OpenH264 retired unqueued picture slot=%d state=%d\n", picture->iPicBuffIdx, thread->pCtx->iErrorCode);
+      |                                                                      ~^                           ~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                       |                                         |
+      |                                                                       int                                       int32_t {aka long int}
+      |                                                                      %ld
+
+CC:  glass_music_parse.c vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'DECODING_STATE WelsDec::CWelsDecoder::DecodeFrame2WithCtx(WelsDec::PWelsDecoderContext, const unsigned char*, int, unsigned char**, SBufferInfo*)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:925:87: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+  925 |       WelsLog (&m_pWelsTrace->m_sLogCtx, WELS_LOG_INFO, "decode failed, failure type:%d \n",
+      |                                                                                      ~^
+      |                                                                                       |
+      |                                                                                       int
+      |                                                                                      %ld
+  926 |                pDecContext->iErrorCode);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~
+      |                             |
+      |                             int32_t {aka long int}
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp: In member function 'virtual DECODING_STATE WelsDec::CWelsDecoder::DecodeParser(const unsigned char*, int, SParserBsInfo*)':
+vendor/openh264/codec/decoder/plus/src/welsDecoderExt.cpp:1326:85: warning: format '%d' expects argument of type 'int', but argument 4 has type 'int32_t' {aka 'long int'} [-Wformat=]
+ 1326 |     WelsLog (&m_pWelsTrace->m_sLogCtx, WELS_LOG_INFO, "decode failed, failure type:%d \n", pDecContext->iErrorCode);
+      |                                                                                    ~^      ~~~~~~~~~~~~~~~~~~~~~~~
+      |                                                                                     |                   |
+      |                                                                                     int                 int32_t {aka long int}
+      |                                                                                    %ld
+
+
+CC:  glass_music_pcm.c
+
+CC:  glass_music_service.c
+
+CXX:  glass_pinyin.cpp
+
+CC:  glass_portal_config.c
+
+CC:  glass_portal_files.c
+
+CC:  glass_portal_http.c glass_portal_http.c: In function 'upload':
+glass_portal_http.c:214:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  214 |     if(ret) break; size-=n;
+      |     ^~
+glass_portal_http.c:214:20: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  214 |     if(ret) break; size-=n;
+      |                    ^~~~
+glass_portal_http.c:219:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  219 |   if(ret) unlink(temp); return ret;
+      |   ^~
+glass_portal_http.c:219:25: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  219 |   if(ret) unlink(temp); return ret;
+      |                         ^~~~~~
+glass_portal_http.c: In function 'client':
+glass_portal_http.c:339:7: warning: this 'while' clause does not guard... [-Wmisleading-indentation]
+  339 |       while(authorized(auth)&&(n=read(in,buf,sizeof(buf)))>0) if(sendall(fd,buf,n)) break; close(in); return;
+      |       ^~~~~
+glass_portal_http.c:339:92: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'while'
+  339 |       while(authorized(auth)&&(n=read(in,buf,sizeof(buf)))>0) if(sendall(fd,buf,n)) break; close(in); return;
+      |                                                                                            ^~~~~
+
+
+CC:  glass_portal_resource.c
+
+CC:  glass_qpk_builder.c
+
+
+CC:  glass_settings_service.c
+
+CC:  glass_system_monitor.c
+
+CC:  glass_system_platform.c
+
+CC:  glass_voice.c
+
+CC:  glass_weather.c
+
+CC:  glass_weather_http.c
+
+CC:  glass_weather_https.c
+
+
+CC:  glass_weather_parse.c
+
+CC:  hass_portal.c
+CC:  dumpstack.c
+
+CC:  hass_qjs.c
+
+CC:  homeassistant_resource.c
+
+
+CC:  pet_engine.c
+
+CC:  pet_lvgl.c
+
+CC:  pet_sprites.c
+
+CC:  qpk_audio_store.c
+CC:  qpk_camera_probe.c
+
+CC:  qpk_espdl_capture.c
+
+CC:  qpk_espdl_probe.c
+
+CC:  qpk_espdl_service.c
+
+CC:  qpk_espdl_sha256.c
+
+CC:  qpk_espdl_store.c qpk_espdl_sha256.c: In function 'qpk_dl_sha256_file':
+qpk_espdl_sha256.c:66:3: warning: this 'for' clause does not guard... [-Wmisleading-indentation]
+   66 |   for(unsigned i=0;i<32;i++)snprintf(hex+i*2,3,"%02x",(uint8_t)(h[i/4]>>(24-8*(i%4))));return 0;
+      |   ^~~
+qpk_espdl_sha256.c:66:88: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'for'
+   66 |   for(unsigned i=0;i<32;i++)snprintf(hex+i*2,3,"%02x",(uint8_t)(h[i/4]>>(24-8*(i%4))));return 0;
+      |                                                                                        ^~~~~~
+
+
+CC:  qpk_espdl_track.c
+
+CC:  qpk_hardware.c
+
+CC:  qpk_homeassistant.c
+
+CC:  qpk_hw_audio.c
+
+CC:  qpk_hw_platform.c
+
+CC:  qpk_hw_probe.c
+
+CC:  qpk_mjpeg.c
+
+CC:  qpk_pet.c
+
+CC:  qpk_runtime.c
+
+CC:  qpk_storage.c
+
+CC:  qpk_storage_selftest.c
+
+CC:  qpk_tjpgd.c
+In file included from qpk_polygon.inc:3,
+                 from qpk_runtime.c:936:
+qpk_polygon_draw.inc: In function 'qpk_polygon_color':
+qpk_polygon_draw.inc:56:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+   56 |     if(mix<0)mix=0;if(mix>1)mix=1;
+      |     ^~
+qpk_polygon_draw.inc:56:20: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+   56 |     if(mix<0)mix=0;if(mix>1)mix=1;
+      |                    ^~
+qpk_polygon_draw.inc: In function 'grok_mosaic_on_stroke':
+qpk_polygon_draw.inc:121:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  121 |     if(t<0)t=0;if(t>1)t=1;
+      |     ^~
+qpk_polygon_draw.inc:121:16: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  121 |     if(t<0)t=0;if(t>1)t=1;
+      |                ^~
+qpk_polygon_draw.inc: In function 'grok_mosaic_draw':
+qpk_polygon_draw.inc:136:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  136 |   if(xmin<0)xmin=0;if(ymin<0)ymin=0;
+      |   ^~
+qpk_polygon_draw.inc:136:20: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  136 |   if(xmin<0)xmin=0;if(ymin<0)ymin=0;
+      |                    ^~
+qpk_polygon_draw.inc:137:3: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  137 |   if(xmax>=width)xmax=width-1;if(ymax>=height)ymax=height-1;
+      |   ^~
+qpk_polygon_draw.inc:137:31: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  137 |   if(xmax>=width)xmax=width-1;if(ymax>=height)ymax=height-1;
+      |                               ^~
+qpk_polygon_draw.inc:154:9: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  154 |         if(l<xmin)l=xmin;if(r>xmax)r=xmax/cell*cell;if(l>r)continue;
+      |         ^~
+qpk_polygon_draw.inc:154:26: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  154 |         if(l<xmin)l=xmin;if(r>xmax)r=xmax/cell*cell;if(l>r)continue;
+      |                          ^~
+qpk_polygon_draw.inc: In function 'qpk_polygon_draw':
+qpk_polygon_draw.inc:223:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  223 |     if(first<0)first=0;if(last>height)last=height;
+      |     ^~
+qpk_polygon_draw.inc:223:24: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  223 |     if(first<0)first=0;if(last>height)last=height;
+      |                        ^~
+qpk_polygon_draw.inc:234:7: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  234 |       if(start<first)start=first;if(end>last)end=last;
+      |       ^~
+qpk_polygon_draw.inc:234:34: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  234 |       if(start<first)start=first;if(end>last)end=last;
+      |                                  ^~
+In file included from qpk_polygon.inc:5:
+qpk_polygon_convert.inc: In function 'qpk_polygon_update':
+qpk_polygon_convert.inc:36:5: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+   36 |     if(px<minx)minx=px;if(px>maxx)maxx=px;if(py<miny)miny=py;if(py>maxy)maxy=py;
+      |     ^~
+qpk_polygon_convert.inc:36:24: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+   36 |     if(px<minx)minx=px;if(px>maxx)maxx=px;if(py<miny)miny=py;if(py>maxy)maxy=py;
+      |                        ^~
+
+CC:  hass_main.c
+
+CC:  hass_service.c
+CC:  nsh_main.c
+
+CC:  hass_transport.c
+
+CC:  sh_main.c
+
+
+
+CC:  nxcamera.c
+
+CC:  nxcamera_main.c
+
+CC:  readline.c
+
+CC:  readline_common.c
+
+CC:  readline_fd.c
+
+CC:  readline_stream.c
+
+
+CC:  glass_ble.c
+
+CC:  glass_ble_hid.c
+
+CC:  glass_ble_store.c
+
+CC:  mouse_core.c
+
+IN: libs/libc/libc.a -> staging/libc.a
+
+IN: [BUILD_WORKSPACE]/v3-media-current/apps/libapps.a -> staging/libapps.a
+
+AS:  common/espressif/esp_head.S
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_aliases.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_aliases.ld.tmp
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_flat_memory.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_flat_memory.ld.tmp
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_sections.rev3.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/boards/risc-v/esp32p4/esp32p4-function-ev-board/../common/scripts/esp32p4_sections.rev3.ld.tmp
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.ld.tmp
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libc.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libc.ld.tmp
+
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libgcc.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.eco5.libgcc.ld.tmp
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld.tmp
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld.tmp
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld.tmp
+
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld.tmp
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/soc/esp32p4/ld/esp32p4.peripherals.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/soc/esp32p4/ld/esp32p4.peripherals.ld.tmp
+
+
+
+CPP:  [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/riscv/ld/rom.api.ld-> [BUILD_WORKSPACE]/v3-media-current/nuttx/arch/risc-v/src/chip/esp-hal-3rdparty/components/riscv/ld/rom.api.ld.tmp
+LD: nuttx
+Memory region         Used Size  Region Size  %age Used
+   tcm_idram_seg:         136 B         8 KB      1.66%
+        irom_seg:     2947390 B        64 MB      4.39%
+        sram_seg:      421424 B     978880 B     43.05%
+        drom_seg:     8072544 B        64 MB     12.03%
+rev3_mspi_workaround_seg:           0 B          0 B
+      lp_ram_seg:         104 B      32744 B      0.32%
+ lp_reserved_seg:          24 B         24 B    100.00%
+  extern_ram_seg:           0 B        64 MB      0.00%
+CP: nuttx.hex
+MKIMAGE: NuttX binary
+esptool.py -c esp32p4 elf2image --ram-only-header --min-rev-full 301 --max-rev-full 399 -fs 16MB -fm dio -ff "80m" -o nuttx.bin nuttx
+Warning: DEPRECATED: 'esptool.py' is deprecated. Please use 'esptool' instead. The '.py' suffix will be removed in a future major release.
+esptool v5.2.0
+Creating ESP32-P4 image...
+Image has only RAM segments visible. ROM segments are hidden and SHA256 digest is not appended.
+Merged 2 ELF sections.
+Successfully created ESP32-P4 image.
+python3 tools/espressif/simple_boot_digest.py nuttx.bin
+Simple Boot RAM SHA256 added; mapped segment offsets unchanged
+Generated: nuttx.bin
+Build verified: [BUILD_WORKSPACE]/out/ha-device-summary-built-20261015 174be0586d7d8c295976caeb471ea5b2817d331b4836e0914e34b8357a8f5a04

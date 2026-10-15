@@ -32,3 +32,7 @@ These records were copied from the local development workspace without moving, d
 | Final acceptance | `ble-mouse-touchpad-final-20260919.json` | Final encrypted connection and notification state |
 
 The final flash log is `flash-ble-touchpad-final-v2-20260919.log`. Failed, retry, and `interrupted` records remain intentionally so the debugging history is auditable; they do not describe the final state.
+
+## 2026-10-15 Home Assistant UI 修复
+
+[交互、图标、卡片过滤及最终编译/烧录记录](2026-10-15-ha-ui/README.md)，包含验证范围、镜像摘要和手动实机验证限制。
