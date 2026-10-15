@@ -12,3 +12,5 @@
 #pair-button{width:100%;padding:14px}#connect-help{font-size:12px;margin:22px 0 0}
 .retry-button{margin:12px 0}#workspace nav{margin-top:24px}
 @media(max-width:640px){.connection-tools{gap:2px}.connect-card{padding:26px 22px;margin-top:16px}.connect-card h2{font-size:23px}#pair-code{font-size:30px;letter-spacing:8px}}
+
+#agent details{border-top:1px solid #ececf2;padding:16px 0}#agent summary{cursor:pointer;font-weight:600;margin-bottom:16px}.inline-option{display:flex;align-items:center;gap:10px}.inline-option input{width:auto;margin:0}

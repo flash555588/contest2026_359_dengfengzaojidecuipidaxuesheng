@@ -986,7 +986,7 @@ test('More groups typed number, option and button actions while sensors stay rea
   for(let i=0;i<20;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
   clickValue('执行');assert.equal(r.controls.at(-1).action,'press');
   for(let i=0;i<20;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready','stateless action accepts unchanged state');
-  const page=r.buttons.find(b=>!r.hidden.get(b.id)&&r.textValues.get(b.id)==='>');assert(page);page.callback();for(let i=0;i<20;i++)r.tick();
+  clickIndicator(r,1,'detailPageIndicator');
   assert(r.context.ESPHomeHA.snapshot().functionControls.some(f=>f.entity==='sensor.temp'&&f.kind==='read'));
   assert(!r.context.ESPHomeHA.snapshot().parameterControls.some(f=>f.entity==='sensor.temp'));
   assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.main');
@@ -1062,7 +1062,7 @@ test('long option lists choose an exact raw value without cycling or leaking inp
   function click(text){const button=r.buttons.find(button=>!r.hidden.get(button.id)&&r.textValues.get(button.id)===text);if(button){button.callback();return;}const label=[...r.textValues].find(([id,value])=>!r.hidden.get(id)&&value===text);assert(label,text);const g=r.geometry.get(label[0]);const target=r.buttons.find(button=>{const b=r.geometry.get(button.id);return !r.hidden.get(button.id)&&g.x+g.w/2>=b.x&&g.x+g.w/2<=b.x+b.w&&g.y+g.h/2>=b.y&&g.y+g.h/2<=b.y+b.h;});assert(target);target.callback();}
   click('m0  >');for(let i=0;i<10;i++)r.tick();assert(r.context.ESPHomeHA.snapshot().optionPicker);assert.equal(r.controls.length,0);
   r.swipe('left');r.touch('down',.5,.5);r.touch('up',.8,.5);assert.equal(r.controls.length,0);
-  click('>');for(let i=0;i<10;i++)r.tick();click('m5');assert.deepEqual(r.controls[0].body,{entity_id:'select.long_mode',option:'m5'});for(let i=0;i<20;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().optionPicker,null);assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.main');
+  clickIndicator(r,1,'optionPageIndicator');for(let i=0;i<10;i++)r.tick();click('m5');assert.deepEqual(r.controls[0].body,{entity_id:'select.long_mode',option:'m5'});for(let i=0;i<20;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().optionPicker,null);assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.main');
   assert.equal(r.buttons.length,64,'profile options reuse the native pool rather than adding native controls per device');
 });
 
@@ -1232,6 +1232,54 @@ function chooseSection(r,y){
   const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===8&&box.y===y;});
   assert(button);button.callback();for(let i=0;i<45;i++)r.tick();
 }
+function clickIndicator(r,page,kind="pageIndicator"){
+  const slot=r.context.ESPHomeHA.snapshot()[kind].slots.find(slot=>slot.page===page);
+  assert(slot,'requested page has a visible dot');
+  const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===slot.x&&box.y===slot.y&&box.w===slot.w&&box.h===slot.h;});
+  assert(button);button.callback();for(let i=0;i<25;i++)r.tick();
+}
+test('capsule indicators jump directly, track swipes and stay centered without overlapping footer text',()=>{
+  for(const [width,height] of [[1024,568],[1024,536],[640,400]])for(const dark of [false,true]){
+    const states=Array.from({length:18},(_,i)=>({entity_id:'light.pager_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+    const r=boot(width,height,{states,dark});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    const initial=r.context.ESPHomeHA.snapshot().pageIndicator;assert(initial.visible);assert(initial.total>=3);
+    clickIndicator(r,2);assert.equal(r.context.ESPHomeHA.snapshot().roomPage,2);
+    r.touch('down',.98,.12);r.swipe('right');for(let i=0;i<25;i++)r.tick();
+    const indicator=r.context.ESPHomeHA.snapshot().pageIndicator;assert.equal(r.context.ESPHomeHA.snapshot().roomPage,1);
+    assert.equal(indicator.slots.filter(slot=>slot.active).length,1);
+    const first=indicator.slots[0],last=indicator.slots.at(-1);
+    assert(Math.abs((first.x+last.x+last.w)/2-(164+(width-164)/2))<=1);
+    for(const slot of indicator.slots){
+      assert(slot.x>=164&&slot.x+slot.w<=width&&slot.y>=0&&slot.y+slot.h<=height);
+      const mark=[...r.geometry].find(([id,box])=>!r.hidden.get(id)&&box.h===6&&box.w===(slot.active?20:6)&&box.x+box.w/2===slot.x+12&&box.y+3===slot.y+20);
+      assert(mark,'every touch target has its centered dot or selected pill');
+    }
+    for(const [id,box] of r.geometry)if(!r.hidden.get(id)&&r.textValues.get(id)&&box.x===180&&box.y>=height-54)
+      assert(box.x+box.w<=first.x-12,'footer text ends before the capsule');
+    const allocated=r.geometry.size;clickIndicator(r,1);assert.equal(r.geometry.size,allocated);assert.equal(r.controls.length,0);
+  }
+});
+test('bounded capsule slots reach every page, survive detail pooling and clamp after device removal',()=>{
+  const states=Array.from({length:59},(_,i)=>({entity_id:'light.pager_'+i,state:'on',attributes:{brightness:128,supported_color_modes:['brightness']}}));
+  const r=boot(1024,568,{states,frontOrder:true});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().pageIndicator.total,10);
+  for(let page=1;page<10;page++)clickIndicator(r,page);
+  const last=r.context.ESPHomeHA.snapshot();assert.equal(last.roomPage,9);assert.equal(last.pageIndicator.slots.length,5);assert(last.pageIndicator.slots.at(-1).active);
+  deviceBody(r,last.layoutPages[9][0].entity_id).callback();for(let i=0;i<30;i++)r.tick();assert(!r.context.ESPHomeHA.snapshot().pageIndicator.visible);
+  const back=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===176&&box.w===32&&box.h===30;});back.callback();for(let i=0;i<30;i++)r.tick();
+  assert(r.context.ESPHomeHA.snapshot().pageIndicator.visible);assert.equal(r.context.ESPHomeHA.snapshot().roomPage,9);
+  const allocated=r.geometry.size;
+  for(let pass=0;pass<20;pass++)for(let page=pass%2?1:8;pass%2?page<=9:page>=0;pass%2?page++:page--)clickIndicator(r,page);
+  assert.equal(r.geometry.size,allocated,'native widgets are reused throughout repeated paging');assert.equal(r.controls.length,0);
+  states.splice(1);r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();
+  const shrunk=r.context.ESPHomeHA.snapshot();assert.equal(shrunk.roomPage,0);assert(!shrunk.pageIndicator.visible);assert.equal(shrunk.pageIndicator.slots.length,0);
+});
+test('scene grids share capsule navigation without executing a scene',()=>{
+  const sceneStates=Array.from({length:18},(_,i)=>({entity_id:'scene.pager_'+i,state:'unknown',attributes:{friendly_name:'场景 '+i}}));
+  const r=boot(1024,568,{sceneSync:true,sceneStates});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();chooseSection(r,162);
+  assert.equal(r.context.ESPHomeHA.snapshot().pageIndicator.total,3);clickIndicator(r,2);assert.equal(r.context.ESPHomeHA.snapshot().roomPage,2);
+  assert.equal(r.controls.length,0);chooseSection(r,208);assert.equal(r.context.ESPHomeHA.snapshot().roomPage,0);
+});
 function sceneExecuteButton(r,id){
   const row=r.context.ESPHomeHA.snapshot().layoutPages.flat().find(row=>row.entity_id===id);assert(row);
   return r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===row.x+16&&box.y===row.y+82&&box.w===row.w-32;});
@@ -1428,7 +1476,7 @@ test('secondary modes and actual readings appear without adding missing measurem
 
 test('long profile mode lists remain paged and send the original option after switching pages',()=>{
   const modes=Array.from({length:9},(_,i)=>'mode-'+i),r=profileDetailFixture('fan.standard',{preset_modes:modes,preset_mode:modes[0]});
-  lampClickLabel(r,'mode-0  >');lampClickLabel(r,'>');lampClickLabel(r,'mode-6');
+  lampClickLabel(r,'mode-0  >');clickIndicator(r,1,'optionPageIndicator');lampClickLabel(r,'mode-6');
   assert.deepEqual(r.controls[0].body,{entity_id:'fan.standard',preset_mode:'mode-6'});
   assert.equal(r.buttons.length,64);
 });
@@ -1519,7 +1567,7 @@ test('long effect lists still choose an exact option and reflow without leaking 
   state.attributes.effect_list=Array.from({length:9},(_,i)=>'effect-'+i);state.attributes.effect='effect-0';
   r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();
   lampClickLabel(r,'灯光效果');assert(r.context.ESPHomeHA.snapshot().optionPicker);
-  lampClickLabel(r,'>');lampClickLabel(r,'effect-6');
+  clickIndicator(r,1,'optionPageIndicator');lampClickLabel(r,'effect-6');
   assert.deepEqual(r.controls.at(-1).body,{entity_id:'light.bedside',effect:'effect-6'});
   state.attributes.effect_list=['none','Day','Night','Relax'];state.attributes.effect='Night';
   r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();lampClickLabel(r,'日间');

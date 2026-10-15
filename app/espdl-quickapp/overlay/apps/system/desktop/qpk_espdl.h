@@ -46,6 +46,10 @@ struct qpk_dl_request {
 extern "C" {
 #endif
 int qpk_dl_start(const struct qpk_dl_request *request);
+/* Select a connected USB camera. Returns an owned request ID or -errno. */
+int qpk_dl_face_start_default(void);
+/* Do not cancel a newer session belonging to a different page. */
+void qpk_dl_cancel_request(uint32_t request);
 void qpk_dl_cancel(void);
 bool qpk_dl_should_cancel(void);
 void qpk_dl_status(struct qpk_dl_result *result);

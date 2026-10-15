@@ -90,7 +90,7 @@ async function connect(code=''){
     if(!code&&loadedToken===token){
       await api('session');if(attempt!==connectionAttempt)return;
     }else{
-      for(const id of ['ai','homeassistant','music','voice','desktop']){
+      for(const id of ['ai','homeassistant','music','voice','desktop','agent']){
         await loadConfig(id,attempt);if(attempt!==connectionAttempt)return;
       }
       loadedToken=token;
@@ -123,7 +123,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)keepSessio
 window.addEventListener('online',keepSession);
 window.addEventListener('hashchange',()=>{const code=scannedCode();if(code)connect(code);});
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));for(const id of ['config','files','install'])$(id).hidden=id!==b.dataset.tab;if(b.dataset.tab==='files')run(list);});
-async function loadConfig(id,attempt){const data=await(await api('config?section='+id)).json();if(attempt!==undefined&&attempt!==connectionAttempt)return;const form=$(id);for(const [key,value]of Object.entries(data)){if(key.endsWith('_set')){form.querySelector('.saved').textContent=value?'已保存密钥，留空即可保留':'未设置自定义密钥';continue;}const el=form.elements.namedItem(key);if(el)el.value=id==='ai'&&key==='timeout_ms'?Math.max(300000,value):value;}}
+async function loadConfig(id,attempt){const data=await(await api('config?section='+id)).json();if(attempt!==undefined&&attempt!==connectionAttempt)return;const form=$(id);for(const [key,value]of Object.entries(data)){if(key.endsWith('_set')){if(id!=='agent')form.querySelector('.saved').textContent=value?'已保存密钥，留空即可保留':'未设置自定义密钥';continue;}const el=form.elements.namedItem(key);if(el)el.value=id==='ai'&&key==='timeout_ms'?Math.max(300000,value):value;}if(id==='agent'){const saved=Object.entries(data).filter(([key,value])=>key.endsWith('_token_set')&&value).length;form.querySelector('.saved').textContent=saved?'已保存 '+saved+' 个 MCP 服务令牌，留空保留':'尚未保存 MCP 服务令牌';}}
 function validateHomeAssistant(data){
   data.url=String(data.url||'').trim();
   const match=/^http:\/\/([a-zA-Z0-9._-]+)(?::([0-9]{1,5}))?\/?$/.exec(data.url);
@@ -135,17 +135,22 @@ function validateHomeAssistant(data){
     if(!data.token)delete data.token;
   }
 }
-for(const id of ['ai','homeassistant','music','voice','desktop']){
+for(const id of ['ai','homeassistant','music','voice','desktop','agent']){
   $(id).onsubmit=e=>{
     e.preventDefault();run(async()=>{
       const form=e.target,button=form.querySelector('button');button.disabled=true;
       try{
         const data=Object.fromEntries(new FormData(form));
         if(id==='homeassistant')validateHomeAssistant(data);
-        for(const key of ['api_key','token','secret_id','secret_key'])if(data[key]==='')delete data[key];
-        for(const key of ['max_tokens','timeout_ms','light','palette','widget','reduced_motion'])if(key in data)data[key]=Number(data[key]);
+        for(const key of ['api_key','token','secret_id','secret_key','mcp1_token','mcp2_token','mcp3_token'])if(data[key]==='')delete data[key];
+        if(id==='agent')for(let i=1;i<=3;i++){
+          if(data['mcp'+i+'_clear_token'])data['mcp'+i+'_token']='';
+          delete data['mcp'+i+'_clear_token'];
+        }
+        for(const key of ['max_tokens','timeout_ms','light','palette','widget','reduced_motion','skills_enabled','mcp1_enabled','mcp2_enabled','mcp3_enabled'])if(key in data)data[key]=Number(data[key]);
         await api('config?section='+id,'POST',data);
         form.querySelectorAll('input[type=password]').forEach(x=>x.value='');
+        form.querySelectorAll('input[type=checkbox]').forEach(x=>x.checked=false);
         say(id==='desktop'?'外观已提交，设备正在应用和保存。':id==='voice'?'语音输入配置已保存。':id==='homeassistant'?'智能家居配置已保存并应用。':'已保存，下次使用时生效。');
         if(id!=='desktop'){
           try{await loadConfig(id);}catch(e){

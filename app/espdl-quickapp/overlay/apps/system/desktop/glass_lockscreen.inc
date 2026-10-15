@@ -207,8 +207,8 @@ static void lock_page_set(unsigned page)
   lv_indev_t *input=lv_indev_active();if(input)lv_indev_wait_release(input);
   if(lv_async_call(lock_page_async,NULL)==LV_RESULT_OK)g_lock_page_pending=true;
 }
-static void lock_page_clicked(lv_event_t *e)
-{lock_page_set((uintptr_t)lv_event_get_user_data(e));}
+static void lock_page_clicked(void *context,unsigned page)
+{(void)context;lock_page_set(page);}
 static void lock_page_async(void *unused)
 {
   LV_UNUSED(unused);g_lock_page_pending=false;if(!g_lock_ui.root)return;
@@ -310,12 +310,9 @@ static void glass_lock_open(lv_event_t *e)
   else if(g_lock_page==2)lock_weather_page(root);
   else if(g_lock_page==3)lock_photo_page(root);
   else lock_clock_page(root);
-  for(unsigned i=0;i<4;i++) {
-    lv_obj_t *button=glass_box(root,432+i*40,568,40,30,0x000000,0);
-    lv_obj_set_style_bg_opa(button,LV_OPA_TRANSP,0);glass_clickable(button,lock_page_clicked,(void *)(uintptr_t)i);
-    lv_obj_t *dot=glass_box(button,17,13,6,6,i==g_lock_page?0xf5f5f7:0x55555d,3);
-    lv_obj_remove_flag(dot,LV_OBJ_FLAG_CLICKABLE);
-  }
+  lv_obj_t *pager=glass_pager_create(root,0x17171c,0xf5f5f7,0x8e8e95,lock_page_clicked,NULL);
+  glass_pager_update(pager,g_lock_page,4,true);
+  if(pager)lv_obj_align(pager,LV_ALIGN_BOTTOM_MID,0,0);
   lock_label(root,"左右切换 · 上滑解锁",24,576,300,16,0x8e8e95);
   lv_obj_t *unlock=glass_box(root,924,568,76,30,0x000000,12);lv_obj_set_style_bg_opa(unlock,LV_OPA_TRANSP,0);
   glass_clickable(unlock,lock_unlock,NULL);lv_obj_t *hint=lock_label(unlock,"解锁",0,0,70,16,0xc6c6cc);lv_obj_center(hint);

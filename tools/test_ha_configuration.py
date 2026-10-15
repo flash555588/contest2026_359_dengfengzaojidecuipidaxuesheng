@@ -8,7 +8,7 @@ a.output.mkdir(parents=True,exist_ok=True);(a.output/'nuttx').mkdir(exist_ok=Tru
 cjson=a.apps/'netutils/cjson/cJSON'
 flags=['-std=gnu11','-O1','-g','-D_GNU_SOURCE','-fsanitize=address,undefined','-fno-omit-frame-pointer','-pthread','-I'+str(a.output),'-I'+str(desktop),'-I'+str(hass),'-I'+str(cjson)]
 for name,sources in [
- ('portal',[repo/'app/espdl-quickapp/tests/ha_portal_configuration_host.c',desktop/'glass_portal_config.c',hass/'hass_service.c',cjson/'cJSON.c']),
+ ('portal',[repo/'app/espdl-quickapp/tests/ha_portal_configuration_host.c',desktop/'glass_portal_config.c',desktop/'glass_agent_config.c',hass/'hass_service.c',cjson/'cJSON.c']),
  ('service',[repo/'app/espdl-quickapp/tests/hass_configuration_host.c',hass/'hass_service.c',cjson/'cJSON.c']),
  ('transport',[repo/'app/espdl-quickapp/tests/hass_transport_growth_host.c'])]:
     binary=a.output/name

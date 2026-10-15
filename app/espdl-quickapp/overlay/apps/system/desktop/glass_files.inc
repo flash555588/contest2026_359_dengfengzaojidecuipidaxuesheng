@@ -30,7 +30,6 @@ static lv_obj_t *g_files_shell;
 static lv_obj_t *g_files_title;
 static lv_obj_t *g_files_auxiliary;
 struct files_tile {lv_obj_t *button,*name,*image,*type;};
-#define FILES_PAGER_SLOTS 5
 static struct
 {
   lv_obj_t *card;
@@ -46,7 +45,6 @@ static struct
   lv_obj_t *paste;
   lv_obj_t *note;
   struct files_tile tiles[GLASS_FILE_PAGE_SIZE];
-  lv_obj_t *page_hit[FILES_PAGER_SLOTS],*page_dot[FILES_PAGER_SLOTS];
 } g_files_browser;
 static int g_files_operation;
 static char g_files_clipboard[GLASS_FILE_PATH_CAP];
@@ -74,7 +72,7 @@ static void glass_files_dialog_async(void *unused);
 static void glass_files_copy_start(void *unused);
 static void glass_files_select(lv_event_t *e);
 static void glass_files_tick(lv_timer_t *timer);
-static void glass_files_page(lv_event_t *e);
+static void glass_files_page(void *context,unsigned page);
 static void glass_files_details_ready(const struct glass_file_result *result);
 
 static lv_obj_t *files_button(lv_obj_t *parent,const char *text,int x,int y,int w,
@@ -304,29 +302,10 @@ static void files_tile_set(size_t index,const struct glass_file_entry *entry)
 }
 static void files_pager_update(bool has_next)
 {
-  lv_obj_t *pager=g_files_browser.pager;lv_obj_remove_state(pager,LV_STATE_DISABLED);
   unsigned first=g_files_page>3?g_files_page-3:0;
   unsigned last=g_files_page+(has_next&&g_files_page<UINT_MAX?1:0);
-  unsigned pages=last-first+1;
-  lv_obj_set_size(pager,24+pages*32,44);lv_obj_align(pager,LV_ALIGN_BOTTOM_MID,0,-18);
-  for(unsigned i=0;i<FILES_PAGER_SLOTS;i++) {
-    lv_obj_t *hit=g_files_browser.page_hit[i];
-    if(i>=pages){if(hit){lv_obj_set_user_data(hit,NULL);lv_obj_add_flag(hit,LV_OBJ_FLAG_HIDDEN);}continue;}
-    bool active=first+i==g_files_page;
-    if(!hit) {
-      hit=lv_button_create(pager);lv_obj_remove_style_all(hit);
-      g_files_browser.page_hit[i]=hit;
-      lv_obj_set_pos(hit,12+i*32,2);lv_obj_set_size(hit,32,40);
-      lv_obj_add_event_cb(hit,glass_files_page,LV_EVENT_CLICKED,NULL);
-      lv_obj_t *dot=glass_box(hit,0,0,10,10,detail_muted(),5);
-      lv_obj_remove_flag(dot,LV_OBJ_FLAG_CLICKABLE);g_files_browser.page_dot[i]=dot;
-    }
-    lv_obj_set_user_data(hit,(void *)(uintptr_t)((uint64_t)first+i+1));
-    lv_obj_t *dot=g_files_browser.page_dot[i];lv_obj_set_size(dot,active?28:10,10);
-    lv_obj_set_style_bg_color(dot,lv_color_hex(active?detail_ink():detail_muted()),0);
-    lv_obj_set_style_bg_opa(dot,active?LV_OPA_COVER:LV_OPA_40,0);lv_obj_center(dot);
-    lv_obj_remove_flag(hit,LV_OBJ_FLAG_HIDDEN);
-  }
+  glass_pager_update_window(g_files_browser.pager,g_files_page,first,last-first+1,true);
+  if(g_files_browser.pager)lv_obj_align(g_files_browser.pager,LV_ALIGN_BOTTOM_MID,0,-20);
 }
 static void glass_files_list_ready(struct glass_file_job *job,
                                    const struct glass_file_result *result)
@@ -539,13 +518,10 @@ static void glass_files_up(lv_event_t *e)
   glass_files_refresh(NULL);
 }
 
-static void glass_files_page(lv_event_t *e)
+static void glass_files_page(void *context,unsigned page)
 {
-  if (g_files_pending) return;
-  uintptr_t target=(uintptr_t)lv_obj_get_user_data(lv_event_get_current_target(e));
-  if(!target || target-1==g_files_page)return;
-  g_files_page=(unsigned)(target-1);
-  glass_files_refresh(NULL);
+  (void)context;if(g_files_pending||page==g_files_page)return;
+  g_files_page=page;glass_files_refresh(NULL);
 }
 
 static void glass_files_apply(lv_event_t *e)
@@ -850,10 +826,8 @@ static void glass_files_render(void *unused)
       lv_obj_set_style_bg_color(g_files_browser.list,lv_color_hex(detail_muted()),LV_PART_SCROLLBAR);
       lv_obj_set_style_bg_opa(g_files_browser.list,LV_OPA_30,LV_PART_SCROLLBAR);
       lv_obj_set_style_width(g_files_browser.list,3,LV_PART_SCROLLBAR);
-      g_files_browser.pager=glass_box(card,0,0,56,44,detail_soft(),22);
-      lv_obj_remove_flag(g_files_browser.pager,LV_OBJ_FLAG_CLICKABLE);
-      lv_obj_align(g_files_browser.pager,LV_ALIGN_BOTTOM_MID,0,-18);
-      lv_obj_set_style_opa(g_files_browser.pager,LV_OPA_50,LV_STATE_DISABLED);
+      g_files_browser.pager=glass_pager_create(card,detail_soft(),detail_ink(),detail_muted(),glass_files_page,NULL);
+      if(g_files_browser.pager)lv_obj_align(g_files_browser.pager,LV_ALIGN_BOTTOM_MID,0,-20);
       g_files_browser.footer=glass_text(card,"",24,GLASS_CONTENT_HEIGHT-48,350,14,theme_secondary());
     }
   g_files_input = NULL;
@@ -892,7 +866,7 @@ static void glass_files_render(void *unused)
   glass_files_list_reset();
   lv_obj_scroll_to_y(g_files_browser.list, 0, LV_ANIM_OFF);
   files_list_note("正在读取目录");
-  lv_obj_add_state(g_files_browser.pager,LV_STATE_DISABLED);
+  glass_pager_set_enabled(g_files_browser.pager,false);
   lv_label_set_text(g_files_browser.footer, "");
   glass_files_begin(GLASS_FILE_LIST, g_files_path, NULL, NULL);
 }

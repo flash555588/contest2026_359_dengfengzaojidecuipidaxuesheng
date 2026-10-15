@@ -6,7 +6,7 @@
       <main class="dc-main">
         <div class="dc-toolbar"><span class="dc-page-title">总览</span><select aria-label="选择设备卡片样式" data-device></select></div>
         <div data-stage></div>
-        <footer class="dc-footer"><span aria-live="polite" data-status>本地预览 · 未连接设备</span><div class="dc-pages" hidden><button type="button" class="cursor-interaction" aria-label="上一页设备" data-prev><i data-lucide="chevron-left" aria-hidden="true"></i></button><span data-page></span><button type="button" class="cursor-interaction" aria-label="下一页设备" data-next><i data-lucide="chevron-right" aria-hidden="true"></i></button></div></footer>
+        <footer class="dc-footer"><span aria-live="polite" data-status>本地预览 · 未连接设备</span><div class="dc-pages" role="navigation" aria-label="设备分页" hidden></div></footer>
       </main>
     </div>
   </div>
@@ -92,9 +92,13 @@
 #ha-unified59-devices [data-device-id=bedside] .dc-secondary .dc-label{min-height:20px;margin-bottom:8px}
 #ha-unified59-devices [data-device-id=bedside] .dc-color-picker{margin-top:8px}
 #ha-unified59-devices .dc-secondary .dc-readings{margin:0;padding:0;border:0}
-#ha-unified59-devices .dc-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;margin-top:8px;font-size:12px;color:var(--dc-muted);flex-wrap:wrap}
-#ha-unified59-devices .dc-pages{display:flex;align-items:center;gap:8px}
-#ha-unified59-devices .dc-pages button{background:transparent;color:var(--dc-muted);display:grid;place-items:center;min-height:44px;width:36px}
+#ha-unified59-devices .dc-footer{position:relative;display:flex;align-items:center;min-height:54px;margin-top:8px;font-size:12px;color:var(--dc-muted)}
+#ha-unified59-devices .dc-footer [data-status]{max-width:calc(50% - 84px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ha-unified59-devices .dc-pages{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;padding:0 8px;border-radius:14px;height:28px;background:light-dark(#f3f2f7,#2e303d)}
+#ha-unified59-devices .dc-pages button{background:transparent;display:grid;place-items:center;min-height:40px;width:24px;padding:0;border:0;border-radius:12px}
+#ha-unified59-devices .dc-pages button span{width:6px;height:6px;border-radius:3px;background:light-dark(#c5c6ce,#5c606e)}
+#ha-unified59-devices .dc-pages button[aria-current="page"] span{width:20px;background:light-dark(#292c38,#eeeef5)}
+#ha-unified59-devices .dc-pages button:focus-visible{outline:2px solid var(--dc-blue);outline-offset:1px}
 #ha-unified59-devices .dc-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 #ha-unified59-devices .dc-small-card{padding:17px;background:var(--dc-card);border-radius:20px;min-width:0;min-height:184px;display:flex;flex-direction:column}
 #ha-unified59-devices .dc-small-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
@@ -210,7 +214,9 @@
  const controlBindings=new WeakMap();
  let state={device:devices[saved?.device]?saved.device:'bedside',view:['detail','overview','scenes','logs'].includes(saved?.view)?saved.view:'overview',page:Number.isInteger(saved?.page)?Math.max(0,Math.min(pageCount-1,saved.page)):0,values:saved?.values||{}};
  const stage=root.querySelector('[data-stage]');const picker=root.querySelector('[data-device]');
- const title=root.querySelector('.dc-page-title'),navButtons=[...root.querySelectorAll('[data-nav]')],pages=root.querySelector('.dc-pages'),pageLabel=root.querySelector('[data-page]'),previous=root.querySelector('[data-prev]'),nextPage=root.querySelector('[data-next]'),statusLine=root.querySelector('[data-status]');
+ const title=root.querySelector('.dc-page-title'),navButtons=[...root.querySelectorAll('[data-nav]')],pages=root.querySelector('.dc-pages'),statusLine=root.querySelector('[data-status]');
+ const pageButtons=Array.from({length:Math.min(5,pageCount)},()=>{const button=document.createElement('button');button.type='button';button.className='cursor-interaction';button.append(document.createElement('span'));button.onclick=()=>{const page=Number(button.dataset.page);if(page===state.page)return;state.page=page;render();persist();};pages.append(button);return button;});
+ function renderPages(){const first=Math.max(0,Math.min(state.page-Math.floor(pageButtons.length/2),pageCount-pageButtons.length));pageButtons.forEach((button,index)=>{const page=first+index;button.dataset.page=String(page);setAttr(button,'aria-label','第 '+(page+1)+' 页，共 '+pageCount+' 页');setAttr(button,'aria-current',page===state.page?'page':'false');});}
  ids.forEach(id=>{const o=document.createElement('option');o.value=id;o.textContent=devices[id].family===devices[id].name?devices[id].name:devices[id].family+' · '+devices[id].name;picker.append(o);});
  function signature(){return [state.device,state.view,state.page,revision].join('|');}
  function flushSave(){if(saveTimer)clearTimeout(saveTimer);saveTimer=0;if(!savePending||!window.openai?.setWidgetState)return;savePending=false;const key=signature();if(key===lastSavedSignature)return;lastSavedSignature=key;window.openai.setWidgetState({modelContent:{device:devices[state.device].name,type:devices[state.device].kind,view:state.view,page:state.page+1,registeredDeviceCategories:ids.length},privateContent:{...state,values:Object.fromEntries(Object.entries(state.values).map(([id,values])=>[id,{...values}]))}}).catch(()=>{if(lastSavedSignature===key){lastSavedSignature='';savePending=true;}});}
@@ -313,7 +319,7 @@
   if(overview){
    const key='overview:'+state.page;
    if(cachedOverview?.key!==key){const grid=document.createElement('div');grid.className='dc-overview';ids.slice(state.page*6,state.page*6+6).forEach(device=>grid.append(quickCard(device)));cachedOverview=indexScreen(grid,key);}
-   screen=cachedOverview;setText(pageLabel,(state.page+1)+' / '+pageCount);if(previous.disabled!==(state.page===0))previous.disabled=state.page===0;if(nextPage.disabled!==(state.page===pageCount-1))nextPage.disabled=state.page===pageCount-1;
+   screen=cachedOverview;renderPages();
   }else{
    const key='detail:'+state.device;
    if(cachedDetail?.key!==key)cachedDetail=indexScreen(detailCard(state.device),key);
@@ -323,7 +329,7 @@
   syncScreen();setText(statusLine,'本地预览 · 未连接设备');
   if(!screen.iconsReady&&globalThis.lucide){lucide.createIcons({attrs:{width:22,height:22}});screen.iconsReady=true;}
  }
- picker.onchange=()=>{state.device=picker.value;state.page=Math.floor(ids.indexOf(state.device)/6);state.view='overview';render();persist();};root.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{state.view=b.dataset.nav==='detail'?'overview':b.dataset.nav;render();persist();});root.querySelector('[data-home]').onclick=()=>{state.view='overview';render();persist();};root.querySelector('[data-prev]').onclick=()=>{state.page=Math.max(0,state.page-1);render();persist();};root.querySelector('[data-next]').onclick=()=>{state.page=Math.min(pageCount-1,state.page+1);render();persist();};
+ picker.onchange=()=>{state.device=picker.value;state.page=Math.floor(ids.indexOf(state.device)/6);state.view='overview';render();persist();};root.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{state.view=b.dataset.nav==='detail'?'overview':b.dataset.nav;render();persist();});root.querySelector('[data-home]').onclick=()=>{state.view='overview';render();persist();};
  window.addEventListener('openai:set_globals',e=>{
   const next=e.detail?.globals?.widgetState?.privateContent;if(!next||!devices[next.device]||!['overview','detail','scenes','logs'].includes(next.view))return;
   const incoming={};

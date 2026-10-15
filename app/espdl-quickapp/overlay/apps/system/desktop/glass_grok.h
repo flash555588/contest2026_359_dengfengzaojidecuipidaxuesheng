@@ -23,11 +23,17 @@ unsigned glass_grok_emotion(const struct chat_activity_snapshot *chat,
 unsigned glass_grok_current(const struct glass_grok *ball);
 bool glass_grok_ready(const struct glass_grok *ball);
 struct glass_grok *glass_grok_create_sprite(lv_obj_t *parent,int x,int y,int width,int height,int diameter,bool black,glass_grok_font_t font);
+/* Reposition/resize a sprite without replacing its reader or animation. */
+bool glass_grok_geometry(struct glass_grok *ball,int x,int y,int width,int height,int diameter);
 lv_obj_t *glass_grok_root(struct glass_grok *ball);
 void glass_grok_select(struct glass_grok *ball,unsigned id);
+/* Front-facing original eye contours; normalized face offsets -1000..1000. */
+bool glass_grok_gaze(struct glass_grok *ball,int x,int y);
 /* Pre-rendered app gestures: 42 spin; 43..51 gaze grid; 0 restore state. */
 void glass_grok_action(struct glass_grok *ball,unsigned action);
 void glass_grok_set_active(struct glass_grok *ball,bool active);
+/* Follow the same chat/voice state as ESPClaw; no extra conversation worker. */
+void glass_grok_follow_chat(struct glass_grok *ball,bool follow);
 void glass_grok_debug_status(void);
 #ifdef GROK_HOST_TEST
 void glass_grok_test_step(struct glass_grok *ball);

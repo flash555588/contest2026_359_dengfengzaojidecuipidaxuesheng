@@ -6,6 +6,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef FACE_CAMERA_SELECTION_TEST
+#include <stdarg.h>
+#include <nuttx/video/uvc_camera.h>
+static struct uvc_camera_list test_cameras;
+static int test_camera_error,test_camera_closed;
+int __wrap_open(const char *path,int flags,...)
+{(void)flags;assert(!strcmp(path,"/dev/uvcctl"));if(test_camera_error){errno=test_camera_error;return -1;}return 77;}
+int __wrap_close(int fd){assert(fd==77);test_camera_closed++;return 0;}
+int __wrap_ioctl(int fd,unsigned long command,...)
+{
+  assert(fd==77&&command==UVCIOC_LIST);va_list args;va_start(args,command);
+  struct uvc_camera_list *out=(void *)va_arg(args,unsigned long);va_end(args);*out=test_cameras;return 0;
+}
+#endif
 static atomic_int active_models,active_cameras,fail_stage,hold_stage,entered;
 static unsigned frame;
 static int gate(int stage) {
@@ -70,6 +84,8 @@ int main(void) {
   request.mode=QPK_DL_FACE;
   int id=qpk_dl_start(&request);assert(id>0);
   assert(qpk_dl_start(&request)==-EBUSY);
+  qpk_dl_cancel_request(0);assert(!qpk_dl_should_cancel());
+  qpk_dl_cancel_request(id+1);assert(!qpk_dl_should_cancel());
   struct qpk_dl_result r,copied;
   for(int i=0;i<1000;i++) {
     qpk_dl_status(&r);
@@ -79,12 +95,26 @@ int main(void) {
   assert(r.busy&&r.frame>=3&&r.track.state==QPK_DL_TRACKING);
   if(!qpk_dl_copy_preview(id,r.frame,pixels,QPK_DL_PIXELS,&copied))
     for(unsigned i=0;i<QPK_DL_PIXELS;i++)assert(pixels[i]==copied.frame);
-  qpk_dl_cancel();r=wait_done();assert(r.error==-ECANCELED&&!r.preview);
+  qpk_dl_cancel_request(id);r=wait_done();assert(r.error==-ECANCELED&&!r.preview);
+  int newer=qpk_dl_start(&request);assert(newer>id);
+  qpk_dl_cancel_request(id);assert(!qpk_dl_should_cancel());
+  qpk_dl_cancel_request(newer);r=wait_done();assert(r.error==-ECANCELED);
   for(int stage=1;stage<=4;stage++) {
     fail_stage=stage;assert(qpk_dl_start(&request)>0);r=wait_done();assert(r.error==-EIO&&!r.count);
     fail_stage=0;hold_stage=stage;entered=0;assert(qpk_dl_start(&request)>0);
     for(int i=0;i<2000&&entered!=stage;i++)usleep(1000);
     assert(entered==stage);qpk_dl_cancel();r=wait_done();assert(r.error==-ECANCELED);hold_stage=0;
   }
+#ifdef FACE_CAMERA_SELECTION_TEST
+  test_camera_error=ENOENT;assert(qpk_dl_face_start_default()==-ENOENT);
+  test_camera_error=0;assert(qpk_dl_face_start_default()==-ENODEV&&test_camera_closed==1);
+  test_cameras.count=4;
+  test_cameras.devices[0]=(struct uvc_camera_device){.connected=1,.supported=0,.generation=1,.id=0};
+  test_cameras.devices[1]=(struct uvc_camera_device){.connected=1,.supported=1,.generation=0,.id=1};
+  test_cameras.devices[2]=(struct uvc_camera_device){.connected=1,.supported=1,.generation=1,.id=99};
+  test_cameras.devices[3]=(struct uvc_camera_device){.connected=1,.supported=1,.generation=7,.id=2};
+  id=qpk_dl_face_start_default();assert(id>0);
+  assert(qpk_dl_face_start_default()==-EBUSY);qpk_dl_cancel_request(id);r=wait_done();assert(r.error==-ECANCELED);
+#endif
   puts("PASS: target association, loss/reacquisition, centering, continuous frames, cancellation and resource release");
 }

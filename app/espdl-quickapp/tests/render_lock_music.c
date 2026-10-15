@@ -48,7 +48,7 @@ int main(int argc,char **argv)
   review_capture(display,"music-lyrics","音乐后台与歌词入口");
   lv_obj_t *entry=review_callback_find(page,glass_lock_open);assert(entry);lv_obj_send_event(entry,LV_EVENT_CLICKED,NULL);
   assert(g_lock_ui.root && g_desktop.current_card==page);assert(lv_timer_get_paused(g_music_ui.timer));
-  assert(lock_object_count(g_lock_ui.root)==35);
+  assert(lock_object_count(g_lock_ui.root)==37);
   review_capture(display,"lock-playing","锁屏 · 同步歌词（原创演示）");
   /* Unchanged state must not invalidate/reallocate label strings. */
   lv_obj_t *title=g_lock_ui.title;const char *buffer=lv_label_get_text(title);lock_refresh(NULL);assert(buffer==lv_label_get_text(title));
@@ -75,7 +75,7 @@ int main(int argc,char **argv)
   lock_clock_update(1709251200);assert(g_lock_ui.local.tm_mon==2 && g_lock_ui.local.tm_mday==1);
   lock_clock_update(0);assert(!g_lock_ui.time_valid && lv_obj_has_flag(g_lock_ui.hand[0],LV_OBJ_FLAG_HIDDEN));
   lock_unlock(NULL);
-  glass_lock_open(NULL);lock_page_set(1);assert(g_lock_page_pending);lv_async_call_cancel(lock_page_async,NULL);lock_page_async(NULL);
+  glass_lock_open(NULL);lv_obj_update_layout(lv_layer_top());lv_obj_t *pager=review_callback_find(g_lock_ui.root,glass_pager_deleted);assert(pager);struct glass_pager *pager_state=lv_obj_get_user_data(pager);lv_obj_send_event(pager_state->slots[1].hit,LV_EVENT_CLICKED,NULL);assert(g_lock_page_pending);lv_async_call_cancel(lock_page_async,NULL);lock_page_async(NULL);
   assert(g_lock_page==1 && g_lock_ui.elapsed);strcpy(now.name,"城市与晚风");strcpy(now.artist,"声动 · 原创演示");strcpy(now.lyrics[1],"把今天交给温柔的晚风");strcpy(now.lyrics[2],"下一站还有新的梦");
   now.state=MUSIC_PLAYING;now.lyrics_state=MUSIC_LYRICS_READY;now.revision=80;now.duration_ms=204000;now.position_ms=42000;now.can_skip=true;
   review_music_now_fixture(&now);lock_refresh(NULL);
@@ -108,5 +108,5 @@ int main(int argc,char **argv)
   for(unsigned i=0;i<30;i++){glass_music(NULL);glass_lock_open(NULL);lock_unlock(NULL);panel_hide(NULL);}
   assert(!g_lock_ui.root && !g_music_ui.root);
   fputs("\n]\n",review_manifest);fclose(review_manifest);
-  puts("LOCK_MUSIC_NATIVE_OK: 13 captures, page preserved, background state, pause/resume, skip clears old lyrics, missing/error/idle, touch isolation/swipe unlock, 35 clock-page objects, leap-year/month rollover/invalid clock four exclusive pages, photo/cover canvas teardown, stale artwork clearing and paused-revision image completion, transition cancellation and 30 reopen cycles");return 0;
+  puts("LOCK_MUSIC_NATIVE_OK: 13 captures, page preserved, background state, pause/resume, skip clears old lyrics, missing/error/idle, touch isolation/swipe unlock, 37 clock-page objects, leap-year/month rollover/invalid clock four exclusive pages, photo/cover canvas teardown, stale artwork clearing and paused-revision image completion, transition cancellation and 30 reopen cycles");return 0;
 }

@@ -16,9 +16,9 @@ static unsigned lock_object_count(lv_obj_t *root)
 {unsigned count=1;for(unsigned i=0;i<lv_obj_get_child_count(root);i++)count+=lock_object_count(lv_obj_get_child(root,i));return count;}
 static unsigned visible_page_buttons(void)
 {
-  unsigned count=0;
-  for(unsigned i=0;i<lv_obj_get_child_count(g_files_browser.pager);i++)
-    if(!lv_obj_has_flag(lv_obj_get_child(g_files_browser.pager,i),LV_OBJ_FLAG_HIDDEN))count++;
+  unsigned count=0;struct glass_pager *pager=lv_obj_get_user_data(g_files_browser.pager);
+  for(unsigned i=0;i<GLASS_PAGER_SLOTS;i++)
+    if(pager->slots[i].hit&&!lv_obj_has_flag(pager->slots[i].hit,LV_OBJ_FLAG_HIDDEN))count++;
   return count;
 }
 static unsigned file_tile_deletes;
@@ -121,7 +121,7 @@ int main(int argc,char **argv)
     }
     assert(file_tile_deletes==deletes_before);
 
-    lv_obj_send_event(lv_obj_get_child(g_files_browser.pager,1),LV_EVENT_CLICKED,NULL);
+    lv_obj_send_event(((struct glass_pager *)lv_obj_get_user_data(g_files_browser.pager))->slots[1].hit,LV_EVENT_CLICKED,NULL);
     for(unsigned i=0;i<4;i++){lv_tick_inc(101);lv_timer_handler();}
     assert(g_files_page==1&&visible_page_buttons()==3);
     for(unsigned i=0;i<GLASS_FILE_PAGE_SIZE;i++)assert(g_files_browser.tiles[i].button==retained[i]);
@@ -138,11 +138,11 @@ int main(int argc,char **argv)
     review_click("返回");for(unsigned i=0;i<4;i++){lv_tick_inc(101);lv_timer_handler();}
     assert(g_files_page==1);
 
-    lv_obj_send_event(lv_obj_get_child(g_files_browser.pager,2),LV_EVENT_CLICKED,NULL);
+    lv_obj_send_event(((struct glass_pager *)lv_obj_get_user_data(g_files_browser.pager))->slots[2].hit,LV_EVENT_CLICKED,NULL);
     for(unsigned i=0;i<4;i++){lv_tick_inc(101);lv_timer_handler();}
     assert(g_files_page==2&&visible_page_buttons()==3);
     review_capture(display,"files-page3","居中胶囊 · 当前最后一页");
-    lv_obj_send_event(lv_obj_get_child(g_files_browser.pager,0),LV_EVENT_CLICKED,NULL);
+    lv_obj_send_event(((struct glass_pager *)lv_obj_get_user_data(g_files_browser.pager))->slots[0].hit,LV_EVENT_CLICKED,NULL);
     for(unsigned i=0;i<4;i++){lv_tick_inc(101);lv_timer_handler();}
     assert(g_files_page==0);
     review_files_pages_fixture(1);glass_files_refresh(NULL);

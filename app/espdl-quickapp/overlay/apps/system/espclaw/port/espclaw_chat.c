@@ -3,6 +3,7 @@
 #include "claw_core.h"
 #include "claw_qpk.h"
 #include "claw_tls.h"
+#include "glass_agent.h"
 #include "llm/backends/claw_llm_backend_openai_compatible.h"
 #include "llm/backends/claw_llm_backend_anthropic.h"
 #include "freertos/task.h"
@@ -26,6 +27,8 @@ static void initialize_tls(void)
   tls_result = claw_tls_initialize(chat_root_ca, sizeof(chat_root_ca));
   if (tls_result == -EALREADY) tls_result = 0;
 }
+const unsigned char *glass_agent_trust(size_t *size)
+{*size=sizeof(chat_root_ca);return chat_root_ca;}
 int glass_chat_tls_initialize(void)
 { pthread_once(&tls_once, initialize_tls); return tls_result; }
 
@@ -95,12 +98,12 @@ static esp_err_t stream_start(const claw_core_request_t *request, void *user)
 static bool cleanup(void)
 {
   if (retained && claw_core_destroy(retained) != ESP_OK) return false;
-  retained = NULL; free(retained_context); retained_context = NULL; return true;
+  retained = NULL; claw_qpk_close(&qpk_session); free(retained_context); retained_context = NULL; return true;
 }
 
 enum chat_error glass_chat_request(const struct portal_ai_config *settings,
                                   const char *context, const char *prompt,
-                                  uint32_t id, atomic_bool *cancel, char **reply)
+                                  uint32_t id, enum glass_agent_mode mode, atomic_bool *cancel, char **reply)
 {
   *reply = NULL;
   if (!cleanup()) return CHAT_ERROR_CLEANUP;
@@ -116,7 +119,7 @@ enum chat_error glass_chat_request(const struct portal_ai_config *settings,
     .task_stack_size = 32768, .task_core = tskNO_AFFINITY,
     .request_queue_len = 1, .response_queue_len = 1, .max_tool_iterations = 1, .max_context_providers = 1
   };
-  qpk_session.cancel = cancel;
+  qpk_session.cancel = cancel; qpk_session.mode = mode;
   claw_qpk_configure(&config, &qpk_session);
   enum chat_error result = CHAT_ERROR_NETWORK;
   esp_err_t err = claw_core_create(&config, &retained);
@@ -126,12 +129,12 @@ enum chat_error glass_chat_request(const struct portal_ai_config *settings,
     .flags = CLAW_CORE_CONTEXT_PROVIDER_FLAG_REQUEST_START_ONLY
   };
   err = claw_core_add_context_provider(retained, &provider);
-  if (err == ESP_OK) err = claw_qpk_attach(retained);
+  if (err == ESP_OK) err = claw_qpk_attach(retained,&qpk_session);
   if (err == ESP_OK) err = claw_core_start(retained);
   if (err != ESP_OK) { result = glass_chat_classify(err, NULL); goto done; }
   if (atomic_load(cancel)) { result = CHAT_ERROR_NONE; goto done; }
   claw_core_request_t request = {
-    .request_id = id, .session_id = "touch-chat", .user_text = prompt,
+    .request_id = id, .session_id = glass_agent_mode_id(mode), .user_text = prompt,
     .source_channel = "display", .source_chat_id = "touch-chat"
   };
   err = claw_core_submit(retained, &request, 1000);

@@ -3,6 +3,7 @@
 #include "glass_speech.h"
 #include "glass_speech_sr.h"
 #include "glass_speech_tts.h"
+#include "glass_speech_level.h"
 #include "glass_music.h"
 #include "glass_music_pcm.h"
 #include <errno.h>
@@ -27,6 +28,9 @@
 
 static pthread_mutex_t speech_lock=PTHREAD_MUTEX_INITIALIZER;
 static struct speech_snapshot speech;
+static uint64_t speech_level_at;
+static uint64_t speech_milliseconds(void)
+{struct timespec now;clock_gettime(CLOCK_MONOTONIC,&now);return (uint64_t)now.tv_sec*1000+now.tv_nsec/1000000;}
 static atomic_bool speech_cancel;
 static const struct speech_command default_commands[]={
   {1,"打开灯光","da kai deng guang"},{2,"关闭灯光","guan bi deng guang"},
@@ -43,7 +47,9 @@ static void speech_publish(enum speech_phase phase,int error,const char *text,in
   pthread_mutex_unlock(&speech_lock);
 }
 void glass_speech_get(struct speech_snapshot *out)
-{if(out){pthread_mutex_lock(&speech_lock);*out=speech;pthread_mutex_unlock(&speech_lock);}}
+{if(out){pthread_mutex_lock(&speech_lock);*out=speech;
+  if(out->phase==SPEECH_SPEAKING&&speech_milliseconds()-speech_level_at>180)out->level=0;
+  pthread_mutex_unlock(&speech_lock);}}
 void glass_speech_stop(void)
 {
   pthread_mutex_lock(&speech_lock);
@@ -57,7 +63,10 @@ static int speech_write(void *opaque,const int16_t *data,size_t frames)
 {
   struct speech_play *play=opaque;if(speech_cancelled(NULL))return -ECANCELED;
   if(!play->opened){int ret=music_pcm_try_open(&play->pcm,22050,55);if(ret)return ret;play->opened=true;}
-  return music_pcm_write(&play->pcm,data,frames,1);
+  int ret=music_pcm_write(&play->pcm,data,frames,1);
+  if(!ret){unsigned level=glass_speech_pcm_level(data,frames);
+    pthread_mutex_lock(&speech_lock);speech.level=level;speech_level_at=speech_milliseconds();pthread_mutex_unlock(&speech_lock);}
+  return ret;
 }
 static int speech_recognize(void)
 {
