@@ -19,6 +19,7 @@ static atomic_bool cancelled;
 static uint32_t next_id = 1;
 static char *stream_text;
 static size_t stream_size, stream_capacity;
+static enum chat_activity current_activity;
 
 const char *glass_chat_error_text(enum chat_error error)
 {
@@ -55,8 +56,10 @@ void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
   bool notify = e->kind != CLAW_STREAM_ACTIVITY || now - t->activity_ms >= 1000;
   t->activity_ms = now;
   if (e->kind == CLAW_STREAM_CONNECT) {
+    current_activity = CHAT_ACTIVITY_CONNECT;
     t->stream_round++; strcpy(t->progress, "正在连接服务");
   } else if (e->kind == CLAW_STREAM_TEXT && e->text) {
+    current_activity = CHAT_ACTIVITY_REPLY;
     size_t length = strlen(t->reply), size = strlen(e->text);
     t->text_bytes += size;
     if (size <= 2 * 1024 * 1024 - stream_size) {
@@ -90,8 +93,10 @@ void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
     }
     n = strlen(t->reasoning);
     glass_chat_copy_utf8(t->reasoning + n, sizeof(t->reasoning) - n, e->text);
+    current_activity = CHAT_ACTIVITY_THINK;
     strcpy(t->progress, "正在思考");
   } else if (e->kind == CLAW_STREAM_TOOL) {
+    current_activity = CHAT_ACTIVITY_TOOL;
     const char *name = e->text ? e->text : "";
     snprintf(t->progress, sizeof(t->progress), "%s", !strcmp(name, "qpk_write_draft") ? "正在编写应用草稿" :
       !strcmp(name, "qpk_read_example") ? "正在读取验证过的示例" : !strcmp(name, "qpk_read_draft") ? "正在检查当前草稿" : "正在查看示例目录");
@@ -284,6 +289,7 @@ static int queue_turn(const char *prompt, bool retry)
   t->archive[0] = 0; t->archive_bytes = 0;
   t->reasoning[0] = 0; strcpy(t->progress, "等待服务响应"); t->began_ms = t->activity_ms = now_ms();
   atomic_store(&cancelled, false); send_pending = true; chat.phase = CHAT_QUEUED;
+  current_activity = CHAT_ACTIVITY_CONNECT;
   changed(); pthread_cond_signal(&chat_wake); ret = 0;
 done:
   pthread_mutex_unlock(&chat_lock); return ret;
@@ -323,4 +329,20 @@ bool glass_chat_get(struct chat_snapshot *out)
   bool update = out->revision != chat.revision;
   if (update) memcpy(out, &chat, sizeof(*out));
   pthread_mutex_unlock(&chat_lock); return update;
+}
+
+void glass_chat_activity_get(struct chat_activity_snapshot *out)
+{
+  if (!out) return;
+  memset(out, 0, sizeof(*out)); out->phase = CHAT_IDLE; out->state = CHAT_DONE;
+  pthread_mutex_lock(&chat_lock);
+  if (chat_state) {
+    out->phase = chat.phase; out->activity = current_activity;
+    out->loaded = chat.loaded; out->configured = chat.configured;
+    if (chat.count) {
+      const struct chat_turn *t = &chat.turns[chat.count - 1];
+      out->turn_id = t->id; out->state = t->state;
+    }
+  }
+  pthread_mutex_unlock(&chat_lock);
 }

@@ -138,6 +138,17 @@ static bool desktop_ui_probe_click(lv_obj_t *object, const char *text)
   return false;
 }
 
+static bool desktop_ui_probe_click_at(lv_obj_t *object,int x,int y)
+{
+  if(!object||!lv_obj_is_visible(object))return false;
+  for(uint32_t i=lv_obj_get_child_count(object);i>0;i--)
+    if(desktop_ui_probe_click_at(lv_obj_get_child(object,i-1),x,y))return true;
+  if(!lv_obj_check_type(object,&lv_button_class)||lv_obj_has_state(object,LV_STATE_DISABLED))return false;
+  lv_area_t area;lv_obj_get_coords(object,&area);
+  if(x<area.x1||x>area.x2||y<area.y1||y>area.y2)return false;
+  lv_obj_send_event(object,LV_EVENT_CLICKED,NULL);return true;
+}
+
 #include "qpk_capacity_test.inc"
 #include "qpk_yield_test.inc"
 
@@ -303,7 +314,19 @@ static void desktop_ui_probe_service(void)
     }
   else
     {
-      if (!strncmp(command, "click:", 6))
+      if (!strcmp(command,"ha-status")) {
+        char *status=malloc(16384);int ret=status?qpk_runtime_ha_status(status,16384):-ENOMEM;
+        if(!ret)desktop_ui_probe_print("HA_STATUS %s\n",status);
+        else desktop_ui_probe_print("HA_STATUS_ERROR %d\n",ret);
+        free(status);
+      }
+      else if (!strncmp(command,"click-at:",9)) {
+        int x,y;bool hit=false;
+        if(sscanf(command+9,"%d:%d",&x,&y)==2&&x>=0&&x<1024&&y>=0&&y<600)
+          hit=desktop_ui_probe_click_at(g_desktop.current_card,x,y);
+        desktop_ui_probe_print("click-at -> %d\n",hit);
+      }
+      else if (!strncmp(command, "click:", 6))
         {
           bool clicked=desktop_ui_probe_click(g_chat_ui.confirm ? g_chat_ui.confirm : g_desktop.current_card,command+6);
           if(!clicked)clicked=desktop_ui_probe_click(lv_layer_top(),command+6);
@@ -349,6 +372,7 @@ static void desktop_ui_probe_service(void)
       else if (!strcmp(command, "settings")) glass_settings(NULL);
       else if (!strcmp(command, "portal")) glass_portal_open(NULL);
       else if (!strcmp(command, "portal-status")) portal_debug_status();
+      else if (!strcmp(command, "grok-status")) glass_grok_debug_status();
       else if (!strcmp(command, "chat")) glass_chat_open(NULL);
       else if (!strcmp(command, "chat-input")) { if (g_chat_ui.root) chat_ui_editor_open(NULL); }
       else if (!strcmp(command, "chat-send")) { if (g_chat_ui.root) chat_ui_send(NULL); }
@@ -403,9 +427,9 @@ static void desktop_ui_probe_service(void)
 static int desktop_ui_probe_request(const char *command)
 {
   const char *commands[] = {"weather", "weather-status", "weather-refresh", "home", "settings", "wifi", "bluetooth", "files", "resources",
-    "music", "music-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown",
+    "music", "music-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
     "files-new", "light", "dark", "audit", "frame", "frame-free", "wifi-scan", "ble-scan", "dialog",
-    "ha-settings", "ha-address", "toast", "camera-start", "camera-photo", "camera-mode",
+    "ha-settings", "ha-address", "ha-status", "toast", "camera-start", "camera-photo", "camera-mode",
     "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",
@@ -422,6 +446,7 @@ static int desktop_ui_probe_request(const char *command)
                (!strncmp(command,"cc-play:",8) && bili_valid_room(command+8)) ||
 #endif
                (!strncmp(command, "click:", 6) && command[6] != '\0') ||
+               (!strncmp(command,"click-at:",9) && command[9]!='\0') ||
                (!strncmp(command, "music-key:", 10) && command[10] != '\0') ||
                (!strncmp(command, "chat-key:", 9) && command[9] != '\0') ||
                (!strncmp(command, "chat-type:", 10) && command[10] != '\0') ||

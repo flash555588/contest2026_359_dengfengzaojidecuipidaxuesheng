@@ -14,7 +14,7 @@ enum music_state { MUSIC_IDLE, MUSIC_LOADING, MUSIC_PLAYING, MUSIC_PAUSED,
 struct music_snapshot {
   struct music_song current, result;
   struct music_song favorites[MUSIC_FAVORITES_MAX];
-  unsigned revision, search_revision, position_ms, volume, favorite_count;
+  unsigned revision, search_revision, position_ms, duration_ms, volume, favorite_count;
   enum music_state state;
   bool searching, has_result, initialized;
   int error, search_error, storage_error;

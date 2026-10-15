@@ -3,6 +3,7 @@
 #include "glass_music.h"
 #include "glass_portal.h"
 #include "glass_music_pcm.h"
+#include "glass_music_duration.h"
 #include "qpk_storage.h"
 #include <cJSON.h>
 #include <errno.h>
@@ -271,7 +272,7 @@ static int play_stream(struct music_song *song, unsigned generation)
   if (ret) goto done;
   network_started = true;
   size_t buffered = 0, skipped = 0; unsigned volume = 0;
-  bool prefilled = false;
+  bool prefilled = false, duration_checked = false;
   while (!stream_cancelled(&s)) {
     pthread_mutex_lock(&lock);
     bool pause = want_pause; unsigned desired_volume = state.volume;
@@ -294,9 +295,18 @@ static int play_stream(struct music_song *song, unsigned generation)
     if (buffered < 16384 && !eof) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
     pthread_mutex_unlock(&s.mutex);
     if (!buffered) { ret = network_error; break; }
-    mp3dec_frame_info_t info;
+    mp3dec_frame_info_t info = {0};
     int frames = mp3dec_decode_frame(decoder, input, buffered, samples, &info);
     if (info.frame_bytes < 0 || (size_t)info.frame_bytes > buffered) { ret = -EINVAL; break; }
+    if (!duration_checked && info.hz > 0 && info.layer == 3 &&
+        info.frame_offset >= 0 && info.frame_offset < info.frame_bytes) {
+      unsigned duration = music_frame_duration(input + info.frame_offset,
+        info.frame_bytes - info.frame_offset, info.hz);
+      duration_checked = true;
+      pthread_mutex_lock(&lock);
+      if (generation == play_generation) { state.duration_ms = duration; state.revision++; }
+      pthread_mutex_unlock(&lock);
+    }
     if (info.frame_bytes) { memmove(input, input+info.frame_bytes, buffered-info.frame_bytes); buffered -= info.frame_bytes; }
     else if (eof) { ret = network_error; break; }
     else { ret = -EINVAL; break; }
@@ -348,7 +358,11 @@ static void *player_worker(void *unused)
     pthread_mutex_unlock(&lock);
     if (!ret && current) ret = play_stream(&song, generation);
     pthread_mutex_lock(&lock);
-    if (generation == play_generation) { state.state = ret ? MUSIC_ERROR : MUSIC_ENDED; state.error = ret; state.revision++; }
+    if (generation == play_generation) {
+      state.state = ret ? MUSIC_ERROR : MUSIC_ENDED; state.error = ret;
+      if (!ret) state.duration_ms = state.position_ms;
+      state.revision++;
+    }
     player_active = false;
     pthread_cond_broadcast(&wake);
     pthread_mutex_unlock(&lock);
@@ -387,7 +401,7 @@ int glass_music_play(const struct music_song *song)
   if (!song || !song->name[0]) return -EINVAL;
   pthread_mutex_lock(&lock);
   pending_song = *song; state.current = *song; play_generation++; want_play = true; want_pause = false;
-  state.state = MUSIC_LOADING; state.position_ms = 0; state.error = 0; state.revision++;
+  state.state = MUSIC_LOADING; state.position_ms = 0; state.duration_ms = 0; state.error = 0; state.revision++;
   pthread_cond_broadcast(&wake); pthread_mutex_unlock(&lock); return 0;
 }
 
@@ -400,7 +414,7 @@ void glass_music_toggle(void)
     state.revision++;
   } else if (state.current.name[0]) {
     pending_song = state.current; play_generation++; want_play = true; want_pause = false;
-    state.state = MUSIC_LOADING; state.error = 0; state.position_ms = 0; state.revision++;
+    state.state = MUSIC_LOADING; state.error = 0; state.position_ms = 0; state.duration_ms = 0; state.revision++;
     pthread_cond_broadcast(&wake);
   }
   pthread_mutex_unlock(&lock);

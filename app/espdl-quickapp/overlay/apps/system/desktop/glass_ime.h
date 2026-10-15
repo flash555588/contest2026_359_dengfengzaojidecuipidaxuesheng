@@ -6,3 +6,5 @@ void glass_ime_attach(lv_obj_t *keyboard, const lv_font_t *font, bool chinese,
                        uint32_t foreground, uint32_t surface, uint32_t accent);
 void glass_ime_commit(lv_obj_t *keyboard);
 void glass_ime_commit_tree(lv_obj_t *parent);
+/* Start the same voice input action as the keyboard microphone. UI thread. */
+bool glass_ime_start_voice(lv_obj_t *keyboard);

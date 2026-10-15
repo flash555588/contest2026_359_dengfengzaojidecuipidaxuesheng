@@ -2,6 +2,8 @@
 /* SHA-256 (FIPS 180-4) for comparing model assets with the pinned manifest. */
 #include "qpk_espdl.h"
 #include <string.h>
+#include <errno.h>
+#include <stdio.h>
 static const uint32_t k[64] = {
   0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
   0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
@@ -45,4 +47,21 @@ void qpk_dl_sha256(const void *data, size_t length, uint8_t digest[32])
   block(h,last);
   if (padded==128) block(h,last+64);
   for (unsigned i=0;i<32;i++) digest[i]=(uint8_t)(h[i/4]>>(24-8*(i%4)));
+}
+/* Streaming file check used by the SD asset installer; no full-file allocation. */
+int qpk_dl_sha256_file(const char *path,char hex[65])
+{
+  FILE *f=fopen(path,"rb");if(!f)return -errno;
+  uint32_t h[8]={0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
+  uint8_t data[4096],last[128]={0};uint64_t bytes=0;size_t n,tail=0;
+  while((n=fread(data,1,sizeof(data),f))){bytes+=n;size_t pos=0;
+    if(tail){size_t add=n<64-tail?n:64-tail;memcpy(last+tail,data,add);tail+=add;pos+=add;if(tail==64){block(h,last);tail=0;}}
+    while(n-pos>=64){block(h,data+pos);pos+=64;}
+    if(n>pos){tail=n-pos;memcpy(last,data+pos,tail);}
+  }
+  int ret=ferror(f)?-EIO:0;fclose(f);if(ret)return ret;
+  memset(last+tail,0,sizeof(last)-tail);last[tail]=0x80;unsigned padded=tail<56?64:128;
+  for(unsigned i=0;i<8;i++)last[padded-1-i]=(uint8_t)((bytes*8)>>(8*i));
+  block(h,last);if(padded==128)block(h,last+64);
+  for(unsigned i=0;i<32;i++)snprintf(hex+i*2,3,"%02x",(uint8_t)(h[i/4]>>(24-8*(i%4))));return 0;
 }

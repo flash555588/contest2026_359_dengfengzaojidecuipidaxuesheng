@@ -30,17 +30,17 @@
     },
     {
       "id": "ouo",
-      "name": "OuO",
-      "purpose": "表情状态、触摸三参数回调、动画、有限定时器。",
+      "name": "Grok Ball 表情",
+      "purpose": "SD 原始像素帧播放：32 种表情、九方向注视、自旋彩带、滑动切换与 AI emotionId。",
       "path": "/data/qpk/.examples/ouo",
       "files": [
         "README.md",
         "manifest.json",
         "app.js"
       ],
-      "source_sha256": "72ec0ffb36e5fcceb9d482b9c8b8760587e81ebcd31afe32ca54b8ba50aa4b0a",
+      "source_sha256": "39fb8a1825d059231f4264311b90351569bca3528e901e298b8a71846ab1a95b",
       "origin": "desktop/ouo/app.js",
-      "verification": "espdl-quickapp/tests/test_ouo_app.js 覆盖状态、定时器、触摸和帧工作量；evidence/ouo-touch-boot.json 等为实板专项记录。聆听、充电等文案只是表情状态。"
+      "verification": "素材由固定版本 SDK 离线生成；固件不运行 SVG。实板结果见对应烧录报告。"
     }
   ]
 }

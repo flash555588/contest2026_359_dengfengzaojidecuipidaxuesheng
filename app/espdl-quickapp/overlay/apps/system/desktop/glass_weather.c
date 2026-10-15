@@ -32,7 +32,7 @@ static bool online(struct c6_link_snapshot *link)
 {
   struct in_addr address;
   return c6net_get_link_snapshot(link) == 0 && link->associated && link->carrier_ready &&
-         netlib_get_ipv4addr("eth0", &address) == 0 && address.s_addr != 0;
+         netlib_get_ipv4addr(C6NET_IFNAME, &address) == 0 && address.s_addr != 0;
 }
 
 static void set_state(enum glass_weather_state state, int error)

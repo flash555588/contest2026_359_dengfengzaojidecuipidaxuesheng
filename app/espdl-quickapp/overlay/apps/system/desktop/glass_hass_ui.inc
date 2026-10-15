@@ -198,7 +198,7 @@ static lv_obj_t *hass_ui_button(lv_obj_t *parent, const char *text, int x,
   lv_obj_t *label = hass_ui_text(button, text, 0, 0, width - 16, 16,
                                  g_hass_ui.primary);
   if (!strcmp(text, LV_SYMBOL_REFRESH))
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_center(label);
   return button;
@@ -1953,9 +1953,9 @@ static void glass_hass_app(lv_obj_t *card)
                                        g_hass_ui.variant, hass_ui_page_next,
                                        NULL);
   lv_obj_set_style_text_font(lv_obj_get_child(g_hass_ui.page_prev, 0),
-                             &lv_font_montserrat_24, 0);
+                             glass_icon_font(24), 0);
   lv_obj_set_style_text_font(lv_obj_get_child(g_hass_ui.page_next, 0),
-                             &lv_font_montserrat_24, 0);
+                             glass_icon_font(24), 0);
   g_hass_ui.list = glass_box(card, 202, 106, 488, 376,
                              g_hass_ui.background, 0);
 

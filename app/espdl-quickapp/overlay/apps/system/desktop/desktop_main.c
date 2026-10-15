@@ -18,6 +18,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/mount.h>
 #include <time.h>
 #include <unistd.h>
 #include <cJSON.h>
@@ -32,6 +33,9 @@
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 #include "../bilibili_live/bili_live.h"
 #include "../bilibili_live/local_video_ui.h"
+#include "../bilibili_live/local_video_media.h"
+#include "../bilibili_live/bili_cpu.h"
+#include "../bilibili_live/bili_ppa.h"
 #include "../bilibili_live/bili_api.h"
 #endif
 #include "qpk_security.h"
@@ -44,6 +48,7 @@
 #include "hass_service.h"
 #endif
 #include "glass_dashboard.h"
+#include "glass_icons.h"
 #include "pet_engine.h"
 #include "pet_lvgl.h"
 
@@ -59,6 +64,7 @@
 static bool chat_qpk_preview_active, chat_qpk_preview_origin;
 static uint32_t chat_qpk_preview_revision;
 static void chat_qpk_preview_back(void);
+static lv_obj_t *unresponsive_shade;
 
 static void chat_qpk_preview_finish(void)
 {
@@ -122,9 +128,9 @@ static const struct builtin_qpk_s g_builtin_ouo_qpk =
 {
   .manifest =
     {
-      .name = "OuO",
+      .name = "Grok Ball",
       .package = "ouo",
-      .version = "1.0.0",
+      .version = "2.0.0",
       .entry = "builtin:/ouo/app.js",
     },
   .kind = "互动表情",
@@ -209,6 +215,7 @@ enum builtin_id_e
 
 static void settings_rebuild_async(void *data);
 static void glass_save_preferences(void);
+static const lv_font_t *hass_qpk_font(int size);
 
 static const lv_font_t *zh_font(int size)
 {
@@ -450,6 +457,9 @@ static void dialog_cancel(void)
   lv_obj_t *dialog = g_desktop.dialog;
 
   g_desktop.dialog = NULL;
+  /* dialog_cancel owns every dialog on the top layer, including the
+   * unresponsive prompt; keep the static pointer in sync. */
+  unresponsive_shade = NULL;
   if (dialog != NULL)
     {
       lv_obj_delete(dialog);
@@ -561,7 +571,7 @@ static lv_obj_t *panel_card(const char *title)
     }
 
   lv_label_set_text(label, LV_SYMBOL_CLOSE);
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
   lv_obj_center(label);
   return card;
@@ -829,6 +839,130 @@ static void qpk_show_dialog(const char *text)
   lv_obj_center(label);
 }
 
+static void qpk_show_unresponsive(bool unresponsive);
+
+static void qpk_unresponsive_wait(lv_event_t *e)
+{
+  (void)e;
+  qpk_show_unresponsive(false);
+}
+
+static void qpk_unresponsive_terminate(lv_event_t *e)
+{
+  (void)e;
+  qpk_show_unresponsive(false);
+  qpk_runtime_stop();
+  panel_hide(NULL);
+}
+
+/* Shown only when the runtime reports a JavaScript entry that ran for
+ * seconds without yielding. It does not stop the app: timers keep running,
+ * and the prompt hides itself when the app recovers or stops. "等待"
+ * dismisses it; "终止程序" stops the runtime and returns home. */
+static void qpk_show_unresponsive(bool unresponsive)
+{
+  lv_obj_t *shade;
+  lv_obj_t *box;
+  lv_obj_t *button;
+  lv_obj_t *label;
+
+  if (!unresponsive)
+    {
+      if (unresponsive_shade != NULL)
+        {
+          if (g_desktop.dialog == unresponsive_shade)
+            {
+              g_desktop.dialog = NULL;
+            }
+
+          lv_obj_delete(unresponsive_shade);
+          unresponsive_shade = NULL;
+        }
+
+      return;
+    }
+
+  if (unresponsive_shade != NULL)
+    {
+      return;
+    }
+
+  dialog_cancel();
+  shade = lv_obj_create(lv_layer_top());
+  if (shade == NULL)
+    {
+      return;
+    }
+
+  g_desktop.dialog = shade;
+  unresponsive_shade = shade;
+  lv_obj_set_size(shade, lv_pct(100), lv_pct(100));
+  lv_obj_set_style_bg_color(shade, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_opa(shade, LV_OPA_70, 0);
+  lv_obj_set_style_border_width(shade, 0, 0);
+  box = lv_obj_create(shade);
+  if (box == NULL)
+    {
+      qpk_show_unresponsive(false);
+      return;
+    }
+
+  lv_obj_set_size(box, 560, 260);
+  lv_obj_center(box);
+  style_panel(box, theme_card());
+  lv_obj_set_style_pad_all(box, 24, 0);
+  lv_obj_remove_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+  label = make_label(box, "快应用长时间未响应。\n等待它继续运行，或终止程序？",
+                     theme_primary(), 20);
+  if (label == NULL)
+    {
+      qpk_show_unresponsive(false);
+      return;
+    }
+
+  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+  lv_obj_set_width(label, 508);
+  lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, 0);
+  button = lv_button_create(box);
+  if (button == NULL)
+    {
+      qpk_show_unresponsive(false);
+      return;
+    }
+
+  lv_obj_set_size(button, 120, 42);
+  lv_obj_align(button, LV_ALIGN_BOTTOM_RIGHT, -132, 0);
+  style_button(button, theme_surface());
+  lv_obj_add_event_cb(button, qpk_unresponsive_wait, LV_EVENT_CLICKED, NULL);
+  label = make_label(button, "等待", theme_primary(), 20);
+  if (label == NULL)
+    {
+      qpk_show_unresponsive(false);
+      return;
+    }
+
+  lv_obj_center(label);
+  button = lv_button_create(box);
+  if (button == NULL)
+    {
+      qpk_show_unresponsive(false);
+      return;
+    }
+
+  lv_obj_set_size(button, 120, 42);
+  lv_obj_align(button, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+  style_button(button, theme_accent());
+  lv_obj_add_event_cb(button, qpk_unresponsive_terminate, LV_EVENT_CLICKED, NULL);
+  label = make_label(button, "终止程序", 0xffffff, 20);
+  if (label == NULL)
+    {
+      qpk_show_unresponsive(false);
+      return;
+    }
+
+  lv_obj_center(label);
+}
+
 static char *qpk_load_entry(const struct qpk_entry_s *qpk,
                             char *filename, size_t filename_size,
                             size_t *source_size)
@@ -947,7 +1081,7 @@ static lv_obj_t *qapp_page_prepare(const char *title)
     }
 
   lv_label_set_text(label, LV_SYMBOL_LEFT);
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
   lv_obj_center(label);
 
@@ -1023,7 +1157,7 @@ static void launch_builtin_qapp(lv_event_t *e)
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
                            g_hello_qpk_js, sizeof(g_hello_qpk_js) - 1,
-                           zh_font, show_toast, qpk_show_dialog);
+                           zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (ret == 0)
     {
       qapp_page_commit(card);
@@ -1051,7 +1185,7 @@ static void launch_builtin_2048_qapp(lv_event_t *e)
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
                            g_2048_qpk_js, sizeof(g_2048_qpk_js) - 1,
-                           zh_font, show_toast, qpk_show_dialog);
+                           zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (ret == 0)
     {
       qapp_page_commit(card);
@@ -1083,7 +1217,7 @@ static void launch_builtin_ouo_qapp(lv_event_t *e)
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
                            source, source_size, zh_font,
-                           show_toast, qpk_show_dialog);
+                           show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (ret == 0)
     {
       qapp_page_commit(card);
@@ -1103,7 +1237,7 @@ static void launch_builtin_espdl_qapp(lv_event_t *e)
   lv_obj_t *card=qapp_page_prepare("ESP-DL 离线识别");
   if (!card) {show_toast("页面内存不足");return;}
   int ret=qpk_runtime_launch(card,"ESP-DL 离线识别","org.openvela.espdl","0.1.0",
-                             "app.js",source,length,zh_font,show_toast,qpk_show_dialog);
+                             "app.js",source,length,zh_font,show_toast,qpk_show_dialog, qpk_show_unresponsive);
   if (!ret) qapp_page_commit(card);
   else lv_obj_delete(lv_obj_get_parent(card));
 }
@@ -1147,7 +1281,7 @@ static void launch_builtin_camera_qapp(lv_event_t *e)
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
                            source, source_size, zh_font,
-                           show_toast, qpk_show_dialog);
+                           show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (ret == 0)
     {
       qapp_page_commit(card);
@@ -1168,7 +1302,7 @@ static void launch_builtin_recorder_qapp(lv_event_t *e)
   if (!card) { show_toast("页面内存不足"); return; }
   int ret = qpk_runtime_launch(card, "录音机", "com.openvela.recorder", "1.0.0",
                                "builtin:/recorder/app.js", source, length,
-                               zh_font, show_toast, qpk_show_dialog);
+                               zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (!ret) qapp_page_commit(card);
   else lv_obj_delete(lv_obj_get_parent(card));
 }
@@ -1188,7 +1322,7 @@ static void launch_builtin_dafeiyu_qapp(lv_event_t *e)
 
   int ret = qpk_runtime_launch(card, "大肥鱼桌宠", "org.flash.dafeiyu", "1.0.1",
                                "builtin:/dafeiyu/app.js", source, length,
-                               zh_font, show_toast, qpk_show_dialog);
+                               zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (!ret) qapp_page_commit(card);
   else lv_obj_delete(lv_obj_get_parent(card));
 }
@@ -1217,8 +1351,8 @@ static void launch_builtin_homeassistant_qapp(lv_event_t *e)
 
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
-                           source, source_size, zh_font,
-                           show_toast, qpk_show_dialog);
+                           source, source_size, hass_qpk_font,
+                           show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (ret == 0)
     {
       qapp_page_commit(card);
@@ -1262,7 +1396,7 @@ static void external_qapp_clicked(lv_event_t *e)
       int ret = qpk_runtime_launch(card, qpk->name, qpk->package,
                                    qpk->version, filename, source,
                                    source_size, zh_font, show_toast,
-                                   qpk_show_dialog);
+                                   qpk_show_dialog, qpk_show_unresponsive);
       free(source);
       if (ret == 0)
         {
@@ -1445,8 +1579,31 @@ static uint32_t desktop_loop_once(void)
 
 #ifndef GLASS_HOST_TEST
 
+#include "glass_test_storage.inc"
+
 int main(int argc, FAR char *argv[])
 {
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  if(argc==2&&!strcmp(argv[1],"cpu-status")){bili_cpu_report();return 0;}
+  if(argc==3&&!strcmp(argv[1],"media-fps")){
+    char *end;unsigned long fps=strtoul(argv[2],&end,10);
+    if(!*argv[2]||*end||fps>20)return -EINVAL;
+    return bili_cpu_set_target_fps((unsigned)fps);
+  }
+  if(argc==2&&!strcmp(argv[1],"ppa-test"))return bili_ppa_test()<0?1:0;
+  if(argc==3&&!strcmp(argv[1],"ppa-mode")&&(!strcmp(argv[2],"0")||!strcmp(argv[2],"1"))){bili_ppa_enable(argv[2][0]=='1');return 0;}
+  if(argc==4&&!strcmp(argv[1],"decode-bench")){
+    char *end;unsigned long features=strtoul(argv[3],&end,10);
+    if(!*argv[3]||*end||features>3)return -EINVAL;
+    return local_video_decode_benchmark(argv[2],(unsigned)features)<0?1:0;
+  }
+#endif
+#if defined(CONFIG_BOARDCTL_MKRD) && defined(CONFIG_FS_FAT)
+  if (argc == 2 && !strcmp(argv[1], "test-disk"))
+    return desktop_test_disk();
+#endif
+  if (argc == 4 && !strcmp(argv[1], "receive"))
+    return desktop_receive(argv[2], argv[3]);
   if (argc > 1 && !strcmp(argv[1], "hardware-test")) {
     extern int qpk_hw_probe(bool);
     return qpk_hw_probe(argc > 2 && !strcmp(argv[2], "audio"));
@@ -1476,6 +1633,39 @@ int main(int argc, FAR char *argv[])
       return qpk_storage_selftest() < 0 ? 1 : 0;
     }
 
+  /* Physical USB diagnostics: return the same short-lived code shown by the
+   * portal page. The installer consumes it privately; debug logs never do. */
+  if (argc == 2 && strcmp(argv[1], "portal-pair") == 0)
+    {
+      /* A temporary NSH task must not own a long-lived portal pthread.
+       * Start it through the persistent desktop task, just like the page. */
+      char code[PORTAL_CODE_LENGTH+1];int ret=desktop_ui_probe_request("portal");
+      if(!ret)ret=portal_session_open(code,sizeof(code));
+      if(!ret)printf("PORTAL_PAIR=%s\n",code);memset(code,0,sizeof(code));return ret;
+    }
+  if (argc == 3 && strcmp(argv[1], "grok-verify") == 0)
+    {
+      extern int qpk_dl_sha256_file(const char *,char[65]);
+      const char *names[]={"home-white.gbs","home-black.gbs","mini-white.gbs","app-white.gbs","app-black.gbs"};
+      bool allowed=false;for(unsigned i=0;i<5;i++)if(!strcmp(argv[2],names[i]))allowed=true;
+      if(!allowed)return 1;char path[96],digest[65];snprintf(path,sizeof(path),"/sdcard/grok/%s",argv[2]);
+      int ret=qpk_dl_sha256_file(path,digest);if(ret)printf("GROK_VERIFY error=%d\n",ret);else printf("GROK_VERIFY %s %s\n",argv[2],digest);return ret;
+    }
+  if ((argc == 2 && !strcmp(argv[1],"frame-export")) ||
+      (argc == 3 && !strcmp(argv[1],"frame-chunk")))
+    {
+      /* The immutable snapshot is produced by the UI thread first. Export
+       * never touches live LVGL objects or stops the animation renderer. */
+      size_t size=g_ui_probe_frame_bytes;const uint8_t *data=(const uint8_t *)g_ui_probe_frame;
+      if(!data||!size)return 1;
+      size_t start=0,end=size;if(argc==3){char *tail;start=strtoul(argv[2],&tail,10);if(*tail||start>=size||start%64)return 1;end=start+64;if(end>size)end=size;}
+      printf("FRAME_DATA %lu\n",(unsigned long)size);
+      for(size_t off=start;off<end;off+=64){char line[150];int pos=snprintf(line,sizeof(line),"F%08lx:",(unsigned long)off);size_t n=end-off<64?end-off:64;
+        for(size_t i=0;i<n;i++){static const char hex[]="0123456789abcdef";line[pos++]=hex[data[off+i]>>4];line[pos++]=hex[data[off+i]&15];}
+        line[pos]=0;puts(line);fflush(stdout);usleep(1500);
+      }
+      puts("FRAME_END");return 0;
+    }
   if (argc == 3 && strcmp(argv[1], "ui") == 0)
     return desktop_ui_probe_request(argv[2]);
 
@@ -1516,6 +1706,9 @@ int main(int argc, FAR char *argv[])
   info.input_path = NULL;
 #endif
 
+#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
+  bili_cpu_register_ui();
+#endif
   lv_nuttx_init(&info, &result);
   if (result.disp == NULL)
     {
@@ -1523,12 +1716,21 @@ int main(int argc, FAR char *argv[])
       return 1;
   }
 
+#if defined(CONFIG_FS_SMARTFS) && !defined(CONFIG_DISABLE_MOUNTPOINT)
+  /* Restore the existing user volume before any app loads preferences.
+   * Never format or erase storage automatically. */
+  if (mkdir("/data", 0777) < 0 && errno != EEXIST)
+    fprintf(stderr, "desktop: data directory unavailable: %d\n", errno);
+  else if (mount("/dev/smart0", "/data", "smartfs", 0, NULL) < 0 && errno != EBUSY)
+    fprintf(stderr, "desktop: data volume not mounted: %d\n", errno);
+#endif
+
   desktop_ui_create();
   lv_obj_invalidate(lv_screen_active());
   lv_refr_now(result.disp);
 
 #if defined(CONFIG_NETUTILS_NETINIT) && !defined(CONFIG_SYSTEM_NSH)
-  /* netinit would run before the companion radio has registered eth0, so the
+  /* netinit would run before the companion radio has registered wlan0, so the
    * boot task below waits for the station and then requests the lease. */
 #endif
 

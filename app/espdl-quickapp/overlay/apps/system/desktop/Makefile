@@ -27,7 +27,7 @@ CFLAGS += -I$(TOPDIR)/arch/risc-v/src/common
 CSRCS += glass_system_monitor.c
 CSRCS += glass_system_platform.c
 
-CSRCS += glass_settings_service.c
+CSRCS += glass_settings_service.c glass_icons.c
 CSRCS += glass_weather.c glass_weather_parse.c glass_weather_https.c glass_weather_http.c glass_https.c
 # Dependency generation needs the same headers as compilation.
 CFLAGS += -I$(APPDIR)/netutils/cjson/cJSON $(ESPCLAW_TLS_CFLAGS)
@@ -45,6 +45,7 @@ CSRCS += glass_music_parse.c glass_music_http.c glass_music_service.c glass_musi
 CSRCS += glass_pinyin_resource.c
 CSRCS += glass_portal_config.c glass_portal_files.c glass_portal_http.c glass_portal_resource.c
 CSRCS += glass_chat_service.c glass_chat_store.c
+CSRCS += glass_grok.c glass_grok_state.c
 CSRCS += pet_engine.c pet_sprites.c qpk_pet.c pet_lvgl.c dafeiyu_resource.c
 CXXSRCS += glass_pinyin.cpp $(wildcard music_vendor/googlepinyin/src/*.cpp)
 CXXEXT = .cpp

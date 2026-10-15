@@ -5,7 +5,7 @@
 static struct {
   lv_obj_t *root, *list, *heading, *subtitle, *search, *status, *title, *artist;
   lv_obj_t *album, *bottom_title, *bottom_artist, *play_label, *favorite_label, *elapsed;
-  lv_obj_t *volume, *count, *nav[2], *disc, *input_shade, *input, *keyboard;
+  lv_obj_t *volume, *progress, *duration, *count, *nav[2], *disc, *input_shade, *input, *keyboard;
   lv_timer_t *timer;
   struct music_snapshot snapshot;
   unsigned search_revision, favorite_count;
@@ -31,7 +31,7 @@ static lv_obj_t *music_ui_button(lv_obj_t *parent, const char *text, int x, int 
   glass_clickable(button,cb,data);
   lv_obj_set_style_bg_opa(button,LV_OPA_80,LV_STATE_PRESSED);
   lv_obj_t *label=music_ui_text(button,text,0,0,width-12,16,g_music_ui.primary);
-  if (symbol) lv_obj_set_style_text_font(label,&lv_font_montserrat_24,0);
+  if (symbol) lv_obj_set_style_text_font(label,glass_icon_font(24),0);
   lv_obj_set_style_text_align(label,LV_TEXT_ALIGN_CENTER,0);
   lv_obj_center(label);
   return button;
@@ -210,9 +210,15 @@ static void music_ui_refresh(lv_timer_t *timer)
     s->state==MUSIC_ERROR?"播放失败 · 点击播放重试":s->state==MUSIC_ENDED?"播放结束":s->state==MUSIC_STOPPED?"已停止":"现在播放";
   lv_label_set_text(g_music_ui.status,status);
   lv_label_set_text(g_music_ui.play_label,s->state==MUSIC_PLAYING?LV_SYMBOL_PAUSE:LV_SYMBOL_PLAY);
-  lv_label_set_text(g_music_ui.favorite_label,glass_music_is_favorite(s,&s->current)?"已收藏":"收藏");
+  lv_obj_set_style_text_color(g_music_ui.favorite_label,lv_color_hex(
+    glass_music_is_favorite(s,&s->current)?g_music_ui.accent:g_music_ui.secondary),0);
   lv_label_set_text_fmt(g_music_ui.count,"%u 首珍藏",s->favorite_count);
   lv_label_set_text_fmt(g_music_ui.elapsed,"%02u:%02u",s->position_ms/60000,(s->position_ms/1000)%60);
+  if (s->duration_ms)
+    lv_label_set_text_fmt(g_music_ui.duration,"%02u:%02u",s->duration_ms/60000,(s->duration_ms/1000)%60);
+  else lv_label_set_text(g_music_ui.duration,s->current.name[0]?"--:--":"00:00");
+  unsigned progress=s->duration_ms?(uint64_t)s->position_ms*1000/s->duration_ms:0;
+  lv_bar_set_value(g_music_ui.progress,progress>1000?1000:progress,LV_ANIM_OFF);
   if (!lv_obj_has_state(g_music_ui.volume,LV_STATE_PRESSED)) lv_slider_set_value(g_music_ui.volume,s->volume,LV_ANIM_OFF);
 }
 
@@ -264,22 +270,33 @@ static void glass_music_app(lv_obj_t *card)
   g_music_ui.title=music_ui_text(now,"还没有播放音乐",22,306,250,28,g_music_ui.primary);
   g_music_ui.artist=music_ui_text(now,"让好音乐，陪伴此刻",22,350,250,20,g_music_ui.secondary);
   g_music_ui.album=music_ui_text(now,"",22,385,250,16,g_music_ui.secondary);
-  music_ui_text(now,"把这一刻，交给音乐",22,426,250,16,g_music_ui.secondary);
   lv_obj_t *bar=glass_box(card,0,500,1024,100,light?0xffffff:0x211d29,0);
   lv_obj_set_style_border_width(bar,1,0); lv_obj_set_style_border_color(bar,lv_color_hex(g_music_ui.surface),0);
-  lv_obj_t *mini=glass_box(bar,22,20,60,60,0x946680,12);
-  glass_gradient(mini,0xe29a82,LV_GRAD_DIR_VER); glass_symbol(mini,LV_SYMBOL_AUDIO,18,18,0xffffff);
-  g_music_ui.bottom_title=music_ui_text(bar,"还没有播放音乐",98,23,250,20,g_music_ui.primary);
-  g_music_ui.bottom_artist=music_ui_text(bar,"让好音乐，陪伴此刻",98,56,250,16,g_music_ui.secondary);
-  music_ui_button(bar,LV_SYMBOL_PREV,372,24,52,52,g_music_ui.surface,music_ui_skip,(void *)-1,true);
-  lv_obj_t *play=music_ui_button(bar,LV_SYMBOL_PLAY,440,18,64,64,g_music_ui.accent,music_ui_toggle,NULL,true);
+  lv_obj_t *mini=glass_box(bar,22,24,52,52,0x946680,12);
+  glass_gradient(mini,0xe29a82,LV_GRAD_DIR_VER); glass_symbol(mini,LV_SYMBOL_AUDIO,14,14,0xffffff);
+  g_music_ui.bottom_title=music_ui_text(bar,"还没有播放音乐",88,28,148,20,g_music_ui.primary);
+  g_music_ui.bottom_artist=music_ui_text(bar,"让好音乐，陪伴此刻",88,57,148,14,g_music_ui.secondary);
+  music_ui_button(bar,LV_SYMBOL_PREV,296,28,44,44,g_music_ui.surface,music_ui_skip,(void *)-1,true);
+  lv_obj_t *play=music_ui_button(bar,LV_SYMBOL_PLAY,348,20,60,60,g_music_ui.accent,music_ui_toggle,NULL,true);
   g_music_ui.play_label=lv_obj_get_child(play,0); lv_obj_set_style_text_color(g_music_ui.play_label,lv_color_white(),0);
-  music_ui_button(bar,LV_SYMBOL_NEXT,520,24,52,52,g_music_ui.surface,music_ui_skip,(void *)1,true);
-  g_music_ui.elapsed=music_ui_text(bar,"00:00",594,40,72,16,g_music_ui.secondary);
-  lv_obj_t *favorite=music_ui_button(bar,"收藏",680,28,88,44,g_music_ui.surface,music_ui_favorite,NULL,false);
+  music_ui_button(bar,LV_SYMBOL_NEXT,424,28,44,44,g_music_ui.surface,music_ui_skip,(void *)1,true);
+  g_music_ui.elapsed=music_ui_text(bar,"00:00",486,42,48,14,g_music_ui.secondary);
+  g_music_ui.progress=lv_bar_create(bar);
+  lv_obj_remove_style_all(g_music_ui.progress);
+  lv_obj_set_pos(g_music_ui.progress,548,48); lv_obj_set_size(g_music_ui.progress,264,4);
+  lv_obj_remove_flag(g_music_ui.progress,LV_OBJ_FLAG_CLICKABLE);
+  lv_bar_set_range(g_music_ui.progress,0,1000);
+  lv_obj_set_style_radius(g_music_ui.progress,LV_RADIUS_CIRCLE,LV_PART_MAIN);
+  lv_obj_set_style_radius(g_music_ui.progress,LV_RADIUS_CIRCLE,LV_PART_INDICATOR);
+  lv_obj_set_style_bg_opa(g_music_ui.progress,LV_OPA_COVER,LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(g_music_ui.progress,LV_OPA_COVER,LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(g_music_ui.progress,lv_color_hex(g_music_ui.surface),LV_PART_MAIN);
+  lv_obj_set_style_bg_color(g_music_ui.progress,lv_color_hex(g_music_ui.accent),LV_PART_INDICATOR);
+  g_music_ui.duration=music_ui_text(bar,"00:00",826,42,48,14,g_music_ui.secondary);
+  lv_obj_t *favorite=music_ui_button(bar,GLASS_ICON_HEART,244,28,44,44,g_music_ui.surface,music_ui_favorite,NULL,true);
   g_music_ui.favorite_label=lv_obj_get_child(favorite,0);
-  glass_symbol(bar,LV_SYMBOL_VOLUME_MAX,798,38,g_music_ui.secondary);
-  g_music_ui.volume=lv_slider_create(bar); lv_obj_set_pos(g_music_ui.volume,842,45); lv_obj_set_size(g_music_ui.volume,146,8);
+  glass_symbol(bar,LV_SYMBOL_VOLUME_MAX,898,38,g_music_ui.secondary);
+  g_music_ui.volume=lv_slider_create(bar); lv_obj_set_pos(g_music_ui.volume,940,45); lv_obj_set_size(g_music_ui.volume,60,6);
   lv_slider_set_range(g_music_ui.volume,0,100);
   lv_obj_set_style_bg_color(g_music_ui.volume,lv_color_hex(g_music_ui.accent),LV_PART_INDICATOR);
   lv_obj_set_style_bg_color(g_music_ui.volume,lv_color_hex(g_music_ui.accent),LV_PART_KNOB);
