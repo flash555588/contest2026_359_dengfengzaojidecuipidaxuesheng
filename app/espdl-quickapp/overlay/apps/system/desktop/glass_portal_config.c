@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_portal.h"
+#include "glass_agent.h"
 #include "qpk_storage.h"
 #include <nuttx/config.h>
 #include "../hass/hass_config_validate.h"
@@ -58,6 +59,14 @@ static cJSON *defaults(const char *section)
     default_string(o,"app_id",""); default_string(o,"secret_id","");
     default_string(o,"secret_key","");
   }
+  else if(!strcmp(section,"agent")) {
+    if(!cJSON_GetObjectItemCaseSensitive(o,"skills_enabled"))cJSON_AddNumberToObject(o,"skills_enabled",1);
+    for(unsigned i=1;i<=AGENT_MCP_SERVERS;i++){
+      char key[32];const char *names[]={"name","url","token","tools"};
+      for(unsigned j=0;j<4;j++){snprintf(key,sizeof(key),"mcp%u_%s",i,names[j]);default_string(o,key,"");}
+      snprintf(key,sizeof(key),"mcp%u_enabled",i);if(!cJSON_GetObjectItemCaseSensitive(o,key))cJSON_AddNumberToObject(o,key,0);
+    }
+  }
   else if(!strcmp(section,"desktop")) {
     cJSON_Delete(o); o=cJSON_CreateObject();
     const char *keys[]={"light","palette","widget","reduced_motion"};
@@ -88,6 +97,10 @@ cJSON *portal_config_get(const char *section)
       cJSON_DeleteItemFromObjectCaseSensitive(o,fields[i].key);
       char key[64]; snprintf(key,sizeof(key),"%s_set",fields[i].key); cJSON_AddBoolToObject(o,key,present);
     }
+  if(o&&!strcmp(section,"agent"))for(unsigned i=1;i<=AGENT_MCP_SERVERS;i++){
+    char key[32],flag[40];snprintf(key,sizeof(key),"mcp%u_token",i);snprintf(flag,sizeof(flag),"%s_set",key);
+    bool present=string(o,key,"")[0]!=0;cJSON_DeleteItemFromObjectCaseSensitive(o,key);cJSON_AddBoolToObject(o,flag,present);
+  }
   pthread_mutex_unlock(&config_lock); return o;
 }
 int portal_config_save(const char *section,const cJSON *patch)
@@ -102,6 +115,11 @@ int portal_config_save(const char *section,const cJSON *patch)
   for(const cJSON *v=patch->child;v;v=v->next) {
     if(!v->string) goto done;
     for(const cJSON *next=v->next;next;next=next->next) if(!strcmp(next->string,v->string)) goto done;
+    if(!strcmp(section,"agent")){
+      if(!glass_agent_value_valid(v->string,v))goto done;
+      cJSON *copy=cJSON_Duplicate(v,true);if(!copy){ret=-ENOMEM;goto done;}
+      cJSON_DeleteItemFromObjectCaseSensitive(o,v->string);cJSON_AddItemToObject(o,v->string,copy);continue;
+    }
     unsigned limit=0; bool known=false;
     for(unsigned i=0;i<sizeof(fields)/sizeof(fields[0]);i++)
       if(!strcmp(section,fields[i].section)&&!strcmp(v->string,fields[i].key)) { limit=fields[i].limit; known=true; }
@@ -138,9 +156,13 @@ int portal_config_save(const char *section,const cJSON *patch)
     if(ha_client<0) { ret=ha_client; goto done; }
 #endif
   }
+  if(!strcmp(section,"agent"))for(unsigned i=1;i<=AGENT_MCP_SERVERS;i++){
+    char key[32];snprintf(key,sizeof(key),"mcp%u_enabled",i);
+    if(number(o,key,0)){snprintf(key,sizeof(key),"mcp%u_url",i);if(!string(o,key,"")[0])goto done;}
+  }
   char *data=cJSON_PrintUnformatted(o);
   if(!data) { ret=-ENOMEM; goto done; }
-  ret=qpk_storage_write(PORTAL_CONFIG_ROOT,"portal",section,data,strlen(data)); free(data);
+  ret=strlen(data)>8192?-E2BIG:qpk_storage_write(PORTAL_CONFIG_ROOT,"portal",section,data,strlen(data)); free(data);
 #ifdef CONFIG_SYSTEM_HASS
   if(!ret&&ha_client>0) {
     const char *url=string(o,"url",""),*token=string(o,"token","");
@@ -256,3 +278,10 @@ void portal_desktop_publish(const uint8_t values[4])
 { pthread_mutex_lock(&config_lock); memcpy(desktop_values,values,4); pthread_mutex_unlock(&config_lock); }
 bool portal_desktop_take(uint8_t values[4])
 { pthread_mutex_lock(&config_lock); bool ready=desktop_dirty; if(ready) { memcpy(values,desktop_pending,4); desktop_dirty=false; } pthread_mutex_unlock(&config_lock); return ready; }
+
+int portal_agent_load(cJSON **out)
+{
+  if(!out)return -EINVAL;
+  pthread_mutex_lock(&config_lock);*out=defaults("agent");pthread_mutex_unlock(&config_lock);
+  return *out?0:-EIO;
+}

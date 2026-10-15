@@ -3,13 +3,14 @@
 #include "local_album.h"
 #include "local_video_ui.h"
 #include "glass_icons.h"
+#include "glass_pager.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static struct {
-  lv_obj_t *root,*note,*position,*view,*canvas,*overlay;
+  lv_obj_t *root,*note,*pager,*view,*canvas,*overlay;
   lv_obj_t *thumb[ALBUM_PAGE],*placeholder[ALBUM_PAGE];
   struct album_listing *listing;
   lv_timer_t *timer;
@@ -49,6 +50,26 @@ static void album_queue(int action)
   if (lv_async_call(album_dispatch,NULL)==LV_RESULT_OK) album_ui.queued=true;
 }
 static void album_clicked(lv_event_t *e) {album_queue((intptr_t)lv_event_get_user_data(e));}
+static void album_page_select(void *context,unsigned page)
+{
+  (void)context;
+  if(!album_ui.listing)return;
+  if(album_ui.mode==0){album_queue(-100-(int)page);return;}
+  unsigned ordinal=0;
+  for(unsigned i=0;i<album_ui.listing->count;i++)if(album_ui.listing->entries[i].kind==ALBUM_PHOTO){
+    if(ordinal++==page){album_queue(i+1);return;}
+  }
+}
+static void album_photo_pager(unsigned index)
+{
+  unsigned ordinal=0,total=0;
+  for(unsigned i=0;i<album_ui.listing->count;i++)if(album_ui.listing->entries[i].kind==ALBUM_PHOTO){
+    if(i<index)ordinal++;total++;
+  }
+  album_ui.pager=glass_pager_create(album_ui.root,album_ui.soft,album_ui.ink,album_ui.muted,album_page_select,NULL);
+  glass_pager_update(album_ui.pager,ordinal,total,true);
+  if(album_ui.pager)lv_obj_align(album_ui.pager,LV_ALIGN_BOTTOM_MID,0,-8);
+}
 static void album_video_back(lv_event_t *e) {(void)e;album_queue(-1);}
 static lv_obj_t *album_button(lv_obj_t *parent,const char *text,int x,int y,int w,int action,bool selected)
 {
@@ -112,7 +133,7 @@ static void album_clear(void)
   if(album_ui.timer)lv_timer_resume(album_ui.timer);
   album_ui.job=0;album_ui.pending_list=false;
   memset(album_ui.thumb,0,sizeof(album_ui.thumb));memset(album_ui.placeholder,0,sizeof(album_ui.placeholder));
-  lv_obj_clean(album_ui.root);album_ui.note=album_ui.position=NULL;
+  lv_obj_clean(album_ui.root);album_ui.note=album_ui.pager=NULL;
 }
 static const char *album_image_error(int error)
 {
@@ -159,8 +180,10 @@ static void album_open_index(unsigned index)
   const char *title=strrchr(path,'/');title=title?title+1:entry.name;
   lv_obj_t *heading=album_text(album_ui.root,title,150,21,width-300,album_ui.ink);
   lv_obj_set_height(heading,24);
+  if(entry.kind==ALBUM_PHOTO)album_photo_pager(index);
   if(album_ui.image_attempted){
     int card_height=height-88;
+    if(album_ui.pager&&!lv_obj_has_flag(album_ui.pager,LV_OBJ_FLAG_HIDDEN))card_height-=40;
     album_ui.view=album_box(album_ui.root,24,64,width-48,card_height,album_ui.paper,16);
     lv_obj_t *badge=album_box(album_ui.view,24,24,240,card_height-48,album_ui.soft,12);
     lv_obj_t *icon=album_text(badge,entry.kind==ALBUM_PHOTO?LV_SYMBOL_IMAGE:LV_SYMBOL_VIDEO,0,72,240,album_ui.muted);
@@ -179,7 +202,7 @@ static void album_open_index(unsigned index)
     album_text(album_ui.view,"建议在电脑或手机上转换为",304,202,width-400,album_ui.muted);
     lv_obj_t *target=album_box(album_ui.view,304,240,width-400,56,album_ui.soft,10);
     album_text(target,entry.kind==ALBUM_PHOTO?"JPEG  /  PNG":"MP4  /  MOV · H.264 + AAC",20,18,width-440,album_ui.ink);
-    album_text(album_ui.view,"原文件保留，可返回继续浏览或管理。",304,320,width-400,album_ui.muted);
+    album_text(album_ui.view,"原文件保留，可返回继续浏览或管理。",304,card_height-104,width-400,album_ui.muted);
     lv_obj_t *back=album_button(album_ui.view,album_ui.return_to_files?"返回文件管理":"返回相册",304,card_height-72,168,-1,true);
     lv_obj_set_style_bg_color(back,lv_color_hex(album_ui.soft),0);
     return;
@@ -189,16 +212,7 @@ static void album_open_index(unsigned index)
   lv_obj_set_style_clip_corner(album_ui.view,true,0);
   album_ui.note=album_text(album_ui.view,"正在载入…",16,16,width-80,album_ui.muted);
   if(entry.kind==ALBUM_VIDEO)return;
-  int prev=-1,next=-1;unsigned ordinal=0,total=0;
-  for(unsigned i=0;i<album_ui.listing->count;i++)if(album_ui.listing->entries[i].kind==ALBUM_PHOTO){
-    total++;if(i<=index)ordinal++;if(i<index)prev=i;if(i>index&&next<0)next=i;
-  }
-  lv_obj_t *button=album_button(album_ui.root,"上一张",24,height-52,104,prev+1,false);
-  if(prev<0)lv_obj_add_state(button,LV_STATE_DISABLED);
-  button=album_button(album_ui.root,"下一张",width-128,height-52,104,next+1,false);
-  if(next<0)lv_obj_add_state(button,LV_STATE_DISABLED);
-  char position[64];snprintf(position,sizeof(position),"%u / %u",ordinal,total);
-  album_text(album_ui.root,position,width/2-40,height-40,100,album_ui.muted);
+
 }
 static void album_grid(void)
 {
@@ -214,10 +228,8 @@ static void album_grid(void)
   album_text(album_ui.root,album_directory,450,22,width-686,album_ui.muted);
   album_button(album_ui.root,"上一级",width-216,10,104,-2,false);
   album_button(album_ui.root,"刷新",width-104,10,88,-3,false);
-  album_ui.note=album_text(album_ui.root,"",24,height-40,width-276,album_ui.muted);
-  album_button(album_ui.root,"‹",width-204,height-52,48,-20,false);
-  album_ui.position=album_text(album_ui.root,"",width-146,height-40,78,album_ui.muted);
-  album_button(album_ui.root,"›",width-64,height-52,48,-21,false);
+  album_ui.note=album_text(album_ui.root,"",24,height-40,width/2-116,album_ui.muted);
+  album_ui.pager=glass_pager_create(album_ui.root,album_ui.soft,album_ui.ink,album_ui.muted,album_page_select,NULL);
   if(album_ui.need_list || !album_ui.listing){lv_label_set_text(album_ui.note,"正在读取 SD 卡…");return;}
   if(album_ui.listing->error){lv_label_set_text(album_ui.note,local?"本机还没有照片，可先拍一张再刷新":"SD 卡未就绪，插入 FAT32 卡后点刷新");return;}
   unsigned count=0,indices[ALBUM_FILES];
@@ -227,7 +239,8 @@ static void album_grid(void)
   }
   unsigned pages=(count+ALBUM_PAGE-1)/ALBUM_PAGE;if(!pages)pages=1;
   if(album_ui.page>=pages)album_ui.page=pages-1;
-  char position[32];snprintf(position,sizeof(position),"%u / %u",album_ui.page+1,pages);lv_label_set_text(album_ui.position,position);
+  glass_pager_update(album_ui.pager,album_ui.page,pages,true);
+  if(album_ui.pager)lv_obj_align(album_ui.pager,LV_ALIGN_BOTTOM_MID,0,-8);
   lv_label_set_text(album_ui.note,!count?"这里还没有照片或视频 · 支持多种图片与视频格式":
     album_ui.listing->truncated?"已载入前 256 项，可进入子目录继续查看":"轻点查看 · 照片按需加载");
   int cardw=(width-48-3*16)/4,cardh=(height-144-16)/2;
@@ -266,10 +279,7 @@ static void album_dispatch(void *unused)
   else if(action==-3){album_ui.need_list=true;album_grid();}
   else if(action==-30 || action==-31){strcpy(album_directory,action==-30?ALBUM_LOCAL_ROOT:ALBUM_ROOT);album_ui.page=0;album_ui.need_list=true;album_grid();}
   else if(action<=-10&&action>=-12){album_ui.filter=-action-10;album_ui.page=0;album_grid();}
-  else if(action==-20||action==-21){
-    if(action==-20){if(album_ui.page)album_ui.page--;}else album_ui.page++;
-    album_grid();
-  }
+  else if(action<=-100){album_ui.page=(unsigned)(-action-100);album_grid();}
 }
 static void album_tick(lv_timer_t *timer)
 {

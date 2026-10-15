@@ -3,6 +3,9 @@
 #include "qpk_espdl.h"
 #include <nuttx/video/uvc_camera.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,16 +36,32 @@ void qpk_dl_status(struct qpk_dl_result *result)
 {
   pthread_mutex_lock(&g_dl_lock);*result=g_dl_result;pthread_mutex_unlock(&g_dl_lock);
 }
-void qpk_dl_cancel(void)
+static void cancel_locked(void)
 {
-  pthread_mutex_lock(&g_dl_lock);
   g_dl_cancel=true;
   if (!g_dl_result.busy) {
     free(g_dl_preview);g_dl_preview=NULL;
     g_dl_result.preview=false;g_dl_result.count=0;g_dl_result.stage=QPK_DL_IDLE;
     memset(&g_dl_result.track,0,sizeof(g_dl_result.track));g_dl_result.track.target=-1;
   }
-  pthread_mutex_unlock(&g_dl_lock);
+}
+void qpk_dl_cancel(void)
+{pthread_mutex_lock(&g_dl_lock);cancel_locked();pthread_mutex_unlock(&g_dl_lock);}
+void qpk_dl_cancel_request(uint32_t request)
+{pthread_mutex_lock(&g_dl_lock);if(request&&request==g_dl_result.request)cancel_locked();pthread_mutex_unlock(&g_dl_lock);}
+int qpk_dl_face_start_default(void)
+{
+  int fd=open("/dev/uvcctl",O_RDONLY);if(fd<0)return -errno;
+  struct uvc_camera_list list={0};int ret=ioctl(fd,UVCIOC_LIST,(unsigned long)&list);
+  int error=errno;close(fd);if(ret<0)return -error;
+  for(unsigned i=0;i<list.count&&i<UVC_CAMERA_MAX_DEVICES;i++){
+    const struct uvc_camera_device *d=&list.devices[i];
+    if(d->connected&&d->supported&&d->generation&&d->id<UVC_CAMERA_MAX_DEVICES){
+      struct qpk_dl_request request={.mode=QPK_DL_FACE,.device=d->id,.generation=d->generation};
+      return qpk_dl_start(&request);
+    }
+  }
+  return -ENODEV;
 }
 int qpk_dl_copy_preview(uint32_t request,uint32_t frame,uint16_t *pixels,
                         size_t count,struct qpk_dl_result *result)

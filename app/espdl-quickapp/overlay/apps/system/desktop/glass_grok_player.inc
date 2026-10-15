@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Pre-rendered RGB565+A8 frames. No QuickJS, SVG or image codec. */
 #include "glass_grok.h"
+#include "glass_grok_gaze.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -26,6 +27,9 @@ struct glass_grok {
   uint64_t read_us,max_read_us;unsigned displayed,reads,errors;
   int error;bool thread_started,quit,pending,busy,ready,initialized;
   bool reduced,settled,celebrating,manual,active;
+  bool gaze_enabled,black,job_gaze;
+  int gaze_x,gaze_y,job_gaze_x,job_gaze_y;
+  struct grok_gaze_scratch *gaze_scratch;
 };
 static struct glass_grok *instances[8]; /* UI thread only. */
 static const unsigned ids[GROK_STATES]={0,1,2,3,4,5,6,7,10,11,12,13,14,15,16,17,18,19,20,21,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51};
@@ -54,6 +58,7 @@ static void *grok_reader(void *opaque)
     while(!b->pending&&!b->quit)pthread_cond_wait(&b->wake,&b->lock);
     if(b->quit)break;
     unsigned id=b->job_id,frame=b->job_frame,epoch=b->job_epoch,slot=b->job_slot;
+    bool gaze=b->job_gaze;int gaze_x=b->job_gaze_x,gaze_y=b->job_gaze_y;
     b->pending=false;pthread_mutex_unlock(&b->lock);uint64_t began=grok_micros();int ret=0;
     if(fd<0)fd=grok_open_bank(b);
     if(fd<0)ret=fd;
@@ -66,6 +71,7 @@ static void *grok_reader(void *opaque)
         else ret=grok_read_all(fd,b->pixels[slot],b->bytes);
       }
     }
+    if(!ret&&gaze)grok_gaze_frame(b->pixels[slot],b->black,id,gaze_x,gaze_y,b->gaze_scratch);
     if(ret&&fd>=0){close(fd);fd=-1;}
     uint64_t duration=grok_micros()-began;pthread_mutex_lock(&b->lock);
     b->read_us+=duration;if(duration>b->max_read_us)b->max_read_us=duration;
@@ -113,6 +119,7 @@ static void grok_tick(lv_timer_t *timer)
   }
   if(!b->busy&&!b->ready&&(!b->retry_at||(int32_t)(now-b->retry_at)>=0)&&(!b->reduced||!b->initialized||b->next_frame==0)){
     b->job_slot=1-b->front;b->job_id=b->action?b->action:b->current;b->job_frame=b->reduced?0:b->next_frame;b->job_epoch=b->epoch;
+    b->job_gaze=b->gaze_enabled;b->job_gaze_x=b->gaze_x;b->job_gaze_y=b->gaze_y;
     b->pending=b->busy=true;pthread_cond_signal(&b->wake);
   }
   pthread_mutex_unlock(&b->lock);
@@ -124,7 +131,7 @@ static void grok_deleted(lv_event_t *e)
   for(unsigned i=0;i<8;i++)if(instances[i]==b)instances[i]=NULL;
   if(b->image)lv_image_set_src(b->image,NULL);
   for(unsigned i=0;i<2;i++){lv_image_cache_drop(&b->images[i]);free(b->pixels[i]);}
-  pthread_cond_destroy(&b->wake);pthread_mutex_destroy(&b->lock);free(b);
+  free(b->gaze_scratch);pthread_cond_destroy(&b->wake);pthread_mutex_destroy(&b->lock);free(b);
 }
 static struct glass_grok *grok_create(lv_obj_t *parent,int width,unsigned style,glass_grok_font_t font)
 {
@@ -163,15 +170,35 @@ struct glass_grok *glass_grok_create_sprite(lv_obj_t *p,int x,int y,int w,int h,
 {
   if(diameter<48||diameter>480||w<64||h<64||w>1024||h>600)return NULL;
   struct glass_grok *b=grok_create(p,w,black?6:5,f);if(!b)return NULL;b->manual=true;
+  b->black=black;
+  glass_grok_geometry(b,x,y,w,h,diameter);return b;
+}
+bool glass_grok_geometry(struct glass_grok *b,int x,int y,int w,int h,int diameter)
+{
+  if(!b||b->states!=42||diameter<48||diameter>480||w<64||h<64||w>1024||h>600)return false;
   lv_obj_set_pos(b->root,x,y);lv_obj_set_size(b->root,w,h);
   lv_image_set_scale(b->image,diameter*256/96);lv_image_set_antialias(b->image,false);
   lv_image_set_pivot(b->image,0,0);int image_side=128*diameter/96;
-  lv_obj_set_pos(b->image,(w-image_side)/2,(h-image_side)/2);return b;
+  lv_obj_set_pos(b->image,(w-image_side)/2,(h-image_side)/2);return true;
 }
 lv_obj_t *glass_grok_root(struct glass_grok *b){return b?b->root:NULL;}
 void glass_grok_select(struct glass_grok *b,unsigned id){if(b){b->manual=true;grok_select_id(b,id);}}
+bool glass_grok_gaze(struct glass_grok *b,int x,int y)
+{
+  if(!b||b->states!=42)return false;
+  if(!b->gaze_scratch){b->gaze_scratch=calloc(1,sizeof(*b->gaze_scratch));if(!b->gaze_scratch)return false;}
+  if(x<-1000)x=-1000;if(x>1000)x=1000;if(y<-1000)y=-1000;if(y>1000)y=1000;
+  /* Quantize to the actual pixel offset so detection jitter does not reread SD. */
+  if(!b->gaze_enabled||x*8/1000!=b->gaze_x*8/1000||y*6/1000!=b->gaze_y*6/1000){
+    b->gaze_x=x;b->gaze_y=y;b->gaze_enabled=true;b->epoch++;
+    if(b->reduced)b->next_frame=0; /* Keep expression animation progressing. */
+    b->due=lv_tick_get();
+  }
+  return true;
+}
 void glass_grok_action(struct glass_grok *b,unsigned action){if(b&&b->states==42&&(action==0||(action>=42&&action<=51))&&action!=b->action){b->action=action;b->epoch++;b->next_frame=0;b->due=lv_tick_get();}}
 void glass_grok_set_active(struct glass_grok *b,bool active){if(b)b->active=active;}
+void glass_grok_follow_chat(struct glass_grok *b,bool follow){if(b){b->manual=!follow;b->polled_at=0;}}
 void glass_grok_set_reduced_motion(struct glass_grok *b,bool reduced){if(b)b->reduced=reduced;}
 void glass_grok_set_obscured_by(struct glass_grok *b,lv_obj_t *o){if(b)b->overlay=o;}
 unsigned glass_grok_current(const struct glass_grok *b){return b?b->current:2;}

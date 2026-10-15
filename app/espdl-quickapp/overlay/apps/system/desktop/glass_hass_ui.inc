@@ -107,8 +107,7 @@ static struct
   lv_obj_t *brightness;
   lv_obj_t *bottom_badge;
   lv_obj_t *bottom_icon;
-  lv_obj_t *page_prev;
-  lv_obj_t *page_next;
+  lv_obj_t *pager;
   lv_obj_t *card_state[HASS_UI_VISIBLE];
   lv_obj_t *summary_row[5];
   lv_obj_t *summary_count[5];
@@ -1223,21 +1222,9 @@ static void hass_ui_render_devices(void)
   const char *headings[] = {"全屋设备", "常用控制", "环境感知"};
   const char *subtitles[] = {"设备状态，一眼看清", "灯光、开关与风扇", "温度、湿度与传感器"};
   lv_label_set_text(g_hass_ui.heading, headings[g_hass_ui.mode]);
-  if (g_hass_ui.filtered > HASS_UI_VISIBLE)
-    {
-      char page_text[96];
-      snprintf(page_text, sizeof(page_text), "%s · %u/%u 页",
-               subtitles[g_hass_ui.mode], g_hass_ui.page + 1, g_hass_ui.pages);
-      lv_label_set_text(g_hass_ui.subtitle, page_text);
-    }
-  else
-    {
-      lv_label_set_text(g_hass_ui.subtitle, subtitles[g_hass_ui.mode]);
-    }
-  glass_pager_enabled(g_hass_ui.page_prev, g_hass_ui.page > 0,
-                      g_hass_ui.primary);
-  glass_pager_enabled(g_hass_ui.page_next,
-                      g_hass_ui.page + 1 < g_hass_ui.pages, g_hass_ui.primary);
+  lv_label_set_text(g_hass_ui.subtitle,subtitles[g_hass_ui.mode]);
+  glass_pager_update(g_hass_ui.pager,g_hass_ui.page,g_hass_ui.pages,true);
+  if(g_hass_ui.pager)lv_obj_align(g_hass_ui.pager,LV_ALIGN_TOP_MID,0,62);
   if (!g_hass_ui.loaded || hass_ui_first_visible() < 0)
     {
       hass_ui_render_empty();
@@ -1713,29 +1700,10 @@ static void hass_ui_nav(lv_event_t *event)
   hass_ui_render_devices();
 }
 
-static void hass_ui_page_step(int delta)
+static void hass_ui_page_select(void *context,unsigned page)
 {
-  if (g_hass_ui.pages <= 1) return;
-  int page = (int)g_hass_ui.page + delta;
-  if (page < 0 || page >= (int)g_hass_ui.pages)
-    {
-      show_toast(delta < 0 ? "已经是第一页" : "已经是最后一页");
-      return;
-    }
-  g_hass_ui.page = (unsigned)page;
-  hass_ui_render_devices();
-}
-
-static void hass_ui_page_prev(lv_event_t *event)
-{
-  LV_UNUSED(event);
-  hass_ui_page_step(-1);
-}
-
-static void hass_ui_page_next(lv_event_t *event)
-{
-  LV_UNUSED(event);
-  hass_ui_page_step(1);
+  (void)context;if(page>=g_hass_ui.pages)return;
+  g_hass_ui.page=page;hass_ui_render_devices();
 }
 
 static void hass_ui_settings(lv_event_t *event)
@@ -1945,17 +1913,7 @@ static void glass_hass_app(lv_obj_t *card)
   g_hass_ui.top_status = hass_ui_text(status_box, "待同步", 8, 7, 92, 16,
                                       g_hass_ui.secondary);
   lv_obj_set_style_text_align(g_hass_ui.top_status, LV_TEXT_ALIGN_CENTER, 0);
-  /* Paging lives above the grid, under the status chip. */
-  g_hass_ui.page_prev = hass_ui_button(card, LV_SYMBOL_LEFT, 596, 66, 40, 34,
-                                       g_hass_ui.variant, hass_ui_page_prev,
-                                       NULL);
-  g_hass_ui.page_next = hass_ui_button(card, LV_SYMBOL_RIGHT, 644, 66, 40, 34,
-                                       g_hass_ui.variant, hass_ui_page_next,
-                                       NULL);
-  lv_obj_set_style_text_font(lv_obj_get_child(g_hass_ui.page_prev, 0),
-                             glass_icon_font(24), 0);
-  lv_obj_set_style_text_font(lv_obj_get_child(g_hass_ui.page_next, 0),
-                             glass_icon_font(24), 0);
+  g_hass_ui.pager=glass_pager_create(card,g_hass_ui.variant,g_hass_ui.primary,g_hass_ui.secondary,hass_ui_page_select,NULL);
   g_hass_ui.list = glass_box(card, 202, 106, 488, 344,
                              g_hass_ui.background, 0);
 

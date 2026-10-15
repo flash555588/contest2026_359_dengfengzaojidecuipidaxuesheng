@@ -24,6 +24,22 @@ int main(int argc,char **argv)
     glass_grok_set_reduced_motion(b,false);pump(10);
     lv_obj_add_flag(b->root,LV_OBJ_FLAG_HIDDEN);before=b->displayed;pump(30);assert(b->displayed==before);lv_obj_remove_flag(b->root,LV_OBJ_FLAG_HIDDEN);wait_frame(b,before);
     if(style>=3){glass_grok_action(b,42);pump(170);assert(b->action==0);for(unsigned id=43;id<=51;id++){before=b->displayed;glass_grok_action(b,id);wait_frame(b,before);assert(b->action==id);}glass_grok_action(b,0);}
+    if(style>=3){
+      assert(glass_grok_gaze(b,0,0));wait_frame(b,b->displayed);
+      choose(b,2);
+      unsigned left=0,right=0;
+      uint16_t *front=(uint16_t *)b->pixels[b->front];
+      for(unsigned y=40;y<82;y++)for(unsigned x=35;x<92;x++){
+        unsigned v=front[y*128+x],r=v>>11,g=(v>>5)&63,blue=v&31;
+        bool eye=b->black?(r>26&&g>53&&blue>26):(r<7&&g<14&&blue<7);
+        if(eye){if(x<64)left++;else right++;}
+      }
+      assert(left&&left==right); /* Frontal idle eyes have equal contour area. */
+      for(unsigned i=0;i<32;i++){choose(b,ids[i]);assert(b->gaze_enabled);}
+      for(int x=-1000;x<=1000;x+=500){before=b->displayed;assert(glass_grok_gaze(b,x,-x));wait_frame(b,before);assert(b->gaze_x==x);}
+      glass_grok_set_reduced_motion(b,true);before=b->displayed;
+      assert(glass_grok_gaze(b,0,0));wait_frame(b,before);assert(b->gaze_x==0&&b->gaze_y==0);
+    }
     lv_refr_now(d);char path[1024];snprintf(path,sizeof(path),"%s/style-%u.rgb565",argv[1],style);FILE *f=fopen(path,"wb");assert(f);fwrite(framebuffer,1,sizeof(framebuffer),f);fclose(f);
     lv_obj_delete(b->root);
   }

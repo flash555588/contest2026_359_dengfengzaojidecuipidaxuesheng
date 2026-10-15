@@ -16,6 +16,7 @@ static struct chat_snapshot *chat_state;
 #define chat (*chat_state)
 static bool started, send_pending, clear_pending, refresh_pending;
 static atomic_bool cancelled;
+static int clear_mode = -1;
 static uint32_t next_id = 1;
 static char *stream_text;
 static size_t stream_size, stream_capacity;
@@ -98,8 +99,10 @@ void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
   } else if (e->kind == CLAW_STREAM_TOOL) {
     current_activity = CHAT_ACTIVITY_TOOL;
     const char *name = e->text ? e->text : "";
+    if(t->tool_count==CHAT_TOOL_TRACE){memmove(t->tools,t->tools+1,(CHAT_TOOL_TRACE-1)*sizeof(t->tools[0]));t->tool_count--;}
+    snprintf(t->tools[t->tool_count++],sizeof(t->tools[0]),"%s",name);t->tool_total++;
     snprintf(t->progress, sizeof(t->progress), "%s", !strcmp(name, "qpk_write_draft") ? "正在编写应用草稿" :
-      !strcmp(name, "qpk_read_example") ? "正在读取验证过的示例" : !strcmp(name, "qpk_read_draft") ? "正在检查当前草稿" : "正在查看示例目录");
+      !strcmp(name, "qpk_read_example") ? "正在读取验证过的示例" : !strcmp(name, "qpk_read_draft") ? "正在检查当前草稿" : !strncmp(name,"skill_",6)?"正在使用技能":!strncmp(name,"mcp_",4)?"正在调用 MCP 工具":"正在查看示例目录");
   } else if (e->kind == CLAW_STREAM_USAGE) {
     if (e->has_output_tokens) { t->has_output_tokens = true; t->output_tokens = e->output_tokens; }
     if (e->has_reasoning_tokens) { t->has_reasoning_tokens = true; t->reasoning_tokens = e->reasoning_tokens; }
@@ -163,13 +166,16 @@ static void *chat_worker(void *unused)
     if (clear) {
       clear_pending = send_pending = false;
       chat.phase = CHAT_CLEARING; changed();
-      memset(copy, 0, sizeof(*copy));
+      memcpy(copy,&chat,sizeof(*copy));
+      unsigned kept=0;
+      for(unsigned i=0;i<copy->count;i++)if(clear_mode>=0&&copy->turns[i].mode!=clear_mode)copy->turns[kept++]=copy->turns[i];
+      copy->count=kept;memset(copy->turns+kept,0,(CHAT_MAX_TURNS-kept)*sizeof(copy->turns[0]));
       pthread_mutex_unlock(&chat_lock);
       int ret = glass_chat_store_save(copy);
       pthread_mutex_lock(&chat_lock);
       if (!ret) {
-        memset(chat.turns, 0, sizeof(chat.turns)); chat.count = 0;
-        next_id = 1;
+        memcpy(chat.turns,copy->turns,sizeof(chat.turns));chat.count=copy->count;
+        /* Keep IDs monotonic while other modes retain their archives. */
       } else if (chat.count && chat.turns[chat.count - 1].state == CHAT_WAITING) {
         chat.turns[chat.count - 1].state = CHAT_CANCELLED;
       }
@@ -194,7 +200,7 @@ static void *chat_worker(void *unused)
       pthread_mutex_lock(&chat_lock); bool configured = chat.configured; pthread_mutex_unlock(&chat_lock);
       if (!configured) error = CHAT_ERROR_CONFIG;
       else if (!context) error = CHAT_ERROR_MEMORY;
-      else error = glass_chat_request(settings, context, turn->prompt, turn->id, &cancelled, &reply);
+      else error = glass_chat_request(settings, context, turn->prompt, turn->id, turn->mode, &cancelled, &reply);
     }
     free(context);
     char archive[48] = ""; uint32_t archive_bytes = 0;
@@ -208,6 +214,7 @@ static void *chat_worker(void *unused)
     bool reset = clear_pending;
     if (!reset) {
       struct chat_turn *current = &chat.turns[chat.count - 1];
+      current->activity_ms=now_ms();
       snprintf(current->archive, sizeof(current->archive), "%s", archive); current->archive_bytes = archive_bytes;
       if (archive_error) chat.storage_error = archive_error;
       if (atomic_load(&cancelled)) {
@@ -260,16 +267,30 @@ void glass_chat_refresh_config(void)
   pthread_cond_signal(&chat_wake); pthread_mutex_unlock(&chat_lock);
 }
 
-static int queue_turn(const char *prompt, bool retry)
+static int queue_turn(const char *prompt, bool retry, enum glass_agent_mode mode)
 {
+  if (!glass_agent_mode_valid(mode)) return -EINVAL;
   if (!retry && (!prompt || !glass_chat_utf8(prompt, CHAT_PROMPT_BYTES, true))) return -EINVAL;
   if (glass_chat_start()) return -ENOMEM;
   pthread_mutex_lock(&chat_lock); int ret = -EBUSY;
   if (!chat.loaded || chat.phase != CHAT_IDLE) goto done;
   if (!chat.configured) { ret = -ENOKEY; goto done; }
   if (retry) {
-    if (!chat.count || (chat.turns[chat.count - 1].state != CHAT_FAILED &&
-                       chat.turns[chat.count - 1].state != CHAT_CANCELLED)) { ret = -EINVAL; goto done; }
+    unsigned index=chat.count;
+    while(index&&chat.turns[index-1].mode!=mode)index--;
+    if(!index||(chat.turns[index-1].state!=CHAT_FAILED&&chat.turns[index-1].state!=CHAT_CANCELLED)){
+      ret=-EINVAL;goto done;
+    }
+    index--;
+    /* Another mode may have completed since this failure. Move only this
+     * mode's latest failed prompt to the queue tail; keep IDs ordered. */
+    if(index!=chat.count-1){
+      char *saved=strdup(chat.turns[index].prompt);
+      if(!saved){ret=-ENOMEM;goto done;}
+      memmove(chat.turns+index,chat.turns+index+1,(chat.count-index-1)*sizeof(chat.turns[0]));
+      struct chat_turn *tail=&chat.turns[chat.count-1];memset(tail,0,sizeof(*tail));
+      tail->mode=mode;strcpy(tail->prompt,saved);free(saved);
+    }
   } else {
     while (*prompt == ' ' || *prompt == '\n' || *prompt == '\t') prompt++;
     size_t size = strlen(prompt);
@@ -279,15 +300,17 @@ static int queue_turn(const char *prompt, bool retry)
       memmove(chat.turns, chat.turns + 1, (CHAT_MAX_TURNS - 1) * sizeof(chat.turns[0])); chat.count--;
     }
     struct chat_turn *t = &chat.turns[chat.count++]; memset(t, 0, sizeof(*t));
-    memcpy(t->prompt, prompt, size); t->prompt[size] = 0;
+    t->mode=mode;memcpy(t->prompt, prompt, size); t->prompt[size] = 0;
   }
   struct chat_turn *t = &chat.turns[chat.count - 1];
   t->id = next_id++;
+  chat.active_mode = t->mode;
   t->reply[0] = 0; t->clipped = false; t->state = CHAT_WAITING; t->error = CHAT_ERROR_NONE;
   t->text_bytes = t->reasoning_bytes = t->output_tokens = t->reasoning_tokens = t->stream_round = 0;
   t->has_output_tokens = t->has_reasoning_tokens = t->output_limited = false;
   t->archive[0] = 0; t->archive_bytes = 0;
   t->reasoning[0] = 0; strcpy(t->progress, "等待服务响应"); t->began_ms = t->activity_ms = now_ms();
+  t->tool_count=t->tool_total=0;memset(t->tools,0,sizeof(t->tools));
   atomic_store(&cancelled, false); send_pending = true; chat.phase = CHAT_QUEUED;
   current_activity = CHAT_ACTIVITY_CONNECT;
   changed(); pthread_cond_signal(&chat_wake); ret = 0;
@@ -295,8 +318,10 @@ done:
   pthread_mutex_unlock(&chat_lock); return ret;
 }
 
-int glass_chat_send(const char *prompt) { return queue_turn(prompt, false); }
-int glass_chat_retry(void) { return queue_turn(NULL, true); }
+int glass_chat_send_mode(const char *prompt,enum glass_agent_mode mode) { return queue_turn(prompt,false,mode); }
+int glass_chat_retry_mode(enum glass_agent_mode mode) { return queue_turn(NULL,true,mode); }
+int glass_chat_send(const char *prompt) { return glass_chat_send_mode(prompt,AGENT_MODE_CREATE); }
+int glass_chat_retry(void) { return glass_chat_retry_mode(AGENT_MODE_CREATE); }
 
 void glass_chat_cancel(void)
 {
@@ -308,13 +333,27 @@ void glass_chat_cancel(void)
   pthread_mutex_unlock(&chat_lock);
 }
 
-int glass_chat_clear(void)
+static int clear_turns(int mode)
 {
   if (glass_chat_start()) return -ENOMEM;
   pthread_mutex_lock(&chat_lock);
   if (!chat.loaded || chat.phase == CHAT_CLEARING) { pthread_mutex_unlock(&chat_lock); return -EBUSY; }
-  clear_pending = true; atomic_store(&cancelled, true); chat.phase = CHAT_CLEARING;
+  if(mode>=0&&chat.phase!=CHAT_IDLE&&chat.count&&chat.turns[chat.count-1].mode!=mode){pthread_mutex_unlock(&chat_lock);return -EBUSY;}
+  clear_mode=mode;clear_pending = true; atomic_store(&cancelled, true); chat.phase = CHAT_CLEARING;
   changed(); pthread_cond_signal(&chat_wake); pthread_mutex_unlock(&chat_lock); return 0;
+}
+
+int glass_chat_clear(void) { return clear_turns(-1); }
+int glass_chat_clear_mode(enum glass_agent_mode mode)
+{return glass_agent_mode_valid(mode)?clear_turns(mode):-EINVAL;}
+
+bool glass_chat_get_mode(struct chat_snapshot *out,enum glass_agent_mode mode)
+{
+  if(!out||!glass_agent_mode_valid(mode))return false;
+  if(out->view_mode!=mode)out->revision=0;
+  if(!glass_chat_get(out))return false;
+  unsigned n=0;for(unsigned i=0;i<out->count;i++)if(out->turns[i].mode==mode)out->turns[n++]=out->turns[i];
+  out->count=n;out->view_mode=mode;memset(out->turns+n,0,(CHAT_MAX_TURNS-n)*sizeof(out->turns[0]));return true;
 }
 
 bool glass_chat_get(struct chat_snapshot *out)
@@ -327,7 +366,7 @@ bool glass_chat_get(struct chat_snapshot *out)
     pthread_mutex_unlock(&chat_lock); return update;
   }
   bool update = out->revision != chat.revision;
-  if (update) memcpy(out, &chat, sizeof(*out));
+  if (update) {memcpy(out, &chat, sizeof(*out));out->view_mode=AGENT_MODE_COUNT;}
   pthread_mutex_unlock(&chat_lock); return update;
 }
 

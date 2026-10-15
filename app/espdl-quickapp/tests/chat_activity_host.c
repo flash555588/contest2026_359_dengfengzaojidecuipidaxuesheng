@@ -17,6 +17,10 @@ int main(void){
   expression(39);
   e.kind=CLAW_STREAM_TOOL;e.text="qpk_write_draft";glass_chat_stream(7,&e);glass_chat_activity_get(&out);assert(out.activity==CHAT_ACTIVITY_TOOL);
   expression(32);
+  for(unsigned i=0;i<6;i++){char name[40];snprintf(name,sizeof(name),"qpk_test_%u",i);e.text=name;glass_chat_stream(7,&e);}
+  assert(chat.turns[0].tool_count==CHAT_TOOL_TRACE&&chat.turns[0].tool_total==7);
+  assert(!strcmp(chat.turns[0].tools[0],"qpk_test_2")&&!strcmp(chat.turns[0].tools[3],"qpk_test_5"));
+  e.text="thinking";
   e.kind=CLAW_STREAM_REASONING;glass_chat_stream(99,&e);glass_chat_activity_get(&out);assert(out.activity==CHAT_ACTIVITY_TOOL);
   atomic_store(&cancelled,true);glass_chat_stream(7,&e);glass_chat_activity_get(&out);assert(out.activity==CHAT_ACTIVITY_TOOL);atomic_store(&cancelled,false);
   clear_pending=true;glass_chat_stream(7,&e);glass_chat_activity_get(&out);assert(out.activity==CHAT_ACTIVITY_TOOL);clear_pending=false;

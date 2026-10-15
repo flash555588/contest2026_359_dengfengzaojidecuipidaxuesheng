@@ -5,6 +5,7 @@
  */
 
 #include "glass_status.h"
+#include "glass_pager.h"
 static void glass_status_tick(void);
 static void glass_status_visibility(bool locked);
 #define GLASS_HISTORY 24
@@ -287,25 +288,6 @@ static lv_obj_t *glass_button(lv_obj_t *parent, const char *text,
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_center(label);
   return button;
-}
-
-/* Labels have explicit text colors, so disabling only the parent does not
- * make a pager visibly inactive. Set both surfaces and label colors. */
-static void glass_pager_enabled(lv_obj_t *button, bool enabled, uint32_t text_color)
-{
-  if (!button) return;
-  uint32_t background = g_desktop.light_theme ? 0xe4e5e8 : 0x35363d;
-  uint32_t foreground = g_desktop.light_theme ? 0x9598a1 : 0x777a84;
-  lv_obj_set_style_bg_color(button, lv_color_hex(background), LV_STATE_DISABLED);
-  lv_obj_set_style_bg_opa(button, LV_OPA_COVER, LV_STATE_DISABLED);
-  lv_obj_set_style_border_opa(button, LV_OPA_TRANSP, LV_STATE_DISABLED);
-  if (enabled) lv_obj_remove_state(button, LV_STATE_DISABLED);
-  else lv_obj_add_state(button, LV_STATE_DISABLED);
-  for (uint32_t i = 0; i < lv_obj_get_child_count(button); i++) {
-    lv_obj_t *label = lv_obj_get_child(button, i);
-    if (lv_obj_check_type(label, &lv_label_class))
-      lv_obj_set_style_text_color(label, lv_color_hex(enabled ? text_color : foreground), 0);
-  }
 }
 
 static void glass_clickable(lv_obj_t *card, lv_event_cb_t callback, void *data)
@@ -1033,9 +1015,9 @@ static void glass_apps_remove_open(lv_event_t *e)
   glass_button(box, "取消", 28, 238, 238, theme_surface(), glass_apps_remove_cancel, NULL);
   glass_button(box, "删除应用", 282, 238, 250, theme_accent(), glass_apps_remove_confirm, NULL);
 }
-static void glass_apps_page(lv_event_t *e)
+static void glass_apps_page(void *context,unsigned page)
 {
-  g_apps_page_index += (int)(intptr_t)lv_event_get_user_data(e);
+  (void)context;g_apps_page_index = (int)page;
   glass_apps_render();
 }
 
@@ -1095,13 +1077,11 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
       }
       if (g_apps_remove_timer && i >= builtin_count) lv_obj_add_state(tile, LV_STATE_DISABLED);
     }
-  char page_text[96];
-  snprintf(page_text, sizeof(page_text), "%d 个应用 · %d / %d 页", total, g_apps_page_index + 1, pages);
-  glass_text(card, page_text, 40, 450, 410, 16, theme_secondary());
-  lv_obj_t *previous = glass_button(card, "上一页", 590, 434, 130, theme_surface(), glass_apps_page, (void *)(intptr_t)-1);
-  lv_obj_t *next = glass_button(card, "下一页", 734, 434, 130, theme_surface(), glass_apps_page, (void *)(intptr_t)1);
-  glass_pager_enabled(previous, g_apps_page_index > 0, theme_primary());
-  glass_pager_enabled(next, g_apps_page_index + 1 < pages, theme_primary());
+  char count_text[48];snprintf(count_text,sizeof(count_text),"%d 个应用",total);
+  glass_text(card,count_text,40,450,230,16,theme_secondary());
+  lv_obj_t *pager=glass_pager_create(card,theme_surface(),theme_primary(),theme_secondary(),glass_apps_page,NULL);
+  glass_pager_update(pager,g_apps_page_index,pages,!g_apps_remove_timer);
+  if(pager)lv_obj_align(pager,LV_ALIGN_BOTTOM_MID,0,-14);
   if (g_desktop.qpk_scan_failed) show_toast("内存不足，部分应用暂未列出；请稍后重新打开");
 }
 

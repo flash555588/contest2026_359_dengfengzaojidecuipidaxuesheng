@@ -55,7 +55,7 @@ const stopButton = ui.button('停止并保存', left + 22, H - 132, leftWidth - 
 const cancelButton = ui.button('放弃本次', left + leftWidth - 154, H - 132, 132, 52, cancel, ui.surface);
 text('返回将放弃尚未保存的录音', left + 22, H - 66, leftWidth - 44, 24, 16, ui.secondary);
 
-text('录音列表', right + 22, 44, rightWidth - 150, 32, 28);
+text('录音列表', right + 22, 44, 142, 32, 28);
 const countLabel = text('0 条', right + rightWidth - 110, 51, 88, 24, 16, ui.secondary);
 ui.setStyle(countLabel, {center: 1});
 const empty = text('还没有录音\n点击左侧开始录音', right + 38, 206, rightWidth - 76, 100, 20, ui.secondary);
@@ -69,13 +69,32 @@ for (let i = 0; i < 4; i++) {
     name: text('', right + 32, y + 8, rightWidth - 64, 27, 20),
     detail: text('', right + 32, y + 39, rightWidth - 64, 22, 16, ui.secondary)});
 }
-const selectionHint = text('选择录音后可以播放或删除', right + 22, H - 130, rightWidth - 44, 24, 16, ui.secondary);
+const selectionHint = text('选择录音后可以播放或删除', right + 176, 52, rightWidth - 308, 24, 14, ui.secondary);
 const playButton = ui.button('播放', right + 16, H - 80, 154, 44, play, ui.accent);
-const deleteButton = ui.button('删除', right + 182, H - 80, 144, 44, remove, ui.surface);
-const previousButton = ui.button('<', right + rightWidth - 224, H - 80, 64, 44, () => turnPage(-1), ui.surface);
-const pageLabel = text('1 / 1', right + rightWidth - 152, H - 72, 60, 28, 16, ui.secondary);
-ui.setStyle(pageLabel, {center: 1});
-const nextButton = ui.button('>', right + rightWidth - 84, H - 80, 64, 44, () => turnPage(1), ui.surface);
+const deleteButton = ui.button('删除', right + rightWidth - 160, H - 80, 144, 44, remove, ui.surface);
+const pagerDark=ui.primary>0x888888,pagerColor=pagerDark?0x2e303d:0xf3f2f7;
+const pagerFace=ui.panel(0,0,40,28,pagerColor);ui.setStyle(pagerFace,{radius:14,borderWidth:0});
+const pagerSlots=Array.from({length:5},()=>{
+  const slot={page:-1};
+  slot.button=ui.button('',0,0,24,40,()=>{if(slot.page>=0)turnPage(slot.page-page);},ui.card);
+  ui.setStyle(slot.button,{radius:0,borderWidth:0});
+  slot.mark=ui.panel(0,0,6,6,ui.secondary);ui.setStyle(slot.mark,{radius:3,borderWidth:0});
+  return slot;
+});
+if(typeof ui.front==='function'){ui.front(pagerFace);pagerSlots.forEach(slot=>ui.front(slot.mark));}
+function drawPager(){
+  const total=Math.max(1,Math.ceil(clips.length/4)),count=Math.min(5,total),first=Math.max(0,Math.min(page-Math.floor(count/2),total-count));
+  const width=16+count*24,x=Math.round(right+rightWidth/2-width/2),y=H-82,visible=total>1;
+  ui.setHidden(pagerFace,!visible);ui.setPos(pagerFace,x,y+6);ui.setSize(pagerFace,width,28);
+  pagerSlots.forEach((slot,i)=>{
+    const shown=visible&&i<count;slot.page=shown?first+i:-1;
+    ui.setHidden(slot.button,!shown);ui.setHidden(slot.mark,!shown);if(!shown)return;
+    const active=slot.page===page,w=active?20:6;
+    ui.setPos(slot.button,x+8+i*24,y);ui.setStyle(slot.button,{enabled:!task});
+    ui.setPos(slot.mark,x+8+i*24+(24-w)/2,y+17);ui.setSize(slot.mark,w,6);
+    ui.setColor(slot.mark,active?(pagerDark?0xeeeef5:0x292c38):(pagerDark?0x5c606e:0xc5c6ce));
+  });
+}
 
 function enable(button, enabled, color, bright) {
   ui.setStyle(button, {enabled: !!enabled, textColor: enabled && bright ? 0xffffff : ui.secondary});
@@ -90,8 +109,7 @@ function controls() {
   enable(cancelButton, busy && operation === 'record' && !stopping, ui.surface, false);
   enable(playButton, !busy && !!entry && entry.valid !== false, ui.accent, true);
   enable(deleteButton, !busy && !!entry, confirmClip ? red : ui.surface, !!confirmClip);
-  enable(previousButton, !busy && page > 0, ui.surface, false);
-  enable(nextButton, !busy && (page + 1) * 4 < clips.length, ui.surface, false);
+  drawPager();
   ui.setText(recordButton, operation === 'record' ? '录音中' : loaded ? '开始录音' : '重试读取');
   ui.setText(stopButton, operation === 'play' ? '停止播放' : '停止并保存');
   ui.setText(deleteButton, confirmClip ? '确认删除' : '删除');
@@ -100,7 +118,6 @@ function controls() {
 function drawList() {
   page = Math.min(page, Math.max(0, Math.ceil(clips.length / 4) - 1));
   ui.setText(countLabel, clips.length + ' 条');
-  ui.setText(pageLabel, (page + 1) + ' / ' + Math.max(1, Math.ceil(clips.length / 4)));
   ui.setHidden(empty, clips.length > 0);
   for (let i = 0; i < rows.length; i++) {
     const entry = clips[page * 4 + i], row = rows[i];
@@ -222,5 +239,5 @@ function poll() {
 }
 
 globalThis.RecorderApp = {record, stop, cancel, play, remove, select, turnPage,
-  state: () => ({task, operation, selected, count: clips.length, elapsed, stopping})};
+  state: () => ({task, operation, selected, count: clips.length, elapsed, stopping,page,pager:pagerSlots.filter(s=>s.page>=0).map(s=>({page:s.page,button:s.button}))})};
 drawList(); refresh('', '准备录音'); setInterval(poll, 100);

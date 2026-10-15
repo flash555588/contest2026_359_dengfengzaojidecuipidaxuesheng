@@ -3,6 +3,7 @@
 #include "glass_ime.h"
 #include "glass_pinyin.h"
 #include "glass_icons.h"
+#include "glass_pager.h"
 #ifdef CONFIG_SYSTEM_DESKTOP
 #include "glass_voice.h"
 #endif
@@ -11,7 +12,7 @@
 #include <stdio.h>
 
 struct ime {
-  lv_obj_t *keyboard, *bar, *mode, *composition, *candidates[5], *previous, *next, *target;
+  lv_obj_t *keyboard, *bar, *mode, *composition, *candidates[5], *pager, *target;
   char input[33], labels[5][100];
   unsigned page, count, slots;
   bool chinese;
@@ -41,9 +42,9 @@ static void ime_render(struct ime *ime)
   ime->count = ime->input[0] ? glass_pinyin_search(ime->input) : 0;
   int width=lv_obj_get_width(ime->bar), start=width>700?200:128;
 #ifdef CONFIG_SYSTEM_DESKTOP
-  int end=122;
+  int end=142;
 #else
-  int end=76;
+  int end=96;
 #endif
   char first[100]; glass_pinyin_candidate(0,first,sizeof(first));
   ime->slots=width>700 && strlen(first)<=12 ? 5 : 3;
@@ -61,10 +62,17 @@ static void ime_render(struct ime *ime)
     if (index < ime->count) lv_obj_remove_state(ime->candidates[i],LV_STATE_DISABLED);
     else lv_obj_add_state(ime->candidates[i],LV_STATE_DISABLED);
   }
-  if (!ime->page) lv_obj_add_state(ime->previous,LV_STATE_DISABLED);
-  else lv_obj_remove_state(ime->previous,LV_STATE_DISABLED);
-  if ((ime->page+1)*ime->slots >= ime->count) lv_obj_add_state(ime->next,LV_STATE_DISABLED);
-  else lv_obj_remove_state(ime->next,LV_STATE_DISABLED);
+  unsigned pages=(ime->count+ime->slots-1)/ime->slots;
+  glass_pager_update(ime->pager,ime->page,pages,true);
+  if(ime->pager)lv_obj_align(ime->pager,LV_ALIGN_RIGHT_MID,-4,0);
+
+}
+
+static void ime_page_select(void *context,unsigned page)
+{
+  struct ime *ime=context;
+  if(page*ime->slots>=ime->count)return;
+  ime->page=page;ime_render(ime);
 }
 
 static void reset_ime(struct ime *ime)
@@ -130,8 +138,6 @@ static void candidate_clicked(lv_event_t *e)
   }
 #endif
   if (button == ime->mode) { glass_ime_commit(ime->keyboard); ime->chinese=!ime->chinese; ime_render(ime); }
-  else if (button == ime->previous) { if (ime->page) ime->page--; ime_render(ime); }
-  else if (button == ime->next) { if ((ime->page+1)*ime->slots < ime->count) ime->page++; ime_render(ime); }
   else for (unsigned i=0; i<ime->slots; i++) if (button==ime->candidates[i]) { choose_ime(ime,ime->page*ime->slots+i); break; }
 }
 
@@ -399,22 +405,20 @@ void glass_ime_attach(lv_obj_t *keyboard, const lv_font_t *font, bool chinese, u
   lv_obj_set_style_text_font(ime->composition,font,0); lv_obj_set_style_text_color(ime->composition,lv_color_hex(foreground),0); lv_label_set_long_mode(ime->composition,LV_LABEL_LONG_DOT);
   int start=width>700?232:148;
 #ifdef CONFIG_SYSTEM_DESKTOP
-  int end=122;
+  int end=142;
 #else
-  int end=76;
+  int end=96;
 #endif
   int size=(width-start-end)/5;
   for (unsigned i=0;i<5;i++) ime->candidates[i]=ime_button(ime,start+i*size,size-2,font,foreground,surface);
 #ifdef CONFIG_SYSTEM_DESKTOP
-  ime->voice=ime_button(ime,width-118,40,glass_icon_font(24),accent,surface);
+  ime->voice=ime_button(ime,width-138,40,glass_icon_font(24),accent,surface);
   lv_label_set_text(lv_obj_get_child(ime->voice,0),LV_SYMBOL_AUDIO);
   lv_obj_remove_event_cb(ime->voice,candidate_clicked);
   lv_obj_add_event_cb(ime->voice,ime_voice_clicked,LV_EVENT_CLICKED,ime);
 #endif
-  ime->previous=ime_button(ime,width-74,34,glass_icon_font(24),foreground,surface);
-  ime->next=ime_button(ime,width-38,34,glass_icon_font(24),foreground,surface);
-  lv_label_set_text(lv_obj_get_child(ime->previous,0),LV_SYMBOL_LEFT);
-  lv_label_set_text(lv_obj_get_child(ime->next,0),LV_SYMBOL_RIGHT);
+  ime->pager=glass_pager_create(ime->bar,surface,foreground,foreground,ime_page_select,ime);
+  if(ime->pager){struct glass_pager *pager=lv_obj_get_user_data(ime->pager);pager->limit=3;}
   lv_obj_remove_event_cb(keyboard,lv_keyboard_def_event_cb);
   lv_obj_add_event_cb(keyboard,ime_key,LV_EVENT_VALUE_CHANGED,ime);
   lv_obj_add_event_cb(keyboard,ime_deleted,LV_EVENT_DELETE,ime);

@@ -14,6 +14,15 @@ static void touch(lv_indev_t *input,int x,int y,bool pressed)
 static void underlying_click(lv_event_t *e){(void)e;leaked_touches++;}
 static unsigned lock_object_count(lv_obj_t *root)
 {unsigned count=1;for(unsigned i=0;i<lv_obj_get_child_count(root);i++)count+=lock_object_count(lv_obj_get_child(root,i));return count;}
+static lv_obj_t *album_review_pager(lv_obj_t *root)
+{
+  if(!root||!lv_obj_is_visible(root))return NULL;
+  if(lv_obj_get_user_data(root)&&lv_obj_get_height(root)==40&&lv_obj_get_width(root)<=136)return root;
+  for(unsigned i=0;i<lv_obj_get_child_count(root);i++){
+    lv_obj_t *found=album_review_pager(lv_obj_get_child(root,i));if(found)return found;
+  }
+  return NULL;
+}
 int main(int argc,char **argv)
 {
   assert(argc==3);review_out=argv[2];
@@ -50,9 +59,9 @@ int main(int argc,char **argv)
     review_click("照片");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}
     review_capture(display,"album-photos","相册 · 照片筛选");
     review_click("晨光.jpg");for(unsigned i=0;i<3;i++){lv_tick_inc(101);lv_timer_handler();}
-    lv_obj_update_layout(g_desktop.screen);assert(review_find(g_desktop.panel,"下一张"));
+    lv_obj_update_layout(g_desktop.screen);lv_obj_t *pager=album_review_pager(g_desktop.panel);assert(pager);
     review_capture(display,"album-photo","照片查看 · 比例适配");
-    review_click("下一张");for(unsigned i=0;i<3;i++){lv_tick_inc(101);lv_timer_handler();}
+    struct glass_pager *state=lv_obj_get_user_data(pager);assert(state->slots[1].hit);lv_obj_send_event(state->slots[1].hit,LV_EVENT_CLICKED,NULL);for(unsigned i=0;i<3;i++){lv_tick_inc(101);lv_timer_handler();}
     lv_obj_update_layout(g_desktop.screen);assert(review_label_find(g_desktop.panel,"山间.jpeg"));
     review_capture(display,"album-portrait","照片 · 竖图与奇数行宽");
     touch(input,720,350,true);touch(input,680,350,true);touch(input,600,350,true);touch(input,500,350,true);touch(input,400,350,true);touch(input,400,350,false);
@@ -66,8 +75,8 @@ int main(int argc,char **argv)
     review_click("海边短片.mp4");lv_tick_inc(101);lv_timer_handler();review_capture(display,"album-video","视频查看 · 返回相册入口");
     review_click("返回相册");for(unsigned i=0;i<3;i++){lv_tick_inc(101);lv_timer_handler();}
     review_click("全部");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}
-    review_click("›");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}review_capture(display,"album-page2","相册 · 分页加载");
-    review_click("‹");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}
+    pager=album_review_pager(g_desktop.panel);assert(pager);state=lv_obj_get_user_data(pager);lv_obj_send_event(state->slots[1].hit,LV_EVENT_CLICKED,NULL);for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}review_capture(display,"album-page2","相册 · 分页加载");
+    pager=album_review_pager(g_desktop.panel);assert(pager);state=lv_obj_get_user_data(pager);lv_obj_send_event(state->slots[0].hit,LV_EVENT_CLICKED,NULL);for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}
     review_click("相机");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}review_capture(display,"album-folder","相册 · 子目录");
     review_click("上一级");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}
     review_click("本机");for(unsigned i=0;i<18;i++){lv_tick_inc(101);lv_timer_handler();}

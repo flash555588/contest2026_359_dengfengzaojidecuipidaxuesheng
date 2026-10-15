@@ -220,6 +220,7 @@ enum builtin_id_e
   APP_ABOUT
 };
 
+static void glass_chat_ball_open(lv_event_t *event);
 static void settings_rebuild_async(void *data);
 static void glass_save_preferences(void);
 static const lv_font_t *hass_qpk_font(int size);
@@ -1216,34 +1217,7 @@ static void launch_builtin_2048_qapp(lv_event_t *e)
 
 static void launch_builtin_ouo_qapp(lv_event_t *e)
 {
-  lv_obj_t *card;
-  const struct qpk_entry_s *manifest = &g_builtin_ouo_qpk.manifest;
-  extern const char *ouo_get_app_js(unsigned int *len);
-  unsigned int source_size;
-  const char *source;
-  int ret;
-
-  LV_UNUSED(e);
-  source = ouo_get_app_js(&source_size);
-  card = qapp_page_prepare(manifest->name);
-  if (card == NULL || source == NULL || source_size == 0)
-    {
-      show_toast("页面内存不足");
-      return;
-    }
-
-  ret = qpk_runtime_launch(card, manifest->name, manifest->package,
-                           manifest->version, manifest->entry,
-                           source, source_size, zh_font,
-                           show_toast, qpk_show_dialog, qpk_show_unresponsive);
-  if (ret == 0)
-    {
-      qapp_page_commit(card);
-    }
-  else
-    {
-      lv_obj_delete(lv_obj_get_parent(card));
-    }
+  glass_chat_ball_open(e);
 }
 
 static void launch_builtin_espdl_qapp(lv_event_t *e)

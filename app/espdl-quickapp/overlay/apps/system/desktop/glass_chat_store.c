@@ -187,6 +187,7 @@ static cJSON *turns_json(const struct chat_snapshot *state)
     const struct chat_turn *t = &state->turns[i];
     cJSON *item = cJSON_CreateObject();
     if (!item || !cJSON_AddNumberToObject(item, "id", t->id) ||
+        !cJSON_AddNumberToObject(item, "mode", t->mode) ||
         !cJSON_AddNumberToObject(item, "state", t->state) ||
         !cJSON_AddNumberToObject(item, "error", t->error) ||
         !cJSON_AddBoolToObject(item, "clipped", t->clipped) ||
@@ -288,7 +289,10 @@ static int load_file(const char *path, struct chat_snapshot *out, uint32_t *sequ
         !cJSON_IsString(prompt) || !prompt->valuestring[0] ||
         !glass_chat_utf8(prompt->valuestring, CHAT_PROMPT_BYTES, true) ||
         !cJSON_IsString(reply) || !glass_chat_utf8(reply->valuestring, CHAT_REPLY_BYTES, true)) goto done;
+    cJSON *mode=cJSON_GetObjectItemCaseSensitive(item,"mode");
+    if(mode&&!integer(item,"mode",AGENT_MODE_CREATE,AGENT_MODE_COUNT-1))goto done;
     struct chat_turn *turn = &out->turns[count++];
+    turn->mode=mode?mode->valueint:AGENT_MODE_CREATE;
     turn->id = cJSON_GetObjectItemCaseSensitive(item, "id")->valuedouble;
     if (turn->id <= previous) goto done;
     previous = turn->id;
@@ -334,10 +338,11 @@ int glass_chat_store_load(struct chat_snapshot *out)
 
 char *glass_chat_context(const struct chat_snapshot *state)
 {
+  enum glass_agent_mode mode=state->count?state->turns[state->count-1].mode:AGENT_MODE_CREATE;
   unsigned start = state->count; size_t bytes = 0;
   while (start) {
     const struct chat_turn *t = &state->turns[start - 1];
-    if (t->state == CHAT_DONE) {
+    if (t->state == CHAT_DONE && t->mode == mode) {
       size_t size = strlen(t->prompt) + strlen(t->reply);
       if (bytes + size > CHAT_CONTEXT_BYTES) break;
       bytes += size;
@@ -347,7 +352,7 @@ char *glass_chat_context(const struct chat_snapshot *state)
   cJSON *array = cJSON_CreateArray(); if (!array) return NULL;
   for (unsigned i = start; i < state->count; i++) {
     const struct chat_turn *t = &state->turns[i];
-    if (t->state != CHAT_DONE) continue;
+    if (t->state != CHAT_DONE || t->mode != mode) continue;
     const char *roles[] = {"user", "assistant"}, *texts[] = {t->prompt, t->reply};
     for (unsigned j = 0; j < 2; j++) {
       cJSON *m = cJSON_CreateObject();

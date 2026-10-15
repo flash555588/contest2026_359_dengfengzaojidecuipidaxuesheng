@@ -3,11 +3,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "glass_agent_mode.h"
 
 #define CHAT_MAX_TURNS 6
 #define CHAT_PROMPT_BYTES 1536
 #define CHAT_REPLY_BYTES 8192
 #define CHAT_CONTEXT_BYTES 12288
+#define CHAT_TOOL_TRACE 4
 
 enum chat_turn_state { CHAT_WAITING, CHAT_DONE, CHAT_FAILED, CHAT_CANCELLED };
 enum chat_phase { CHAT_LOADING, CHAT_IDLE, CHAT_QUEUED, CHAT_REQUESTING,
@@ -21,6 +23,7 @@ enum chat_error {
 
 struct chat_turn {
   uint32_t id;
+  enum glass_agent_mode mode;
   enum chat_turn_state state;
   enum chat_error error;
   bool clipped;
@@ -29,6 +32,8 @@ struct chat_turn {
   unsigned stream_round;
   bool has_output_tokens, has_reasoning_tokens, output_limited;
   char progress[96], reasoning[1025];
+  unsigned tool_count,tool_total;
+  char tools[CHAT_TOOL_TRACE][40];
   char archive[48];
   uint32_t archive_bytes;
   char prompt[CHAT_PROMPT_BYTES + 1];
@@ -37,6 +42,9 @@ struct chat_turn {
 
 struct chat_snapshot {
   unsigned revision, count;
+  enum glass_agent_mode active_mode;
+  /* Caller-local filter marker; not persisted or sent to the model. */
+  enum glass_agent_mode view_mode;
   enum chat_phase phase;
   bool loaded, configured;
   int storage_error;
@@ -47,6 +55,10 @@ struct chat_snapshot {
 int glass_chat_start(void);
 void glass_chat_refresh_config(void);
 int glass_chat_send(const char *prompt);
+int glass_chat_send_mode(const char *prompt,enum glass_agent_mode mode);
+int glass_chat_retry_mode(enum glass_agent_mode mode);
+int glass_chat_clear_mode(enum glass_agent_mode mode);
+bool glass_chat_get_mode(struct chat_snapshot *out,enum glass_agent_mode mode);
 int glass_chat_retry(void);
 void glass_chat_cancel(void);
 int glass_chat_clear(void);

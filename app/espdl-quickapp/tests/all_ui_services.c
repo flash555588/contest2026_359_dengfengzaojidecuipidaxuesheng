@@ -21,12 +21,122 @@ void review_qpk_fixture(const char *source){review_draft_source=source;review_pr
 void review_music_fixture(int mode){review_music_mode=mode;review_music_position=42000;review_music_duration=204000;review_music_revision++;}
 void review_music_progress_fixture(unsigned position,unsigned duration){review_music_position=position;review_music_duration=duration;review_music_revision++;}
 void review_chat_fixture(int mode){review_chat_mode=mode;}
-void glass_chat_activity_get(struct chat_activity_snapshot *out){memset(out,0,sizeof(*out));out->loaded=true;out->configured=true;out->phase=CHAT_IDLE;out->state=CHAT_DONE;if(review_chat_mode)out->turn_id=1;if(review_grok_mode>0&&review_grok_mode<4){out->phase=CHAT_REQUESTING;out->state=CHAT_WAITING;out->activity=review_grok_mode==1?CHAT_ACTIVITY_THINK:review_grok_mode==2?CHAT_ACTIVITY_REPLY:CHAT_ACTIVITY_TOOL;}else if(review_grok_mode==5)out->state=CHAT_FAILED;else if(review_grok_mode==6)out->state=CHAT_CANCELLED;else if(review_grok_mode==7)out->turn_id=0;}
+/* One shared service fixture for both production chat presentations. */
+static bool review_dialogue;
+static struct chat_snapshot review_dialogue_state;
+static unsigned review_dialogue_sends,review_dialogue_cancels,review_voice_starts;
+static struct glass_voice_snapshot review_dialogue_voice;
+static struct speech_snapshot review_speech;
+static unsigned review_speech_calls;
+static enum chat_activity review_dialogue_activity;
+static int review_speech_failure;
+static char review_spoken[CHAT_REPLY_BYTES+1];
+void review_chat_dialog_fixture(bool enabled)
+{
+  review_dialogue_activity=CHAT_ACTIVITY_THINK;
+  review_dialogue=enabled;memset(&review_dialogue_state,0,sizeof(review_dialogue_state));
+  review_dialogue_state.loaded=review_dialogue_state.configured=true;review_dialogue_state.phase=CHAT_IDLE;
+  review_dialogue_state.revision=1000;strcpy(review_dialogue_state.model,"共享对话验证");
+  memset(&review_speech,0,sizeof(review_speech));review_speech_calls=0;review_speech_failure=0;review_spoken[0]=0;
+  review_dialogue_sends=review_dialogue_cancels=review_voice_starts=0;memset(&review_dialogue_voice,0,sizeof(review_dialogue_voice));
+}
+unsigned review_chat_send_count(void){return review_dialogue_sends;}
+unsigned review_chat_cancel_count(void){return review_dialogue_cancels;}
+unsigned review_voice_start_count(void){return review_voice_starts;}
+int glass_chat_send_mode(const char *prompt,enum glass_agent_mode mode)
+{
+  if(!review_dialogue)return 0;
+  if(review_dialogue_state.phase!=CHAT_IDLE)return -EBUSY;
+  if(!prompt||!prompt[0]||strlen(prompt)>CHAT_PROMPT_BYTES)return -EINVAL;
+  if(review_dialogue_state.count==CHAT_MAX_TURNS){memmove(review_dialogue_state.turns,review_dialogue_state.turns+1,(CHAT_MAX_TURNS-1)*sizeof(struct chat_turn));review_dialogue_state.count--;}
+  struct chat_turn *turn=&review_dialogue_state.turns[review_dialogue_state.count++];memset(turn,0,sizeof(*turn));
+  turn->mode=mode;turn->id=++review_dialogue_sends;turn->state=CHAT_WAITING;strcpy(turn->prompt,prompt);strcpy(turn->progress,"正在思考");
+  review_dialogue_state.active_mode=mode;
+  review_dialogue_activity=CHAT_ACTIVITY_THINK;review_dialogue_state.phase=CHAT_REQUESTING;review_dialogue_state.revision++;return 0;
+}
+int glass_chat_send(const char *prompt){return glass_chat_send_mode(prompt,AGENT_MODE_CREATE);}
+int glass_chat_retry_mode(enum glass_agent_mode mode){(void)mode;return 0;}
+int glass_chat_clear_mode(enum glass_agent_mode mode)
+{
+  unsigned n=0;for(unsigned i=0;i<review_dialogue_state.count;i++)if(review_dialogue_state.turns[i].mode!=mode)
+    review_dialogue_state.turns[n++]=review_dialogue_state.turns[i];
+  review_dialogue_state.count=n;review_dialogue_state.revision++;return 0;
+}
+bool glass_chat_get_mode(struct chat_snapshot *out,enum glass_agent_mode mode)
+{
+  if(out->view_mode!=mode)out->revision=0;
+  if(!glass_chat_get(out))return false;
+  unsigned n=0;for(unsigned i=0;i<out->count;i++)if(out->turns[i].mode==mode)out->turns[n++]=out->turns[i];
+  out->count=n;out->view_mode=mode;return true;
+}
+void review_chat_reply_fixture(const char *text,bool done)
+{
+  assert(review_dialogue_state.count);struct chat_turn *turn=&review_dialogue_state.turns[review_dialogue_state.count-1];
+  snprintf(turn->reply,sizeof(turn->reply),"%s",text);turn->state=done?CHAT_DONE:CHAT_WAITING;
+  snprintf(turn->progress,sizeof(turn->progress),"%s",done?"回复已完成":"正在接收回复");
+  review_dialogue_activity=CHAT_ACTIVITY_REPLY;
+  review_dialogue_state.phase=done?CHAT_IDLE:CHAT_REQUESTING;review_dialogue_state.revision++;
+}
+void glass_chat_cancel(void)
+{
+  if(!review_dialogue)return;review_dialogue_cancels++;review_dialogue_state.phase=CHAT_IDLE;
+  if(review_dialogue_state.count)review_dialogue_state.turns[review_dialogue_state.count-1].state=CHAT_CANCELLED;
+  review_dialogue_state.revision++;
+}
+int glass_chat_clear(void)
+{
+  if(review_dialogue){review_dialogue_state.count=0;review_dialogue_state.phase=CHAT_IDLE;review_dialogue_state.revision++;}return 0;
+}
+int glass_voice_start(void)
+{
+  assert(!review_dialogue||!review_speech.active);
+  if(review_dialogue){review_voice_starts++;review_dialogue_voice.phase=GLASS_VOICE_LISTENING;review_dialogue_voice.active=true;review_dialogue_voice.revision++;}return 0;
+}
+void glass_voice_stop(void)
+{
+  if(review_dialogue){review_dialogue_voice.phase=GLASS_VOICE_FINISHING;review_dialogue_voice.revision++;}
+}
+void review_voice_text_fixture(const char *text)
+{
+  snprintf(review_dialogue_voice.text,sizeof(review_dialogue_voice.text),"%s",text);
+  review_dialogue_voice.phase=GLASS_VOICE_DONE;review_dialogue_voice.active=false;review_dialogue_voice.revision++;
+}
+void glass_speech_get(struct speech_snapshot *out){*out=review_speech;}
+int glass_speech_say(const char *text)
+{
+  assert(!review_dialogue_voice.active);assert(strlen(text)<=240);for(const unsigned char *p=(const unsigned char *)text;*p;){unsigned n=*p<128?1:*p<224?2:*p<240?3:4;assert(*p<128||*p>=194);for(unsigned j=1;j<n;j++)assert(p[j]&&(p[j]&192)==128);p+=n;}
+  if(review_speech_failure)return review_speech_failure;
+  assert(!review_speech.active);review_speech_calls++;review_speech.active=true;review_speech.phase=SPEECH_SPEAKING;review_speech.error=0;
+  assert(strlen(review_spoken)+strlen(text)<sizeof(review_spoken));strcat(review_spoken,text);return 0;
+}
+void glass_speech_stop(void){if(review_speech.active)review_speech.phase=SPEECH_STOPPING;}
+void review_speech_done_fixture(int error){review_speech.active=false;review_speech.error=error;review_speech.phase=error?SPEECH_ERROR:SPEECH_IDLE;}
+unsigned review_speech_count(void){return review_speech_calls;}
+const char *review_speech_text(void){return review_spoken;}
+void review_speech_failure_fixture(int error){review_speech_failure=error;}
+void review_chat_phase_fixture(enum chat_phase phase){review_dialogue_state.phase=phase;review_dialogue_state.revision++;}
+void review_chat_error_fixture(void){review_dialogue_state.phase=CHAT_IDLE;review_dialogue_state.turns[review_dialogue_state.count-1].state=CHAT_FAILED;review_dialogue_state.turns[review_dialogue_state.count-1].error=CHAT_ERROR_NETWORK;review_dialogue_state.revision++;}
+void review_chat_activity_fixture(enum chat_activity activity){review_dialogue_activity=activity;review_dialogue_state.revision++;}
+void review_chat_tool_fixture(const char *name,const char *progress)
+{
+  assert(review_dialogue_state.count);struct chat_turn *turn=&review_dialogue_state.turns[review_dialogue_state.count-1];
+  if(turn->tool_count==CHAT_TOOL_TRACE){memmove(turn->tools,turn->tools+1,(CHAT_TOOL_TRACE-1)*sizeof(turn->tools[0]));turn->tool_count--;}
+  snprintf(turn->tools[turn->tool_count++],sizeof(turn->tools[0]),"%s",name);turn->tool_total++;
+  snprintf(turn->progress,sizeof(turn->progress),"%s",progress);review_chat_activity_fixture(CHAT_ACTIVITY_TOOL);
+}
+void review_speech_level_fixture(unsigned level){review_speech.level=level;}
+void review_voice_level_fixture(unsigned level){review_dialogue_voice.level=level;}
+void review_voice_error_fixture(void){review_dialogue_voice.active=false;review_dialogue_voice.phase=GLASS_VOICE_ERROR;review_dialogue_voice.error=GLASS_VOICE_ERROR_EMPTY;}
+void glass_chat_activity_get(struct chat_activity_snapshot *out){if(review_dialogue){memset(out,0,sizeof(*out));out->loaded=out->configured=true;out->phase=review_dialogue_state.phase;if(review_dialogue_state.count){const struct chat_turn *t=&review_dialogue_state.turns[review_dialogue_state.count-1];out->turn_id=t->id;out->state=t->state;out->activity=review_dialogue_activity;}return;}memset(out,0,sizeof(*out));out->loaded=true;out->configured=true;out->phase=CHAT_IDLE;out->state=CHAT_DONE;if(review_chat_mode)out->turn_id=1;if(review_grok_mode>0&&review_grok_mode<4){out->phase=CHAT_REQUESTING;out->state=CHAT_WAITING;out->activity=review_grok_mode==1?CHAT_ACTIVITY_THINK:review_grok_mode==2?CHAT_ACTIVITY_REPLY:CHAT_ACTIVITY_TOOL;}else if(review_grok_mode==5)out->state=CHAT_FAILED;else if(review_grok_mode==6)out->state=CHAT_CANCELLED;else if(review_grok_mode==7)out->turn_id=0;}
 void review_weather_fixture(int mode){review_weather_mode=mode;}
 void review_ble_fixture(int mode){review_ble_mode=mode;}
 static void review_music_library(struct music_snapshot *out){memset(out,0,sizeof(*out));out->initialized=true;out->volume=40;out->revision=review_music_revision;if(review_music_mode){out->favorite_count=3;const char *names[]={"午后的小调","城市与晚风","熟悉的旋律"};for(unsigned i=0;i<3;i++){snprintf(out->favorites[i].name,sizeof(out->favorites[i].name),"%s",names[i]);strcpy(out->favorites[i].artist,"审核示例歌手");strcpy(out->favorites[i].album,"离线示例专辑");}out->current=out->result=out->favorites[0];out->has_result=true;out->search_revision=1;out->state=review_music_mode==2?MUSIC_PLAYING:MUSIC_IDLE;out->position_ms=review_music_position;out->duration_ms=review_music_duration;}}
-bool glass_chat_get(struct chat_snapshot *out){memset(out,0,sizeof(*out));out->loaded=true;out->phase=CHAT_IDLE;out->configured=true;out->revision=review_chat_mode+1;strcpy(out->model,"离线审核 · 服务示例");if(review_chat_mode){out->count=1;out->turns[0].id=1;out->turns[0].state=CHAT_DONE;strcpy(out->turns[0].prompt,"帮我安排今天的学习计划。");strcpy(out->turns[0].reply,"可以先完成一项最重要的任务，再留出时间整理笔记。\n\n上午：专注学习与练习。\n下午：回顾进度，补充问题。\n晚上：整理收获，为明天留下一条清晰的待办。\n\n以上内容仅用于离线页面审核。");out->turns[0].clipped=true;strcpy(out->turns[0].archive,"review-response");}review_grok_chat(out);return true;}
-bool glass_chat_page_get(struct chat_page *out){memset(out,0,sizeof(*out));out->revision=1;out->pages=2;strcpy(out->text,"完整回复（离线审核示例）\n\n1. 选择今天最重要的一件事。\n2. 在一个专注时段里完成它。\n3. 安排短休息，再检查进度。\n4. 保存笔记，整理明天的待办。\n\n这个页面沿用原有分页与返回操作。");return true;}
+bool glass_chat_get(struct chat_snapshot *out){if(review_dialogue){if(out->revision==review_dialogue_state.revision)return false;*out=review_dialogue_state;return true;}memset(out,0,sizeof(*out));out->loaded=true;out->phase=CHAT_IDLE;out->configured=true;out->revision=review_chat_mode+1;strcpy(out->model,"离线审核 · 服务示例");if(review_chat_mode){out->count=1;out->turns[0].id=1;out->turns[0].state=CHAT_DONE;strcpy(out->turns[0].prompt,"帮我安排今天的学习计划。");strcpy(out->turns[0].reply,"可以先完成一项最重要的任务，再留出时间整理笔记。\n\n上午：专注学习与练习。\n下午：回顾进度，补充问题。\n晚上：整理收获，为明天留下一条清晰的待办。\n\n以上内容仅用于离线页面审核。");out->turns[0].clipped=true;strcpy(out->turns[0].archive,"review-response");}review_grok_chat(out);return true;}
+static unsigned review_archive_page,review_archive_revision=1,review_archive_total=2;
+void review_chat_pages_fixture(unsigned pages){review_archive_total=pages;review_archive_page=0;}
+int glass_chat_page_request(const char *name,unsigned page)
+{(void)name;if(page>=review_archive_total)return -EINVAL;review_archive_page=page;review_archive_revision++;return 0;}
+bool glass_chat_page_get(struct chat_page *out){memset(out,0,sizeof(*out));out->revision=review_archive_revision;out->page=review_archive_page;out->pages=review_archive_total;strcpy(out->text,"完整回复（离线审核示例）\n\n1. 选择今天最重要的一件事。\n2. 在一个专注时段里完成它。\n3. 安排短休息，再检查进度。\n4. 保存笔记，整理明天的待办。\n\n这个页面沿用原有分页与返回操作。");return true;}
 size_t glass_chat_copy_utf8(char *out,size_t cap,const char *text){size_t n=strlen(text);if(n>=cap)n=cap-1;while(n&&(text[n]&0xc0)==0x80)n--;memcpy(out,text,n);out[n]=0;return n;}
 void glass_weather_get(struct glass_weather_snapshot *out){memset(out,0,sizeof(*out));out->state=WEATHER_WAIT_NET;if(review_weather_mode){out->valid=true;out->state=WEATHER_READY;out->revision=2;out->data.temperature=24;out->data.humidity=48;out->data.aqi=32;out->data.level=1;out->data.pm25=12;strcpy(out->data.condition,"多云");strcpy(out->data.category,"良好");strcpy(out->data.location,"当地天气");strcpy(out->data.report_time,"2026-10-13 14:00 · 审核示例");}}
 void glass_ble_read(struct glass_ble_state *out){memset(out,0,sizeof(*out));out->started=true;out->ready=true;if(review_ble_mode){out->count=2;strcpy(out->devices[0].name,"蓝牙键盘 · 审核示例");strcpy(out->devices[1].name,"温湿度传感器 · 审核示例");for(unsigned i=0;i<2;i++){out->devices[i].rssi=-38-i*10;out->devices[i].address[0]=2;out->devices[i].address[5]=i+1;}}}
@@ -34,8 +144,11 @@ void glass_ble_hid_read(struct glass_ble_hid_state *out){memset(out,0,sizeof(*ou
 int c6_desktop_worker_start(struct c6_desktop_worker *w,const struct c6_desktop_backend *b){memset(w,0,sizeof(*w));return 0;}
 int c6_desktop_worker_read(struct c6_desktop_worker *w,struct c6_desktop_result *out){memset(out,0,sizeof(*out));out->sequence=1;out->operation=C6_DESKTOP_STATUS;return 0;}
 /* The keyboard/IME UI is production code; dictionary/voice backends stay offline. */
-bool glass_pinyin_candidate(unsigned index,char *out,size_t capacity){(void)index;if(capacity)out[0]=0;return false;}
-void glass_voice_get(struct glass_voice_snapshot *out){memset(out,0,sizeof(*out));if(review_grok_mode==7){out->active=true;out->phase=GLASS_VOICE_LISTENING;}}
+static unsigned review_pinyin_count;
+void review_pinyin_fixture(unsigned count){review_pinyin_count=count;}
+unsigned glass_pinyin_search(const char *input){return input&&input[0]?review_pinyin_count:0;}
+bool glass_pinyin_candidate(unsigned index,char *out,size_t capacity){if(index>=review_pinyin_count){if(capacity)out[0]=0;return false;}snprintf(out,capacity,"候选%u",index+1);return true;}
+void glass_voice_get(struct glass_voice_snapshot *out){if(review_dialogue){*out=review_dialogue_voice;return;}memset(out,0,sizeof(*out));if(review_grok_mode==7){out->active=true;out->phase=GLASS_VOICE_LISTENING;}}
 const char *glass_voice_error_text(enum glass_voice_error error){(void)error;return "离线审核服务";}
 bool glass_qpk_removable(const char *path,const char *package){return path&&package&&!strcmp(package,"review.fixture");}
 void hass_status(bool *configured,bool *busy,unsigned *clients){if(configured)*configured=false;if(busy)*busy=false;if(clients)*clients=0;}
@@ -208,3 +321,13 @@ int local_album_decode(const char *path,unsigned maxw,unsigned maxh)
 }
 bool local_album_take_image(struct album_image *out)
 {if(!review_album_image_ready)return false;*out=review_album_image;review_album_image=(struct album_image){0};review_album_image_ready=false;return true;}
+
+static struct qpk_dl_result review_face;
+static bool review_face_available;
+static unsigned review_face_cancelled;
+void review_face_fixture(int x,int y,bool tracked){review_face.frame++;review_face.track.state=tracked?QPK_DL_TRACKING:QPK_DL_LOST;review_face.track.offset_x=x;review_face.track.offset_y=y;}
+void review_face_available_fixture(bool available){review_face_available=available;}
+unsigned review_face_cancel_count(void){return review_face_cancelled;}
+int qpk_dl_face_start_default(void){if(!review_face_available)return -ENODEV;review_face.request++;review_face.busy=true;review_face.mode=QPK_DL_FACE;review_face.frame=0;return review_face.request;}
+void qpk_dl_status(struct qpk_dl_result *out){*out=review_face;}
+void qpk_dl_cancel_request(uint32_t id){if(id&&id==review_face.request){review_face_cancelled++;review_face.busy=false;}}

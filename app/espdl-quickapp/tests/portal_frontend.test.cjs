@@ -32,7 +32,7 @@ function boot() {
     sessionStorage: { getItem: () => '', setItem() {}, removeItem() {} },
     Blob, Uint8Array, AbortController, Response, TypeError, TextEncoder,
     FormData: class {
-      constructor(form) { return new Map([['url', form.elements.namedItem('url').value],
+      constructor(form) { if(form.testData)return new Map(Object.entries(form.testData));return new Map([['url', form.elements.namedItem('url').value],
         ['token', form.elements.namedItem('token').value]]); }
     },
     fetch: async (url, options) => { calls.push({ url, options }); return handler(url, options); },
@@ -253,4 +253,21 @@ test('compiled portal assets match the current installer files byte for byte',()
     const array=c.match(new RegExp('asset'+i+'\\[\\]\\=\\{([^}]*)\\}'));
     assert.ok(array);assert.deepEqual(Buffer.from(array[1].split(',').map(Number)),fs.readFileSync(path.join(root,'portal',name)));
   });
+});
+
+test('Agent save keeps blank MCP secrets, converts switches and sends explicit token clear', async () => {
+  const r=boot();await r.connected();
+  r.node('agent').testData={skills_enabled:'1',mcp1_enabled:'1',mcp1_url:'https://mcp.example/mcp',mcp1_token:'',mcp2_token:'',mcp3_token:'',mcp2_clear_token:'on'};
+  let posted;
+  r.handle((url,options)=>{if(options.method==='POST'){assert.equal(url,'/api/config?section=agent');posted=JSON.parse(options.body);}return new Response('{}');});
+  await r.node('agent').onsubmit({preventDefault(){},target:r.node('agent')});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(posted.skills_enabled,1);assert.equal(posted.mcp1_enabled,1);
+  assert.equal('mcp1_token' in posted,false);assert.equal(posted.mcp2_token,'');assert.equal('mcp3_token' in posted,false);
+  assert.equal('mcp2_clear_token' in posted,false);
+});
+
+test('Agent reports saved MCP tokens accurately when later slots are empty', async () => {
+  const r=boot();await r.connected();r.handle(()=>new Response(JSON.stringify({mcp1_token_set:true,mcp2_token_set:false,mcp3_token_set:false})));
+  await r.evaluate("loadConfig('agent')");assert.match(r.node('agent:.saved').textContent,/1.*MCP/);
 });

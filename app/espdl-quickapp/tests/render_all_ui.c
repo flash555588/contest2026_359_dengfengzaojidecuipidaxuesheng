@@ -16,6 +16,18 @@ static void review_flush(lv_display_t *display,const lv_area_t *area,uint8_t *pi
   }
   lv_display_flush_ready(display);
 }
+/* Keep original expression-SDK regression cases separate from the upgraded
+ * launcher entry, which now opens the shared native conversation view. */
+static void review_grok_expression_fixture(void)
+{
+  extern const char *ouo_get_app_js(unsigned int *);
+  unsigned size;const char *source=ouo_get_app_js(&size);
+  const struct qpk_entry_s *manifest=&g_builtin_ouo_qpk.manifest;
+  lv_obj_t *card=qapp_page_prepare(manifest->name);assert(card&&source&&size);
+  assert(qpk_runtime_launch(card,manifest->name,manifest->package,manifest->version,manifest->entry,
+    source,size,zh_font,show_toast,qpk_show_dialog,qpk_show_unresponsive)==0);
+  qapp_page_commit(card);
+}
 static const char *review_out;
 static FILE *review_manifest;
 static unsigned review_count;
@@ -325,7 +337,7 @@ int main(int argc,char **argv)
     review_click("Toast 提示");review_capture(display,"hello-toast","快应用消息提示");toast_cancel();
     review_click("对话框");review_capture(display,"hello-dialog","快应用对话框");dialog_cancel();
     SHOT("game2048","2048",launch_builtin_2048_qapp(NULL));
-    SHOT("ouo","Grok Ball 表情",launch_builtin_ouo_qapp(NULL));
+    SHOT("ouo","Grok Ball · 表情兼容检查",review_grok_expression_fixture());
     assert(qpk_review_eval("for(var i=0;i<12;i++)__reviewTick()")==0);review_capture(display,"ouo-animation","Grok Ball 动画帧");
     assert(qpk_review_eval("VelaMood.setEmotion('30');for(var i=0;i<84;i++)__reviewTick()")==0);
     review_capture(display,"ouo-thinking","Grok Ball 思考环带");

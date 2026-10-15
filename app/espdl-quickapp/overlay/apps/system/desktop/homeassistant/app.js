@@ -3093,12 +3093,9 @@
     out.footerLine = panel(GRID_X, H - FOOTER_H, GRID_W, 1, pal.line, 0);
     out.selectedName = label('', GRID_X + 16, H - FOOTER_H + 4, 278, 24, 15, pal.ink);
     out.selectedState = label('', GRID_X + 16, H - FOOTER_H + 28, 278, 24, 11, pal.muted);
-    out.pages = label('', W - 292, H - FOOTER_H + 15, 180, 24, 12, pal.muted);
-    pushStyle(out.pages, 'L', { center: 1 });
-    out.previous = iconButton('\uf053', W - 100, H - FOOTER_H + 11, 36, 30,
-      () => { if (roomPage > 0) { roomPage--; render(); } }, pal.card);
-    out.next = iconButton('\uf054', W - 58, H - FOOTER_H + 11, 36, 30,
-      () => { if (roomPage + 1 < pageCount()) { roomPage++; render(); } }, pal.card);
+    out.pager=createPageIndicator('list',target=>{
+      quickDrag=null;quickGestureOwned=false;roomPage=target;render();
+    });
     yield out;
     out.url = label('', GRID_X + 42, GRID_Y + 42, GRID_W - 84, 24, 16, pal.ink);
     out.secret = label('', GRID_X + 42, GRID_Y + 72, GRID_W - 84, 24, 14, pal.muted);
@@ -3154,12 +3151,7 @@
     }
     const bottom=dy+dh-42;
     const navWidth=Math.floor((leftW-8)/2);
-    out.detailPrevious=createButton('<',cx+cw-118,bottom,44,36,()=>{controlPage=Math.max(0,controlPage-1);render();},pal.soft,{radius:18,borderWidth:0,fontSize:14});
-    out.detailNext=createButton('>',cx+cw-66,bottom,44,36,()=>{controlPage++;render();},pal.soft,{radius:18,borderWidth:0,fontSize:14});
-    out.detailPrevious.section=out.detailNext.section='detail';
-    out.detailFunctionIndex=remember(label('',cx+cw-leftW-20,dy+dh-40,leftW-130,24,13,pal.muted));pushStyle(out.detailFunctionIndex,'L',{center:1});
-    out.detailPagerPreviousGlyph=remember(label('<',cx+cw-118,bottom+5,44,26,20,pal.muted));pushStyle(out.detailPagerPreviousGlyph,'L',{center:1});
-    out.detailPagerNextGlyph=remember(label('>',cx+cw-66,bottom+5,44,26,20,pal.muted));pushStyle(out.detailPagerNextGlyph,'L',{center:1});
+    out.detailPager=createPageIndicator('detail',target=>{controlPage=target;render();},remember);
     out.detailEntity=remember(label('',cx+20,bottom-24,cw-40,20,11,pal.muted));
     out.detailAvailability=remember(label('',cx+20,bottom,cw-212,30,13,pal.muted));
     out.detailControlRows=[];
@@ -3182,9 +3174,7 @@
       row.plusGlyph=remember(label('+',rx+rw-58,y+43,58,28,20,pal.ink));pushStyle(row.plusGlyph,'L',{center:1});
       out.detailControlRows.push(row);
     }
-    out.detailControlPrevious=createButton('上一组',cx+cw-180,bottom,76,32,()=>{controlPage=Math.max(0,controlPage-1);render();},pal.soft,{radius:16,borderWidth:0,fontSize:13});
-    out.detailControlNext=createButton('下一组',cx+cw-96,bottom,76,32,()=>{controlPage++;render();},pal.soft,{radius:16,borderWidth:0,fontSize:13});
-    out.detailControlPrevious.section=out.detailControlNext.section='detail';
+
     out.detailDragGroup={item:null,brightnessRect:null,sliderRects:[],controlRects:[]};
     out.detailWidgets.forEach(id=>hide(id,true));
   }
@@ -3257,7 +3247,8 @@
       optionPickerUi={choices:Array.from({length:4},(_,index)=>make('',()=>{
         if(!optionPicker)return;const state=optionPicker,entity=entities.find(row=>row.entity_id===state.entity),current=entity&&functionControls(entity).find(row=>row.service===state.service&&row.key===state.key);
         const value=current&&current.options[state.page*4+index];optionPicker=null;detailRenderKey='';if(value!==undefined)requestFunction(entity,current,value);render();
-      })),previous:make('<',()=>{optionPicker.page--;render();}),next:make('>',()=>{optionPicker.page++;render();}),close:make('返回',()=>{optionPicker=null;detailRenderKey='';render();})};
+      })),close:make('返回',()=>{optionPicker=null;detailRenderKey='';render();})};
+      optionPickerUi.pager=createPageIndicator('picker',target=>{if(optionPicker){optionPicker.page=target;render();}},id=>out.detailWidgets.push(id));
     }
     out.detailWidgets.forEach(id=>hide(id,true));hide(out.detailPanel,false);hide(out.detailName,false);hide(out.detailState,false);
     pushPos(out.detailName,box.x+20,box.y+16);pushSize(out.detailName,box.w-40,36);
@@ -3268,10 +3259,11 @@
     optionPickerUi.choices.forEach((button,index)=>{const value=spec.options[optionPicker.page*4+index];hide(button,value===undefined);if(value===undefined)return;
       paintDetailButton(button,optionLabel(value),box.x+20,y+index*rowH,box.w-40,rowH-8,value===controlValue(item,spec),true);});
     const bottom=box.y+box.h-52;
-    Object.assign(optionPickerUi.previous,{x:box.x+20,y:bottom,w:48,h:40});hide(optionPickerUi.previous,optionPicker.page===0);
-    Object.assign(optionPickerUi.next,{x:box.x+80,y:bottom,w:48,h:40});hide(optionPickerUi.next,optionPicker.page+1>=pages);
+    hidePageIndicator(out.detailPager);
+    updatePageIndicator(optionPickerUi.pager,optionPicker.page,pages,true,box.x+box.w/2,bottom,pal.card);
     Object.assign(optionPickerUi.close,{x:box.x+box.w-108,y:bottom,w:88,h:40});hide(optionPickerUi.close,false);
-    [optionPickerUi.previous,optionPickerUi.next,optionPickerUi.close].forEach(b=>{if(!b.hidden)paintDetailButton(b,b.text,b.x,b.y,b.w,b.h,false,true);});
+    paintDetailButton(optionPickerUi.close,'返回',optionPickerUi.close.x,bottom,88,40,false,true);
+
   }
   function lampUi(){
     const out=widgets;if(out.lampUi)return out.lampUi;
@@ -3456,9 +3448,7 @@
     const out=widgets,box=out.detailAuxBox,fields=supplied||deviceFields(members);
     const count=out.detailAuxCount,pages=totalPages||Math.max(1,Math.ceil(fields.length/count));controlPage=Math.min(controlPage,pages-1);
     const visible=supplied||fields.slice(controlPage*count,controlPage*count+count);
-    hide(out.detailPrevious,controlPage===0);hide(out.detailNext,controlPage+1>=pages);
-    hide(out.detailPagerPreviousGlyph,controlPage===0);hide(out.detailPagerNextGlyph,controlPage+1>=pages);
-    hide(out.detailFunctionIndex,pages===1);pushText(out.detailFunctionIndex,(controlPage+1)+' / '+pages);
+    updatePageIndicator(out.detailPager,controlPage,pages,true,out.detailBox.x+out.detailBox.w/2,H-44,pal.page);
     const rowH=out.detailAuxRowHeight||Math.min(102,Math.floor(box.h/count));
     out.detailMembers.forEach((row,index)=>{
       const field=index<count?visible[index]:null;row.item=field&&field.item;row.spec=field&&field.spec;
@@ -3647,9 +3637,7 @@
     const draw=(rows,fields,x,w,aux)=>{let y=bodyY;rows.forEach((row,index)=>{const f=fields[index];paintRow(row,f,x,y,w,aux);if(f)y+=height(f)+(grid?18:D.fieldGap);});};
     draw(out.detailControlRows,controlPage<basePages?leftPages[controlPage]||[]:extraPages[controlPage-basePages]||[],left,width,false);
     draw(out.detailMembers,controlPage<basePages?rightPages[controlPage]||[]:[],right,auxWidth,true);
-    const pagerY=box.y+box.h+8;[out.detailPrevious,out.detailNext].forEach((b,i)=>Object.assign(b,{x:box.x+box.w-118+i*52,y:pagerY,w:44,h:36}));
-    pushPos(out.detailPagerPreviousGlyph,box.x+box.w-118,pagerY+5);pushPos(out.detailPagerNextGlyph,box.x+box.w-66,pagerY+5);pushPos(out.detailFunctionIndex,right,pagerY+6);
-    hide(out.detailPrevious,controlPage===0);hide(out.detailNext,controlPage+1>=pages);hide(out.detailPagerPreviousGlyph,controlPage===0);hide(out.detailPagerNextGlyph,controlPage+1>=pages);hide(out.detailFunctionIndex,pages===1);pushText(out.detailFunctionIndex,(controlPage+1)+' / '+pages);
+    updatePageIndicator(out.detailPager,controlPage,pages,true,box.x+box.w/2,Math.min(H-40,box.y+box.h+2),pal.page);
   }
 
   function renderDetail(selected,visible){
@@ -3668,9 +3656,8 @@
     out.detailMembers.forEach(row=>{row.minusAction=row.plusAction=null;hide(row.button,!visible);});
     out.detailControlRows.forEach(row=>{row.minusAction=row.plusAction=null;hide(row.minus,true);hide(row.plus,true);});
     hide(out.detailLampPowerFace,true);
-    hide(out.detailPagerPreviousGlyph,true);hide(out.detailPagerNextGlyph,true);
+    hidePageIndicator(out.detailPager);
     out.detailAuxRowHeight=0;out.activeDetailBox=out.detailBox;pushSize(out.detailPanel,out.detailBox.w,out.detailBox.h);
-    [out.detailPrevious,out.detailNext,out.detailControlPrevious,out.detailControlNext].forEach(id=>hide(id,true));
     out.detailDragGroup={item:selected,brightnessRect:null,sliderRects:[],controlRects:[]};
     if(!visible)return;
     const device=currentDeviceCard(),members=deviceFunctions();
@@ -3685,7 +3672,6 @@
     pushText(out.detailState,detailState+(profile&&profile.notice?' · '+profile.notice:''));
     pushColor(out.detailState,readings.some(row=>row.alert)?pal.warn:pal.muted);
     out.detailMembers.forEach(row=>{[row.face,row.name,row.state,row.fill,row.thumb].forEach(id=>hide(id,true));hide(row.button,true);});
-    hide(out.detailFunctionIndex,true);
     hide(out.detailEntity,true);hide(out.detailAvailability,true);
     const specs=functionControls(selected);
     pushPos(out.detailName,out.detailBox.x+20,out.detailBox.y+16);pushStyle(out.detailName,'L',{fontSize:24,center:0});
@@ -3704,7 +3690,6 @@
     const pageFields=fields.slice(offset,offset+mainCount);
     controlPage=Math.min(controlPage,pages-1);
     pushText(out.detailAvailability,!connected?'未连接':!available(selected)?'设备不可用':specs.length?'拖动调节 · '+(controlPage+1)+'/'+pages:'传感器读数 · 只读');
-    hide(out.detailControlPrevious,true);hide(out.detailControlNext,true);
     out.detailControlRows.forEach((row,i)=>{
       const field=i<out.detailControlCount?pageFields[i]:null,spec=field&&field.spec;row.item=field&&field.item;row.spec=spec;
       [row.title,row.track,row.fill,row.thumb,row.value,row.minusGlyph,row.plusGlyph].forEach(id=>hide(id,!spec));
@@ -3870,14 +3855,15 @@
 
     hide(widgets.footer, !listView); hide(widgets.footerLine, !listView);
     hide(widgets.selectedName, !listView); hide(widgets.selectedState, !listView);
-    hide(widgets.pages, !listView);
-    pushText(widgets.selectedName,nav==='logs'?'本次会话日志 · 最多 32 条':nav==='scenes'?'场景与脚本':layoutEditing?'编辑卡片布局':selected?fit(selected.name,278,15):'轻点卡片 · 更多操作');
+    const footerTextWidth = renderPageIndicator(listView, pages);
+    pushSize(widgets.selectedName, footerTextWidth, 24);
+    pushSize(widgets.selectedState, footerTextWidth, 24);
+    pushStyle(widgets.selectedName, 'L', { ellipsis: 1 });
+    pushStyle(widgets.selectedState, 'L', { ellipsis: 1 });
+    pushText(widgets.selectedName,fit(nav==='logs'?'本次会话日志 · 最多 32 条':nav==='scenes'?'场景与脚本':layoutEditing?'编辑卡片布局':selected?selected.name:'轻点卡片 · 更多操作',footerTextWidth,15));
     const selectedTarget=selected&&controlTargets[selected.entity_id];
     pushText(widgets.selectedState,layoutEditing?(layoutSaveError?'布局未保存，请重试':'选择尺寸后，点击完成编辑查看组合'):
       nav==='logs'?'仅记录本页面 · 关闭后清除':nav==='scenes'?sceneStatusText(list.length):phase==='error'?message:selectedTarget?(selectedTarget.sent?'正在同步状态':'待执行 · 前一设备仍在执行'):selected?fit(quickCardModel(selected).subtitle,278,11):message);
-    pushText(widgets.pages, '第 '+(roomPage+1)+' / '+pages+'页 · '+list.length+'张卡片');
-    pairHidden(widgets.previous, !listView || roomPage === 0);
-    pairHidden(widgets.next, !listView || roomPage + 1 >= pages);
 
     if(widgets.detailWidgets)renderDetail(selected,detailView);
 
@@ -3903,9 +3889,51 @@
     if(quickDrag&&quickDrag.generation===generation&&quickDrag.group.item&&
        (quickDrag.rect.item||quickDrag.group.item).entity_id===quickDrag.item.entity_id&&(quickDrag.group.brightnessRect||quickDrag.rect.spec))
       previewQuickBrightness(quickDrag,quickDrag.percent);
-    if(optionPickerUi)Object.values(optionPickerUi).flat().forEach(button=>hide(button,true));
+    if(optionPickerUi)Object.values(optionPickerUi).flat().forEach(button=>{if(button&&button.slots)hidePageIndicator(button);else hide(button,true);});
     renderOptionPicker();
     renderButtons();
+  }
+
+  function createPageIndicator(section,select,remember){
+    const keep=id=>{if(remember)remember(id);hide(id,true);return id;};
+    const pager={face:keep(panel(0,0,40,28,dark?0x2e303d:0xf3f2f7,14)),slots:[],keep};
+    for(let index=0;index<5;index++){
+      const slot={page:-1,mark:null};
+      slot.button=createButton('',0,0,24,40,()=>{
+        if(!pager.visible||slot.page<0||slot.page>=pager.total||slot.page===pager.current)return;
+        select(slot.page);
+      },pal.card,{radius:0,borderWidth:0});
+      slot.button.section=section;hide(slot.button,true);pager.slots.push(slot);
+    }
+    return pager;
+  }
+  function hidePageIndicator(pager){
+    if(!pager)return;pager.visible=false;pager.frontKey='';hide(pager.face,true);
+    pager.slots.forEach(slot=>{slot.page=-1;hide(slot.button,true);hide(slot.mark,true);});
+  }
+  function updatePageIndicator(pager,current,total,visible,centerX,y,background){
+    if(!pager)return;
+    visible=visible&&total>1;pager.visible=visible;pager.current=current;pager.total=total;
+    const count=Math.min(pager.slots.length,total);
+    const first=Math.max(0,Math.min(current-Math.floor(count/2),total-count));
+    const width=16+count*24,x=Math.floor(centerX-width/2),frontKey=visible+'|'+buttonPool.length;
+    hide(pager.face,!visible);pushSize(pager.face,width,28);pushPos(pager.face,x,y+6);
+    if(visible&&pager.frontKey!==frontKey&&typeof ui.front==='function')ui.front(pager.face);
+    pager.slots.forEach((slot,index)=>{
+      const shown=visible&&index<count;slot.page=shown?first+index:-1;
+      hide(slot.button,!shown);hide(slot.mark,!shown);if(!shown)return;
+      const created=!slot.mark;if(created)slot.mark=pager.keep(panel(0,0,6,6,pal.muted,3));
+      const active=slot.page===current,markWidth=active?20:6;
+      Object.assign(slot.button,{x:x+8+index*24,y,color:background});
+      hide(slot.mark,false);pushPos(slot.mark,slot.button.x+(24-markWidth)/2,y+17);pushSize(slot.mark,markWidth,6);
+      pushColor(slot.mark,active?(dark?0xeeeef5:0x292c38):(dark?0x5c606e:0xc5c6ce));
+      if((created||pager.frontKey!==frontKey)&&typeof ui.front==='function')ui.front(slot.mark);
+    });pager.frontKey=frontKey;
+  }
+  function renderPageIndicator(listView,total){
+    updatePageIndicator(widgets.pager,roomPage,total,listView,GRID_X+GRID_W/2,H-FOOTER_H+7,pal.card);
+    const width=16+Math.min(5,total)*24,x=Math.floor(GRID_X+(GRID_W-width)/2);
+    return listView&&total>1?Math.max(1,Math.min(278,x-GRID_X-32)):278;
   }
 
   function continueRender() {
@@ -3969,6 +3997,13 @@
       nativeManaged,
       desktopPins:desktopPins.slice(),desktopCards:desktopCards().map(card=>({entity:card.entity_id,key:deviceCardKey(card),name:card.name,pinned:desktopPins.includes(deviceCardKey(card))})),
       favorites: favorites.slice(), filter, search, page, nav, roomPage, layoutStyle,
+      pageIndicator:widgets&&widgets.pager?{visible:!settingsOpen&&!detailOpen&&pageCount()>1,
+        total:pageCount(),slots:widgets.pager.slots.filter(slot=>slot.page>=0).map(slot=>({
+          page:slot.page,active:slot.page===roomPage,x:slot.button.x,y:slot.button.y,w:24,h:40}))}:null,
+      detailPageIndicator:widgets&&widgets.detailPager?{visible:widgets.detailPager.visible,
+        current:controlPage,total:widgets.detailPager.total,slots:widgets.detailPager.slots.filter(slot=>slot.page>=0).map(slot=>({page:slot.page,x:slot.button.x,y:slot.button.y,w:24,h:40}))}:null,
+      optionPageIndicator:optionPickerUi&&optionPickerUi.pager?{visible:optionPickerUi.pager.visible,
+        total:optionPickerUi.pager.total,slots:optionPickerUi.pager.slots.filter(slot=>slot.page>=0).map(slot=>({page:slot.page,x:slot.button.x,y:slot.button.y,w:24,h:40}))}:null,
       functionControls:detailOpen?deviceFields(deviceFunctions()).map(f=>({entity:f.item.entity_id,title:f.spec.title,key:f.spec.key,kind:f.spec.kind,service:f.spec.service,min:f.spec.min,max:f.spec.max,options:f.spec.options})):[],
       colorWheel:widgets&&detailOpen&&widgets.lampUi&&widgets.lampUi.wheelRect?Object.assign({},widgets.lampUi.wheelRect):null,
       parameterControls:widgets?([widgets.detailDragGroup].concat(widgets.quickGroups||[],widgets.cards||[])).filter(Boolean).flatMap(q=>(q.controlRects||[]).map(r=>({entity:(r.item||q.item).entity_id,key:r.spec.key,vertical:!!r.vertical,x:r.inputX||r.x,y:r.y,w:r.inputW||r.w,h:r.h,min:r.spec.min,max:r.spec.max}))):[],

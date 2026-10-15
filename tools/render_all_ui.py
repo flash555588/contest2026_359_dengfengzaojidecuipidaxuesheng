@@ -134,7 +134,7 @@ void local_video_play_path(const char *path){(void)path;}
     headers=['qpk_runtime.h','qpk_storage.h','glass_qpk_builder.h','glass_portal.h',
       'hass_portal.h','hass_service.h','glass_music.h','glass_lock_photo.h','glass_chat.h','glass_ime.h',
       'glass_weather.h','glass_settings_service.h','glass_file_service.h','glass_system_monitor.h','glass_voice.h','glass_pinyin.h',
-      'glass_ble.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
+      'glass_ble.h','glass_speech.h','qpk_espdl.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
     skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice'}
     mocks=['#include <stdlib.h>\n#include <string.h>\n#include <stdio.h>\n#include <errno.h>\n#include <netinet/in.h>\n#include "glass_icons.h"']
     mocks += [f'#include "{name}"' for name in headers]
@@ -181,7 +181,7 @@ void local_video_play_path(const char *path){(void)path;}
     sources=[a.harness_source or repo/'app/espdl-quickapp/tests/render_all_ui.c',repo/'app/espdl-quickapp/tests/qpk_review_bridge.c',work/'service_mocks.c',desktop/'glass_icons.c',desktop/'glass_ime.c',
       apps/'netutils/cjson/cJSON/cJSON.c',work/'qrcodegen.c']
     sources += [desktop/name for name in ['camera_resource.c','recorder_resource.c','espdl_resource.c','ouo_resource.c','dafeiyu_resource.c','homeassistant_resource.c']]
-    sources += [desktop/name for name in ['glass_grok.c','glass_grok_state.c']]
+    sources += [desktop/name for name in ['glass_grok.c','glass_grok_state.c','glass_code_font.c']]
     sources += [repo/'app/bilibili_live/local_album_ui.c',repo/'app/bilibili_live/album_formats.c']
     command=['gcc',*flags,*map(str,sources),*map(str,objects),'-Wl,--gc-sections','-lm','-o',str(out/'render-all-ui')]
     with (out/'compile.log').open('w') as log:
@@ -191,7 +191,7 @@ void local_video_play_path(const char *path){(void)path;}
     subprocess.run([str(out/'render-all-ui'),str(apps/'system/desktop/AlibabaPuHuiTi-3-55-Regular.otf'),str(out)],check=True)
     captures=[out/Path(row['file']).with_suffix('.rgb565') for row in json.loads((out/'screens.json').read_text()) if row['id'].startswith(a.png_prefix)]
     with ProcessPoolExecutor(max_workers=4) as pool:list(pool.map(png565,captures))
-    tracked=sources+[repo/'tools/render_all_ui.py',repo/'app/espdl-quickapp/tests/all_ui_fixture.js',desktop/'qpk_runtime.c']+list(desktop.glob('*.inc'))+[desktop/'glass_file_types.h']
+    tracked=sources+[repo/'tools/render_all_ui.py',repo/'app/espdl-quickapp/tests/all_ui_fixture.js',desktop/'qpk_runtime.c']+list(desktop.glob('*.inc'))+[desktop/'glass_file_types.h',desktop/'glass_pager.h',desktop/'glass_speech_level.h',desktop/'glass_grok_gaze.h',desktop/'glass_chat_markup.h',desktop/'glass_chat.h']
     records=[]
     for path in sorted(set(tracked)):
         try:name=str(path.relative_to(repo))

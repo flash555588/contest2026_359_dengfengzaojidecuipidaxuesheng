@@ -74,7 +74,7 @@ int espclaw_main(int argc, char **argv)
     }
     if (!strcmp(argv[1], "cleanup")) {
         err = retained_core ? claw_core_destroy(retained_core) : ESP_OK;
-        if (err == ESP_OK) retained_core = NULL;
+        if (err == ESP_OK) {retained_core = NULL;claw_qpk_close(&qpk_session);}
         printf("espclaw: cleanup %s (code %d)\n",
                retained_core ? "pending" : "complete", err);
         pthread_mutex_unlock(&command_lock);
@@ -83,7 +83,7 @@ int espclaw_main(int argc, char **argv)
     if (retained_core) {
         err = claw_core_destroy(retained_core);
         if (err != ESP_OK) goto done;
-        retained_core = NULL;
+        retained_core = NULL;claw_qpk_close(&qpk_session);
     }
     claw_core_config_t config = {
         .system_prompt = "Offline firmware lifecycle check",
@@ -105,13 +105,15 @@ int espclaw_main(int argc, char **argv)
     }
     if (ask) {
         cli_streamed = false;
+        /* The developer CLI retains its explicit app-authoring role. */
+        qpk_session.mode = AGENT_MODE_CREATE;
         claw_qpk_configure(&config, &qpk_session);
         config.on_request_start = cli_stream_start;
         if (config.timeout_ms < 300000) config.timeout_ms = 300000;
     }
     err = claw_core_create(&config, &retained_core);
     if (err != ESP_OK) goto done;
-    if (ask) err = claw_qpk_attach(retained_core);
+    if (ask) err = claw_qpk_attach(retained_core,&qpk_session);
     if (err == ESP_OK) err = claw_core_start(retained_core);
     if (err == ESP_OK) {
         claw_core_request_t request = {
@@ -137,9 +139,10 @@ int espclaw_main(int argc, char **argv)
         claw_core_response_free(&response);
     }
     esp_err_t cleanup = claw_core_destroy(retained_core);
-    if (cleanup == ESP_OK) retained_core = NULL;
+    if (cleanup == ESP_OK) {retained_core = NULL;claw_qpk_close(&qpk_session);}
     else { result = 1; err = cleanup; }
 done:
+    if(!retained_core)claw_qpk_close(&qpk_session);
     if (!result && !ask) printf("ESP-Claw %s: offline core selftest PASS; network/model not tested\n",
                         claw_get_version());
     else if (result) fprintf(stderr, "espclaw: command failed (code %d, cleanup pending %s)\n",
