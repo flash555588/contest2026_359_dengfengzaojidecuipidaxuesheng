@@ -116,14 +116,14 @@ static void glass_resources_page(void *unused)
     g_resources.mini[i]=resources_chart(tile,14,90,130,32,i,&g_resources.mini_series[i]);
   }
   detail_text(card,"监测范围",24,442,142,12,detail_muted());detail_text(card,"CPU · 系统堆",24,464,142,14,detail_ink());
-  lv_obj_t *graph=detail_tile(card,216,104,784,344);g_resources.heading=detail_text(graph,"CPU",24,22,300,28,detail_ink());
+  lv_obj_t *graph=detail_tile(card,216,104,784,320);g_resources.heading=detail_text(graph,"CPU",24,22,300,28,detail_ink());
   g_resources.labels[6]=detail_text(graph,"--",520,20,236,34,detail_ink());lv_obj_set_style_text_align(g_resources.labels[6],LV_TEXT_ALIGN_RIGHT,0);
   g_resources.labels[4]=detail_text(graph,"",24,60,650,12,detail_muted());
-  g_resources.chart=resources_chart(graph,24,108,736,192,0,&g_resources.series);
-  g_resources.empty=detail_text(graph,"等待有效采样",268,185,250,16,detail_muted());detail_text(graph,"100%",704,85,56,12,detail_muted());
-  g_resources.axis=detail_text(graph,"开始采样",24,312,260,12,detail_muted());detail_text(graph,"现在",716,312,44,12,detail_muted());
-  lv_obj_t *stats=detail_tile(card,216,464,784,102);const char *names[]={"已用内存","可用内存","最大连续空闲","堆使用峰值"};const unsigned fields[]={7,8,2,3};
+  g_resources.chart=resources_chart(graph,24,108,736,168,0,&g_resources.series);
+  g_resources.empty=detail_text(graph,"等待有效采样",268,173,250,16,detail_muted());detail_text(graph,"100%",704,85,56,12,detail_muted());
+  g_resources.axis=detail_text(graph,"开始采样",24,288,260,12,detail_muted());detail_text(graph,"现在",716,288,44,12,detail_muted());
+  lv_obj_t *stats=detail_tile(card,216,440,784,102);const char *names[]={"已用内存","可用内存","最大连续空闲","堆使用峰值"};const unsigned fields[]={7,8,2,3};
   for(unsigned i=0;i<4;i++){detail_text(stats,names[i],24+i*194,18,174,12,detail_muted());g_resources.labels[fields[i]]=detail_text(stats,"--",24+i*194,48,174,20,detail_ink());if(i)glass_box(stats,12+i*194,24,1,54,detail_line(),0);}
-  g_resources.labels[5]=detail_text(card,"",216,578,784,12,detail_muted());glass_resources_text(5,"正在采样");resources_present();
+  g_resources.labels[5]=detail_text(card,"",216,GLASS_CONTENT_HEIGHT-18,784,12,detail_muted());glass_resources_text(5,"正在采样");resources_present();
   g_resources.timer=lv_timer_create(glass_resources_update,1000,NULL);if(!g_resources.timer)glass_resources_text(5,"采样启动失败：内存不足");else glass_resources_update(NULL);
 }

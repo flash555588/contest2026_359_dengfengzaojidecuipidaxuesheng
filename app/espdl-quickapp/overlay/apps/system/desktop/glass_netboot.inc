@@ -7,6 +7,7 @@
  * Permanent workers reacquire leases at half their lifetime and after link
  * changes. All deadlines use monotonic time rather than the NTP-adjusted clock.
  */
+#include "glass_status.h"
 #ifdef CONFIG_SYSTEM_C6_DESKTOP
 #include <arpa/inet.h>
 #include <errno.h>
@@ -41,6 +42,19 @@ static bool g_net_notice_pending;
 static bool g_net_lease_requested;
 static bool g_net_lease_announce;
 static bool g_net_time_started;
+static struct glass_status_network g_status_network;
+static void glass_status_network_get(struct glass_status_network *out)
+{
+  pthread_mutex_lock(&g_net_lock); *out = g_status_network;
+  pthread_mutex_unlock(&g_net_lock);
+}
+static void glass_status_network_publish(bool wired, bool linked, bool usable)
+{
+  pthread_mutex_lock(&g_net_lock);
+  if (wired) g_status_network.wired = usable;
+  else { g_status_network.wifi = usable; g_status_network.joining = linked && !usable; }
+  pthread_mutex_unlock(&g_net_lock);
+}
 static pthread_mutex_t g_net_dns_lock = PTHREAD_MUTEX_INITIALIZER;
 /* dhcpc_open binds UDP port 68 before SO_BINDTODEVICE. Serialize clients
  * across interfaces so simultaneous boot-time leases cannot fail to bind. */
@@ -339,6 +353,7 @@ static void *glass_net_boot_thread(void *arg)
 
       if (c6net_get_link_snapshot(&link) < 0)
         {
+          glass_status_network_publish(false, false, false);
           sleep(1);
           continue;
         }
@@ -357,6 +372,7 @@ static void *glass_net_boot_thread(void *arg)
           reconnect_at = glass_net_seconds() + 12;
         }
 
+      glass_status_network_publish(false, ready, ready && lease.configured && lease.generation == link.generation);
       ret = glass_net_maintain(GLASS_NET_IFNAME, false, &lease, ready,
                                link.generation, requested);
       if (ret == 0)
@@ -372,6 +388,7 @@ static void *glass_net_boot_thread(void *arg)
             }
         }
 
+      glass_status_network_publish(false, ready, ready && glass_net_usable(GLASS_NET_IFNAME));
       if (!link.associated && glass_net_seconds() >= reconnect_at)
         {
           ret = c6net_reconnect();
@@ -403,8 +420,10 @@ static void *glass_net_wired_thread(void *arg)
       bool running = netlib_getifstatus("eth0", &flags) == 0 &&
                      (flags & IFF_RUNNING);
       if (running != was_running) generation++;
+      glass_status_network_publish(true, running, running && lease.configured && lease.generation == generation);
       int ret = glass_net_maintain("eth0", true, &lease, running,
                                    generation, false);
+      glass_status_network_publish(true, running, running && glass_net_usable("eth0"));
       if (ret == 0) glass_net_time_sync();
       was_running = running;
       glass_net_select_dns();

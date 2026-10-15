@@ -16,7 +16,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define MEDIA_ROOT CONFIG_SYSTEM_DESKTOP_QPK_DIR "/.data"
+#include "qpk_volume.h"
 
 /* The board has a single ES8311 codec. Wait until the music worker has closed
  * its PCM session instead of guessing how long asynchronous cancellation may
@@ -51,11 +51,11 @@ static void wav_header(unsigned char h[44], unsigned bytes, unsigned rate, unsig
   le32(h + 4, bytes + 36); le16(h + 22, channels); le32(h + 24, rate);
   le32(h + 28, rate * channels * 2); le16(h + 32, channels * 2); le32(h + 40, bytes);
 }
-static int clip_path(const char *package, const cJSON *a, char path[QPK_STORAGE_PATH_MAX], bool create)
+static int clip_path(const char *media_root,const char *package, const cJSON *a, char path[QPK_STORAGE_PATH_MAX], bool create)
 {
   cJSON *v = cJSON_GetObjectItemCaseSensitive(a, "clip");
   const char *clip = !v ? "recording" : cJSON_IsString(v) ? v->valuestring : NULL;
-  return qpk_audio_path(MEDIA_ROOT, package, clip, path, create);
+  return qpk_audio_path(media_root, package, clip, path, create);
 }
 static int write_all(int fd, const void *data, size_t size)
 {
@@ -260,12 +260,14 @@ static int save_clip(const char *path, const cJSON *a, cJSON *out, struct qpk_hw
   cJSON_AddNumberToObject(out, "bytes", length); return ret;
 }
 
-int qpk_hw_audio_execute(const char *package, const char *op, const cJSON *a, cJSON *out, struct qpk_hw_progress *progress)
+int qpk_hw_audio_execute_at(const char *media_root,const char *package, const char *op, const cJSON *a, cJSON *out, struct qpk_hw_progress *progress)
 {
   if (!strcmp(op, "tone")) return play_clip(NULL, a, out, progress, true);
-  if (!strcmp(op, "list")) return qpk_audio_list(MEDIA_ROOT, package, out, &progress->cancel);
+  enum qpk_volume volume=!strcmp(media_root,qpk_volume_data_root(QPK_VOLUME_SD))?QPK_VOLUME_SD:QPK_VOLUME_INTERNAL;
+  int ready=qpk_volume_ready(volume,true);if(ready)return ready;
+  if (!strcmp(op, "list")) return qpk_audio_list(media_root, package, out, &progress->cancel);
   bool create = !strcmp(op, "record") || !strcmp(op, "save");
-  char path[QPK_STORAGE_PATH_MAX]; int ret = clip_path(package, a, path, create); if (ret) return ret;
+  char path[QPK_STORAGE_PATH_MAX]; int ret = clip_path(media_root,package, a, path, create); if (ret) return ret;
   if (!strcmp(op, "record")) return record_clip(path, a, out, progress);
   if (!strcmp(op, "play")) return play_clip(path, a, out, progress, false);
   if (!strcmp(op, "save")) return save_clip(path, a, out, progress);
@@ -273,3 +275,6 @@ int qpk_hw_audio_execute(const char *package, const char *op, const cJSON *a, cJ
   if (!strcmp(op, "info")) return qpk_audio_info(path, out);
   return -ENOSYS;
 }
+
+int qpk_hw_audio_execute(const char *package,const char *op,const cJSON *a,cJSON *out,struct qpk_hw_progress *progress)
+{return qpk_hw_audio_execute_at(qpk_volume_data_root(QPK_VOLUME_INTERNAL),package,op,a,out,progress);}

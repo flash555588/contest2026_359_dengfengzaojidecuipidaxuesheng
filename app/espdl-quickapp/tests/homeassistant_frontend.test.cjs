@@ -29,7 +29,7 @@ function boot(width = 1024, height = 600, options = {}) {
   const hidden = new Map();
   const textValues = new Map();
   const styles = new Map();
-  const nativeWrites=[];
+  const nativeWrites=[],desktopSnapshots=[];
   const saves = new Map();
   const responses = {
     devices: options.devices || [],
@@ -159,8 +159,9 @@ function boot(width = 1024, height = 600, options = {}) {
   if(options.measureMetrics)ui.measureText=options.measureMetrics;
   const context = vm.createContext({
     system: { homeAssistantService: service, homeAssistant: {},
+      desktop:{devices:json=>{desktopSnapshots.push(JSON.parse(json));return 0;}},
       yield: () => ({ then: resolve => { deferred.push(resolve); } }),
-      storage: { get: key => key==='eh_favs'?JSON.stringify(options.favorites||[]):key==='eh_scope'?(options.savedScope||''):key==='eh_card_sizes'?(options.savedLayout||''):key==='eh_card_sizes_2'?(options.savedLayout2||''):key==='eh_card_usage'?(options.savedUsage||''):'', set: (key,value) => saves.set(key,value) } },
+      storage: { get: key => key==='eh_favs'?JSON.stringify(options.favorites||[]):key==='eh_scope'?(options.savedScope||''):key==='eh_card_sizes'?(options.savedLayout||''):key==='eh_card_sizes_2'?(options.savedLayout2||''):key==='eh_card_usage'?(options.savedUsage||''):key==='eh_desktop_pins'?(options.savedPins||''):'', set: (key,value) => saves.set(key,value) } },
     ui, prompt: { input: () => {} }, console,
     setInterval(callback) { timer = callback; return 1; },
     clearInterval: () => {},
@@ -170,7 +171,7 @@ function boot(width = 1024, height = 600, options = {}) {
   vm.runInContext(options.source||source, context, { filename: 'homeassistant/app.js' });
   // Creation deliberately shares several native event-loop turns.
   for(let i=0;i<30&&deferred.length;i++)deferred.shift()();
-  return { context, buttons, controls, requests, geometry, hidden, textValues, styles, saves,nativeWrites,
+  return { context, buttons, controls, requests, geometry, hidden, textValues, styles, saves,nativeWrites,desktopSnapshots,
     remoteConfigure(endpoint) {
       serviceUrl = endpoint;
       configured = !!endpoint;
@@ -1705,4 +1706,82 @@ test('HA software entities stay out of device boards while real sensors, helpers
   chooseSection(r,116);assert(r.context.ESPHomeHA.snapshot().layoutPages.flat().every(row=>ids.includes(row.entity_id)));
   chooseSection(r,162);assert.deepEqual([...r.context.ESPHomeHA.snapshot().layoutPages.flat().map(row=>row.entity_id)].sort(),['scene.evening','script.sleep']);
   assert.equal(r.controls.length,0);
+});
+
+function pinButton(r) {
+  return r.buttons.find(b=>!r.hidden.get(b.id)&&r.geometry.get(b.id).x===864&&r.geometry.get(b.id).y===10&&r.geometry.get(b.id).w===144);
+}
+const desktopEndpoint='http://192.168.1.20:8123';
+function desktopFixture(extra={}) {
+  return {states:[['a','on'],['b','off'],['c','unavailable']].map(([id,state])=>({entity_id:'light.'+id,state,attributes:{friendly_name:'设备 '+id,supported_color_modes:['brightness']}})),
+    devices:[['dev_a','设备 A','',['light.a']],['dev_b','设备 B','',['light.b']],['dev_c','设备 C','',['light.c']]],...extra};
+}
+test('desktop uses manual device pins before usage, deduplicates physical devices and bounds shortcuts to two',()=>{
+  const r=boot(1024,536,desktopFixture({savedPins:JSON.stringify({server:desktopEndpoint,pins:['device.dev_b']}),
+    savedUsage:JSON.stringify({server:desktopEndpoint,counts:{'device.dev_a':20,'device.dev_c':10}})}));
+  r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();
+  assert.deepEqual(r.desktopSnapshots.at(-1).items.map(x=>[x.entity,x.pinned]),[['light.b',true],['light.a',false]]);
+  const n=r.desktopSnapshots.length;for(let i=0;i<30;i++)r.tick();
+  assert.equal(r.desktopSnapshots.length,n,'unchanged renders do not cross the native bridge');
+  assert.equal(r.controls.length,0,'desktop publishing is read-only');
+});
+test('pin and unpin persist physical identities without changing the approved card geometry',()=>{
+  const r=boot(1024,536,desktopFixture());r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();
+  r.context.ESPHomeHA.openDevice(desktopEndpoint,'light.b');for(let i=0;i<40;i++)r.tick();
+  assert(pinButton(r));pinButton(r).callback();for(let i=0;i<30;i++)r.tick();
+  assert.deepEqual(JSON.parse(r.saves.get('eh_desktop_pins')),{server:desktopEndpoint,pins:['device.dev_b']});
+  assert.equal(r.desktopSnapshots.at(-1).items[0].entity,'light.b');assert.equal(r.desktopSnapshots.at(-1).items[0].pinned,true);
+  const savedPins=r.saves.get('eh_desktop_pins');
+  const again=boot(1024,536,desktopFixture({savedPins}));again.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)again.tick();
+  assert.equal(again.desktopSnapshots.at(-1).items[0].entity,'light.b');assert.equal(again.desktopSnapshots.at(-1).items[0].pinned,true);
+  pinButton(r).callback();for(let i=0;i<30;i++)r.tick();
+  assert.deepEqual(JSON.parse(r.saves.get('eh_desktop_pins')).pins,[]);assert.equal(r.controls.length,0);
+});
+test('a third pin preserves both existing pins and unavailable devices remain identifiable',()=>{
+  const r=boot(1024,536,desktopFixture({savedPins:JSON.stringify({server:desktopEndpoint,pins:['device.dev_a','device.dev_b']})}));
+  r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();
+  r.context.ESPHomeHA.openDevice(desktopEndpoint,'light.c');for(let i=0;i<40;i++)r.tick();pinButton(r).callback();for(let i=0;i<25;i++)r.tick();
+  assert.deepEqual(Array.from(r.context.ESPHomeHA.snapshot().desktopPins),['device.dev_a','device.dev_b']);
+  assert.equal(r.context.ESPHomeHA.snapshot().message,'桌面已固定两台设备，请先取消一个固定');
+  assert.equal(r.controls.length,0);
+});
+test('desktop deep links defer until sync, open the physical detail and reject stale endpoint navigation',()=>{
+  const r=boot(1024,536,desktopFixture());
+  assert.equal(r.context.ESPHomeHA.openDevice(desktopEndpoint,'light.b'),true);
+  for(let i=0;i<55;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().view,'detail');assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.b');
+  assert.equal(r.context.ESPHomeHA.openDevice('http://192.168.1.21:8123','light.a'),false);
+  assert.equal(r.context.ESPHomeHA.openDevice(desktopEndpoint,'invalid'),false);
+  assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.b');assert.equal(r.controls.length,0);
+});
+test('pins and usage from another HA endpoint or removed device cannot create ghost desktop cards',()=>{
+  const r=boot(1024,536,desktopFixture({savedPins:JSON.stringify({server:'http://192.168.1.21:8123',pins:['device.dev_c']}),
+    savedUsage:JSON.stringify({server:'http://192.168.1.21:8123',counts:{'device.dev_c':50}})}));
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();assert.equal(r.desktopSnapshots.at(-1).items[0].entity,'light.a');
+  assert.equal(r.desktopSnapshots.at(-1).items.some(x=>x.pinned),false);
+  r.context.ESPHomeHA.openDevice(desktopEndpoint,'light.removed');for(let i=0;i<20;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().message,'该设备已移除或未在当前同步范围内');assert.equal(r.controls.length,0);
+});
+
+test('confirmed removal releases a manual desktop pin without pruning during a partial sync',()=>{
+  const savedPins=JSON.stringify({server:desktopEndpoint,pins:['device.removed','device.dev_b']});
+  const r=boot(1024,536,desktopFixture({savedPins}));r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();
+  assert.deepEqual(Array.from(r.context.ESPHomeHA.snapshot().desktopPins),['device.dev_b']);
+  assert.deepEqual(JSON.parse(r.saves.get('eh_desktop_pins')).pins,['device.dev_b']);
+  const partial=boot(1024,536,desktopFixture({savedPins,savedScope:'favorites',favorites:['light.b']}));
+  partial.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)partial.tick();
+  assert.deepEqual(Array.from(partial.context.ESPHomeHA.snapshot().desktopPins),['device.removed','device.dev_b']);
+});
+
+test('desktop state labels are bounded independently of unusually long HA sensor state strings',()=>{
+  const r=boot(1024,536,{states:[{entity_id:'sensor.custom',state:'设备'.repeat(64),attributes:{friendly_name:'名称'.repeat(64)}}]});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();const row=r.desktopSnapshots.at(-1).items[0];
+  assert(Buffer.byteLength(row.name)<128);assert(Buffer.byteLength(row.state)<80);assert.equal(r.controls.length,0);
+});
+
+test('desktop navigation accepts the exact endpoint already approved by the native HA service',()=>{
+  const endpoint='http://203.0.113.20:8123',r=boot(1024,536,desktopFixture({url:endpoint}));
+  assert.equal(r.context.ESPHomeHA.openDevice(endpoint,'light.b'),true);for(let i=0;i<55;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.b');assert.equal(r.context.ESPHomeHA.snapshot().detailOpen,true);
+  assert.equal(r.context.ESPHomeHA.openDevice(endpoint+'/', 'light.a'),false);assert.equal(r.controls.length,0);
 });

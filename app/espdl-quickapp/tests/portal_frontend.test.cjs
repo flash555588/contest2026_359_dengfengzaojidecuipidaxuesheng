@@ -225,3 +225,32 @@ test('HA colon-port save trims copied credentials and a blank token preserves th
   await new Promise(resolve=>setImmediate(resolve));
   post=r.calls.find(c=>c.options.method==='POST');assert.equal('token' in JSON.parse(post.options.body),false);
 });
+
+for (const storage of ['internal','sdcard']) test('installer submits selected '+storage+' volume independently of package metadata',async()=>{
+  const r=boot();await r.connected();r.node('install-storage').value=storage;
+  r.evaluate("pack={manifest:{name:'Test',package:'test.app',storage:'untrusted'},files:{'manifest.json':new Uint8Array([1]),'app.js':new Uint8Array([2,3])}};");
+  r.handle(()=>new Response('{}'));await r.node('install-button').onclick();
+  const begin=r.calls.find(c=>c.url==='/api/install/begin');assert.ok(begin);
+  assert.equal(JSON.parse(begin.options.body).storage,storage);
+  assert.ok(r.calls.some(c=>c.url==='/api/install/commit'));
+  assert.match(r.node('install-status').textContent,storage==='sdcard'?/已安装到SD 卡/:/已安装到内置存储/);
+  assert.equal(r.evaluate('busy'),false);
+});
+test('failed SD installation aborts staging and never retries on internal storage',async()=>{
+  const r=boot();await r.connected();r.node('install-storage').value='sdcard';
+  r.evaluate("pack={manifest:{name:'Test',package:'test.app'},files:{'app.js':new Uint8Array([2,3])}};");
+  r.handle(url=>url.startsWith('/api/install/file')?new Response('{"error":"card removed"}',{status:400}):new Response('{}'));
+  await r.node('install-button').onclick();
+  assert.equal(r.calls.filter(c=>c.url==='/api/install/begin').length,1);
+  assert.equal(JSON.parse(r.calls.find(c=>c.url==='/api/install/begin').options.body).storage,'sdcard');
+  assert.ok(r.calls.some(c=>c.url==='/api/install/abort'));
+  assert.ok(!r.calls.some(c=>c.url==='/api/install/commit'));
+  assert.equal(r.node('install-button').disabled,false);assert.equal(r.evaluate('busy'),false);
+});
+test('compiled portal assets match the current installer files byte for byte',()=>{
+  const root=path.join(__dirname,'../overlay/apps/system/desktop');const c=fs.readFileSync(path.join(root,'glass_portal_resource.c'),'utf8');
+  ['index.html','style.css','app.js'].forEach((name,i)=>{
+    const array=c.match(new RegExp('asset'+i+'\\[\\]\\=\\{([^}]*)\\}'));
+    assert.ok(array);assert.deepEqual(Buffer.from(array[1].split(',').map(Number)),fs.readFileSync(path.join(root,'portal',name)));
+  });
+});

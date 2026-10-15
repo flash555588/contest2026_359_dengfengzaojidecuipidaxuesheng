@@ -17,7 +17,7 @@ static JSValue js_hw_submit(JSContext *c, JSValueConst self, int argc, JSValueCo
   if (JS_IsException(encoded)) return encoded;
   const char *text = JS_ToCString(c, encoded);
   if (!text) { JS_FreeValue(c, encoded); return JS_EXCEPTION; }
-  if (!g_qpk_hardware) g_qpk_hardware = qpk_hw_create(g_qpk.package);
+  if (!g_qpk_hardware) g_qpk_hardware = qpk_hw_create_at(g_qpk.package,QPK_STORAGE_ROOT);
   int id = g_qpk_hardware ? qpk_hw_submit(g_qpk_hardware, qpk_hw_operations[magic], text) : -ENOMEM;
   JS_FreeCString(c, text); JS_FreeValue(c, encoded);
   if (id < 0) return JS_ThrowInternalError(c, "hardware submit: %d (%s)", id, strerror(-id));

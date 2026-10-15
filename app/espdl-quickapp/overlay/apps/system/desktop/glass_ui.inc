@@ -4,6 +4,9 @@
  * 渐变和半透明填充模拟磨砂层；不进行全屏模糊或连续背景重绘。
  */
 
+#include "glass_status.h"
+static void glass_status_tick(void);
+static void glass_status_visibility(bool locked);
 #define GLASS_HISTORY 24
 #define GLASS_HOME_CARD_COUNT 5
 /* Shown clock offset used only while this build has no zoneinfo database. */
@@ -67,6 +70,8 @@ static struct
   lv_obj_t *air;
   lv_obj_t *devices;
   lv_obj_t *sync;
+  lv_obj_t *device_rows[2], *device_names[2], *device_states[2], *device_pins[2];
+  lv_obj_t *device_empty;
   lv_obj_t *widget_title;
   lv_obj_t *widget_value;
   lv_obj_t *widget_hint;
@@ -424,9 +429,11 @@ void glass_dashboard_publish(int temperature, int humidity, int pm25,
 }
 
 #include "glass_weather_ui.inc"
+#include "glass_home_devices.inc"
 
 static void glass_update(lv_timer_t *timer)
 {
+  glass_status_tick();
   uint8_t portal_values[4];
   if(portal_desktop_take(portal_values)) {
     g_desktop.light_theme=portal_values[0]; g_glass.palette=portal_values[1];
@@ -434,6 +441,7 @@ static void glass_update(lv_timer_t *timer)
     glass_rebuild(); glass_save_preferences();
   }
   glass_preferences_update();
+  home_devices_tick();
   struct timespec uptime = {0};
   struct tm local = {0};
   time_t now = time(NULL);
@@ -451,6 +459,7 @@ static void glass_update(lv_timer_t *timer)
     {
       return;
     }
+  glass_home_devices_paint();
   clock_gettime(CLOCK_MONOTONIC, &uptime);
   uint64_t weather_now = (uint64_t)uptime.tv_sec * 1000 + uptime.tv_nsec / 1000000;
   uint32_t sync_seconds = lv_tick_elaps(g_glass.received) / 1000;
@@ -938,6 +947,8 @@ static void glass_system_page_open(lv_event_t *e)
 
 #include "glass_settings_ui.inc"
 
+static void glass_lock_open(lv_event_t *e);
+#include "glass_music_cover_ui.inc"
 #include "glass_music_ui.inc"
 #ifdef CONFIG_SYSTEM_HASS
 #include "glass_hass_ui.inc"
@@ -947,6 +958,7 @@ static void glass_homeassistant(lv_event_t *e)
   launch_builtin_homeassistant_qapp(e);
 }
 #endif
+#include "glass_speech_ui.inc"
 #include "glass_chat_ui.inc"
 
 static void glass_music(lv_event_t *e)
@@ -990,7 +1002,7 @@ static void glass_apps_remove_confirm(lv_event_t *e)
   if (g_apps_remove_timer) return;
   lv_timer_t *timer = lv_timer_create(glass_apps_remove_poll, 150, NULL);
   if (!timer) { show_toast("内存不足，请稍后重试"); return; }
-  int ret = glass_qpk_remove_async(g_apps_remove_target.dir, g_apps_remove_target.package);
+  int ret = glass_qpk_remove_async_from(g_apps_remove_target.dir, g_apps_remove_target.package,g_apps_remove_target.volume);
   if (ret) { lv_timer_delete(timer); show_toast(ret == -EBUSY ? "正在处理应用，请稍后重试" : "无法删除这个应用"); return; }
   g_apps_remove_timer = timer;
   dialog_cancel();
@@ -1043,12 +1055,12 @@ static void glass_apps_render(void)
   lv_obj_t *grid = glass_box(card, 20, 80, 880, 336, theme_card(), 0);
   const char *names[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
-"网络直播", "本地视频",
+"网络直播", "相册",
 #endif
 "ESPClaw AI 助手", "相机", "录音机", "智能家居", "蓝牙鼠标", "Grok Ball", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
   const char *symbols[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
-LV_SYMBOL_VIDEO, LV_SYMBOL_VIDEO,
+LV_SYMBOL_VIDEO, LV_SYMBOL_IMAGE,
 #endif
 LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_GPS,
                            LV_SYMBOL_EYE_OPEN, LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, LV_SYMBOL_PLAY};
@@ -1072,7 +1084,7 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
       glass_symbol(tile, i < builtin_count ? symbols[i] : LV_SYMBOL_FILE, 20, 20, theme_accent());
       glass_text(tile, i < builtin_count ? names[i] : g_desktop.qpk[i - builtin_count].name,
                  62, 18, 198, 20, theme_primary());
-      glass_text(tile, i < builtin_count ? "内置应用" : "快应用", 62, 57, 108, 16, theme_secondary());
+      glass_text(tile, i < builtin_count ? "内置应用" : g_desktop.qpk[i-builtin_count].volume==QPK_VOLUME_SD?"SD 卡应用":"内置存储", 62, 57, 108, 16, theme_secondary());
       glass_clickable(tile, i < builtin_count ? callbacks[i] : external_qapp_clicked,
                        i < builtin_count ? NULL : (void *)(intptr_t)(i - builtin_count));
       if (i >= builtin_count && glass_qpk_removable(g_desktop.qpk[i - builtin_count].dir, g_desktop.qpk[i - builtin_count].package)) {
@@ -1121,6 +1133,8 @@ static void glass_homeassistant_enter(lv_obj_t *card)
 }
 
 #include "glass_home_ui.inc"
+#include "glass_lockscreen.inc"
+#include "glass_status_ui.inc"
 
 static bool g_edge_back_pending;
 static bool g_edge_tracking;
@@ -1133,7 +1147,7 @@ static void glass_edge_back_async(void *data)
   LV_UNUSED(data);
   g_edge_back_pending = false;
   /* Ignore a gesture if another action changed the page before dispatch. */
-  if (g_edge_page != g_desktop.current_card) return;
+  if (g_lock_ui.root || g_edge_page != g_desktop.current_card) return;
   if (g_desktop.dialog != NULL)
     dialog_cancel();
   else if (g_control_card != NULL && g_control_card == g_desktop.current_card &&
@@ -1269,13 +1283,14 @@ static void desktop_ui_create(void)
   if (g_desktop.font16) g_desktop.font16->fallback = glass_icon_font(16);
   if (g_desktop.font20) g_desktop.font20->fallback = glass_icon_font(20);
   if (g_desktop.font28) g_desktop.font28->fallback = glass_icon_font(24);
-  g_desktop.screen = lv_screen_active();
+  g_desktop.screen = glass_box(lv_screen_active(), 0, GLASS_STATUS_HEIGHT,
+                                1024, GLASS_CONTENT_HEIGHT, theme_card(), 0);
   lv_obj_set_style_text_font(g_desktop.screen, zh_font(20), 0);
   lv_obj_remove_flag(g_desktop.screen, LV_OBJ_FLAG_SCROLLABLE);
   qpk_scan();
   g_desktop.panel = lv_obj_create(g_desktop.screen);
   lv_obj_set_pos(g_desktop.panel, 0, 0);
-  lv_obj_set_size(g_desktop.panel, 1024, 600);
+  lv_obj_set_size(g_desktop.panel, 1024, GLASS_CONTENT_HEIGHT);
   lv_obj_set_style_pad_all(g_desktop.panel, 0, 0);
   lv_obj_set_style_border_width(g_desktop.panel, 0, 0);
   lv_obj_set_style_radius(g_desktop.panel, 0, 0);
@@ -1283,6 +1298,7 @@ static void desktop_ui_create(void)
   lv_obj_add_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
   glass_rebuild();
   glass_edge_back_create();
+  glass_status_create();
   g_glass.timer = lv_timer_create(glass_update, 1000, NULL);
   pet_engine_init(lv_obj_get_width(g_desktop.screen),
                   lv_obj_get_height(g_desktop.screen));

@@ -16,6 +16,7 @@ enum qpk_widget_type_e {QPK_WIDGET_LABEL,QPK_WIDGET_NUMBER,QPK_WIDGET_PANEL,QPK_
 struct qpk_event_s {struct qpk_event_s *next;JSValue function;lv_obj_t *owner;bool used;};
 static struct {
   JSRuntime *runtime;JSContext *context;lv_obj_t *root;
+  char package[48];
   lv_obj_t **widgets;uint8_t *widget_types;void **widget_extra;uint64_t *widget_generations;
   uint64_t widget_serial;int widget_capacity,widget_hint;struct qpk_event_s *events;
   qpk_font_cb_t font_cb;qpk_message_cb_t toast_cb,dialog_cb;
@@ -113,11 +114,12 @@ int qpk_runtime_touch_test(const char *state,double x,double y){(void)state;(voi
 const char *qpk_runtime_last_error(void){return review_error;}
 unsigned qpk_runtime_widget_count(void){return g_qpk.widget_hint;}
 int qpk_runtime_select_espdl_mode(unsigned mode){return qpk_review_eval(mode?"EspDlApp.selectMode(1)":"EspDlApp.selectMode(0)");}
+#include "production_qpk_ha_navigation.inc"
 int qpk_runtime_launch(lv_obj_t *root,const char *name,const char *package,const char *version,
  const char *filename,const char *source,size_t source_len,qpk_font_cb_t font,qpk_message_cb_t toast,qpk_message_cb_t dialog,qpk_unresponsive_cb_t unresponsive)
 {
   (void)source_len;(void)name;(void)package;(void)version;(void)filename;(void)unresponsive;
-  qpk_runtime_stop();review_error[0]=0;g_qpk.root=root;g_qpk.font_cb=font;g_qpk.toast_cb=toast;g_qpk.dialog_cb=dialog;
+  qpk_runtime_stop();snprintf(g_qpk.package,sizeof(g_qpk.package),"%s",package);review_error[0]=0;g_qpk.root=root;g_qpk.font_cb=font;g_qpk.toast_cb=toast;g_qpk.dialog_cb=dialog;
   uint32_t background=lv_color_to_u32(lv_obj_get_style_bg_color(root,0));
   bool light=((background>>16)&255)+((background>>8)&255)+(background&255)>384;
   g_qpk.primary_color=light?0x252d46:0xf4f2ff;g_qpk.secondary_color=light?0x616981:0xabb3cd;

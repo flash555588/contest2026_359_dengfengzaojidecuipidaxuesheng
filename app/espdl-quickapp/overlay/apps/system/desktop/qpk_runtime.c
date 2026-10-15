@@ -48,6 +48,7 @@
 #endif
 #include "qpk_pet.h"
 #include "glass_dashboard.h"
+#include "glass_home_devices.h"
 
 #define QPK_STACK_LIMIT   (16 * 1024)
 /* JavaScript entries are no longer cut off at an interactive budget. A
@@ -67,7 +68,8 @@
 /* One frame is about 16 ms; a yield only has to let LVGL run once. */
 #define QPK_YIELD_PERIOD_MS 1
 #define QPK_DIR CONFIG_SYSTEM_DESKTOP_QPK_DIR
-#define QPK_STORAGE_ROOT QPK_DIR "/.data"
+#include "qpk_volume.h"
+#define QPK_STORAGE_ROOT qpk_volume_data_root(g_qpk.volume)
 #define QPK_CAMERA_DEVICE "/dev/video0"
 #define QPK_CAMERA_RAW_WIDTH 1024
 #define QPK_CAMERA_RAW_HEIGHT 600
@@ -208,6 +210,7 @@ struct qpk_runtime_s
   qpk_unresponsive_cb_t unresponsive_cb;
   char name[48];
   char package[48];
+  enum qpk_volume volume;
   bool ha_config_access;
 #ifdef CONFIG_SYSTEM_HASS
   unsigned hass_grants;
@@ -2120,7 +2123,8 @@ static JSValue js_storage_get(JSContext *context, JSValueConst this_value,
       JS_FreeCString(context, key);
       return JS_ThrowOutOfMemory(context);
     }
-  ret = qpk_storage_read(QPK_STORAGE_ROOT, g_qpk.package, key,
+  ret=qpk_volume_mounted(g_qpk.volume);
+  if(!ret)ret = qpk_storage_read(QPK_STORAGE_ROOT, g_qpk.package, key,
                          buffer, QPK_STORAGE_VALUE_MAX + 1, &length);
   if(g_qpk.ha_config_access &&
      (!strcmp(key,"ha_url")||!strcmp(key,"ha_token"))) {
@@ -2153,7 +2157,8 @@ static JSValue js_storage_set(JSContext *context, JSValueConst this_value,
       JS_FreeCString(context, key);
       return JS_EXCEPTION;
     }
-  ret = qpk_storage_write(QPK_STORAGE_ROOT, g_qpk.package, key, value, length);
+  ret=qpk_volume_ready(g_qpk.volume,true);
+  if(!ret)ret = qpk_storage_write(QPK_STORAGE_ROOT, g_qpk.package, key, value, length);
   if(!ret&&g_qpk.ha_config_access &&
      (!strcmp(key,"ha_url")||!strcmp(key,"ha_token"))) ret=portal_ha_set(key,value);
   JS_FreeCString(context, key);
@@ -2169,7 +2174,8 @@ static JSValue js_storage_delete(JSContext *context, JSValueConst this_value,
   int ret;
   (void)this_value;
   if (key == NULL) return JS_EXCEPTION;
-  ret = qpk_storage_remove(QPK_STORAGE_ROOT, g_qpk.package, key);
+  ret=qpk_volume_mounted(g_qpk.volume);
+  if(!ret)ret = qpk_storage_remove(QPK_STORAGE_ROOT, g_qpk.package, key);
   JS_FreeCString(context, key);
   if (ret == -EINVAL) return JS_ThrowRangeError(context, "invalid storage key");
   return ret < 0 ? JS_ThrowInternalError(context, "storage delete failed: %d", -ret) : JS_UNDEFINED;
@@ -3553,6 +3559,19 @@ static JSValue js_camera_frames(JSContext *context,
 }
 
 /* Runs inside the existing LVGL-driven JS callback, without I/O or a worker. */
+static JSValue js_desktop_devices(JSContext *context, JSValueConst this_value,
+                                 int argc, JSValueConst *argv)
+{
+  (void)this_value;
+  if (argc != 1 || !JS_IsString(argv[0]))
+    return JS_ThrowTypeError(context, "desktop.devices needs a snapshot");
+  const char *json = JS_ToCString(context, argv[0]);
+  if (!json) return JS_EXCEPTION;
+  int ret = glass_home_devices_publish(json);
+  JS_FreeCString(context, json);
+  return JS_NewInt32(context, ret);
+}
+
 static JSValue js_desktop_publish(JSContext *context, JSValueConst this_value,
                                  int argc, JSValueConst *argv)
 {
@@ -3880,6 +3899,11 @@ static void qpk_install_api(JSContext *context)
     JS_SetPropertyStr(context, desktop, "publish",
                       JS_NewCFunction(context, js_desktop_publish,
                                       "publish", 5));
+#ifdef CONFIG_SYSTEM_HASS
+    if (g_qpk.hass_grants && !strcmp(g_qpk.package, "com.openvela.homeassistant"))
+      JS_SetPropertyStr(context, desktop, "devices",
+                        JS_NewCFunction(context, js_desktop_devices, "devices", 1));
+#endif
     JS_SetPropertyStr(context, system, "desktop", desktop);
 
     JS_SetPropertyStr(context, camera, "devices", JS_NewCFunction(context, js_camera_devices, "devices", 0));
@@ -4012,6 +4036,7 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
     }
   g_qpk.card_color = background;
   strlcpy(g_qpk.name, name ? name : "Quick App", sizeof(g_qpk.name));
+  g_qpk.volume=qpk_volume_from_filename(filename);
   strlcpy(g_qpk.package, package ? package : "", sizeof(g_qpk.package));
   g_qpk.ha_config_access = qpk_builtin_ha_origin(package, filename);
 #ifdef CONFIG_SYSTEM_HASS
@@ -4311,6 +4336,27 @@ int qpk_runtime_select_espdl_mode(unsigned mode)
   JS_FreeValue(context, method);
   JS_FreeValue(context, app);
   JS_FreeValue(context, global);
+  return ret;
+}
+
+int qpk_runtime_open_ha_device(const char *server, const char *entity)
+{
+  JSContext *context = g_qpk.context;
+  if (!context || !server || !entity || strlen(server) >= 192 || strlen(entity) >= 128 ||
+      strcmp(g_qpk.package, "com.openvela.homeassistant")) return -EINVAL;
+  JSValue global = JS_GetGlobalObject(context);
+  JSValue app = JS_GetPropertyStr(context, global, "ESPHomeHA");
+  JSValue method = JS_IsObject(app) ? JS_GetPropertyStr(context, app, "openDevice") : JS_UNDEFINED;
+  int ret = -ENOENT;
+  if (JS_IsFunction(context, method))
+    {
+      JSValue args[2] = {JS_NewString(context, server), JS_NewString(context, entity)};
+      JSValue result = qpk_call_args(method, QPK_HANG_BUDGET, 2, args);
+      ret = JS_IsException(result) ? -EIO : JS_ToBool(context, result) ? 0 : -ENOENT;
+      JS_FreeValue(context, result);
+      JS_FreeValue(context, args[0]);JS_FreeValue(context, args[1]);
+    }
+  JS_FreeValue(context, method);JS_FreeValue(context, app);JS_FreeValue(context, global);
   return ret;
 }
 

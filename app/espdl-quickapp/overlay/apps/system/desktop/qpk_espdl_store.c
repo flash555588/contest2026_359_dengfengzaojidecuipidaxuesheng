@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-extern int esp_spiflash_read(uint32_t address, void *buffer, uint32_t length);
 
 static FILE *asset_open(unsigned index)
 {
@@ -22,7 +21,7 @@ int qpk_dl_model_available(unsigned index)
   uint8_t header[4];
   int result;
   if (f) { result=fread(header,1,4,f)==4?0:-EIO; fclose(f); }
-  else result=esp_spiflash_read(QPK_DL_FLASH_BASE+g_qpk_dl_assets[index].offset,header,4);
+  else result=-ENOENT;
   if (result<0) return result;
   return memcmp(header,"EDL2",4)==0?0:-ENOENT;
 }
@@ -31,7 +30,6 @@ int qpk_dl_model_load(unsigned index, void **data, size_t *length)
   if (!data || !length || index>=QPK_DL_ASSET_COUNT) return -EINVAL;
   *data=NULL; *length=0;
   const struct qpk_dl_model_asset *asset=&g_qpk_dl_assets[index];
-  if (asset->offset>QPK_DL_FLASH_SIZE || asset->bytes>QPK_DL_FLASH_SIZE-asset->offset) return -EFBIG;
   uint8_t *buffer=memalign(64,asset->bytes);
   if (!buffer) return -ENOMEM;
   FILE *f=asset_open(index);
@@ -40,12 +38,12 @@ int qpk_dl_model_load(unsigned index, void **data, size_t *length)
     struct stat st;
     if (fstat(fileno(f),&st)<0 || st.st_size!=asset->bytes) ret=-EBADMSG;
   }
+  if(!f)ret=-ENOENT;
   for (size_t offset=0; !ret && offset<asset->bytes;) {
     if (qpk_dl_should_cancel()) { ret=-ECANCELED;break; }
     size_t n=asset->bytes-offset;
     if (n>4096) n=4096;
     if (f) { if (fread(buffer+offset,1,n,f)!=n) ret=-EIO; }
-    else ret=esp_spiflash_read(QPK_DL_FLASH_BASE+asset->offset+offset,buffer+offset,n);
     offset+=n;
   }
   if (f) fclose(f);

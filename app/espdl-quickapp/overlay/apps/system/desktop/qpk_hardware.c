@@ -57,11 +57,11 @@ static void *hardware_worker(void *arg)
   return NULL;
 }
 
-struct qpk_hw_session *qpk_hw_create(const char *package)
+struct qpk_hw_session *qpk_hw_create_at(const char *package,const char *data_root)
 {
   struct qpk_hw_session *s = calloc(1, sizeof(*s));
   if (!s) return NULL;
-  s->platform = qpk_hw_platform_create(package);
+  s->platform = data_root?qpk_hw_platform_create_at(package,data_root):qpk_hw_platform_create(package);
   if (!s->platform) { free(s); return NULL; }
   int ret = pthread_mutex_init(&s->lock, NULL);
   if (ret) goto fail;
@@ -90,6 +90,8 @@ struct qpk_hw_session *qpk_hw_create(const char *package)
 fail:
   qpk_hw_platform_destroy(s->platform); free(s); return NULL;
 }
+
+struct qpk_hw_session *qpk_hw_create(const char *package){return qpk_hw_create_at(package,NULL);}
 
 static void release_session(struct qpk_hw_session *s, bool wait)
 {

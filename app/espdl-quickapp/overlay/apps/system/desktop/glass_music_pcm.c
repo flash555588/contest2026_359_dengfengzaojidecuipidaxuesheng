@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "glass_music_pcm.h"
+#ifdef GLASS_LOCAL_SPEECH
+#include "glass_speech.h"
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -21,6 +24,9 @@ static atomic_bool g_pcm_session_active;
 int music_pcm_session_lock(void)
 {
   int ret;
+#ifdef GLASS_LOCAL_SPEECH
+  glass_speech_stop();
+#endif
   do
     {
       ret = pthread_mutex_lock(&g_pcm_session_lock);
@@ -33,6 +39,13 @@ int music_pcm_session_lock(void)
     }
 
   return ret ? -ret : 0;
+}
+
+int music_pcm_session_trylock(void)
+{
+  int ret=pthread_mutex_trylock(&g_pcm_session_lock);
+  if(!ret)atomic_store(&g_pcm_session_active,true);
+  return ret?-ret:0;
 }
 
 void music_pcm_session_unlock(void)

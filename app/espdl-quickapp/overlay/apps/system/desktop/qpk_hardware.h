@@ -11,6 +11,7 @@ struct qpk_hw_progress {
   atomic_uint bytes, elapsed_ms, peak;
 };
 struct qpk_hw_session *qpk_hw_create(const char *package);
+struct qpk_hw_session *qpk_hw_create_at(const char *package,const char *data_root);
 void qpk_hw_release(struct qpk_hw_session *session);
 /* For short-lived diagnostic tasks; the UI uses the nonblocking release. */
 void qpk_hw_release_wait(struct qpk_hw_session *session);
@@ -21,6 +22,7 @@ char *qpk_hw_capabilities(void);
 
 /* Platform calls run on a dedicated worker, never on the LVGL/JS thread. */
 void *qpk_hw_platform_create(const char *package);
+void *qpk_hw_platform_create_at(const char *package,const char *data_root);
 void qpk_hw_platform_destroy(void *platform);
 int qpk_hw_platform_execute(void *platform, const char *operation,
                             const cJSON *arguments, cJSON *result,

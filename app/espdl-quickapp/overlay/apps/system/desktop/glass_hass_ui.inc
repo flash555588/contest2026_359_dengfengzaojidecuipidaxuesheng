@@ -1911,14 +1911,14 @@ static void glass_hass_app(lv_obj_t *card)
   g_hass_ui.accent = light ? 0x15956b : 0x43c996;
   g_hass_ui.warm = light ? 0xf06a3b : 0xff8a61;
   lv_obj_set_pos(card, 0, 0);
-  lv_obj_set_size(card, 1024, 600);
+  lv_obj_set_size(card, 1024, GLASS_CONTENT_HEIGHT);
   lv_obj_set_style_radius(card, 0, 0);
   lv_obj_set_style_border_width(card, 0, 0);
   lv_obj_set_style_bg_color(card, lv_color_hex(g_hass_ui.background), 0);
   lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
   lv_obj_add_event_cb(card, hass_ui_deleted, LV_EVENT_DELETE, NULL);
 
-  lv_obj_t *sidebar = glass_box(card, 0, 0, 178, 500,
+  lv_obj_t *sidebar = glass_box(card, 0, 0, 178, 468,
                                 g_hass_ui.sidebar, 0);
   lv_obj_t *logo = glass_box(sidebar, 22, 24, 48, 48, g_hass_ui.warm, 14);
   lv_obj_t *home = glass_symbol(logo, LV_SYMBOL_HOME, 0, 0, 0xffffff);
@@ -1933,7 +1933,7 @@ static void glass_hass_app(lv_obj_t *card)
                                       hass_ui_nav, (void *)(uintptr_t)i);
   g_hass_ui.count = hass_ui_text(sidebar, "0 台设备 · 0 在线", 24, 310,
                                  136, 16, g_hass_ui.secondary);
-  hass_ui_button(sidebar, "返回桌面", 16, 434, 146, 44,
+  hass_ui_button(sidebar, "返回桌面", 16, 402, 146, 44,
                  g_hass_ui.variant, panel_hide, NULL);
 
   g_hass_ui.heading = hass_ui_text(card, "全屋设备", 202, 24, 250, 28,
@@ -1956,11 +1956,11 @@ static void glass_hass_app(lv_obj_t *card)
                              glass_icon_font(24), 0);
   lv_obj_set_style_text_font(lv_obj_get_child(g_hass_ui.page_next, 0),
                              glass_icon_font(24), 0);
-  g_hass_ui.list = glass_box(card, 202, 106, 488, 376,
+  g_hass_ui.list = glass_box(card, 202, 106, 488, 344,
                              g_hass_ui.background, 0);
 
   /* Overview column: ha-card surface with the per-domain breakdown. */
-  lv_obj_t *hero = glass_box(card, 706, 24, 294, 458, g_hass_ui.surface, 16);
+  lv_obj_t *hero = glass_box(card, 706, 24, 294, 426, g_hass_ui.surface, 16);
   lv_obj_set_style_border_width(hero, 1, 0);
   lv_obj_set_style_border_color(hero, lv_color_hex(g_hass_ui.divider), 0);
   hass_ui_text(hero, "家庭中枢", 22, 18, 140, 16, g_hass_ui.secondary);
@@ -1995,7 +1995,7 @@ static void glass_hass_app(lv_obj_t *card)
      HASS_HA_GREY};
   for (unsigned i = 0; i < 5; i++)
     {
-      lv_obj_t *row = glass_box(hero, 22, 262 + (int)i * 32, 250, 28,
+      lv_obj_t *row = glass_box(hero, 22, 250 + (int)i * 28, 250, 28,
                                 g_hass_ui.surface, 0);
       lv_obj_t *dot = glass_box(row, 2, 9, 10, 10, summary_dots[i], 5);
       lv_obj_remove_flag(dot, LV_OBJ_FLAG_CLICKABLE);
@@ -2006,10 +2006,10 @@ static void glass_hass_app(lv_obj_t *card)
                                   LV_TEXT_ALIGN_RIGHT, 0);
       g_hass_ui.summary_row[i] = row;
     }
-  g_hass_ui.sync_label = hass_ui_text(hero, "等待首次同步", 22, 426, 250,
+  g_hass_ui.sync_label = hass_ui_text(hero, "等待首次同步", 22, 398, 250,
                                       16, g_hass_ui.secondary);
 
-  lv_obj_t *bar = glass_box(card, 0, 500, 1024, 100, g_hass_ui.surface, 0);
+  lv_obj_t *bar = glass_box(card, 0, GLASS_CONTENT_HEIGHT-100, 1024, 100, g_hass_ui.surface, 0);
   lv_obj_t *bar_rule = glass_box(bar, 0, 0, 1024, 1, g_hass_ui.divider, 0);
   lv_obj_remove_flag(bar_rule, LV_OBJ_FLAG_CLICKABLE);
   g_hass_ui.bottom_badge = glass_box(bar, 24, 22, 56, 56,
