@@ -40,6 +40,10 @@
 #endif
 #include "qpk_security.h"
 #include "qpk_storage.h"
+#include "qpk_volume.h"
+#ifdef GLASS_LOCAL_SPEECH
+#include "glass_speech.h"
+#endif
 #include "qpk_limits.h"
 #include "glass_qpk_builder.h"
 #include "glass_portal.h"
@@ -57,6 +61,7 @@
 #define PANEL_WIDTH   944
 #define PANEL_HEIGHT  512
 #define QAPP_HEADER_HEIGHT  64
+#include "glass_status.h"
 /* Long Chinese chat pages exceed 64 unique glyphs even within one viewport.
  * Keep glyph metrics and rasterized bitmaps across scrolling in PSRAM. */
 #define DESKTOP_FONT_CACHE_GLYPHS 2048
@@ -80,6 +85,7 @@ extern const uint8_t g_desktop_font_end[];
 
 struct qpk_entry_s
 {
+  enum qpk_volume volume;
   char dir[64];
   char name[NAME_MAXLEN];
   char package[NAME_MAXLEN];
@@ -383,10 +389,13 @@ static void qpk_scan(void)
 
   g_desktop.nqpk = 0;
   g_desktop.qpk_scan_failed = false;
-  dp = opendir(QPK_DIR);
+  for(unsigned volume=0;volume<2;volume++) {
+  const char *scan_root=qpk_volume_root(volume);
+  if(qpk_volume_ready(volume,false))continue;
+  dp = opendir(scan_root);
   if (dp == NULL)
     {
-      return;
+      continue;
     }
 
   while ((ent = readdir(dp)) != NULL)
@@ -395,8 +404,8 @@ static void qpk_scan(void)
       struct qpk_entry_s *qpk = &candidate;
 
       if (ent->d_name[0] == '.' ||
-          snprintf(path, sizeof(path), "%s/%s", QPK_DIR, ent->d_name) >=
-          sizeof(path) || stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
+          snprintf(path, sizeof(path), "%s/%s", scan_root, ent->d_name) >=
+          sizeof(path) || lstat(path, &st) != 0 || !S_ISDIR(st.st_mode))
         {
           continue;
         }
@@ -407,6 +416,10 @@ static void qpk_scan(void)
           continue;
         }
 
+      bool duplicate=false;
+      for(int j=0;j<g_desktop.nqpk;j++)if(!strcmp(g_desktop.qpk[j].package,qpk->package))duplicate=true;
+      if(duplicate)continue;
+      qpk->volume=volume;
       strlcpy(qpk->dir, ent->d_name, sizeof(qpk->dir));
       if (g_desktop.nqpk == g_desktop.qpk_capacity) {
         if (g_desktop.qpk_capacity > (INT_MAX - 16) / 2) { g_desktop.qpk_scan_failed = true; break; }
@@ -422,6 +435,7 @@ static void qpk_scan(void)
     }
 
   closedir(dp);
+  }
 }
 
 static void glass_rebuild(void);
@@ -975,9 +989,10 @@ static char *qpk_load_entry(const struct qpk_entry_s *qpk,
   size_t got;
   int i;
 
+  if(qpk_volume_ready(qpk->volume,false))return NULL;
   for (i = 0; i < 3; i++)
     {
-      if (snprintf(filename, filename_size, patterns[i], QPK_DIR, qpk->dir,
+      if (snprintf(filename, filename_size, patterns[i], qpk_volume_root(qpk->volume), qpk->dir,
                    qpk->entry[0] ? qpk->entry : "app.js") >= filename_size)
         {
           continue;
@@ -1059,6 +1074,8 @@ static lv_obj_t *qapp_page_prepare(const char *title)
   lv_obj_set_style_opa(page, LV_OPA_TRANSP, 0);
   lv_obj_set_size(page, lv_pct(100), lv_pct(100));
   style_panel(page, theme_card());
+  lv_obj_set_style_radius(page, 0, 0);
+  lv_obj_set_style_border_width(page, 0, 0);
   lv_obj_set_style_pad_all(page, 0, 0);
   lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -1108,7 +1125,7 @@ static lv_obj_t *qapp_page_prepare(const char *title)
   lv_obj_set_style_bg_color(content, lv_color_hex(theme_card()), 0);
   lv_obj_set_style_bg_opa(content, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_width(content, 0, 0);
-  lv_obj_set_style_radius(content, 8, 0);
+  lv_obj_set_style_radius(content, 0, 0);
   lv_obj_set_style_pad_all(content, 0, 0);
   lv_obj_remove_flag(content, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -1411,7 +1428,7 @@ static void external_qapp_clicked(lv_event_t *e)
            "MicroReactor 风格 .ux 解析器将在下一阶段接入。",
            qpk->package[0] ? qpk->package : "未声明",
            qpk->version[0] ? qpk->version : "未声明",
-           qpk->entry[0] ? qpk->entry : "未声明", QPK_DIR, qpk->dir);
+           qpk->entry[0] ? qpk->entry : "未声明", qpk_volume_root(qpk->volume), qpk->dir);
   label = make_label(card, text, theme_secondary(), 20);
   lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
   lv_obj_set_width(label, 690);
@@ -1608,6 +1625,9 @@ int main(int argc, FAR char *argv[])
     extern int qpk_hw_probe(bool);
     return qpk_hw_probe(argc > 2 && !strcmp(argv[2], "audio"));
   }
+#ifdef GLASS_LOCAL_SPEECH
+  if(argc>1&&!strcmp(argv[1],"speech"))return glass_speech_cli(argc,argv);
+#endif
   if (argc>1 && !strcmp(argv[1],"espdl")) {
     extern int qpk_dl_probe(int,char **);
     return qpk_dl_probe(argc,argv);

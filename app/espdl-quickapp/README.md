@@ -66,6 +66,13 @@ python tools/package_ui_review.py /path/to/all-ui-review
 Home Assistant 原生米家页的实体范围、分页、状态色、控制确认和布局依据见
 [HA-TILE-DESIGN.md](HA-TILE-DESIGN.md)。
 
+桌面“智能家居”显示两个设备入口，手动固定优先，其余位置按设备使用次数排序。
+在设备“更多功能”右上角选择“固定到桌面”或“取消桌面固定”，最多固定两台。
+固定设置按 HA 家庭地址保存；确认设备已删除后释放固定位置。点击入口只打开对应
+设备详情，不直接发送控制命令。桌面可见时每 30 秒异步读取这两个设备的状态，
+离开桌面即取消请求；排序变化的持久化合并为每 10 秒一次，状态更新只驻留内存。
+
+
 大肥鱼桌宠 1.0.1 的原生浮层、`system.pet` API 和快应用源码已接入当前 overlay，
 说明与许可证见 [dafeiyu/README.md](overlay/apps/system/desktop/dafeiyu/README.md)。
 桌宠已通过宿主 C/JS 测试、固件构建和实板启动测试；`desktop ui pet` 可启动内置

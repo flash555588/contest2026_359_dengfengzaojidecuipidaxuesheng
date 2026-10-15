@@ -264,10 +264,10 @@ static int record_read(const char *path, struct draft_record *out)
   return ret;
 }
 
-static bool installed_record_matches(const struct draft_record *record)
+static bool installed_record_matches_at(const struct draft_record *record,enum qpk_volume volume)
 {
   char dir[256], path[288], package[32], version[24];
-  snprintf(dir, sizeof(dir), QPK_BUILDER_ROOT "/ai.%s", record->slug);
+  snprintf(dir, sizeof(dir), "%s/ai.%s", qpk_volume_root(volume),record->slug);
   if (directory(dir, false)) return false;
   snprintf(path, sizeof(path), "%s/app.js", dir);
   char *source = NULL, *manifest = NULL;
@@ -300,7 +300,11 @@ static int initialize_locked(void)
   int newest = errors[0] ? (errors[1] ? -1 : 1) :
                errors[1] || records[0].sequence >= records[1].sequence ? 0 : 1;
   if (newest < 0 && (errors[0] != -ENOENT || errors[1] != -ENOENT)) ret = -EBADMSG;
-  bool installed = !ret && newest >= 0 && !records[newest].discarded && installed_record_matches(&records[newest]);
+  enum qpk_volume installed_volume=QPK_VOLUME_INTERNAL;
+  bool installed = !ret && newest >= 0 && !records[newest].discarded && installed_record_matches_at(&records[newest],installed_volume);
+  if(!installed&&!ret&&newest>=0&&!records[newest].discarded&&!qpk_volume_ready(QPK_VOLUME_SD,false)){
+    installed=installed_record_matches_at(&records[newest],QPK_VOLUME_SD);if(installed)installed_volume=QPK_VOLUME_SD;
+  }
   pthread_mutex_lock(&state_lock);
   info.error = ret;
   if (!ret) {
@@ -310,6 +314,7 @@ static int initialize_locked(void)
       draft_sequence = r->sequence;
       info.revision = r->discarded ? 0 : r->revision; strcpy(info.name, r->name); strcpy(info.slug, r->slug);
       if (installed) {
+        info.installed_volume=installed_volume;
         info.saved_revision = r->revision;
         snprintf(info.installed_package, sizeof(info.installed_package), "ai.%s", r->slug);
       }
@@ -552,11 +557,15 @@ char *glass_qpk_write_draft(const char *json, atomic_bool *cancel)
   char *text = cJSON_PrintUnformatted(result); cJSON_Delete(result); return text;
 }
 
-static int install_record(const struct draft_record *record)
+static int install_record(const struct draft_record *record,enum qpk_volume volume)
 {
   save_stage(1);
+  int ready=qpk_volume_ready(volume,true);if(ready)return ready;
+  char other[256];struct stat other_st;
+  snprintf(other,sizeof(other),"%s/ai.%s",qpk_volume_root(volume==QPK_VOLUME_SD?QPK_VOLUME_INTERNAL:QPK_VOLUME_SD),record->slug);
+  if(!lstat(other,&other_st))return -EEXIST;
   char dir[256], script[288], manifest_path[288], version[24];
-  snprintf(dir, sizeof(dir), QPK_BUILDER_ROOT "/ai.%s", record->slug);
+  snprintf(dir, sizeof(dir), "%s/ai.%s", qpk_volume_root(volume),record->slug);
   snprintf(script, sizeof(script), "%s/app.js", dir);
   snprintf(manifest_path, sizeof(manifest_path), "%s/manifest.json", dir);
   snprintf(version, sizeof(version), "1.0.%lu", (unsigned long)record->revision);
@@ -591,8 +600,9 @@ static int install_record(const struct draft_record *record)
   free(manifest); return ret;
 }
 
-int glass_qpk_save(uint32_t revision)
+int glass_qpk_save_to(uint32_t revision,enum qpk_volume volume)
 {
+  if(!qpk_volume_root(volume))return -EINVAL;
   pthread_mutex_lock(&state_lock); info.save_started_ms = clock_ms(); info.save_elapsed_ms = 0; info.save_stage = 1; pthread_mutex_unlock(&state_lock);
   pthread_mutex_lock(&io_lock);
   int ret = initialize_locked();
@@ -606,14 +616,16 @@ int glass_qpk_save(uint32_t revision)
     if (!record.source) ret = -ENOMEM;
   }
   pthread_mutex_unlock(&state_lock);
-  if (!ret) ret = install_record(&record);
+  if (!ret) ret = install_record(&record,volume);
   free(record.source);
   pthread_mutex_lock(&state_lock);
   info.error = ret;
   info.save_stage = ret ? 5 : 4; info.save_elapsed_ms = clock_ms() - info.save_started_ms;
-  if (!ret) { info.saved_revision = revision; snprintf(info.installed_package, sizeof(info.installed_package), "ai.%s", info.slug); }
+  if (!ret) { info.installed_volume=volume;info.saved_revision = revision; snprintf(info.installed_package, sizeof(info.installed_package), "ai.%s", info.slug); }
   pthread_mutex_unlock(&state_lock); pthread_mutex_unlock(&io_lock); return ret;
 }
+
+int glass_qpk_save(uint32_t revision){return glass_qpk_save_to(revision,QPK_VOLUME_INTERNAL);}
 
 int glass_qpk_discard(void)
 {
@@ -640,13 +652,13 @@ int glass_qpk_discard(void)
 
 #include "glass_qpk_remove.inc"
 enum background_operation { QPK_LOAD, QPK_SAVE, QPK_DISCARD, QPK_REMOVE };
-struct background_job { uint32_t revision; enum background_operation operation; char dir[48], package[48]; };
+struct background_job { uint32_t revision; enum background_operation operation; char dir[48], package[48]; enum qpk_volume volume; };
 static void *background(void *arg)
 {
   struct background_job *job = arg;
   bool removing = job->operation == QPK_REMOVE;
-  int ret = removing ? remove_installed(job->dir, job->package) : job->operation == QPK_DISCARD ? glass_qpk_discard() :
-            job->operation == QPK_SAVE ? glass_qpk_save(job->revision) : glass_qpk_initialize();
+  int ret = removing ? remove_installed(job->dir, job->package,job->volume) : job->operation == QPK_DISCARD ? glass_qpk_discard() :
+            job->operation == QPK_SAVE ? glass_qpk_save_to(job->revision,job->volume) : glass_qpk_initialize();
   free(job);
   pthread_mutex_lock(&state_lock);
   info.busy = info.discarding = info.removing = false;
@@ -655,8 +667,9 @@ static void *background(void *arg)
   return NULL;
 }
 
-static int start_job(enum background_operation operation, uint32_t revision, const char *dir, const char *package)
+static int start_job(enum background_operation operation, uint32_t revision, const char *dir, const char *package,enum qpk_volume volume)
 {
+  if(!qpk_volume_root(volume))return -EINVAL;
   pthread_mutex_lock(&state_lock);
   if (info.busy) { pthread_mutex_unlock(&state_lock); return -EBUSY; }
   if (operation == QPK_LOAD && info.loaded) { pthread_mutex_unlock(&state_lock); return 0; }
@@ -665,7 +678,7 @@ static int start_job(enum background_operation operation, uint32_t revision, con
   }
   struct background_job *job = malloc(sizeof(*job));
   if (!job) { pthread_mutex_unlock(&state_lock); return -ENOMEM; }
-  job->revision = revision; job->operation = operation;
+  job->revision = revision; job->operation = operation; job->volume=volume;
   if (operation == QPK_REMOVE) { strcpy(job->dir, dir); strcpy(job->package, package); info.remove_error = 0; }
   info.busy = true; info.discarding = operation == QPK_DISCARD;
   info.removing = operation == QPK_REMOVE;
@@ -677,16 +690,23 @@ static int start_job(enum background_operation operation, uint32_t revision, con
   return -ret;
 }
 
-int glass_qpk_start(void) { return start_job(QPK_LOAD, 0, NULL, NULL); }
-int glass_qpk_save_async(uint32_t revision) { return revision ? start_job(QPK_SAVE, revision, NULL, NULL) : -EINVAL; }
-int glass_qpk_discard_async(void) { return start_job(QPK_DISCARD, 0, NULL, NULL); }
+int glass_qpk_start(void) { return start_job(QPK_LOAD, 0, NULL, NULL,QPK_VOLUME_INTERNAL); }
+int glass_qpk_save_async(uint32_t revision) { return revision ? start_job(QPK_SAVE, revision, NULL, NULL,QPK_VOLUME_INTERNAL) : -EINVAL; }
+int glass_qpk_discard_async(void) { return start_job(QPK_DISCARD, 0, NULL, NULL,QPK_VOLUME_INTERNAL); }
 int glass_qpk_remove_async(const char *dir, const char *package)
-{ return glass_qpk_removable(dir, package) ? start_job(QPK_REMOVE, 0, dir, package) : -EPERM; }
+{ return glass_qpk_removable(dir, package) ? start_job(QPK_REMOVE, 0, dir, package,QPK_VOLUME_INTERNAL) : -EPERM; }
+
+int glass_qpk_save_async_to(uint32_t revision,enum qpk_volume volume)
+{return revision?start_job(QPK_SAVE,revision,NULL,NULL,volume):-EINVAL;}
+int glass_qpk_remove_async_from(const char *dir,const char *package,enum qpk_volume volume)
+{return glass_qpk_removable(dir,package)?start_job(QPK_REMOVE,0,dir,package,volume):-EPERM;}
 
 const char *glass_qpk_error_text(int error)
 {
   switch (-error) {
     case 0: return "";
+    case ENODEV: return "SD 卡未挂载或存储不可用，请检查安装位置。";
+    case ENOENT: return "存储目录不可用，请检查 SD 卡和内置存储。";
     case ENOSPC: return "设备存储空间不足，草稿或应用尚未保存。";
     case EEXIST: return "这个应用标识已存在；请让 AI 使用新标识保存副本。";
     case EAGAIN: return "请先预览当前草稿，返回后再保存。";

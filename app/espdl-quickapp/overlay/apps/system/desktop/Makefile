@@ -5,6 +5,9 @@
 include $(APPDIR)/Make.defs
 ifeq ($(CONFIG_SYSTEM_C6_DESKTOP),y)
 CFLAGS += -I$(APPDIR)/system/c6probe
+ifeq ($(CONFIG_SYSTEM_BILIBILI_LIVE),y)
+CFLAGS += -I$(APPDIR)/system/bilibili_live
+endif
 endif
 
 
@@ -42,6 +45,7 @@ qpk_tjpgd.c_CFLAGS += -O2
 qpk_mjpeg.c_CFLAGS += -O2
 
 CSRCS += glass_music_parse.c glass_music_http.c glass_music_service.c glass_music_pcm.c glass_ime.c glass_voice.c
+CSRCS += glass_lock_photo.c
 CSRCS += glass_pinyin_resource.c
 CSRCS += glass_portal_config.c glass_portal_files.c glass_portal_http.c glass_portal_resource.c
 CSRCS += glass_chat_service.c glass_chat_store.c

@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdatomic.h>
 #include "qpk_limits.h"
+#include "qpk_volume.h"
 
 #define QPK_DRAFT_NAME_MAX 47
 #define QPK_DRAFT_SLUG_MAX 20
@@ -19,6 +20,7 @@ struct qpk_draft_info {
   uint32_t save_started_ms, save_elapsed_ms;
   char name[QPK_DRAFT_NAME_MAX + 1], slug[QPK_DRAFT_SLUG_MAX + 1];
   char installed_package[32], preview_error[256];
+  enum qpk_volume installed_volume;
 };
 
 /* No LVGL in this module. Synchronous file work is for worker/core threads. */
@@ -29,10 +31,13 @@ char *glass_qpk_preview_source(struct qpk_draft_info *out);
 void glass_qpk_preview_result(uint32_t revision, const char *error);
 int glass_qpk_save_async(uint32_t revision);
 int glass_qpk_save(uint32_t revision);
+int glass_qpk_save_to(uint32_t revision,enum qpk_volume volume);
+int glass_qpk_save_async_to(uint32_t revision,enum qpk_volume volume);
 int glass_qpk_discard_async(void);
 int glass_qpk_discard(void);
 bool glass_qpk_removable(const char *directory, const char *package);
 int glass_qpk_remove_async(const char *directory, const char *package);
+int glass_qpk_remove_async_from(const char *directory,const char *package,enum qpk_volume volume);
 
 const char *glass_qpk_guide(void);
 const char *glass_qpk_tools(void);

@@ -19,6 +19,22 @@ struct music_snapshot {
   bool searching, has_result, initialized;
   int error, search_error, storage_error;
 };
+#define MUSIC_LYRIC_TEXT_MAX 192
+enum music_lyrics_state { MUSIC_LYRICS_NONE, MUSIC_LYRICS_LOADING,
+                          MUSIC_LYRICS_READY, MUSIC_LYRICS_MISSING };
+/* Small, UI-independent view: no URLs, library copies or retained pointers. */
+struct music_now_playing {
+  char name[128], artist[96], album[128];
+  char cover_url[1024];
+  unsigned track_id;
+  char lyrics[3][MUSIC_LYRIC_TEXT_MAX];
+  unsigned revision, position_ms, duration_ms, volume;
+  enum music_state state;
+  enum music_lyrics_state lyrics_state;
+  bool pause_requested, favorite, can_skip, lyrics_started;
+};
+void glass_music_now_playing(struct music_now_playing *out);
+int glass_music_skip(int direction);
 void glass_music_start(void);
 void glass_music_get(struct music_snapshot *out);
 int glass_music_search(const char *query);

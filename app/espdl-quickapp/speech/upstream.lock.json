@@ -1,0 +1,717 @@
+{
+  "format": 1,
+  "sources": [
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "LICENSE",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "LICENSE.MIT",
+      "bytes": 4113,
+      "sha256": "2f544ceb6a679cf706652c9df3bf8a6753197ee36456ba61665d97fbed43210e"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "web/voices/chinese-xiaoya/dec_f16.bin",
+      "bytes": 1461858,
+      "sha256": "95f16b0e9c6fb83b3983a5f8ff4a98edc19d2e8d82ae2bcd15c506ac78bca762"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "web/voices/chinese-xiaoya/front_f16.bin",
+      "bytes": 1647694,
+      "sha256": "b54364e52378b560c014c25acadddc8b2f03090c96d0d6ead9255abb630f6372"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "web/voices/chinese-xiaoya/meta.json",
+      "bytes": 2655,
+      "sha256": "40ab8bf4e8056e047184ef68d6d60611aec0c0e584908b8ff18df9cb3d9ea6c7"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "web/g2p-lazy/zh/unicode_tables.mjs",
+      "bytes": 14988,
+      "sha256": "03119be690def9344862138c8adfee684829be11cc8ffc56fbabfc7ae0387243"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "web/g2p-lazy/zh/zh_g2p.mjs",
+      "bytes": 30766,
+      "sha256": "3ce1ef33fd35e329edf2d0a23fc0e2c0b5a356f7fa3cfa8221fe18d6bb4158bd"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/chars.xz",
+      "bytes": 134028,
+      "sha256": "3d4a51fcbe2f1fb9a59d26380e94e28d7847ba440e2d1c06103bf76e70d119dd"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/MANIFEST.json",
+      "bytes": 704,
+      "sha256": "dcca7210c155537c84bc74d3ca0ebbcdb3cbd223adb13e18414503bd70ad81ee"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/phrases.xz",
+      "bytes": 82212,
+      "sha256": "125dbb22c9d889a59a5908b5d9a810b3fb43b180ff6582045d652b161115a192"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/phrase_keys.xz",
+      "bytes": 142268,
+      "sha256": "7b9aee85f15b3da86a81b258ad424b3e8560dff00dc0684331cfbb9d6ec34db9"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "mcu/include/snt_front_f32.h",
+      "bytes": 4114,
+      "sha256": "9fd3f8e19faedfabfdb5c496f30853becd0592faafd040bdddda9dad5733b028"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "mcu/include/snt_piperlite.h",
+      "bytes": 2830,
+      "sha256": "afea2efa940806d22ed0ab7fd28347e1cf5fc4ecb8a888d724a11d76839ec16b"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "mcu/src/snt_front_f32.c",
+      "bytes": 18828,
+      "sha256": "3857dd940e6fd628089551a602a7742db8e3b7c26af39014ccfa102ad4d22b53"
+    },
+    {
+      "cache": "sanoTTS",
+      "repo": "Ampixa/sanoTTS",
+      "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+      "path": "mcu/src/snt_piperlite.c",
+      "bytes": 14027,
+      "sha256": "6eff1c5cf317712242b51a3b8c6e9f83a937ecd460caa6f066f22ea2415a69ac"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "idf_component.yml",
+      "bytes": 332,
+      "sha256": "d22a412b09ba78767e496aee309e21c194731f4ad90792d6abc6337b797537b9"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "LICENSE",
+      "bytes": 1187,
+      "sha256": "7d916fb00bc0742c47cafb0d0144b67f826d76779730b1cb8796045ea6ba1b9a"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "src/esp_mn_speech_commands.c",
+      "bytes": 13780,
+      "sha256": "57c14f35dc3107db84d038f9e16d560831106698280895d7bae73a7a3cfd7885"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "src/esp_sr_debug.c",
+      "bytes": 213,
+      "sha256": "df7c18bb7852fcb7433c2eccda5e29b79db09f196af8f5c46b0f0ddf823b15c5"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "src/include/esp_mn_speech_commands.h",
+      "bytes": 5551,
+      "sha256": "26c86a0195cc24f3e0e8bc26ac9fc346a06cb01828d8d22c8066c60dd4f7b342"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "src/include/esp_process_sdkconfig.h",
+      "bytes": 679,
+      "sha256": "29fd60bf115b59ef4e7e4ddc94168e1ac0eb36053f31c5ee7824bcc3e35f8b7e"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "src/include/esp_sr_debug.h",
+      "bytes": 848,
+      "sha256": "c9ca7a369773218d616446db0e9a09c8405eecb14a15ed385f0de8f5267c9e9e"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "src/include/model_path.h",
+      "bytes": 5955,
+      "sha256": "3820bc0d563feadcadfcdfd64c785b1e072cad297e1a08ba3cb81737c7aa3888"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/wakenet_model/wn9_hilexin/wn9_data",
+      "bytes": 289796,
+      "sha256": "901fe90bcff4af61402a52e62d11993a0beac7659ccad355b4fbaa7b23594611"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/wakenet_model/wn9_hilexin/wn9_index",
+      "bytes": 1152,
+      "sha256": "da36d558d0a378c0a7bdd8348a721b5898c2aa9aef27951f613cc71f7cb7c5cd"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/wakenet_model/wn9_hilexin/_MODEL_INFO_",
+      "bytes": 41,
+      "sha256": "ac7d629244030b22d48c87324300efe4c66b27df566d82212e46c0f0061e60d7"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/multinet_model/mn7_cn/mn7_data",
+      "bytes": 2659972,
+      "sha256": "21bf13f3dc4792bdac9a9d6d6d3e69c782ded4071bba24df3da98ee14151120f"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/multinet_model/mn7_cn/mn7_index",
+      "bytes": 4656,
+      "sha256": "8a018cc23671dcee23a80ff343c37e87f3b893f144198a2dba09bcb9f745af75"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/multinet_model/mn7_cn/vocab",
+      "bytes": 6601,
+      "sha256": "7505578a7543455554a3d0a45cad7e2fd2f258097ba3b5f381d18d20d3f7ed51"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "model/multinet_model/mn7_cn/_MODEL_INFO_",
+      "bytes": 158,
+      "sha256": "251cee555d800867c5279cb5c88ef2cca10d0d250a17baf48f87830d502244aa"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "lib/esp32p4/libc_speech_features.a",
+      "bytes": 420216,
+      "sha256": "befab5ec69d86d5d3299f11f5daa2f96540c728703f939bcb506d1c5c46f033f"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "lib/esp32p4/libdl_lib.a",
+      "bytes": 4044110,
+      "sha256": "831082b93739fb33fd830cf7daf06eda2ce6464183e66c65e09760e763b92e4d"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "lib/esp32p4/libfst.a",
+      "bytes": 731034,
+      "sha256": "57ce572565fda81e253b8ca87384eccedde67ea82126d39f66c7c70344488773"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "lib/esp32p4/libhufzip.a",
+      "bytes": 328498,
+      "sha256": "446dd67481264650cc3fe09de4efa85f417b7817c758b70a4dc50aeba1104380"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "lib/esp32p4/libmultinet.a",
+      "bytes": 1116018,
+      "sha256": "ec0063f64d448ebda09ab33927cb56f068d182cf52348c9dba21e6786804dd13"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "lib/esp32p4/libwakenet.a",
+      "bytes": 795082,
+      "sha256": "b72edecd996e86c43de7b8804406a7ae4addee4cc54c079f187973087dc0b586"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/c_speech_features_config.h",
+      "bytes": 596,
+      "sha256": "905b0469ccfd4f0f97f66566837c85b4470699e624f5c963bd0b2c6736b95394"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib.h",
+      "bytes": 16837,
+      "sha256": "8afaa38d0f176eeb53e361bde387669bccacfe08732b1a8a59699ccbdd1c5cfb"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_coefgetter_if.h",
+      "bytes": 3057,
+      "sha256": "558f93ef6393553875d920ac9e1f9dc6c820f40ed99b4ba82626317a43c64d50"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_convq8_queue.h",
+      "bytes": 13581,
+      "sha256": "a0b0d7bd343154d9a3974d4ad58c81ada8a5c4cc82d5384d14479f28aaa6809c"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_convq_queue.h",
+      "bytes": 16780,
+      "sha256": "ed3853c2a17a95670b0488ffd46c52b631b46668a8534b244cf8f905e32ab35a"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_conv_queue.h",
+      "bytes": 6883,
+      "sha256": "3e8e080d36413f8ef7502a1daceb382d61133bb3d6f7e7ba76b3c3bd3a8ac31d"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_matrix.h",
+      "bytes": 8322,
+      "sha256": "e9e31c5c2b27997fe0def78bfdb7ee920875040047dbfa44ace12b7141ea9d7d"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_matrixq.h",
+      "bytes": 15949,
+      "sha256": "7d9d25ed23cda0018d22a1835b6327ff4e742a481d8496f6675e5d7e8ba1f980"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/dl_lib_matrixq8.h",
+      "bytes": 2224,
+      "sha256": "c1e56678d5a65cf1e30a7ce4186513f14e42a76d71a4b779a22ff0c6678d6246"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_aec.h",
+      "bytes": 7055,
+      "sha256": "249d98eb33d344caafcd83dfafff1ba0f9b563147fa5a1ef8fddfcf3e006c8cf"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_aec_nlp.h",
+      "bytes": 626,
+      "sha256": "72a7bb61844cf77106fceecd08f45b8ee59b76c2f5cd559f015c710260d69105"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_afe_aec.h",
+      "bytes": 2532,
+      "sha256": "c6af1d3f37e8fce4405e6138122a35e69346384d4562f8eadd674c41af36690a"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_afe_config.h",
+      "bytes": 12317,
+      "sha256": "480dbcd8069c8dd3ac7a66290b78f2115117b7f8148d599f3c4d30e6db4d8b62"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_afe_doa.h",
+      "bytes": 1424,
+      "sha256": "22d1d290d3b40d449ecaad1455ae9bdb845cda47a563ed0f59582482ce319af5"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_afe_sr_iface.h",
+      "bytes": 9974,
+      "sha256": "065855dbfab09740000c16257ec0e3467b83a9c3bfcb301090c38eab355c613e"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_afe_sr_models.h",
+      "bytes": 196,
+      "sha256": "96ead6893f831aed6b78c62f2cbd0167c49b0531f5b52f0022cee349d998be3d"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_agc.h",
+      "bytes": 1839,
+      "sha256": "e013b9b2f21cb2c78557e4a60f5671ea4f81033c4eeba8b12bee2efce8c3d4d6"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_doa.h",
+      "bytes": 1178,
+      "sha256": "096958044df9f92a7de235b19ca832110182fee7b994c22967171b38a466f176"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_mase.h",
+      "bytes": 2609,
+      "sha256": "a4e3ad6ee45f30184d9f0949e42bdc2ab8101b0ad1f0b970da10606e46d5608d"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_mfcc_iface.h",
+      "bytes": 3806,
+      "sha256": "9e82754f83d1b3002615eaa6fb03fdcc3942ad07d0fa61ec89e7e17cafe927ed"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_mfcc_models.h",
+      "bytes": 1186,
+      "sha256": "d2654a4ca11aed7f496b7c438e2ea9bb504b8574d8f71c154c037d113bae788a"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_mn_iface.h",
+      "bytes": 8066,
+      "sha256": "74f031979ac525cfee66e088cc9c856052727d562489b64e3bee6be3b5e05349"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_mn_models.h",
+      "bytes": 1575,
+      "sha256": "87de5c35fce529c735ff93b961bf1643db09647608078fc78a1ac2dfab90d97e"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_ns.h",
+      "bytes": 2263,
+      "sha256": "c027230ab1145cd5eb025e8e5ebc4ea7495597cbc41de94b133c9cc8d6ae99b2"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_nsn_iface.h",
+      "bytes": 2110,
+      "sha256": "66dd501469a9709a343bc4dd93c117d9e9fd19c1a7ff87f2c3014566e19057af"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_nsn_models.h",
+      "bytes": 337,
+      "sha256": "bb2826d863c149553e406e476a55cf1bfc4ebbee52d57ef1243784442b3206ef"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_speech_features.h",
+      "bytes": 1854,
+      "sha256": "ab20eb789bca9a6d4396fee784d442472d3b97ee7a88fe8d1b5a350385a9331c"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_sr_webrtc.h",
+      "bytes": 2537,
+      "sha256": "1d319609af7904198bc5b4f58d751b5a226897a329dfc0360eba7ea889ebcc7e"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_vad.h",
+      "bytes": 5075,
+      "sha256": "afa170ef12dac8eab504055ba8b38a9bfc9c4f41d6aec8fe3268f8ac0d46cf4b"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_vadn_iface.h",
+      "bytes": 5341,
+      "sha256": "96def58f1b0be11a4826141b35af6f49d6329895224271136048779e1381e79f"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_vadn_models.h",
+      "bytes": 445,
+      "sha256": "d4fcea705a5a78b57598eb0ebe10a31f7e7a317c6cd8324fade571e1a41df74a"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_wn_iface.h",
+      "bytes": 7754,
+      "sha256": "b80819758d9263a058d5be29339bfeae379355799c84524d518501c5ae151979"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/esp_wn_models.h",
+      "bytes": 1213,
+      "sha256": "893806a239865bd1a42bea5c9b26823340eb9f163a6f193382693de8898fc5c8"
+    },
+    {
+      "cache": "esp-sr-2.4.6",
+      "repo": "espressif/esp-sr",
+      "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "path": "include/esp32p4/flite_g2p.h",
+      "bytes": 496,
+      "sha256": "6b1b018272ee6e3946aec6c0c7c7f45d02cb6885fe71fa8b16c08123f1a8c25e"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "LICENSE",
+      "bytes": 1095,
+      "sha256": "3513f1605ebcc227f7364956f6c30a303412597e232648cb3090e76697ca5aa3"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_fft.h",
+      "bytes": 6618,
+      "sha256": "390040f96ff27e8137e8d7848c440f214f849e1822df7d55fa23fbd032f7ca2f"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_fft_f32.c",
+      "bytes": 2182,
+      "sha256": "bedaeda9ac1b53d6a7be32e1d367f2d85af7e77b011950446df721045bb00cf9"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_rfft.h",
+      "bytes": 8008,
+      "sha256": "a86559df25cfe2c8d7e4ac5d3ee418c4d04733bbf14206583819d071e4859f61"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_rfft_f32.c",
+      "bytes": 3721,
+      "sha256": "148fcecfe3d289577c9212d3764da42adf602d181fffd5e18340e8616f36b5c8"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft2r_fc32_ansi.c",
+      "bytes": 7479,
+      "sha256": "8ee9794462849e498ec6d7f707f3bada7723212ecf48531a8491f114a2c5a0ac"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft4r_fc32_ansi.c",
+      "bytes": 9025,
+      "sha256": "2cf9d2acbd80e4acd69601545baaef72a67924df1aacd7476530d01926ee3d7b"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft_base.c",
+      "bytes": 6849,
+      "sha256": "fc5dbeaa1b2bffea94afc646d85090146631ccd7b03607973feeeb8cff40e5f9"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft_base.h",
+      "bytes": 7891,
+      "sha256": "07ab6b0ea11a2da73b6ad75d39a210337df5fbc6b690fb3a926e915d8b04858e"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft_dtype.h",
+      "bytes": 427,
+      "sha256": "209a8da6f977565f2bbf80d8d8726afb1d3c9a6dbf1e48e342c1db6023066306"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft_table.c",
+      "bytes": 3302,
+      "sha256": "8369538235750105f4fa8ea9f1fa59f84b581810860bdf1e7c744b524c2e72db"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/isa/dl_fft_platform.h",
+      "bytes": 2965,
+      "sha256": "7adce5473481d06c2f00507e84000e8c8e885489c8279f3b678f6e9e339a1afa"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_fft_s16.c",
+      "bytes": 2964,
+      "sha256": "f859769f3f767b2fbcbe3b2b4093b693d5670874638445d00845f25a633d5179"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_fft_s32.c",
+      "bytes": 1388,
+      "sha256": "ef376cb8a82c30c7c2aea9fce778cf58f1412e2f16abc10a34e954cfebce35ba"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_rfft_s16.c",
+      "bytes": 3531,
+      "sha256": "8e6ecd7c0a19bde18baec5b86126f97dbefc2f8cf7735f1681e8b53b2a94a415"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/dl_rfft_s32.c",
+      "bytes": 1605,
+      "sha256": "c1bff2439abd6594093041d34d05a9c7b5f839b17fc47a8af64eae3f70a3d5e0"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft2r_sc16_ansi.c",
+      "bytes": 17303,
+      "sha256": "d6731bf99f42a13cd3c320ba22c19666a1093bf4a7dac859a4dadfb06ccabda1"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft2r_sc16_dif_ansi.c",
+      "bytes": 10328,
+      "sha256": "11c1387bf9ab462b94f1ff26a50d1fd9354ba4d4f3895edcaeffea41a2883fff"
+    },
+    {
+      "cache": "esp-dl",
+      "repo": "espressif/esp-dl",
+      "revision": "17e9abb1c59cd66b77b4bdb95587abcfafbb124a",
+      "path": "tools/dl_fft/base/dl_fft2r_sc32_ansi.c",
+      "bytes": 4454,
+      "sha256": "30707855424c3713437dd3d60dddb92bfe87d707fc6330bf4066e8703729046d"
+    }
+  ]
+}

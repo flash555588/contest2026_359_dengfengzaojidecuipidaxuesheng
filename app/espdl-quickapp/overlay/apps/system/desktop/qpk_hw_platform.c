@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "qpk_hardware.h"
+#include "qpk_volume.h"
 #include "glass_ble.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -23,7 +24,7 @@
 #include <arch/chip/gpio_sig_map.h>
 
 struct hw_platform {
-  char package[48];
+  char package[48],data_root[256];
   unsigned gpio, outputs;
   struct i2c_master_s *i2c;
   struct spi_dev_s *spi;
@@ -33,7 +34,7 @@ struct hw_platform {
 static pthread_mutex_t claims_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct hw_platform *pin_owner[7], *ble_owner;
 static const unsigned pwm_pins[] = {0, 3, 4, 6};
-extern int qpk_hw_audio_execute(const char *, const char *, const cJSON *, cJSON *, struct qpk_hw_progress *);
+extern int qpk_hw_audio_execute_at(const char *,const char *,const char *,const cJSON *,cJSON *,struct qpk_hw_progress *);
 
 static const char *string_arg(const cJSON *a, const char *key, const char *fallback)
 { cJSON *v = cJSON_GetObjectItemCaseSensitive(a, key); return !v ? fallback : cJSON_IsString(v) ? v->valuestring : NULL; }
@@ -86,14 +87,17 @@ static void unclaim(struct hw_platform *p, unsigned pins)
   }
   pthread_mutex_unlock(&claims_lock);
 }
-void *qpk_hw_platform_create(const char *package)
+void *qpk_hw_platform_create_at(const char *package,const char *data_root)
 {
+  if(!data_root||(strcmp(data_root,qpk_volume_data_root(QPK_VOLUME_INTERNAL))&&strcmp(data_root,qpk_volume_data_root(QPK_VOLUME_SD))))return NULL;
   if (!package || !*package || strlen(package) >= 48) return NULL;
   struct hw_platform *p = calloc(1, sizeof(*p)); if (!p) return NULL;
-  strcpy(p->package, package); p->uart = -1;
+  strcpy(p->package, package);strcpy(p->data_root,data_root);p->uart = -1;
   for (unsigned i = 0; i < 4; i++) p->pwm[i] = -1;
   return p;
 }
+void *qpk_hw_platform_create(const char *package)
+{return qpk_hw_platform_create_at(package,qpk_volume_data_root(QPK_VOLUME_INTERNAL));}
 void qpk_hw_platform_destroy(void *opaque)
 {
   struct hw_platform *p = opaque; if (!p) return;
@@ -336,6 +340,6 @@ int qpk_hw_platform_execute(void *opaque, const char *op, const cJSON *a, cJSON 
   if (!strncmp(op, "pwm.", 4)) return pwm_operation(p, op + 4, a, out, false);
   if (!strncmp(op, "servo.", 6)) return pwm_operation(p, op + 6, a, out, true);
   if (!strncmp(op, "ble.", 4)) return ble_operation(p, op + 4, a, out);
-  if (!strncmp(op, "audio.", 6)) return qpk_hw_audio_execute(p->package, op + 6, a, out, progress);
+  if (!strncmp(op, "audio.", 6)) return qpk_hw_audio_execute_at(p->data_root,p->package, op + 6, a, out, progress);
   return -ENOSYS;
 }

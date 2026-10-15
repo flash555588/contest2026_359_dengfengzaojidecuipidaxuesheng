@@ -50,3 +50,6 @@ bool qpk_runtime_camera_poll(void);
 int qpk_runtime_touch_test(const char *state, double nx, double ny);
 /* Fixed, read-only HA diagnostic. No credential fields are exported. */
 int qpk_runtime_ha_status(char *out, size_t capacity);
+
+/* Read-only navigation to a synced HA device; no device command is sent. */
+int qpk_runtime_open_ha_device(const char *server, const char *entity);

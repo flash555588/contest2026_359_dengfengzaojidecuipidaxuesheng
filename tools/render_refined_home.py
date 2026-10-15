@@ -66,7 +66,7 @@ def main():
     if not unchanged:conf.write_text(config)
     flags=['-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer','-pthread',
            '-I'+str(desktop),'-I'+str(apps/'system/desktop'),'-I'+str(apps/'graphics/lvgl'),
-           '-I'+str(out),'-DLV_CONF_INCLUDE_SIMPLE']
+           '-I'+str(out),'-I'+str(desktop.parent/'hass'),'-I'+str(apps/'netutils/cjson/cJSON'),'-I'+str(repo/'app/espdl-quickapp/tests'),'-DLV_CONF_INCLUDE_SIMPLE']
     environment=os.environ.copy();environment['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1';environment['ASAN_OPTIONS']='detect_leaks=1'
     def run(*cmd):subprocess.run(list(map(str,cmd)),check=True,env=environment)
     def compile(item):
@@ -75,7 +75,7 @@ def main():
         run('gcc',*flags,'-c',s,'-o',obj);return obj
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         objects=list(pool.map(compile,enumerate(sorted((lvgl/'src').rglob('*.c')))))
-    run('gcc',*flags,repo/'app/espdl-quickapp/tests/render_refined_home.c',desktop/'glass_icons.c',
+    run('gcc',*flags,repo/'app/espdl-quickapp/tests/render_refined_home.c',desktop/'glass_icons.c',desktop/'glass_grok.c',desktop/'glass_grok_state.c',apps/'netutils/cjson/cJSON/cJSON.c',
         *objects,'-lm','-o',out/'render-refined-home')
     run(out/'render-refined-home',apps/'system/desktop/AlibabaPuHuiTi-3-55-Regular.otf',out)
     for path in out.glob('*.rgb565'):png565(path)

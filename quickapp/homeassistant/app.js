@@ -90,6 +90,7 @@
   let controlQueue=[],controlTargets=Object.create(null),controlSequence=0,controlRevision=0;
   let usageServer='',usageCounts=Object.create(null),homeWeights=Object.create(null),homeOrderRevision=0;
   let usageDirty=false,usageSaveAt=Infinity;
+  let desktopPins=[],desktopServer='',desktopPublished='',desktopInputKey='',desktopRevision=0,pendingDesktop=null;
   let entityDevices=Object.create(null),deviceRegistryReady=false,deviceRegistryAt=0;
   let deviceCardsKey=-1,deviceCards=[];
   let dashboardStatsKey='',dashboardStatsValue=null;
@@ -366,6 +367,7 @@
     autoRefresh = false;
     nextRefresh = Infinity;
     lastCached = false;
+    pendingDesktop=null;
     phase = 'disconnected';
     services = Object.create(null);
     serviceDiscoveryLimited = false;
@@ -657,6 +659,13 @@
     if (serviceDiscoveryLimited) message = '只读 · 服务目录超过 256 KiB' +
       (lastCached ? ' · 本地缓存' : '');
     if(changed||!wasConnected)appendActivity('状态同步',entities.length+' 个实体 · '+groupedDeviceCards().length+' 台设备'+(lastCached?' · 本地缓存':'')+(limited?' · 已达实体上限':'')+(changed?' · 数据已更新':' · 连接已恢复'));
+    ensureDesktopPins();
+    if(scope==='all'&&!limited&&deviceRegistryReady){
+      const keys=groupedDeviceCards().map(deviceCardKey),pins=desktopPins.filter(key=>keys.includes(key));
+      if(pins.length!==desktopPins.length){desktopPins=pins;desktopRevision++;
+        save('eh_desktop_pins',JSON.stringify({server:url,pins:desktopPins}));}
+    }
+    publishDesktop();resolveDesktopDevice();
     if(nav==='scenes'&&supportsSceneSync())schedule('scenes');
     /* tick() renders once after complete(); a second render here can push a
      * large state synchronization past the callback deadline. */
@@ -2698,7 +2707,62 @@
     usageCounts[key]=Math.min(1000000,(usageCounts[key]||0)+1);
     // Keep the current page stable; rank on the next overview visit. Batch
     // preference writes instead of writing flash on every tap or drag.
-    usageDirty=true;usageSaveAt=steadyNow()+10000;
+    usageDirty=true;usageSaveAt=steadyNow()+10000;desktopRevision++;
+  }
+  // Pins and usage belong to one HA endpoint, independent of sync scope.
+  function ensureDesktopPins() {
+    if(desktopServer===url)return;
+    desktopServer=url;desktopPins=[];desktopPublished='';desktopRevision++;
+    try{const saved=JSON.parse(storage&&storage.get('eh_desktop_pins')||'{}');
+      if(saved.server===url&&Array.isArray(saved.pins))desktopPins=saved.pins.filter(validCardKey)
+        .filter((key,i,list)=>list.indexOf(key)===i).slice(0,2);
+    }catch(_){}
+  }
+  function desktopCards() {
+    ensureUsage();ensureDesktopPins();
+    const cards=groupedDeviceCards().slice();
+    cards.sort((a,b)=>{
+      const ai=desktopPins.indexOf(deviceCardKey(a)),bi=desktopPins.indexOf(deviceCardKey(b));
+      if(ai>=0||bi>=0)return (ai<0?2:ai)-(bi<0?2:bi);
+      return (usageCounts[deviceCardKey(b)]||0)-(usageCounts[deviceCardKey(a)]||0)||
+        String(a.name).localeCompare(String(b.name))||a.entity_id.localeCompare(b.entity_id);
+    });
+    return cards.slice(0,2);
+  }
+  function toggleDesktopPin() {
+    const card=currentDeviceCard();if(!card)return;
+    ensureDesktopPins();const key=deviceCardKey(card),index=desktopPins.indexOf(key);
+    if(index>=0)desktopPins.splice(index,1);
+    else if(desktopPins.length>=2){message='桌面已固定两台设备，请先取消一个固定';render();return;}
+    else desktopPins.push(key);
+    save('eh_desktop_pins',JSON.stringify({server:url,pins:desktopPins}));
+    desktopRevision++;detailRenderKey='';publishDesktop();render();
+  }
+  function publishDesktop() {
+    if(!system.desktop||typeof system.desktop.devices!=='function'||!connected||quickDrag||lampWheelDrag)return;
+    ensureDesktopPins();const key=[url,entityRevision,desktopRevision].join('|');
+    if(key===desktopInputKey)return;
+    const items=desktopCards().map(card=>({entity:card.entity_id,name:clean(card.name,30),
+      state:clean(card.device_online===false?'设备离线':friendlyState(card)+(card.domain==='light'&&card.state==='on'&&card.brightness!==null?' · '+card.brightness+'%':''),18)||'状态未知',
+      pinned:desktopPins.includes(deviceCardKey(card))}));
+    const json=JSON.stringify({server:url,items});
+    if(json===desktopPublished){desktopInputKey=key;return;}
+    try{if(system.desktop.devices(json)===0){desktopPublished=json;desktopInputKey=key;}}catch(_){}
+  }
+  function resolveDesktopDevice() {
+    if(!pendingDesktop||!connected)return;
+    if(pendingDesktop.server!==url){pendingDesktop=null;return;}
+    const request=pendingDesktop;pendingDesktop=null;
+    const card=groupedDeviceCards().find(card=>card.device_entities.includes(request.entity));
+    if(card)openDetail(card);
+    else {message='该设备已移除或未在当前同步范围内';render();}
+  }
+  function openDesktopDevice(server,entity) {
+    if(server!==url||!validEntity(entity)||disposed)return false;
+    pendingDesktop={server:url,entity};
+    if(connected)resolveDesktopDevice();
+    else {settingsOpen=false;autoRefresh=true;refresh();}
+    return true;
   }
   function preferredHomeCard(item) {
     return item.device_entities.some(id=>favorites.includes(id))||!!homeWeights[deviceCardKey(item)];
@@ -2965,6 +3029,7 @@
         render();
       }, pal.page);
     out.title = label('', GRID_X + 56, 17, 280, 30, 24, pal.ink);
+    out.desktopPin=createButton('',W-160,10,144,40,toggleDesktopPin,pal.blueSoft,{radius:12,borderWidth:0,fontSize:15});out.desktopPin.section='detail';
     out.status = label('', W - 370, 21, 110, 20, 13, pal.muted);
     pushStyle(out.status, 'L', { center: 1 });
     out.refresh = iconButton('\uf021', W - 44, 16, 32, 28, refresh, pal.page);
@@ -3070,6 +3135,9 @@
     out.detailAuxBox={x:cx+cw-leftW-20,y:dy+84,w:leftW,h:dh-148};
     const remember=id=>{out.detailWidgets.push(id);return id;};
     out.detailPanel=remember(borderedPanel(cx,dy,cw,dh,dark?0x20262e:0xffffff,24));
+    out.desktopPinFace=panel(W-160,10,144,40,pal.blueSoft,12);
+    out.desktopPinLabel=label('固定到桌面',W-154,20,132,24,15,pal.blue);pushStyle(out.desktopPinLabel,'L',{center:1});
+
     pushStyle(out.detailPanel,'S',{radius:24,borderWidth:1,borderColor:dark?0x303845:pal.line});
     out.detailCrumb=remember(label('',dx+8,dy+8,leftW-16,28,20,pal.ink));
     out.detailName=remember(label('',cx+20,dy+16,cw-40,32,24,pal.ink));
@@ -3758,6 +3826,10 @@
       detailRequested ? '更多功能' : sectionNames[nav]);
     pushText(widgets.status, connected ? '\u5df2\u540c\u6b65' : '\u672a\u8fde\u63a5');
     pairHidden(widgets.back, !settingsOpen && !detailRequested);
+    ensureDesktopPins();
+    hide(widgets.desktopPin,!detailView);
+    [widgets.desktopPinFace,widgets.desktopPinLabel].forEach(id=>hide(id,!detailView));
+    if(detailView)pushText(widgets.desktopPinLabel,desktopPins.includes(deviceCardKey(currentDeviceCard()))?'取消桌面固定':desktopPins.length>=2?'桌面已固定两台':'固定到桌面');
     pairHidden(widgets.refresh, !listView);
     pairHidden(widgets.settingsButton, !listView);
     hide(widgets.layoutEdit,true);buttonText(widgets.layoutEdit,'');
@@ -3841,6 +3913,7 @@
     if (disposed) { renderRunning = false; return; }
     renderAgain = false;
     renderNow();
+    publishDesktop();
     if (renderAgain) {
       system.yield().then(continueRender, () => { renderRunning = false; });
     } else {
@@ -3894,6 +3967,7 @@
       backend: sharedReady ? 'native-service' :
         nativeService ? 'unsupported-service' : 'legacy',
       nativeManaged,
+      desktopPins:desktopPins.slice(),desktopCards:desktopCards().map(card=>({entity:card.entity_id,key:deviceCardKey(card),name:card.name,pinned:desktopPins.includes(deviceCardKey(card))})),
       favorites: favorites.slice(), filter, search, page, nav, roomPage, layoutStyle,
       functionControls:detailOpen?deviceFields(deviceFunctions()).map(f=>({entity:f.item.entity_id,title:f.spec.title,key:f.spec.key,kind:f.spec.kind,service:f.spec.service,min:f.spec.min,max:f.spec.max,options:f.spec.options})):[],
       colorWheel:widgets&&detailOpen&&widgets.lampUi&&widgets.lampUi.wheelRect?Object.assign({},widgets.lampUi.wheelRect):null,
@@ -4200,7 +4274,7 @@
     if(state==='cancel'){if(quickDrag){cardRenderKey='';detailRenderKey='';quickDrag.group.renderKey='';}quickDrag=null;render();}
   });
   globalThis.ESPHomeHA = {
-    refresh, disconnect,
+    refresh, disconnect, openDevice:openDesktopDevice,
     settings: () => { detailOpen = false; settingsOpen = true; render(); },
     snapshot,
     dispose: () => {

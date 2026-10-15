@@ -23,5 +23,6 @@ int music_pcm_pause(struct music_pcm *pcm, bool paused);
 int music_pcm_drain(struct music_pcm *pcm);
 void music_pcm_close(struct music_pcm *pcm);
 int music_pcm_session_lock(void);
+int music_pcm_session_trylock(void);
 void music_pcm_session_unlock(void);
 bool music_pcm_session_active(void);

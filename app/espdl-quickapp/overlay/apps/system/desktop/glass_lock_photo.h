@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+#pragma once
+#include <stdbool.h>
+#include <stdint.h>
+struct glass_lock_photo { uint16_t *pixels; unsigned width,height; int error; };
+int glass_lock_photo_request(void);
+void glass_lock_photo_cancel(void);
+/* Transfers ownership of pixels to the caller; never invokes LVGL. */
+bool glass_lock_photo_take(struct glass_lock_photo *out);
+
+#define GLASS_COVER_MUSIC 1u
+#define GLASS_COVER_LOCK 2u
+int glass_lock_cover_request(unsigned owner,const char *url);
+void glass_lock_cover_cancel(unsigned owner);
+bool glass_lock_cover_take(unsigned owner,struct glass_lock_photo *out);

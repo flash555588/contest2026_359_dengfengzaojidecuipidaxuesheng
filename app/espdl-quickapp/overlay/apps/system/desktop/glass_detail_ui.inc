@@ -13,7 +13,7 @@ static uint32_t detail_accent(void){return g_desktop.light_theme?0x77658f:0xc1ae
 static void detail_page(lv_obj_t *card)
 {
   lv_obj_clean(card);lv_obj_remove_style_all(card);
-  lv_obj_set_pos(card,0,0);lv_obj_set_size(card,1024,600);
+  lv_obj_set_pos(card,0,0);lv_obj_set_size(card,1024,GLASS_CONTENT_HEIGHT);
   lv_obj_remove_flag(card,LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_style_bg_color(card,lv_color_hex(detail_canvas()),0);
   lv_obj_set_style_bg_opa(card,LV_OPA_COVER,0);
@@ -50,10 +50,10 @@ static lv_obj_t *detail_nav(lv_obj_t *parent,const char *text,const char *icon,i
 }
 static void detail_sidebar(lv_obj_t *card,const char *name,const char *icon,lv_event_cb_t back)
 {
-  glass_box(card,0,0,190,600,detail_paper(),0);
-  glass_box(card,189,0,1,600,detail_line(),0);
+  glass_box(card,0,0,190,GLASS_CONTENT_HEIGHT,detail_paper(),0);
+  glass_box(card,189,0,1,GLASS_CONTENT_HEIGHT,detail_line(),0);
   home_icon(card,icon,24,30,24,detail_accent());
   detail_text(card,name,62,30,112,20,detail_ink());
   detail_text(card,"Vela Desk",24,68,140,12,detail_muted());
-  detail_button(card,"返回桌面",16,530,158,back,NULL);
+  detail_button(card,"返回桌面",16,GLASS_CONTENT_HEIGHT-62,158,back,NULL);
 }

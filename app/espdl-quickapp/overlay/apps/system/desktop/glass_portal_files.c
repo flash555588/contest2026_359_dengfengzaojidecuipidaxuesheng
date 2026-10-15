@@ -10,7 +10,10 @@
 #ifndef PORTAL_DATA_ROOT
 #define PORTAL_DATA_ROOT "/data"
 #endif
-#define STAGE PORTAL_DATA_ROOT "/qpk/.install"
+#include "qpk_volume.h"
+static enum qpk_volume install_volume;
+static char install_stage[256]=QPK_VOLUME_INTERNAL_ROOT "/.install";
+#define STAGE install_stage
 static char install_package[32],install_entry[32];
 
 /* One path component. SmartFS reserves 32 bytes per name including the
@@ -96,16 +99,27 @@ int portal_install_begin(const cJSON *manifest,char *error,size_t cap)
      !*name||strlen(name)>63||strpbrk(name,"\"\\\r\n")) return -EINVAL;
   for(const char *p=pkg;*p;p++) if(!((*p>='a'&&*p<='z')||(*p>='A'&&*p<='Z')||(*p>='0'&&*p<='9')||strchr("._-",*p))) return -EINVAL;
   if(!strcmp(pkg,"music")||!strcmp(pkg,"pinyin")||!strncmp(pkg,"com.openvela.",13)) return -EPERM;
+  const cJSON *selection=cJSON_GetObjectItemCaseSensitive(manifest,"storage");
+  if(selection&&!cJSON_IsString(selection))return -EINVAL;
+  const char *storage=str(manifest,"storage");
+  if(*storage&&strcmp(storage,"internal")&&strcmp(storage,"sdcard"))return -EINVAL;
+  enum qpk_volume selected=!strcmp(storage,"sdcard")?QPK_VOLUME_SD:QPK_VOLUME_INTERNAL;
+  int ready=qpk_volume_ready(selected,true);
+  if(ready){snprintf(error,cap,selected==QPK_VOLUME_SD?"SD 卡未挂载或不可写":"内置存储不可用");return ready;}
   char target[192]; struct stat st;
-  snprintf(target,sizeof(target),PORTAL_DATA_ROOT "/qpk/%s",pkg);
-  if(lstat(target,&st)==0) { snprintf(error,cap,"同名应用已存在，请先在设备删除旧应用"); return -EEXIST; }
-  portal_install_abort(); mkdir(PORTAL_DATA_ROOT "/qpk",0700);
+  for(unsigned v=0;v<2;v++){
+    snprintf(target,sizeof(target),"%s/%s",qpk_volume_root(v),pkg);
+    if(lstat(target,&st)==0) { snprintf(error,cap,"同名应用已存在，请先在设备删除旧应用"); return -EEXIST; }
+  }
+  portal_install_abort();install_volume=selected;
+  snprintf(STAGE,sizeof(install_stage),"%s/.install",qpk_volume_root(selected));
   if(mkdir(STAGE,0700)<0) return -errno;
   cJSON *clean=cJSON_CreateObject(); if(!clean) return -ENOMEM;
   cJSON_AddStringToObject(clean,"name",name); cJSON_AddStringToObject(clean,"package",pkg);
   cJSON_AddStringToObject(clean,"entry",entry); cJSON_AddStringToObject(clean,"versionName","1.0");
   char *data=cJSON_PrintUnformatted(clean); cJSON_Delete(clean); if(!data) return -ENOMEM;
-  FILE *f=fopen(STAGE "/manifest.json","wb"); int ret=-EIO;
+  char manifest_path[288];snprintf(manifest_path,sizeof(manifest_path),"%s/manifest.json",STAGE);
+  FILE *f=fopen(manifest_path,"wb"); int ret=-EIO;
   if(f) { bool ok=fwrite(data,1,strlen(data),f)==strlen(data); ret=fclose(f)==0&&ok?0:-EIO; }
   free(data); if(ret) { portal_install_abort(); return ret; }
   snprintf(install_package,sizeof(install_package),"%s",pkg); snprintf(install_entry,sizeof(install_entry),"%s",entry); return 0;
@@ -113,15 +127,17 @@ int portal_install_begin(const cJSON *manifest,char *error,size_t cap)
 int portal_install_target(const char *relative,char *out,size_t cap)
 {
   if(!install_package[0] || !strcmp(relative,"manifest.json")) return -EINVAL;
+  int ready=qpk_volume_ready(install_volume,false);if(ready)return ready;
   return portal_safe_path(STAGE,relative,out,cap,true);
 }
 int portal_install_commit(void)
 {
   char path[256],target[192]; struct stat st;
   if(!install_package[0]) return -EINVAL;
-  snprintf(path,sizeof(path),STAGE "/%s",install_entry);
+  int ready=qpk_volume_ready(install_volume,false);if(ready)return ready;
+  snprintf(path,sizeof(path),"%s/%s",STAGE,install_entry);
   if(stat(path,&st)<0 || !S_ISREG(st.st_mode)||st.st_size<=0) return -EINVAL;
-  snprintf(target,sizeof(target),PORTAL_DATA_ROOT "/qpk/%s",install_package);
+  snprintf(target,sizeof(target),"%s/%s",qpk_volume_root(install_volume),install_package);
   if(lstat(target,&st)==0) return -EEXIST;
   if(rename(STAGE,target)<0) return -errno;
   install_package[0]=0; return 0;

@@ -18,13 +18,13 @@ bool glass_qpk_removable(const char *dir, const char *package)
   return true;
 }
 
-static int remove_installed(const char *dir, const char *package)
+static int remove_installed(const char *dir, const char *package,enum qpk_volume volume)
 {
   if (!glass_qpk_removable(dir, package)) return -EPERM;
   pthread_mutex_lock(&io_lock);
   char path[256], manifest[288];
-  int ret = root_ready();
-  snprintf(path, sizeof(path), QPK_BUILDER_ROOT "/%s", dir);
+  int ret = qpk_volume_ready(volume,false);
+  snprintf(path, sizeof(path), "%s/%s", qpk_volume_root(volume),dir);
   if (!ret) ret = directory(path, false);
   snprintf(manifest, sizeof(manifest), "%s/manifest.json", path);
   char *text = NULL;
@@ -33,7 +33,7 @@ static int remove_installed(const char *dir, const char *package)
   cJSON *pkg = cJSON_GetObjectItemCaseSensitive(root, "package");
   if (!ret && (!cJSON_IsString(pkg) || strcmp(pkg->valuestring, package))) ret = -ESTALE;
   cJSON_Delete(root); free(text);
-  if (!ret) ret = qpk_storage_remove_package(QPK_BUILDER_ROOT "/.data", package);
+  if (!ret) ret = qpk_storage_remove_package(qpk_volume_data_root(volume), package);
   /* Keep the manifest until all other files are gone: failed cleanup can be
    * retried from the same tile instead of silently leaving hidden files. */
   DIR *dp = !ret ? opendir(path) : NULL;

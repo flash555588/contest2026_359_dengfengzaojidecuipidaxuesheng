@@ -87,6 +87,39 @@ static lv_obj_t *home_icon(lv_obj_t *parent, const char *symbol,
   return label;
 }
 
+static unsigned g_home_devices_painted;
+
+static void home_device_open(lv_event_t *event)
+{
+  unsigned index = (uintptr_t)lv_event_get_user_data(event);
+  if (index >= g_home_devices.count) return;
+  /* Capture identity before launching: app startup can publish a new ranking. */
+  struct home_device_s row = g_home_devices.rows[index];
+  char server[sizeof(g_home_devices.server)];
+  strcpy(server, g_home_devices.server);
+  glass_homeassistant(NULL);
+  qpk_runtime_open_ha_device(server, row.entity);
+}
+
+static void glass_home_devices_paint(void)
+{
+  if (!g_glass.device_empty || g_home_devices_painted == g_home_devices.revision) return;
+  g_home_devices_painted = g_home_devices.revision;
+  for (unsigned i = 0; i < 2; i++)
+    {
+      if (i >= g_home_devices.count) lv_obj_add_flag(g_glass.device_rows[i], LV_OBJ_FLAG_HIDDEN);
+      else
+        {
+          lv_obj_remove_flag(g_glass.device_rows[i], LV_OBJ_FLAG_HIDDEN);
+          lv_label_set_text(g_glass.device_names[i], g_home_devices.rows[i].name);
+          lv_label_set_text(g_glass.device_states[i], g_home_devices.rows[i].state);
+          lv_label_set_text(g_glass.device_pins[i], g_home_devices.rows[i].pinned ? "固定" : "常用");
+        }
+    }
+  if (g_home_devices.count) lv_obj_add_flag(g_glass.device_empty, LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_remove_flag(g_glass.device_empty, LV_OBJ_FLAG_HIDDEN);
+}
+
 static lv_obj_t *home_button(lv_obj_t *parent, const char *text,
                              const char *symbol, int x, int y, int w,
                              uint32_t fill, uint32_t color,
@@ -201,22 +234,26 @@ static void glass_rebuild(void)
       lv_obj_delete(g_glass.home);
     }
   g_glass_display.valid = false;
-  lv_obj_t *root = glass_box(g_desktop.screen, 0, 0, 1024, 600, background, 0);
+  lv_obj_t *root = glass_box(g_desktop.screen, 0, 0, 1024, GLASS_CONTENT_HEIGHT, background, 0);
   g_glass.home = root;
   lv_obj_move_to_index(root, 0);
 
   /* Header. The network entry does not claim service connectivity. */
-  lv_obj_t *mark = glass_box(root, 28, 22, 40, 40, ink, 13);
-  lv_obj_t *label = home_text(mark, "v.", 0, 0, 40, 28, paper);
+  lv_obj_t *mark = glass_box(root, 28, 5, 32, 32, ink, 13);
+  lv_obj_t *label = home_text(mark, "v.", 0, 0, 32, 20, paper);
   lv_obj_center(label);
-  home_text(root, "Vela", 80, 26, 50, 20, ink);
-  home_text(root, "Desk", 127, 26, 58, 20, muted);
-  g_glass.date = home_text(root, "时钟待校准", 378, 34, 346, 14, muted);
+  home_text(root, "Vela", 72, 8, 50, 20, ink);
+  home_text(root, "Desk", 119, 8, 58, 20, muted);
+  g_glass.date = home_text(root, "时钟待校准", 350, 12, 346, 14, muted);
   g_glass.wifi_button = home_button(root, "网络", LV_SYMBOL_WIFI,
-    764, 22, 90, background, muted, glass_system_page_open, NULL);
-  g_glass.clock = home_text(root, "--:--", 858, 25, 87, 28, ink);
+    764, 0, 90, background, muted, glass_system_page_open, NULL);
+  g_glass.clock = home_text(root, "--:--", 858, 3, 87, 28, ink);
+  glass_clickable(g_glass.clock, glass_lock_open, NULL);
+  /* The system status bar owns the visible clock and network entry. */
+  lv_obj_add_flag(g_glass.clock, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(g_glass.wifi_button, LV_OBJ_FLAG_HIDDEN);
   g_glass.theme_button = home_button(root, NULL, GLASS_ICON_SLIDERS,
-    952, 20, 44, paper, ink, settings_clicked, NULL);
+    952, 0, 44, paper, ink, settings_clicked, NULL);
 
   /* Persistent rail. All icons come from the same authored outline family. */
   const char *symbols[] = {GLASS_ICON_GRID, GLASS_ICON_CAMERA, LV_SYMBOL_HOME,
@@ -226,7 +263,7 @@ static void glass_rebuild(void)
     glass_homeassistant, glass_chat_open, glass_music, qpk_clicked};
   for (unsigned i = 0; i < 6; i++)
     {
-      lv_obj_t *item = glass_box(root, 20, 84 + i * 80, 68, 72,
+      lv_obj_t *item = glass_box(root, 20, 52 + i * 80, 68, 72,
                                 i ? background : paper, 17);
       lv_obj_t *icon = home_icon(item, symbols[i], 0, 0, 20, i ? muted : accent);
       lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 12);
@@ -237,7 +274,7 @@ static void glass_rebuild(void)
     }
 
   /* One music feature, with adjacent entry points for video and live media. */
-  lv_obj_t *card = home_card(root, 0, 108, 84, 567, 272, 0x272534);
+  lv_obj_t *card = home_card(root, 0, 108, 52, 567, 272, 0x272534);
   static const uint32_t ends[] = {0x695070, 0x754f48, 0x456e67};
   glass_gradient(card, ends[g_glass.palette < 3 ? g_glass.palette : 0], LV_GRAD_DIR_HOR);
   lv_obj_t *fill = lv_image_create(card);
@@ -282,7 +319,7 @@ static void glass_rebuild(void)
   label = home_text(card, "更多影音", 26, 246, 74, 12, 0xd6c6de);
   lv_obj_t *live = home_button(card, "网络直播", GLASS_ICON_RADIO,
     103, 228, 127, 0x373043, 0xfff8ef, launch_bilibili, NULL);
-  lv_obj_t *video = home_button(card, "本地视频", LV_SYMBOL_VIDEO,
+  lv_obj_t *video = home_button(card, "相册", LV_SYMBOL_IMAGE,
     234, 228, 127, 0x373043, 0xfff8ef, launch_local_video, NULL);
   lv_obj_set_style_bg_opa(live, LV_OPA_TRANSP, 0);
   lv_obj_set_style_bg_opa(video, LV_OPA_TRANSP, 0);
@@ -291,7 +328,7 @@ static void glass_rebuild(void)
 #endif
 
   /* Weather data is supplied by the existing worker. Unknown values stay --. */
-  card = home_card(root, 3, 693, 84, 307, 272, paper);
+  card = home_card(root, 3, 693, 52, 307, 272, paper);
   home_text(card, "天气与环境", 24, 24, 226, 16, ink);
   home_arrow(card, glass_weather_open);
   g_glass.temperature = home_text(card, "--°", 24, 60, 180, 64, ink);
@@ -318,7 +355,7 @@ static void glass_rebuild(void)
   glass_clickable(card, glass_widget_open, NULL);
 
   /* Bottom cards share geometry, typography and 44 px touch targets. */
-  card = home_card(root, 1, 108, 374, 285, 178, light ? 0xe9e2f2 : 0x302a3e);
+  card = home_card(root, 1, 108, 342, 285, 178, light ? 0xe9e2f2 : 0x302a3e);
   struct glass_grok *home_ball=glass_grok_create_pixel(card,285,!g_desktop.light_theme,zh_font);
   glass_grok_set_reduced_motion(home_ball,g_glass.reduced_motion);
   glass_grok_set_obscured_by(home_ball,g_desktop.panel);
@@ -333,19 +370,31 @@ static void glass_rebuild(void)
     light ? 0xf7f4fa : 0x3d354a, accent, home_chat_input, (void *)1);
   glass_clickable(card, glass_chat_open, NULL);
 
-  card = home_card(root, 2, 411, 374, 285, 178, light ? 0xe0ebe6 : 0x26372f);
-  home_icon(card, LV_SYMBOL_HOME, 25, 20, 20, green);
+  card = home_card(root, 2, 411, 342, 285, 178, light ? 0xe0ebe6 : 0x26372f);
+  home_text(card, "智能家居", 21, 18, 200, 20, ink);
   home_arrow(card, glass_homeassistant);
-  home_text(card, "智能家居", 21, 60, 240, 20, ink);
-  g_glass.devices = home_text(card, "-- / --", 21, 90, 145, 32, ink);
-  home_text(card, "实体可用 / 全部", 169, 106, 100, 12, green);
-  home_rule(card, 21, 140, 243, green);
-  home_text(card, "Home Assistant", 21, 151, 122, 12, muted);
-  g_glass.sync = home_text(card, "尚未同步", 144, 151, 122, 12, muted);
-  lv_obj_set_style_text_align(g_glass.sync, LV_TEXT_ALIGN_RIGHT, 0);
+  for (unsigned i = 0; i < 2; i++)
+    {
+      lv_obj_t *row = glass_box(card, 21, 53 + i * 46, 243, 42,
+                                light ? 0xf2f7f4 : 0x32473c, 10);
+      lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_EVENT_BUBBLE);
+      glass_clickable(row, home_device_open, (void *)(uintptr_t)i);
+      g_glass.device_rows[i] = row;
+      g_glass.device_names[i] = home_text(row, "", 10, 3, 183, 14, ink);
+      g_glass.device_states[i] = home_text(row, "", 10, 23, 220, 12, muted);
+      g_glass.device_pins[i] = home_text(row, "", 203, 5, 32, 12, green);
+    }
+  g_glass.device_empty = home_text(card, "进入米家 HA 同步设备", 21, 83, 243, 14, muted);
+  home_text(card, "固定优先 · 常用补齐", 21, 151, 243, 12, muted);
+  /* Keep telemetry consumers separate from the shortcuts' visible labels. */
+  g_glass.devices = home_text(card, "-- / --", 0, 0, 145, 14, ink);
+  g_glass.sync = home_text(card, "尚未同步", 0, 0, 122, 12, muted);
+  lv_obj_add_flag(g_glass.devices, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(g_glass.sync, LV_OBJ_FLAG_HIDDEN);
+  g_home_devices_painted = ~g_home_devices.revision;
   glass_clickable(card, glass_homeassistant, NULL);
 
-  card = home_card(root, 4, 714, 374, 286, 178, light ? 0xe3e7f0 : 0x29313f);
+  card = home_card(root, 4, 714, 342, 286, 178, light ? 0xe3e7f0 : 0x29313f);
   home_icon(card, GLASS_ICON_FACE, 25, 20, 20, blue);
   home_arrow(card, launch_builtin_camera_qapp);
   home_text(card, "相机与识别", 21, 60, 245, 20, ink);
@@ -356,13 +405,13 @@ static void glass_rebuild(void)
   home_button(card, "分类", NULL, 197, 121, 65, chip, blue, home_vision_mode, NULL);
   glass_clickable(card, launch_builtin_camera_qapp, NULL);
 
-  home_text(root, "VelaDesk", 108, 573, 190, 12, muted);
+  home_text(root, "VelaDesk", 108, 541, 190, 12, muted);
   lv_obj_t *files = home_button(root, "文件", LV_SYMBOL_DIRECTORY,
-    739, 556, 73, background, muted, glass_system_page_open, (void *)1);
+    739, 524, 73, background, muted, glass_system_page_open, (void *)1);
   lv_obj_t *pet = home_button(root, "桌宠", GLASS_ICON_FISH,
-    817, 556, 73, background, muted, launch_builtin_dafeiyu_qapp, NULL);
+    817, 524, 73, background, muted, launch_builtin_dafeiyu_qapp, NULL);
   lv_obj_t *portal = home_button(root, "扫码配置", GLASS_ICON_QR,
-    895, 556, 105, background, muted, glass_portal_open, NULL);
+    895, 524, 105, background, muted, glass_portal_open, NULL);
   lv_obj_set_style_bg_opa(files, LV_OPA_TRANSP, 0);
   lv_obj_set_style_bg_opa(pet, LV_OPA_TRANSP, 0);
   lv_obj_set_style_bg_opa(portal, LV_OPA_TRANSP, 0);

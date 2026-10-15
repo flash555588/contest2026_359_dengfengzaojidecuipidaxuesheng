@@ -119,13 +119,28 @@ static void chat_ui_preview_app(lv_event_t *e)
   show_toast("试用后点左上角返回，可以继续修改或保存应用");
 }
 
+static void chat_ui_install_choice(lv_event_t *e)
+{
+  uintptr_t choice=(uintptr_t)lv_event_get_user_data(e);
+  if(g_chat_ui.confirm){lv_obj_delete(g_chat_ui.confirm);g_chat_ui.confirm=NULL;}
+  if(choice>1)return;
+  int ret=glass_qpk_save_async_to(g_chat_ui.app.revision,(enum qpk_volume)choice);
+  show_toast(ret?glass_qpk_error_text(ret):"正在安装应用…");chat_ui_refresh(NULL);
+}
 static void chat_ui_save_app(lv_event_t *e)
 {
   LV_UNUSED(e);
-  if (!g_chat_ui.root || g_chat_ui.snapshot->phase != CHAT_IDLE) return;
-  int ret = glass_qpk_save_async(g_chat_ui.app.revision);
-  show_toast(ret ? glass_qpk_error_text(ret) : "正在保存应用…");
-  chat_ui_refresh(NULL);
+  if (!g_chat_ui.root || g_chat_ui.snapshot->phase != CHAT_IDLE || g_chat_ui.confirm) return;
+  lv_obj_t *shade=glass_box(g_chat_ui.root,0,0,1024,GLASS_CONTENT_HEIGHT,0x000000,0);
+  lv_obj_set_style_bg_opa(shade,LV_OPA_60,0);g_chat_ui.confirm=shade;
+  lv_obj_t *card=glass_box(shade,252,150,520,300,g_chat_ui.background,20);
+  chat_ui_text(card,"选择安装位置",28,26,464,28,g_chat_ui.primary,false);
+  chat_ui_text(card,"内置存储与系统数据共享 2 MiB。\n安装到 SD 卡的应用需要插卡运行。",28,78,464,20,g_chat_ui.secondary,true);
+  glass_button(card,"内置存储",28,172,210,g_chat_ui.surface,chat_ui_install_choice,(void *)0);
+  bool sd_ready=qpk_volume_mounted(QPK_VOLUME_SD)==0;
+  lv_obj_t *sd=glass_button(card,sd_ready?"SD 卡":"SD 卡未就绪",256,172,236,g_chat_ui.surface,chat_ui_install_choice,(void *)1);
+  if(!sd_ready){lv_obj_add_state(sd,LV_STATE_DISABLED);lv_obj_set_style_opa(sd,LV_OPA_40,LV_STATE_DISABLED);}
+  glass_button(card,"取消",176,238,168,g_chat_ui.surface,chat_ui_install_choice,(void *)2);
 }
 
 static lv_obj_t *chat_ui_text(lv_obj_t *parent, const char *text, int x, int y,
@@ -221,14 +236,14 @@ static void chat_ui_editor_open(lv_event_t *e)
 {
   LV_UNUSED(e);
   if (g_chat_ui.editor) return;
-  lv_obj_t *editor = glass_box(g_chat_ui.root, 220, 0, 804, 600, g_chat_ui.background, 0);
+  lv_obj_t *editor = glass_box(g_chat_ui.root, 220, 0, 804, GLASS_CONTENT_HEIGHT, g_chat_ui.background, 0);
   g_chat_ui.editor = editor;
   chat_ui_text(editor, "写下你的想法", 26, 28, 430, 28, g_chat_ui.primary, false);
   chat_ui_button(editor, "收起", 572, 23, 88, 46, false, chat_ui_editor_close, NULL);
   chat_ui_button(editor, "发送", 674, 23, 102, 46, true, chat_ui_send, NULL);
   g_chat_ui.input = lv_textarea_create(editor);
   glass_input_style(g_chat_ui.input);
-  lv_obj_set_pos(g_chat_ui.input, 26, 92); lv_obj_set_size(g_chat_ui.input, 752, 148);
+  lv_obj_set_pos(g_chat_ui.input, 26, 92); lv_obj_set_size(g_chat_ui.input, 752, 116);
   lv_obj_set_style_bg_color(g_chat_ui.input, lv_color_hex(g_chat_ui.surface), 0);
   lv_obj_set_style_text_color(g_chat_ui.input, lv_color_hex(g_chat_ui.primary), 0);
   lv_obj_set_style_border_color(g_chat_ui.input, lv_color_hex(g_chat_ui.accent), LV_STATE_FOCUSED);
@@ -237,8 +252,8 @@ static void chat_ui_editor_open(lv_event_t *e)
   lv_textarea_set_placeholder_text(g_chat_ui.input, "输入问题，也可以换行补充细节");
   lv_textarea_set_text(g_chat_ui.input, chat_draft);
   lv_textarea_set_cursor_pos(g_chat_ui.input, LV_TEXTAREA_CURSOR_LAST);
-  chat_ui_text(editor, "中文 / English · 连续拼音选词 · 空格确认", 28, 254, 556, 16, g_chat_ui.secondary, false);
-  g_chat_ui.counter = chat_ui_text(editor, "", 588, 254, 190, 16, g_chat_ui.secondary, false);
+  chat_ui_text(editor, "中文 / English · 连续拼音选词 · 空格确认", 28, 222, 556, 16, g_chat_ui.secondary, false);
+  g_chat_ui.counter = chat_ui_text(editor, "", 588, 222, 190, 16, g_chat_ui.secondary, false);
   lv_obj_set_style_text_align(g_chat_ui.counter, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_add_event_cb(g_chat_ui.input, chat_ui_counter, LV_EVENT_VALUE_CHANGED, NULL);
   g_chat_ui.keyboard = lv_keyboard_create(editor);
@@ -246,7 +261,7 @@ static void chat_ui_editor_open(lv_event_t *e)
   lv_obj_set_size(g_chat_ui.keyboard, 772, 244);
   /* lv_keyboard starts bottom-aligned; coordinates alone would move it
    * below the screen. Fix the alignment before attaching the candidate bar. */
-  lv_obj_align(g_chat_ui.keyboard, LV_ALIGN_TOP_LEFT, 16, 340);
+  lv_obj_align(g_chat_ui.keyboard, LV_ALIGN_TOP_LEFT, 16, GLASS_CONTENT_HEIGHT-260);
   lv_keyboard_set_mode(g_chat_ui.keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
   lv_keyboard_set_textarea(g_chat_ui.keyboard, g_chat_ui.input);
   glass_ime_attach(g_chat_ui.keyboard, zh_font(20), true,
@@ -462,7 +477,7 @@ static void chat_ui_discard(lv_event_t *e)
   if (g_chat_ui.confirm) return;
   struct qpk_draft_info app; glass_qpk_get(&app);
   if (app.busy) { show_toast("正在处理草稿，请稍后重试"); return; }
-  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, 600, 0x000000, 0);
+  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, GLASS_CONTENT_HEIGHT, 0x000000, 0);
   lv_obj_set_style_bg_opa(shade, LV_OPA_60, 0); g_chat_ui.confirm = shade;
   lv_obj_t *card = glass_box(shade, 252, 166, 520, 268, g_chat_ui.background, 22);
   chat_ui_text(card, "放弃这个创意？", 28, 26, 464, 28, g_chat_ui.primary, false);
@@ -476,7 +491,7 @@ static void chat_ui_new(lv_event_t *e)
   LV_UNUSED(e);
   if (g_chat_ui.confirm) return;
   if (!g_chat_ui.snapshot->count) { chat_ui_editor_open(NULL); return; }
-  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, 600, 0x000000, 0);
+  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, GLASS_CONTENT_HEIGHT, 0x000000, 0);
   lv_obj_set_style_bg_opa(shade, LV_OPA_60, 0); g_chat_ui.confirm = shade;
   lv_obj_t *card = glass_box(shade, 272, 178, 480, 242, g_chat_ui.background, 22);
   chat_ui_text(card, "开始新对话？", 28, 26, 424, 28, g_chat_ui.primary, false);
@@ -641,33 +656,37 @@ static void glass_chat_show(bool from_apps)
   g_chat_ui.primary = light ? 0x1c3433 : 0xe7f0ee;
   g_chat_ui.secondary = light ? 0x647d79 : 0x98afa9;
   g_chat_ui.accent = light ? 0x18796c : 0x246f64;
-  lv_obj_set_pos(card, 0, 0); lv_obj_set_size(card, 1024, 600);
+  lv_obj_set_pos(card, 0, 0); lv_obj_set_size(card, 1024, GLASS_CONTENT_HEIGHT);
   lv_obj_set_style_radius(card, 0, 0); lv_obj_set_style_border_width(card, 0, 0);
   lv_obj_set_style_bg_color(card, lv_color_hex(g_chat_ui.background), 0);
   lv_obj_add_event_cb(card, chat_ui_deleted, LV_EVENT_DELETE, NULL);
-  lv_obj_t *sidebar = glass_box(card, 0, 0, 220, 600, g_chat_ui.sidebar, 0);
+  lv_obj_t *sidebar = glass_box(card, 0, 0, 220, GLASS_CONTENT_HEIGHT, g_chat_ui.sidebar, 0);
   chat_ui_text(sidebar, "ESPClaw", 24, 34, 180, 28, g_chat_ui.primary, false);
   chat_ui_text(sidebar, "聊想法，也能做应用", 24, 82, 180, 16, g_chat_ui.secondary, false);
   chat_ui_button(sidebar, "新对话", 20, 118, 180, 44, true, chat_ui_new, NULL);
   g_chat_ui.count = chat_ui_text(sidebar, "0 轮交流", 26, 179, 172, 16, g_chat_ui.secondary, false);
   g_chat_ui.app_status = chat_ui_text(sidebar, "正在载入草稿", 24, 220, 174, 16, g_chat_ui.primary, true);
   lv_obj_set_height(g_chat_ui.app_status, 96);
-  g_chat_ui.preview_button = chat_ui_button(sidebar, "预览草稿", 20, 324, 180, 44, false, chat_ui_preview_app, NULL);
-  g_chat_ui.save_button = chat_ui_button(sidebar, "保存应用", 20, 378, 180, 44, false, chat_ui_save_app, NULL);
-  g_chat_ui.discard_button = chat_ui_button(sidebar, "放弃创意", 20, 430, 180, 38, false, chat_ui_discard, NULL);
-  g_chat_ui.storage = chat_ui_text(sidebar, "最近 6 轮对话\n自动保存在设备", 26, 480, 170, 16, g_chat_ui.secondary, true);
-  chat_ui_button(sidebar, from_apps ? "返回应用" : "返回桌面", 20, 528, 180, 48, false, glass_chat_back, NULL);
+  g_chat_ui.preview_button = chat_ui_button(sidebar, "预览草稿", 20, 300, 180, 44, false, chat_ui_preview_app, NULL);
+  g_chat_ui.save_button = chat_ui_button(sidebar, "保存应用", 20, 354, 180, 44, false, chat_ui_save_app, NULL);
+  g_chat_ui.discard_button = chat_ui_button(sidebar, "放弃创意", 20, 406, 180, 38, false, chat_ui_discard, NULL);
+  g_chat_ui.storage = chat_ui_text(sidebar, "最近 6 轮对话\n自动保存在设备", 26, 452, 170, 16, g_chat_ui.secondary, true);
+  chat_ui_button(sidebar, from_apps ? "返回应用" : "返回桌面", 20, GLASS_CONTENT_HEIGHT-72, 180, 48, false, glass_chat_back, NULL);
   chat_ui_text(card, "对话", 250, 24, 150, 28, g_chat_ui.primary, false);
   g_chat_ui.status = chat_ui_text(card, "正在载入对话", 402, 34, 420, 16, g_chat_ui.secondary, false);
+#ifdef GLASS_LOCAL_SPEECH
+  lv_obj_set_width(g_chat_ui.status,320);
+  chat_ui_button(card,"本地语音",738,22,124,42,false,glass_speech_open,NULL);
+#endif
   g_chat_ui.model = chat_ui_text(card, "", 250, 71, 706, 16, g_chat_ui.secondary, false);
   chat_ui_button(card, "AI 设置", 874, 22, 124, 42, false, chat_ui_config, NULL);
   lv_obj_t *rule = glass_box(card, 246, 103, 752, 1, g_chat_ui.secondary, 0);
   lv_obj_set_style_bg_opa(rule, 36, 0);
-  g_chat_ui.messages = glass_box(card, 242, 115, 764, 382, g_chat_ui.background, 0);
+  g_chat_ui.messages = glass_box(card, 242, 115, 764, 350, g_chat_ui.background, 0);
   lv_obj_add_flag(g_chat_ui.messages, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(g_chat_ui.messages, LV_DIR_VER); lv_obj_set_scrollbar_mode(g_chat_ui.messages, LV_SCROLLBAR_MODE_AUTO);
   lv_obj_add_event_cb(g_chat_ui.messages,chat_ui_ball_position,LV_EVENT_SCROLL,NULL);
-  g_chat_ui.ball_strip=glass_box(card,250,115,64,382,g_chat_ui.background,0);
+  g_chat_ui.ball_strip=glass_box(card,250,115,64,350,g_chat_ui.background,0);
   lv_obj_set_style_bg_opa(g_chat_ui.ball_strip,LV_OPA_TRANSP,0);
   lv_obj_remove_flag(g_chat_ui.ball_strip,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
   g_chat_ui.ball_mount=glass_box(g_chat_ui.ball_strip,0,0,64,64,g_chat_ui.background,0);
@@ -675,12 +694,12 @@ static void glass_chat_show(bool from_apps)
   lv_obj_remove_flag(g_chat_ui.ball_mount,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
   g_chat_ui.ball=glass_grok_create_avatar(g_chat_ui.ball_mount,zh_font);
   glass_grok_set_reduced_motion(g_chat_ui.ball,g_glass.reduced_motion);
-  lv_obj_t *draft = glass_box(card, 250, 514, 614, 58, g_chat_ui.surface, 16);
+  lv_obj_t *draft = glass_box(card, 250, 482, 614, 58, g_chat_ui.surface, 16);
   glass_clickable(draft, chat_ui_editor_open, NULL);
   g_chat_ui.draft_label = chat_ui_text(draft, chat_draft[0] ? chat_draft : "聊点什么…", 20, 18, 574, 20, g_chat_ui.secondary, false);
-  g_chat_ui.action = chat_ui_button(card, "发送", 880, 514, 118, 58, true, chat_ui_action, NULL);
+  g_chat_ui.action = chat_ui_button(card, "发送", 880, 482, 118, 58, true, chat_ui_action, NULL);
   g_chat_ui.action_label = lv_obj_get_child(g_chat_ui.action, 0);
-  chat_ui_text(card, "轻点输入框开始 · 支持中文、英文与换行", 252, 575, 746, 16, g_chat_ui.secondary, false);
+  chat_ui_text(card, "轻点输入框开始 · 支持中文、英文与换行", 252, 543, 746, 16, g_chat_ui.secondary, false);
   glass_chat_refresh_config();
   (void)glass_qpk_start();
   g_chat_ui.timer = lv_timer_create(chat_ui_refresh, 250, NULL); chat_ui_refresh(NULL);

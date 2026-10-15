@@ -6,8 +6,10 @@ static struct {
   lv_obj_t *root, *list, *heading, *subtitle, *search, *status, *title, *artist;
   lv_obj_t *album, *bottom_title, *bottom_artist, *play_label, *favorite_label, *elapsed;
   lv_obj_t *volume, *progress, *duration, *count, *nav[2], *disc, *input_shade, *input, *keyboard;
+  lv_obj_t *lyric;
   lv_timer_t *timer;
   struct music_snapshot snapshot;
+  struct music_cover_view cover;
   unsigned search_revision, favorite_count;
   bool favorites, valid;
   uint32_t primary, secondary, surface, accent, background;
@@ -59,13 +61,7 @@ static void music_ui_favorite(lv_event_t *e)
 static void music_ui_skip(lv_event_t *e)
 {
   int direction=(intptr_t)lv_event_get_user_data(e);
-  struct music_snapshot *s=&g_music_ui.snapshot;
-  if (!s->favorite_count) { show_toast("收藏歌曲后可切换播放"); return; }
-  int index=-1;
-  for (unsigned i=0;i<s->favorite_count;i++)
-    if (!strcmp(s->current.name,s->favorites[i].name) && !strcmp(s->current.artist,s->favorites[i].artist)) { index=i; break; }
-  index=index<0?0:(index+direction+(int)s->favorite_count)%s->favorite_count;
-  glass_music_play(&s->favorites[index]);
+  if(glass_music_skip(direction)) show_toast("收藏歌曲后可切换播放");
   music_ui_refresh(NULL);
 }
 
@@ -197,6 +193,7 @@ static void music_ui_refresh(lv_timer_t *timer)
   int storage_error=g_music_ui.snapshot.storage_error;
   glass_music_get(&g_music_ui.snapshot);
   struct music_snapshot *s=&g_music_ui.snapshot;
+  struct music_now_playing now;glass_music_now_playing(&now);music_cover_tick(&g_music_ui.cover,&now);
   if (g_music_ui.valid && s->revision==previous_revision) return;
   if (!g_music_ui.valid || s->search_revision!=previous_search || s->favorite_count!=previous_count || s->searching!=searching) music_ui_list();
   if (s->storage_error && s->storage_error!=storage_error) show_toast(s->storage_error==-ENOSPC?"收藏空间已满":"收藏未保存，请检查存储");
@@ -206,10 +203,14 @@ static void music_ui_refresh(lv_timer_t *timer)
   lv_label_set_text(g_music_ui.title,title); lv_label_set_text(g_music_ui.bottom_title,title);
   lv_label_set_text(g_music_ui.artist,artist); lv_label_set_text(g_music_ui.bottom_artist,artist);
   lv_label_set_text(g_music_ui.album,s->current.album);
+  const char *line=now.lyrics[1][0]?now.lyrics[1]:
+    now.lyrics_state==MUSIC_LYRICS_LOADING?"正在获取歌词…":
+    now.lyrics_state==MUSIC_LYRICS_READY?(now.lyrics_started?"间奏":"前奏 · 等待歌词"):s->current.name[0]?"暂无歌词":"";
+  lv_label_set_text(g_music_ui.lyric,line);
   const char *status=s->state==MUSIC_LOADING?"正在加载音乐":s->state==MUSIC_PLAYING?"正在播放":s->state==MUSIC_PAUSED?"已暂停":
     s->state==MUSIC_ERROR?"播放失败 · 点击播放重试":s->state==MUSIC_ENDED?"播放结束":s->state==MUSIC_STOPPED?"已停止":"现在播放";
   lv_label_set_text(g_music_ui.status,status);
-  lv_label_set_text(g_music_ui.play_label,s->state==MUSIC_PLAYING?LV_SYMBOL_PAUSE:LV_SYMBOL_PLAY);
+  lv_label_set_text(g_music_ui.play_label,(s->state==MUSIC_PLAYING || s->state==MUSIC_LOADING) && !now.pause_requested?LV_SYMBOL_PAUSE:LV_SYMBOL_PLAY);
   lv_obj_set_style_text_color(g_music_ui.favorite_label,lv_color_hex(
     glass_music_is_favorite(s,&s->current)?g_music_ui.accent:g_music_ui.secondary),0);
   lv_label_set_text_fmt(g_music_ui.count,"%u 首珍藏",s->favorite_count);
@@ -225,6 +226,7 @@ static void music_ui_refresh(lv_timer_t *timer)
 static void music_ui_deleted(lv_event_t *e)
 {
   LV_UNUSED(e);
+  music_cover_reset(&g_music_ui.cover);
   if (g_music_ui.timer) lv_timer_delete(g_music_ui.timer);
   memset(&g_music_ui,0,sizeof(g_music_ui));
 }
@@ -240,26 +242,29 @@ static void glass_music_app(lv_obj_t *card)
   g_music_ui.background=light?0xf8f7fa:0x15131d;
   g_music_ui.surface=light?0xeeecf3:0x272330;
   g_music_ui.accent=light?0xd82f62:0xff7297;
-  lv_obj_set_size(card,1024,600); lv_obj_set_pos(card,0,0);
+  lv_obj_set_size(card,1024,GLASS_CONTENT_HEIGHT); lv_obj_set_pos(card,0,0);
   lv_obj_set_style_radius(card,0,0); lv_obj_set_style_border_width(card,0,0);
   lv_obj_set_style_bg_color(card,lv_color_hex(g_music_ui.background),0);
   lv_obj_add_event_cb(card,music_ui_deleted,LV_EVENT_DELETE,NULL);
-  lv_obj_t *sidebar=glass_box(card,0,0,178,500,light?0xf0edf4:0x1c1924,0);
+  lv_obj_t *sidebar=glass_box(card,0,0,178,468,light?0xf0edf4:0x1c1924,0);
   music_ui_text(sidebar,"声动",24,28,130,28,g_music_ui.accent);
   music_ui_text(sidebar,"MUSIC",26,70,128,16,g_music_ui.secondary);
   g_music_ui.nav[0]=music_ui_button(sidebar,"搜索与发现",12,130,154,48,g_music_ui.surface,music_ui_nav,NULL,false);
   g_music_ui.nav[1]=music_ui_button(sidebar,"我的收藏",12,190,154,48,g_music_ui.background,music_ui_nav,(void *)1,false);
   g_music_ui.count=music_ui_text(sidebar,"0 首珍藏",26,255,132,16,g_music_ui.secondary);
-  music_ui_button(sidebar,"返回桌面",16,434,146,44,g_music_ui.surface,panel_hide,NULL,false);
+  music_ui_button(sidebar,"锁屏播放",16,324,146,44,g_music_ui.surface,glass_lock_open,NULL,false);
+  music_ui_text(sidebar,"退出页面继续播放",20,375,146,14,g_music_ui.secondary);
+  music_ui_button(sidebar,"返回桌面",16,402,146,44,g_music_ui.surface,panel_hide,NULL,false);
   g_music_ui.search=music_ui_button(card,"搜索歌名、歌手",202,24,476,50,g_music_ui.surface,music_ui_input_open,NULL,false);
   lv_obj_set_width(lv_obj_get_child(g_music_ui.search,0),414);
   g_music_ui.heading=music_ui_text(card,"搜索与发现",202,104,480,28,g_music_ui.primary);
   g_music_ui.subtitle=music_ui_text(card,"找到此刻想听的声音",202,144,480,16,g_music_ui.secondary);
-  g_music_ui.list=glass_box(card,202,188,482,294,g_music_ui.background,0);
+  g_music_ui.list=glass_box(card,202,188,482,262,g_music_ui.background,0);
   lv_obj_add_flag(g_music_ui.list,LV_OBJ_FLAG_SCROLLABLE); lv_obj_set_scroll_dir(g_music_ui.list,LV_DIR_VER);
-  lv_obj_t *now=glass_box(card,706,24,294,458,light?0xf0e8ee:0x292030,22);
+  lv_obj_t *now=glass_box(card,706,24,294,426,light?0xf0e8ee:0x292030,22);
   g_music_ui.status=music_ui_text(now,"现在播放",22,18,250,16,g_music_ui.secondary);
   g_music_ui.disc=glass_box(now,38,60,218,218,0x6f5b8c,20);
+  g_music_ui.cover.host=g_music_ui.disc;g_music_ui.cover.owner=GLASS_COVER_MUSIC;
   glass_gradient(g_music_ui.disc,0xe19a83,LV_GRAD_DIR_VER);
   lv_obj_set_style_shadow_width(g_music_ui.disc,24,0); lv_obj_set_style_shadow_opa(g_music_ui.disc,36,0);
   lv_obj_t *circle=glass_box(g_music_ui.disc,32,32,154,154,0x252031,77);
@@ -267,10 +272,11 @@ static void glass_music_app(lv_obj_t *card)
   lv_obj_t *ring=glass_box(circle,28,28,98,98,0xd69c9c,49);
   lv_obj_set_style_bg_opa(ring,70,0);
   glass_symbol(ring,LV_SYMBOL_AUDIO,37,37,0xffffff);
-  g_music_ui.title=music_ui_text(now,"还没有播放音乐",22,306,250,28,g_music_ui.primary);
-  g_music_ui.artist=music_ui_text(now,"让好音乐，陪伴此刻",22,350,250,20,g_music_ui.secondary);
-  g_music_ui.album=music_ui_text(now,"",22,385,250,16,g_music_ui.secondary);
-  lv_obj_t *bar=glass_box(card,0,500,1024,100,light?0xffffff:0x211d29,0);
+  g_music_ui.title=music_ui_text(now,"还没有播放音乐",22,284,250,28,g_music_ui.primary);
+  g_music_ui.artist=music_ui_text(now,"让好音乐，陪伴此刻",22,328,250,20,g_music_ui.secondary);
+  g_music_ui.album=music_ui_text(now,"",22,363,250,16,g_music_ui.secondary);
+  g_music_ui.lyric=music_ui_text(now,"",22,397,250,16,g_music_ui.accent);
+  lv_obj_t *bar=glass_box(card,0,GLASS_CONTENT_HEIGHT-100,1024,100,light?0xffffff:0x211d29,0);
   lv_obj_set_style_border_width(bar,1,0); lv_obj_set_style_border_color(bar,lv_color_hex(g_music_ui.surface),0);
   lv_obj_t *mini=glass_box(bar,22,24,52,52,0x946680,12);
   glass_gradient(mini,0xe29a82,LV_GRAD_DIR_VER); glass_symbol(mini,LV_SYMBOL_AUDIO,14,14,0xffffff);
