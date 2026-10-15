@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
@@ -137,7 +138,15 @@ static uint8_t g_dma_block[ESP_HOSTED_BLOCK_SIZE]
 
 /* One full frame is reassembled here before dispatch. */
 
-static uint8_t g_frame_buf[ESP_HOSTED_MAX_FRAME];
+/* PACKET_LEN is an aggregate byte count, not the size of one Ethernet frame.
+ * The C6's 20-entry TX queue can accumulate more than 16 KiB while the host
+ * decodes video.  Keep a bounded batch buffer in the application heap; DMA
+ * still uses the internal, cache-aligned 512-byte bounce buffer above. */
+
+#define C6_RX_BATCH_SIZE (64u * 1024u)
+static FAR uint8_t *g_frame_buf;
+static uint32_t g_rx_peak;
+static uint32_t g_rx_large_batches;
 
 /****************************************************************************
  * Private Functions
@@ -852,10 +861,20 @@ static int hosted_read_frame(FAR uint32_t *framelen)
       return OK;
     }
 
-  if (pending > ESP_HOSTED_MAX_FRAME)
+  if (pending > g_rx_peak)
+    {
+      g_rx_peak = pending;
+    }
+
+  if (pending > C6_RX_BATCH_SIZE)
     {
       syslog(LOG_ERR, "frame too large: %" PRIu32 "\n", pending);
       return -EMSGSIZE;
+    }
+
+  if (pending > ESP_HOSTED_MAX_FRAME)
+    {
+      g_rx_large_batches++;
     }
 
   /* Read exactly as the reference host does: full 512-byte blocks use
@@ -914,6 +933,7 @@ int esp_hosted_initialize(bool verbose)
   FAR struct sdio_dev_s *sdio;
   uint32_t regval;
   int ret;
+  bool allocated = false;
 
   ret = nxmutex_lock(&g_hosted.lock);
   if (ret < 0)
@@ -925,6 +945,18 @@ int esp_hosted_initialize(bool verbose)
     {
       nxmutex_unlock(&g_hosted.lock);
       return OK;
+    }
+
+  if (g_frame_buf == NULL)
+    {
+      g_frame_buf = malloc(C6_RX_BATCH_SIZE);
+      if (g_frame_buf == NULL)
+        {
+          ret = -ENOMEM;
+          goto errout;
+        }
+
+      allocated = true;
     }
 
   if (verbose)
@@ -1008,6 +1040,11 @@ int esp_hosted_initialize(bool verbose)
 
 errout:
   g_hosted.up = false;
+  if (allocated)
+    {
+      free(g_frame_buf);
+      g_frame_buf = NULL;
+    }
   nxmutex_unlock(&g_hosted.lock);
   return ret;
 }
@@ -1426,6 +1463,10 @@ int esp_hosted_debug_counters(FAR uint32_t *tokens, FAR uint32_t *pending,
     {
       return ret;
     }
+
+  printf("c6: RX peak=%lu large_batches=%lu capacity=%u\n",
+         (unsigned long)g_rx_peak, (unsigned long)g_rx_large_batches,
+         C6_RX_BATCH_SIZE);
 
   if (tokens != NULL)
     {
