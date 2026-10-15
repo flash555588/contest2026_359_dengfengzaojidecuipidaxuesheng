@@ -9,13 +9,14 @@
 struct hass_action_rule_s
 {
   const char *domain, *service, *key;
-  char type; /* n = number, s = bounded string, b = bool, 0 = no parameters */
+  char type; /* n = number, s = bounded string, b = bool, c = RGB, 0 = none */
   double minimum, maximum;
 };
 
 static const struct hass_action_rule_s hass_action_rules[] = {
   {"light","turn_on","brightness_pct",'n',1,100},
   {"light","turn_on","color_temp_kelvin",'n',1000,20000},
+  {"light","turn_on","rgb_color",'c',0,255},
   {"light","turn_on","effect",'s',0,128},
   {"light","turn_off",NULL,0,0,0},
   {"switch","turn_on",NULL,0,0,0},{"switch","turn_off",NULL,0,0,0},
@@ -67,7 +68,7 @@ static bool hass_action_valid(const char *domain, const char *service,
   cJSON *root = cJSON_ParseWithOpts(body, &end, true);
   if (!root || !cJSON_IsObject(root)) { cJSON_Delete(root); return false; }
   bool known = false, valid = true;
-  unsigned targets = 0, params = 0;
+  unsigned targets = 0, params = 0, colors = 0;
   for (unsigned i = 0; i < sizeof(hass_action_rules)/sizeof(hass_action_rules[0]); i++)
     if (!strcmp(domain,hass_action_rules[i].domain) &&
         !strcmp(service,hass_action_rules[i].service)) known = true;
@@ -85,14 +86,24 @@ static bool hass_action_valid(const char *domain, const char *service,
           matched = r->type=='n' ? cJSON_IsNumber(field) && isfinite(field->valuedouble) && field->valuedouble>=r->minimum && field->valuedouble<=r->maximum :
                     /* Frontend limit is 128 characters; UTF-8 needs up to four
                      * bytes per character. The complete body remains bounded. */
-                    r->type=='s' ? cJSON_IsString(field) && strlen(field->valuestring)>0 && strlen(field->valuestring)<=4*r->maximum : cJSON_IsBool(field);
+                    r->type=='s' ? cJSON_IsString(field) && strlen(field->valuestring)>0 && strlen(field->valuestring)<=4*r->maximum :
+                    r->type=='c' ? cJSON_IsArray(field) && cJSON_GetArraySize(field)==3 : cJSON_IsBool(field);
+          if (r->type=='c')
+            {
+              const cJSON *channel;
+              cJSON_ArrayForEach(channel,field)
+                matched &= cJSON_IsNumber(channel) && isfinite(channel->valuedouble) &&
+                  channel->valuedouble>=0 && channel->valuedouble<=255 &&
+                  channel->valuedouble==(int)channel->valuedouble;
+            }
+          if (!strcmp(r->key,"rgb_color") || !strcmp(r->key,"color_temp_kelvin")) colors++;
           /* Duplicate parameters cannot override a validated earlier value. */
           matched &= cJSON_GetObjectItemCaseSensitive(root,field->string)==field;
           break;
         }
       params++; valid &= matched;
     }
-  valid &= known && targets==1 && params<=3;
+  valid &= known && targets==1 && params<=3 && colors<=1;
   /* Parameterized services require their argument; plain turn_on is valid. */
   if (!params && strcmp(service,"turn_on"))
     {

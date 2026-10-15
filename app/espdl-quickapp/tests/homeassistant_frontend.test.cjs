@@ -97,6 +97,7 @@ function boot(width = 1024, height = 600, options = {}) {
     if((action==='turn_on'||action==='turn_off')&&!/^(scene|script)\./.test(entity))state.state=action==='turn_on'?'on':'off';
     if(body.brightness_pct!==undefined)state.attributes.brightness=Math.round(body.brightness_pct*255/100);
     if(body.color_temp_kelvin!==undefined)state.attributes.color_temp_kelvin=body.color_temp_kelvin;
+    if(body.rgb_color!==undefined){state.attributes.rgb_color=body.rgb_color.slice();state.attributes.color_mode='rgb';}
     if(body.value!==undefined||body.option!==undefined)state.state=String(body.value===undefined?body.option:body.value);
     if(body.position!==undefined)state.attributes.current_position=body.position;
     if(body.hvac_mode!==undefined)state.state=body.hvac_mode;
@@ -124,6 +125,7 @@ function boot(width = 1024, height = 600, options = {}) {
       buttons.push({ id, callback });
       return id;
     },
+    colorWheel:(x,y,d)=>create(x,y,d,d),
     panel: (x, y, w, h) => create(x, y, w, h),
     rect: (x, y, w, h) => create(x, y, w, h),
     arc: (x, y, w, h) => create(x, y, w, h),
@@ -133,7 +135,7 @@ function boot(width = 1024, height = 600, options = {}) {
     text: (text, x, y, w = 1, h = 1) => {const id=create(x,y,w,h);textValues.set(id,text);return id;},
     setColor: (id,value) => {requireHandle(id, 'setColor');nativeWrites.push({method:'color',id,value});},
     setHidden: (id,value) => {requireHandle(id, 'setHidden');hidden.set(id,!!value);nativeWrites.push({method:'hidden',id,value:!!value});},
-    setStyle: (id,style) => {requireHandle(id,'setStyle');if(style.fontSize!==undefined)assert(style.fontSize>=0&&style.fontSize<=48,'native style fontSize contract');styles.set(id,{...styles.get(id),...style});nativeWrites.push({method:'style',id,style});},
+    setStyle: (id,style) => {requireHandle(id,'setStyle');if(style.center!==undefined)assert([0,1].includes(style.center),'native center is boolean');if(style.fontSize!==undefined)assert(style.fontSize>=0&&style.fontSize<=48,'native style fontSize contract');styles.set(id,{...styles.get(id),...style});nativeWrites.push({method:'style',id,style});},
     setText(id, value) {
       requireHandle(id, 'setText');
       textValues.set(id, value);
@@ -153,6 +155,8 @@ function boot(width = 1024, height = 600, options = {}) {
       nativeWrites.push({method:'size',id,w,h});
     }
   };
+  if(options.frontOrder)ui.front=id=>{requireHandle(id,'front');nativeWrites.push({method:'front',id});};
+  if(options.measureMetrics)ui.measureText=options.measureMetrics;
   const context = vm.createContext({
     system: { homeAssistantService: service, homeAssistant: {},
       yield: () => ({ then: resolve => { deferred.push(resolve); } }),
@@ -699,6 +703,11 @@ test('real HA device models bind to their registered card categories', () => {
   const devices=registry.devices.map(d=>[d.device_id,d.name,d.area,d.entities,d.model,d.manufacturer]);
   const r=boot(1024,536,{states,devices});r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();
   const cards=r.context.ESPHomeHA.snapshot().deviceCards;
+  assert.equal(cards.length,4,'real-home snapshot has four appliances, no Backup/Sun/TTS/software cards');
+  assert([...r.textValues].some(([id,text])=>!r.hidden.get(id)&&text==='4 台设备 · 已同步'));
+  assert(![...r.textValues].some(([id,text])=>!r.hidden.get(id)&&String(text).includes('200 个实体')),'entity count belongs in logs');
+  assert(r.context.ESPHomeHA.snapshot().activityLog.some(row=>row.detail.includes('200 个实体 · 4 台设备')));
+  assert.equal(r.context.ESPHomeHA.snapshot().entities.length,states.length,'raw HA entities remain synchronized');
   const camera=cards.find(c=>c.model==='chuangmi.camera.079ac1');assert(camera);assert.equal(camera.quickReference.type,'camera');
   assert.equal(camera.entity_id,'switch.chuangmi_cn_1184483380_079ac1_on_p_2_1');assert.equal(camera.members.length,100);
   const lock=cards.find(c=>c.model==='ynsur.lock.v12m');assert(lock);assert.equal(lock.quickReference.type,'lock');assert.equal(lock.members.length,39);
@@ -940,7 +949,7 @@ test('color temperature uses device bounds, follows gestures, and verifies its o
     const r=boot(1024,536,{dark,states,nativeActions:true,acceptControls:true,savedLayout:JSON.stringify({server:'http://192.168.1.20:8123',sizes:{'light.desk':'large'}})});
     r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();
     if(!r.context.ESPHomeHA.snapshot().detailOpen){deviceBody(r,'light.desk').callback();for(let i=0;i<30;i++)r.tick();}
-    assert([...r.styles.values()].some(style=>style.gradientHorizontal===1&&style.gradientEnd===0xffffff),'Kelvin rail is a full warm-to-white gradient');
+    assert([...r.styles.values()].some(style=>style.gradientHorizontal===1&&style.gradientEnd===0xfffdfa),'Kelvin rail is a full warm-to-white gradient');
     parameterDrag(r,'color_temp_kelvin',.5);assert.equal(r.controls.length,1);
     assert.deepEqual(r.controls[0],{entity:'light.desk',action:'turn_on',body:{entity_id:'light.desk',color_temp_kelvin:4600}});
     for(let i=0;i<30;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
@@ -1298,3 +1307,402 @@ test('a failed scene submission is never replayed automatically',()=>{
 });
 
 
+
+
+function lampFixture(overrides={},serviceOptions={}){
+  const state={entity_id:'light.bedside',state:'on',attributes:{friendly_name:'床头灯',brightness:200,
+    supported_color_modes:['color_temp','rgb'],color_mode:'color_temp',rgb_color:[255,150,46],
+    color_temp_kelvin:2700,min_color_temp_kelvin:2700,max_color_temp_kelvin:6500,
+    supported_features:4,effect_list:['none','Day','Night','Relax'],effect:'Relax',...overrides}};
+  const options={states:[state],nativeActions:true,acceptControls:true,...serviceOptions};
+  const r=boot(1024,536,options);r.fixtureState=state;r.fixtureOptions=options;
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();deviceBody(r,state.entity_id).callback();for(let i=0;i<20;i++)r.tick();return r;
+}
+function lampClickLabel(r,text){
+  const label=[...r.textValues].find(([id,t])=>!r.hidden.get(id)&&t===text);assert(label,text);
+  const g=r.geometry.get(label[0]);lampClickAt(r,g.x+g.w/2,g.y+g.h/2);
+}
+function lampClickAt(r,x,y){
+  const b=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&x>=g.x&&x<=g.x+g.w&&y>=g.y&&y<=g.y+g.h;});assert(b,'native lamp hit target');b.callback();for(let i=0;i<10;i++)r.tick();
+}
+test('lamp detail has real color presets, an effect selector, and bounded native controls',()=>{
+  const r=lampFixture();const visible=()=>[...r.textValues].filter(([id])=>!r.hidden.get(id)).map(([,v])=>v);
+  for(const t of ['亮度','色温','常用色温 · 颜色','颜色选择','灯光效果'])assert(visible().includes(t),t);
+  const face=r.nativeWrites.filter(w=>w.method==='color'&&w.value===0x7facff).at(-1);assert(face);
+  const g=r.geometry.get(face.id);lampClickAt(r,g.x+g.w/2,g.y+g.h/2);
+  assert.deepEqual(r.controls[0].body,{entity_id:'light.bedside',rgb_color:[127,172,255]});assert.equal(r.controls.length,1);
+  assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');assert.equal(r.buttons.length,64);
+  lampClickLabel(r,'夜间');assert.equal(r.context.ESPHomeHA.snapshot().optionPicker,null);assert.deepEqual(r.controls[1].body,{entity_id:'light.bedside',effect:'Night'});
+  for(const [id,g] of r.geometry)if(!r.hidden.get(id)){assert(g.x>=0&&g.y>=0&&g.x+g.w<=1024&&g.y+g.h<=536,'lamp bounds '+JSON.stringify(g));}
+});
+test('native color disc previews locally, cancels safely and applies only on release',()=>{
+  const r=lampFixture(),wheel=r.context.ESPHomeHA.snapshot().colorWheel;assert(wheel);
+  const x=wheel.x+wheel.w/2,y=wheel.y+2;
+  r.touch('down',x/1024,y/536);for(let i=0;i<25;i++)r.touch('move',x/1024,y/536);
+  assert.equal(r.controls.length,0);r.swipe('left');r.touch('cancel',x/1024,y/536);assert.equal(r.controls.length,0);
+  r.touch('down',x/1024,y/536);r.touch('move',x/1024,y/536);r.touch('up',x/1024,y/536);
+  assert.equal(r.controls.length,1);assert.equal(r.controls[0].body.rgb_color[0],255);
+  assert(r.controls[0].body.rgb_color[1]<8&&r.controls[0].body.rgb_color[2]<8);
+  assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+  const before=r.controls.length;r.touch('down',(wheel.x-4)/1024,(wheel.y-4)/536);r.touch('up',(wheel.x+10)/1024,(wheel.y+10)/536);assert.equal(r.controls.length,before,'outside circle is not a color gesture');
+});
+test('color disc drag performs bounded native writes and never touches the HA transport before release',()=>{
+  const r=lampFixture(),wheel=r.context.ESPHomeHA.snapshot().colorWheel,x=wheel.x+wheel.w/2,y=wheel.y+2;
+  r.nativeWrites.length=0;r.touch('down',x/1024,y/536);
+  for(let i=0;i<100;i++){r.touch('move',x/1024,y/536);r.tick();}
+  assert.equal(r.controls.length,0);assert(r.nativeWrites.length<12,'only marker, preview chip and hex label change');
+  r.context.ESPHomeHA.disconnect();r.touch('up',x/1024,y/536);assert.equal(r.controls.length,0,'stale color gesture cannot control disconnected home');
+});
+test('lamp detail drag updates a fixed value and thumb locally then sends one release request',()=>{
+  const r=lampFixture(),rail=r.context.ESPHomeHA.snapshot().parameterControls.find(row=>row.key==='brightness_pct');assert.equal(rail.h,52);
+  const nx=(rail.x+rail.w*.5)/1024,ny=(rail.y+rail.h/2)/536;
+  const warm=r.nativeWrites.find(w=>w.method==='color'&&w.value===0xffa64e);assert(warm,'orange fill matches reference');
+  r.nativeWrites.length=0;r.touch('down',nx,ny);for(let i=0;i<24;i++)r.touch('move',nx,ny);
+  assert.equal(r.controls.length,0);assert(r.nativeWrites.some(w=>w.method==='text'&&w.value==='50%'));
+  assert(r.nativeWrites.length<25,'drag writes only changed fill, thumb and value');
+  r.touch('up',nx,ny);assert.equal(r.controls.length,1);assert.equal(r.controls[0].body.brightness_pct,50);
+});
+test('white-only lamps expose actual kelvin presets while color/effect controls remain capability gated',()=>{
+  const r=lampFixture({supported_color_modes:['color_temp'],rgb_color:null,supported_features:0,effect_list:[]});
+  const visible=[...r.textValues].filter(([id])=>!r.hidden.get(id)).map(([,v])=>v);
+  assert(visible.includes('常用色温'));assert.equal(r.context.ESPHomeHA.snapshot().colorWheel,null);assert(!visible.includes('灯光效果'));
+  const face=r.nativeWrites.filter(w=>w.method==='color'&&w.value===0xfffdfa).at(-1);const g=r.geometry.get(face.id);lampClickAt(r,g.x+g.w/2,g.y+g.h/2);
+  assert.deepEqual(r.controls[0].body,{entity_id:'light.bedside',color_temp_kelvin:6500});
+});
+
+function profileDetailFixture(id,overrides={},dark=false){
+  const state=commonProfileSamples().find(row=>row.entity_id===id);assert(state,id);
+  Object.assign(state.attributes,overrides);
+  const r=boot(1024,536,{states:[state],services:commonServices(),nativeActions:true,acceptControls:true,dark});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();deviceBody(r,id).callback();for(let i=0;i<25;i++)r.tick();return r;
+}
+
+test('device detail sliders follow approved preview geometry and repaint only their live value and handle',()=>{
+  for(const dark of [false,true])for(const [entity,key] of [['fan.standard','percentage'],['cover.curtain','position'],['humidifier.room','humidity'],['media_player.speaker','volume_level']]){
+    const r=profileDetailFixture(entity,{},dark),rail=r.context.ESPHomeHA.snapshot().parameterControls.find(row=>row.key===key);
+    assert.equal(rail.h,52);assert.equal(rail.w,370);
+    const x=(rail.x+rail.w*.5)/1024,y=(rail.y+rail.h/2)/536;
+    r.nativeWrites.length=0;r.touch('down',x,y);
+    for(let i=0;i<100;i++){r.touch('move',x,y);r.tick();}
+    assert.equal(r.controls.length,0);assert(r.nativeWrites.length<15,entity+' repeated pointer writes '+r.nativeWrites.length);
+    r.touch('up',x,y);assert.equal(r.controls.length,1);assert.equal(r.buttons.length,64);
+    for(const [id,g] of r.geometry)if(!r.hidden.get(id))assert(g.x>=0&&g.y>=0&&g.x+g.w<=1024&&g.y+g.h<=536,entity+' bounds '+JSON.stringify(g));
+  }
+});
+
+test('cover and speaker actions share a row and retain their exact HA services',()=>{
+  for(const [entity,labels,actions] of [
+    ['cover.curtain',['打开','停止','关闭'],['open_cover','stop_cover','close_cover']],
+    ['media_player.speaker',['上一首','播放','暂停','下一首'],['media_previous_track','media_play','media_pause','media_next_track']]]){
+    const r=profileDetailFixture(entity);
+    const positions=labels.map(text=>{const row=[...r.textValues].find(([id,t])=>!r.hidden.get(id)&&t===text);assert(row,text);return r.geometry.get(row[0]);});
+    assert(positions.every(g=>g.y+g.h/2===positions[0].y+positions[0].h/2),entity+' '+JSON.stringify(positions));
+    labels.forEach(label=>lampClickLabel(r,label));
+    assert.deepEqual(r.controls.map(row=>row.action),actions);
+    assert(r.controls.every(row=>row.body.entity_id===entity));
+  }
+});
+
+test('climate detail uses bounded steppers while mode buttons preserve raw HA values',()=>{
+  const r=profileDetailFixture('climate.room');lampClickLabel(r,'+');
+  assert.deepEqual(r.controls[0].body,{entity_id:'climate.room',temperature:24.5});
+  lampClickLabel(r,'制热');assert.deepEqual(r.controls[1].body,{entity_id:'climate.room',hvac_mode:'heat'});
+  const range=r.context.ESPHomeHA.snapshot().parameterControls.find(row=>row.key==='temperature');
+  const x=(range.x+range.w/2)/1024,y=(range.y+range.h/2)/536;
+  r.touch('down',x,y);r.touch('cancel',x,y);assert.equal(r.controls.length,2);
+  lampClickLabel(r,'低');assert.deepEqual(r.controls[2].body,{entity_id:'climate.room',fan_mode:'low'});
+});
+
+test('secondary modes and actual readings appear without adding missing measurements',()=>{
+  const r=profileDetailFixture('humidifier.room');
+  const visible=()=>[...r.textValues].filter(([id])=>!r.hidden.get(id));
+  const range=r.context.ESPHomeHA.snapshot().parameterControls.find(row=>row.key==='humidity');
+  const mode=visible().find(([,t])=>t==='加湿模式'),reading=visible().find(([,t])=>t==='当前湿度');
+  assert(r.geometry.get(mode[0]).x>range.x+range.w);assert(reading);
+  assert(visible().some(([,t])=>t==='48'));assert(r.geometry.get(reading[0]).x<r.geometry.get(mode[0]).x);lampClickLabel(r,'睡眠');
+  assert.deepEqual(r.controls[0].body,{entity_id:'humidifier.room',mode:'sleep'});
+  const absent=profileDetailFixture('humidifier.room',{current_humidity:null});
+  assert(![...absent.textValues].some(([id,t])=>!absent.hidden.get(id)&&t==='当前湿度'));
+});
+
+test('long profile mode lists remain paged and send the original option after switching pages',()=>{
+  const modes=Array.from({length:9},(_,i)=>'mode-'+i),r=profileDetailFixture('fan.standard',{preset_modes:modes,preset_mode:modes[0]});
+  lampClickLabel(r,'mode-0  >');lampClickLabel(r,'>');lampClickLabel(r,'mode-6');
+  assert.deepEqual(r.controls[0].body,{entity_id:'fan.standard',preset_mode:'mode-6'});
+  assert.equal(r.buttons.length,64);
+});
+
+test('purifier reads real MIoT PM2.5 and filter values, including zero',()=>{
+  const r=profileDetailFixture('fan.purifier',{pm25:null,miot_properties:{'environment.pm2.5-density':0,'air-purifier.filter-life-level':83}});
+  const visible=[...r.textValues].filter(([id])=>!r.hidden.get(id));
+  const pm=visible.find(([,t])=>t==='PM2.5'),filter=visible.find(([,t])=>t==='滤芯余量');assert(pm);assert(filter);
+  assert(visible.some(([,t])=>t==='0'));assert(visible.some(([,t])=>t==='ug/m3'));assert(visible.some(([,t])=>t==='83'));
+  assert(r.geometry.get(pm[0]).x<r.geometry.get(filter[0]).x);assert.equal(r.controls.length,0);
+});
+
+test('switching device details reuses bounded widgets and hides every previous detail decoration',()=>{
+  const ids=['light.bedside','fan.standard','climate.room','cover.curtain','humidifier.room','media_player.speaker'];
+  const states=commonProfileSamples().filter(row=>ids.includes(row.entity_id));
+  const r=boot(1024,536,{states,services:commonServices(),nativeActions:true});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  let allocated=0;
+  for(let pass=0;pass<3;pass++){
+    for(const entity of ids){
+      deviceBody(r,entity).callback();for(let i=0;i<25;i++)r.tick();
+      const back=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x===176&&g.w===32&&g.h===30;});assert(back);back.callback();for(let i=0;i<25;i++)r.tick();
+      assert(![...r.textValues].some(([id,t])=>!r.hidden.get(id)&&['播放控制','窗帘控制','常用色温','目标湿度','目标温度'].includes(t)));
+      assert.equal(r.buttons.length,64);
+    }
+    if(pass===0)allocated=r.geometry.size;else assert.equal(r.geometry.size,allocated,'no new native widgets after visiting each profile once');
+  }
+  assert.equal(r.controls.length,0);
+});
+
+test('firmware layout dimensions and field order come from the unchanged approved HTML',()=>{
+  const html=fs.readFileSync(path.join(__dirname,'../../homeassistant/preview/unified-device-cards.html'),'utf8');
+  const design=JSON.parse(source.match(/const detailDesign = (.*);/)[1]);
+  const css=(selector,property)=>{const escaped=('#ha-unified59-devices '+selector).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const rule=html.match(new RegExp(escaped+'\\{([^}]+)\\}'))[1];return Number(rule.match(new RegExp('(?:^|;)'+property+':([\\d.]+)'))[1]);};
+  assert.equal(design.primaryMax,css('.dc-primary .dc-control','max-width'));
+  assert.equal(design.rangeHeight,css('.dc-range','height'));
+  assert.equal(design.minHeight,css('.dc-device-card','min-height'));
+  assert.equal(design.buttonHeight,css('.dc-buttons button','min-height'));
+  assert.deepEqual(design.layouts.humidifier.left.map(f=>f[1]),['目标湿度','当前湿度']);
+  assert.deepEqual(design.layouts.heater.left.map(f=>f[1]),['目标水温','当前水温']);
+  assert.deepEqual(design.layouts.fan.right.map(f=>f[0]),['swing']);
+});
+
+test('boolean controls use the preview switch and cover position presets reuse the existing service',()=>{
+  const fan=profileDetailFixture('fan.standard');lampClickLabel(fan,'摆风');
+  assert.deepEqual(fan.controls[0].body,{entity_id:'fan.standard',oscillating:true});
+  assert([...fan.geometry].some(([id,g])=>!fan.hidden.get(id)&&g.w===46&&g.h===28));
+  assert(![...fan.textValues].some(([id,t])=>!fan.hidden.get(id)&&['开启','关闭'].includes(t)),'a boolean is not a pair of option buttons');
+  const cover=profileDetailFixture('cover.curtain');
+  for(const [caption,value] of [['全开',100],['半开',50],['全关',0]]){
+    lampClickLabel(cover,caption);assert.deepEqual(cover.controls.at(-1).body,{entity_id:'cover.curtain',position:value});
+  }
+});
+
+test('the preview slider uses one clipped gradient track and keeps its value right aligned at both endpoints',()=>{
+  const r=profileDetailFixture('fan.standard'),rail=r.context.ESPHomeHA.snapshot().parameterControls.find(s=>s.key==='percentage');
+  r.nativeWrites.length=0;const y=(rail.y+rail.h/2)/536;
+  for(const p of [0,100]){const x=(rail.x+rail.w*p/100)/1024;r.touch('down',x,y);r.touch('move',x,y);r.touch('cancel',x,y);}
+  assert(r.nativeWrites.some(w=>w.method==='style'&&w.style.gradientMainStop===0&&w.style.gradientEndStop===0));
+  assert(r.nativeWrites.some(w=>w.method==='style'&&w.style.gradientMainStop===255&&w.style.gradientEndStop===255));
+  assert([...r.styles.values()].some(style=>style.rightAlign===1));assert.equal(r.controls.length,0);
+});
+
+test('lamp effects switch directly with one tap and keep their exact case-sensitive HA values',()=>{
+  const r=lampFixture();
+  for(const [label,raw] of [['夜间','Night'],['日间','Day'],['放松','Relax'],['无','none']]){
+    const before=r.controls.length;lampClickLabel(r,label);
+    assert.equal(r.controls.length,before+1);assert.equal(r.context.ESPHomeHA.snapshot().optionPicker,null);
+    assert.deepEqual(r.controls.at(-1).body,{entity_id:'light.bedside',effect:raw});
+  }
+  const labels=['无','日间','夜间','放松'].map(text=>[...r.textValues].find(([id,t])=>!r.hidden.get(id)&&t===text));
+  assert(labels.every(Boolean));const positions=labels.map(([id])=>r.geometry.get(id));
+  assert(positions.every(g=>Math.abs(g.y+g.h/2-positions[0].y-positions[0].h/2)<1));
+  assert(positions.every(g=>g.y+g.h<=536));assert.equal(r.buttons.length,64);
+});
+
+test('rapid effect changes keep the most recent choice while the HA request is pending',()=>{
+  const r=lampFixture(),transport=r.fixtureOptions;
+  transport.holdRequests=true;lampClickLabel(r,'夜间');lampClickLabel(r,'日间');lampClickLabel(r,'放松');
+  assert.equal(r.controls.length,1);assert.equal(r.context.ESPHomeHA.snapshot().controlQueue.length,1);
+  assert.equal(r.context.ESPHomeHA.snapshot().optionPicker,null);
+  transport.holdRequests=false;for(let i=0;i<80;i++)r.tick();
+  assert.deepEqual(r.controls.map(row=>row.body.effect),['Night','Relax']);
+  assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+});
+
+test('long effect lists still choose an exact option and reflow without leaking or overlapping buttons',()=>{
+  const r=lampFixture(),state=r.fixtureState,before=r.geometry.size;
+  state.attributes.effect_list=Array.from({length:9},(_,i)=>'effect-'+i);state.attributes.effect='effect-0';
+  r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();
+  lampClickLabel(r,'灯光效果');assert(r.context.ESPHomeHA.snapshot().optionPicker);
+  lampClickLabel(r,'>');lampClickLabel(r,'effect-6');
+  assert.deepEqual(r.controls.at(-1).body,{entity_id:'light.bedside',effect:'effect-6'});
+  state.attributes.effect_list=['none','Day','Night','Relax'];state.attributes.effect='Night';
+  r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();lampClickLabel(r,'日间');
+  assert.deepEqual(r.controls.at(-1).body,{entity_id:'light.bedside',effect:'Day'});
+  const wheel=r.context.ESPHomeHA.snapshot().colorWheel;
+  assert([...r.geometry].some(([id,g])=>!r.hidden.get(id)&&g.x===wheel.x&&g.y===wheel.y&&g.w===Math.round(wheel.w)&&g.h===Math.round(wheel.h)));
+  assert.equal(r.buttons.length,64);assert(r.geometry.size>before,'long-list picker is allocated once');
+});
+
+
+function dragLightPercent(r,entity,percent,release='up'){
+  const snapshot=r.context.ESPHomeHA.snapshot();
+  const rail=snapshot.parameterControls.find(row=>row.entity===entity&&row.key==='brightness_pct')||snapshot.brightnessControls.find(row=>row.entity===entity);
+  assert(rail,entity+' has a usable brightness slider');
+  if(rail.min!==undefined){assert.equal(rail.min,0);assert.equal(rail.max,100);}
+  const x=(rail.x+rail.w*percent/100)/1024,y=(rail.y+rail.h/2)/536,before=r.controls.length;
+  r.touch('down',x,y);for(let i=0;i<6;i++)r.touch('move',x,y);
+  assert.equal(r.controls.length,before,'no commands during brightness preview');
+  assert.equal(r.context.ESPHomeHA.snapshot().brightnessInput.percent,percent);
+  r.touch(release,x,y);
+}
+
+test('all dimmable light profiles use exact 0/1/50/100 percent on small and detail cards with both service bridges',()=>{
+  for(const nativeActions of [false,true])for(const detail of [false,true])for(const [type,modes] of [
+    ['light',['brightness']],['light',['color_temp']],['light',['rgb']],['mirror',['color_temp']]]){
+    const entity='light.range',state={entity_id:entity,state:'on',attributes:{friendly_name:'Range',brightness:200,
+      device_type:type,supported_color_modes:modes,color_temp_kelvin:2700,min_color_temp_kelvin:2700,max_color_temp_kelvin:6500}};
+    const options={states:[state],nativeActions,acceptControls:true};
+    const r=boot(1024,536,options);r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    if(detail){deviceBody(r,entity).callback();for(let i=0;i<20;i++)r.tick();}
+    for(const percent of [0,1,50,100]){
+      dragLightPercent(r,entity,percent);
+      const command=r.controls.at(-1);assert(command,`${type} ${detail} ${percent}`);
+      if(nativeActions)assert.deepEqual(command,{entity,action:percent?'turn_on':'turn_off',body:percent?{entity_id:entity,brightness_pct:percent}:{entity_id:entity}});
+      else assert.deepEqual(command,{entity,on:percent>0,brightness:percent||-1});
+      for(let i=0;i<40;i++)r.tick();
+      assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+      assert.equal(state.state,percent?'on':'off');
+      assert.equal(r.controls.length,[0,1,50,100].indexOf(percent)+1,'one request per release');
+    }
+  }
+});
+
+test('off lamps show zero even when HA retains brightness or omits it and can be started at one percent',()=>{
+  for(const brightness of [undefined,200])for(const detail of [false,true]){
+    const entity='light.off',state={entity_id:entity,state:'off',attributes:{friendly_name:'Off',brightness,supported_color_modes:['brightness']}};
+    const r=boot(1024,536,{states:[state],nativeActions:true,acceptControls:true});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    assert.equal(r.context.ESPHomeHA.snapshot().brightnessControls[0].value,0);
+    if(detail){deviceBody(r,entity).callback();for(let i=0;i<20;i++)r.tick();assert([...r.textValues].some(([id,value])=>!r.hidden.get(id)&&value==='0%'));}
+    dragLightPercent(r,entity,1);assert.equal(r.controls[0].body.brightness_pct,1);for(let i=0;i<40;i++)r.tick();
+    assert.equal(state.state,'on');assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+  }
+});
+
+test('zero and positive brightness intents coalesce together without replaying an obsolete power state',()=>{
+  for(const last of [0,1,100]){
+    const options={acceptControls:true,nativeActions:true},r=boot(1024,536,options);
+    r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();options.holdRequests=true;
+    dragLightPercent(r,'light.desk',50);
+    for(const percent of [0,1,100,last])dragLightPercent(r,'light.spotlights',percent);
+    assert.equal(r.controls.length,1);const queue=r.context.ESPHomeHA.snapshot().controlQueue;
+    assert.equal(queue.length,1);assert.equal(queue[0].brightness,last);assert.equal(queue[0].service,last?'turn_on':'turn_off');
+    options.holdRequests=false;for(let i=0;i<70;i++)r.tick();
+    assert.equal(r.controls.length,2);assert.deepEqual(r.controls[1],{entity:'light.spotlights',action:last?'turn_on':'turn_off',body:last?{entity_id:'light.spotlights',brightness_pct:last}:{entity_id:'light.spotlights'}});
+    assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+  }
+});
+
+test('canceling a zero brightness preview does not switch off a lamp and raw HA brightness one remains positive',()=>{
+  const r=lampFixture({brightness:1});assert.equal(r.context.ESPHomeHA.snapshot().entities[0].brightness,1);
+  assert([...r.textValues].some(([id,value])=>!r.hidden.get(id)&&value==='1%'));
+  dragLightPercent(r,'light.bedside',0,'cancel');for(let i=0;i<15;i++)r.tick();assert.equal(r.controls.length,0);assert.equal(r.fixtureState.state,'on');
+  assert([...r.textValues].some(([id,value])=>!r.hidden.get(id)&&value==='1%'));
+});
+
+test('interactive preview shares zero-off and positive-on brightness semantics for every light alias',()=>{
+  const html=fs.readFileSync(path.join(__dirname,'../../homeassistant/preview/unified-device-cards.html'),'utf8');
+  const script=html.match(/<script>([\s\S]*?)<\/script>/);assert(script);
+  const functions=['lightBrightness','val','store','snap','changeValue'].map(name=>{
+    const line=script[1].split('\n').find(line=>line.trimStart().startsWith('function '+name+'('));assert(line,name);return line;
+  }).join('\n');
+  // Execute the exact preview handlers with a local binding spy; no DOM or HA transport is involved.
+  const context=vm.createContext({assert});
+  vm.runInContext(`
+    const devices={bedside:{primary:[{id:'brightness'}]},mirror:{primary:[{id:'brightness'}]},fan:{primary:[{id:'speed'}]}};
+    const state={values:{}},powerOn=id=>state.values[id]?.power??true;
+    let savePending=false,saveTimer=0;const paints=[];
+    const markChanged=()=>{},syncPower=()=>{},flushPaint=()=>{},refresh=(id,c)=>paints.push(val(id,c)),notice=()=>{},fmt=()=>'',queuePaint=()=>{};
+    ${functions}
+    for(const device of ['bedside','mirror']){
+      const c={id:'brightness',value:79,min:0,max:100,step:1};
+      assert.equal(snap(c,0),0);assert.equal(snap(c,1),1);assert.equal(snap(c,50),50);assert.equal(snap(c,100),100);
+      changeValue(device,c,0);assert.equal(val(device,c),0);assert.equal(powerOn(device),false);
+      store(device,{id:'power'},true);assert.equal(val(device,c),79);
+      for(const value of [1,50,100]){changeValue(device,c,value);assert.equal(val(device,c),value);assert.equal(powerOn(device),true);}
+      changeValue(device,c,0);store(device,{id:'power'},true);assert.equal(val(device,c),100);
+    }
+    changeValue('fan',{id:'speed',value:40},0);assert.equal(state.values.fan.speed,0);assert.equal(state.values.fan.power,undefined);
+  `,context);
+  assert(html.includes("R('brightness','亮度',79)"),'preview brightness starts at zero');
+});
+
+
+test('grouped auxiliary lighting uses the same range and controls only its own light entity',()=>{
+  const main={entity_id:'light.main',state:'on',attributes:{friendly_name:'主灯',brightness:128,supported_color_modes:['brightness']}},
+    aux={entity_id:'light.aux',state:'on',attributes:{friendly_name:'辅助灯',brightness:200,supported_color_modes:['brightness']}};
+  const r=boot(1024,536,{states:[main,aux],devices:[['combo','组合灯','',[main.entity_id,aux.entity_id]]],nativeActions:true,acceptControls:true});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();deviceBody(r,'light.main').callback();for(let i=0;i<20;i++)r.tick();
+  for(const percent of [0,1,100]){dragLightPercent(r,'light.aux',percent);for(let i=0;i<40;i++)r.tick();}
+  assert.deepEqual(r.controls.map(c=>[c.entity,c.action,c.body.brightness_pct]),[['light.aux','turn_off',undefined],['light.aux','turn_on',1],['light.aux','turn_on',100]]);
+  assert.equal(main.attributes.brightness,128);assert.equal(main.state,'on');
+});
+
+
+test('zero percent has no accent-colored gradient endpoint and leaving zero restores the fill',()=>{
+  for(const dark of [false,true])for(const detail of [false,true]){
+    const r=boot(1024,536,{dark,nativeActions:true,acceptControls:true});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    if(detail){deviceBody(r,'light.desk').callback();for(let i=0;i<20;i++)r.tick();}
+    const snapshot=r.context.ESPHomeHA.snapshot(),rail=snapshot.parameterControls.find(row=>row.entity==='light.desk'&&row.key==='brightness_pct')||snapshot.brightnessControls.find(row=>row.entity==='light.desk');assert(rail);
+    const track=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.x===rail.x-15&&g.w===rail.w+30&&g.y===rail.y&&g.h===rail.h&&r.styles.get(id)?.gradientHorizontal===1);assert(track);
+    const id=track[0],background=r.styles.get(id).gradientEnd;
+    const color=()=>r.nativeWrites.findLast(w=>w.method==='color'&&w.id===id)?.value;
+    const accent=color();assert.notEqual(accent,background);
+    const y=(rail.y+rail.h/2)/536,x=p=>(rail.x+rail.w*p/100)/1024;
+    r.touch('down',x(0),y);
+    assert.equal(color(),background);assert.equal(r.styles.get(id).gradientEnd,background,'both stops use gray at zero');
+    for(const percent of [1,50,100,0,1]){
+      r.touch('move',x(percent),y);
+      assert.equal(color(),percent?accent:background);
+      assert.equal(r.styles.get(id).gradientEnd,percent===100?accent:background,'full brightness also has no gray endpoint');
+    }
+    assert.equal(r.controls.length,0);r.touch('up',x(0),y);for(let i=0;i<40;i++)r.tick();
+    assert.equal(color(),background);assert.equal(r.styles.get(id).gradientEnd,background,'verified off render remains gray');
+    dragLightPercent(r,'light.desk',50);for(let i=0;i<40;i++)r.tick();assert.equal(color(),accent);assert.equal(r.styles.get(id).gradientEnd,background);
+  }
+});
+
+
+test('camera cards retain a readable preview placeholder above its background and align real reading baselines',()=>{
+  for(const dark of [false,true])for(const type of ['camera','video-doorbell']){
+    const entity='camera.entry',state={entity_id:entity,state:'idle',attributes:{friendly_name:'监控摄像机',device_type:type,device_id:'entry',miot_properties:{'battery.battery-level':86}}};
+    const r=boot(1024,536,{states:[state],dark,frontOrder:true,measureMetrics:(text,size)=>({width:String(text).length*12,height:size===43?32:18,baseline:size===43?5:3})});
+    r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    const labels=text=>[...r.textValues].filter(([id,value])=>!r.hidden.get(id)&&value===text);
+    assert(labels('暂无预览画面').length,'small camera preview text');
+    assert(![...r.textValues].some(([id,value])=>!r.hidden.get(id)&&String(value).startsWith('设备状态 · 电量')),'no crowded status header');
+    r.nativeWrites.length=0;deviceBody(r,entity).callback();for(let i=0;i<25;i++)r.tick();
+    const notice=labels('暂无预览画面')[0];assert(notice);
+    const bg=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.w===400&&g.h===225);assert(bg);
+    const fronts=r.nativeWrites.filter(w=>w.method==='front').map(w=>w.id);
+    assert(fronts.lastIndexOf(notice[0])>fronts.lastIndexOf(bg[0]),'notice paints above preview background');
+    const battery=labels('86')[0],unit=labels('%')[0];assert(battery&&unit);
+    const numberBox=r.geometry.get(battery[0]),unitBox=r.geometry.get(unit[0]);
+    assert.equal(numberBox.y+32-5,unitBox.y+18-3,'battery and percent share their measured baseline');
+    assert.equal(r.controls.length,0,'opening previews never controls a camera');
+  }
+});
+
+
+test('HA software entities stay out of device boards while real sensors, helpers and grouped auxiliary controls remain accessible',()=>{
+  const states=[
+    {entity_id:'conversation.home_assistant',state:'unknown',attributes:{friendly_name:'Assistant'}},
+    {entity_id:'zone.home',state:'0',attributes:{}},{entity_id:'person.me',state:'home',attributes:{}},
+    {entity_id:'sun.sun',state:'above_horizon',attributes:{}},{entity_id:'todo.shopping',state:'0',attributes:{}},
+    {entity_id:'tts.voice',state:'unknown',attributes:{}},{entity_id:'update.core',state:'off',attributes:{}},
+    {entity_id:'sensor.backup_state',state:'idle',attributes:{device_class:'enum'}},
+    {entity_id:'sensor.next_dawn',state:'2026-10-16T01:00:00Z',attributes:{device_class:'timestamp'}},
+    {entity_id:'scene.evening',state:'unknown',attributes:{}},{entity_id:'script.sleep',state:'off',attributes:{}},
+    {entity_id:'light.desk',state:'on',attributes:{brightness:128,supported_color_modes:['brightness']}},
+    {entity_id:'update.desk_firmware',state:'on',attributes:{}},
+    {entity_id:'sensor.room',state:'24',attributes:{device_class:'temperature',unit_of_measurement:'°C'}},
+    {entity_id:'sensor.plant_seen',state:'2026-10-15T01:00:00Z',attributes:{device_class:'timestamp'}},
+    {entity_id:'input_boolean.mode',state:'on',attributes:{}},
+    {entity_id:'sensor.followed_time',state:'2026-10-15T01:00:00Z',attributes:{device_class:'timestamp'}}];
+  const devices=[['tts','Voice','',['tts.voice'],'Google Translate TTS','Google'],
+    ['backup','任意名字','',['sensor.backup_state'],'Home Assistant Backup','Home Assistant'],
+    ['sun','任意名字','',['sensor.next_dawn']],[ 'lamp','台灯','',['light.desk','update.desk_firmware'],'yeelink.light.lamp28','Yeelink'],
+    ['plant','植物检测仪','',['sensor.plant_seen'],'monitor','Acme']];
+  const r=boot(1024,536,{states,devices,favorites:['sensor.followed_time']});r.context.ESPHomeHA.refresh();for(let i=0;i<45;i++)r.tick();
+  const ids=r.context.ESPHomeHA.snapshot().deviceCards.map(card=>card.entity_id);
+  assert.deepEqual([...ids].sort(),['input_boolean.mode','light.desk','sensor.followed_time','sensor.plant_seen','sensor.room']);
+  assert.equal(r.context.ESPHomeHA.snapshot().entities.length,states.length,'filtering cards never discards entity data');
+  const lamp=r.context.ESPHomeHA.snapshot().deviceCards.find(card=>card.entity_id==='light.desk');assert(lamp.members.includes('update.desk_firmware'));
+  chooseSection(r,116);assert(r.context.ESPHomeHA.snapshot().layoutPages.flat().every(row=>ids.includes(row.entity_id)));
+  chooseSection(r,162);assert.deepEqual([...r.context.ESPHomeHA.snapshot().layoutPages.flat().map(row=>row.entity_id)].sort(),['scene.evening','script.sleep']);
+  assert.equal(r.controls.length,0);
+});
