@@ -294,6 +294,7 @@ static void glass_clickable(lv_obj_t *card, lv_event_cb_t callback, void *data)
 {
   lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_style_border_opa(card, 160, LV_STATE_PRESSED);
+  glass_motion_button(card);
   lv_obj_add_event_cb(card, callback, LV_EVENT_CLICKED, data);
 }
 
@@ -676,6 +677,7 @@ static void glass_widget_select(lv_event_t *e)
 static void glass_motion_changed(lv_event_t *e)
 {
   g_glass.reduced_motion = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
+  glass_motion_set_reduced(g_glass.reduced_motion);
   glass_save_preferences();
   if (g_glass.reduced_motion)
     {
@@ -963,6 +965,13 @@ static void glass_widget_open(lv_event_t *e)
 }
 
 static int g_apps_page_index;
+static lv_obj_t *g_apps_card,*g_apps_grid,*g_apps_pager,*g_apps_count;
+static int g_apps_direction;
+static void glass_apps_deleted(lv_event_t *event)
+{
+  LV_UNUSED(event);g_apps_card=g_apps_grid=g_apps_pager=g_apps_count=NULL;
+}
+
 static void glass_apps_render(void);
 static struct qpk_entry_s g_apps_remove_target;
 static lv_timer_t *g_apps_remove_timer;
@@ -1017,7 +1026,7 @@ static void glass_apps_remove_open(lv_event_t *e)
 }
 static void glass_apps_page(void *context,unsigned page)
 {
-  (void)context;g_apps_page_index = (int)page;
+  (void)context;g_apps_direction=(int)page>g_apps_page_index?1:-1;g_apps_page_index = (int)page;
   glass_apps_render();
 }
 
@@ -1025,16 +1034,24 @@ static void glass_apps(lv_event_t *e)
 {
   LV_UNUSED(e);
   qpk_scan();
-  g_apps_page_index = 0;
+  g_apps_page_index = 0;g_apps_direction=0;
   glass_apps_render();
 }
 
 static void glass_apps_render(void)
 {
-  lv_obj_t *card = panel_card("全部应用");
-  if (card == NULL) return;
-  g_desktop.apps_page = true;
-  lv_obj_t *grid = glass_box(card, 20, 80, 880, 336, theme_card(), 0);
+  bool reuse=g_desktop.apps_page&&g_apps_card&&g_desktop.current_card==g_apps_card;
+  lv_obj_t *card=reuse?g_apps_card:panel_card("全部应用");
+  if(!card)return;
+  g_desktop.apps_page=true;
+  if(!reuse){
+    g_apps_card=card;lv_obj_add_event_cb(card,glass_apps_deleted,LV_EVENT_DELETE,NULL);
+    g_apps_grid=glass_box(card,20,80,880,336,theme_card(),0);
+    g_apps_count=glass_text(card,"",40,450,230,16,theme_secondary());
+    g_apps_pager=glass_pager_create(card,theme_surface(),theme_primary(),theme_secondary(),glass_apps_page,NULL);
+    if(g_apps_pager)lv_obj_align(g_apps_pager,LV_ALIGN_BOTTOM_MID,0,-14);
+  }
+  lv_obj_t *grid=g_apps_grid;glass_motion_cancel(grid);lv_obj_clean(grid);
   const char *names[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 "网络直播", "相册",
@@ -1078,38 +1095,16 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
       if (g_apps_remove_timer && i >= builtin_count) lv_obj_add_state(tile, LV_STATE_DISABLED);
     }
   char count_text[48];snprintf(count_text,sizeof(count_text),"%d 个应用",total);
-  glass_text(card,count_text,40,450,230,16,theme_secondary());
-  lv_obj_t *pager=glass_pager_create(card,theme_surface(),theme_primary(),theme_secondary(),glass_apps_page,NULL);
-  glass_pager_update(pager,g_apps_page_index,pages,!g_apps_remove_timer);
-  if(pager)lv_obj_align(pager,LV_ALIGN_BOTTOM_MID,0,-14);
+  lv_label_set_text(g_apps_count,count_text);
+  glass_pager_update(g_apps_pager,g_apps_page_index,pages,!g_apps_remove_timer);
+  if(reuse&&g_apps_direction)glass_motion_begin(grid,MOTION_X,18*g_apps_direction,0,GLASS_MOTION_ENTER,0);
+  g_apps_direction=0;
   if (g_desktop.qpk_scan_failed) show_toast("内存不足，部分应用暂未列出；请稍后重新打开");
 }
 
 static void glass_fade(void *object, int32_t value)
 {
   lv_obj_set_style_opa(object, (lv_opa_t)value, 0);
-}
-
-static void glass_card_offset(void *object, int32_t value)
-{
-  lv_obj_set_style_translate_y(object, value, 0);
-}
-
-static void glass_homeassistant_enter(lv_obj_t *card)
-{
-  if (g_glass.reduced_motion) return;
-  lv_obj_t *page = lv_obj_get_parent(card);
-  lv_anim_t animation;
-  lv_anim_init(&animation);
-  lv_anim_set_var(&animation, page);
-  lv_anim_set_values(&animation, 18, 0);
-  lv_anim_set_duration(&animation, 240);
-  lv_anim_set_path_cb(&animation, lv_anim_path_ease_out);
-  lv_anim_set_exec_cb(&animation, glass_card_offset);
-  lv_anim_start(&animation);
-  lv_anim_set_values(&animation, 150, 255);
-  lv_anim_set_exec_cb(&animation, glass_fade);
-  lv_anim_start(&animation);
 }
 
 #include "glass_home_ui.inc"
@@ -1120,7 +1115,27 @@ static bool g_edge_back_pending;
 static bool g_edge_tracking;
 static lv_point_t g_edge_start;
 static lv_obj_t *g_edge_page;
+static void glass_edge_back_async(void *data);
 static lv_obj_t *g_edge_strip;
+static lv_style_value_t g_edge_saved;
+static bool g_edge_had_offset;
+static int g_edge_offset;
+static void glass_edge_deleted(lv_event_t *event)
+{
+  if(g_edge_page==lv_event_get_target(event)){
+    lv_async_call_cancel(glass_edge_back_async,NULL);
+    g_edge_page=NULL;g_edge_tracking=false;g_edge_back_pending=false;g_edge_offset=0;
+  }
+}
+static void glass_edge_restore(bool animate)
+{
+  if(!g_edge_page||g_edge_page!=g_desktop.current_card)return;
+  if(g_edge_had_offset)lv_obj_set_local_style_prop(g_edge_page,LV_STYLE_TRANSLATE_X,g_edge_saved,0);
+  else lv_obj_remove_local_style_prop(g_edge_page,LV_STYLE_TRANSLATE_X,0);
+  if(animate&&g_edge_offset)glass_motion_begin(g_edge_page,MOTION_X,g_edge_offset,0,180,0);
+  g_edge_offset=0;
+}
+
 
 static void glass_edge_back_async(void *data)
 {
@@ -1142,6 +1157,10 @@ static void glass_edge_back_async(void *data)
     }
 }
 
+static void glass_edge_complete(lv_obj_t *obj)
+{
+  if(obj==g_desktop.current_card)glass_edge_back_async(NULL);
+}
 static void glass_edge_event(lv_event_t *e)
 {
   lv_indev_t *input = lv_indev_active();
@@ -1150,10 +1169,18 @@ static void glass_edge_event(lv_event_t *e)
   lv_obj_t *strip = lv_event_get_target(e);
   if (code == LV_EVENT_PRESSED)
     {
+      if(g_lock_ui.root||!g_desktop.current_card||g_edge_back_pending)return;
+      glass_edge_restore(false);
+      glass_motion_cancel(g_desktop.current_card);
       lv_indev_get_point(input, &g_edge_start);
       g_edge_tracking = true;
       g_edge_strip = strip;
-      g_edge_page = g_desktop.current_card;
+      g_edge_page = g_desktop.current_card;g_edge_offset=0;
+      g_edge_had_offset=lv_obj_get_local_style_prop(g_edge_page,LV_STYLE_TRANSLATE_X,&g_edge_saved,0)==LV_STYLE_RES_FOUND;
+      bool watched=false;
+      for(unsigned i=0;i<lv_obj_get_event_count(g_edge_page);i++)
+        if(lv_event_dsc_get_cb(lv_obj_get_event_dsc(g_edge_page,i))==glass_edge_deleted)watched=true;
+      if(!watched)lv_obj_add_event_cb(g_edge_page,glass_edge_deleted,LV_EVENT_DELETE,NULL);
     }
   else if (code == LV_EVENT_PRESSING && g_edge_tracking && strip == g_edge_strip)
     {
@@ -1163,18 +1190,27 @@ static void glass_edge_event(lv_event_t *e)
       int dy = abs(point.y - g_edge_start.y);
       bool right = (uintptr_t)lv_event_get_user_data(e) != 0;
       int inward = right ? -dx : dx;
-      if (dy > 48) g_edge_tracking = false;
+      if(g_edge_page!=g_desktop.current_card){g_edge_tracking=false;return;}
+      if (dy > 48){g_edge_tracking=false;glass_edge_restore(true);}
       else if (inward >= 72 && inward > 2 * dy)
         {
           g_edge_tracking = false;
           lv_indev_wait_release(input);
-          if (!g_edge_back_pending &&
-              lv_async_call(glass_edge_back_async, NULL) == LV_RESULT_OK)
-            g_edge_back_pending = true;
+          int offset=g_edge_offset;glass_edge_restore(false);
+          struct glass_motion_job *job=g_desktop.dialog?NULL:glass_motion_begin(g_edge_page,MOTION_X,offset,right?-48:48,140,0);
+          if(job){g_edge_back_pending=true;job->done=glass_edge_complete;}
+          else if(!g_edge_back_pending&&lv_async_call(glass_edge_back_async,NULL)==LV_RESULT_OK)g_edge_back_pending=true;
         }
+      else if(!g_motion_reduced&&!g_desktop.dialog){
+        int distance=inward<0?0:inward/4;if(distance>24)distance=24;
+        g_edge_offset=right?-distance:distance;
+        lv_obj_set_style_translate_x(g_edge_page,(g_edge_had_offset?g_edge_saved.num:0)+g_edge_offset,0);
+      }
     }
-  else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
-    g_edge_tracking = false;
+  else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST){
+    if(g_edge_tracking)glass_edge_restore(true);
+    g_edge_tracking=false;
+  }
 }
 
 static void glass_edge_back_create(void)

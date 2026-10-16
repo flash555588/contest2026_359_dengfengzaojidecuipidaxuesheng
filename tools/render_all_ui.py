@@ -111,19 +111,20 @@ void local_video_play_path(const char *path){(void)path;}
       'qpk_event_release','qpk_event_deleted','js_ui_text','qpk_number_style','js_ui_number','js_ui_set_text',
       'qpk_touch_call','qpk_event_touched','qpk_event_swiped',
       'js_ui_set_hidden','js_ui_background','js_ui_get_size','js_ui_set_color','js_ui_set_style','js_ui_measure_text','js_ui_panel',
-      'js_ui_set_pos','js_ui_set_size','js_ui_set_opacity','js_ui_show','js_ui_hide','js_ui_remove','js_ui_rect',
+      'js_ui_set_pos','js_ui_set_size','js_ui_present','js_ui_range','js_ui_set_opacity','js_ui_show','js_ui_hide','js_ui_remove','js_ui_rect',
       'js_ui_arc','js_ui_arc_set','js_ui_line','js_ui_line_set','js_ui_button','qpk_input_finish',
       'qpk_input_cancel','qpk_input_submit','qpk_input_button','js_prompt_input','qpk_message_arg','js_prompt_toast','js_prompt_dialog']
-    (work/'production_qpk_bindings.inc').write_text('\n\n'.join(function(runtime,n) for n in binding_names)+'\n#include "qpk_polygon.inc"\n')
+    (work/'production_qpk_bindings.inc').write_text('static bool qpk_viewport_object(lv_obj_t *);\nstatic void qpk_viewport_origin(lv_obj_t *,int *,int *);\nstatic void qpk_viewport_cleanup(lv_obj_t *,void *);\n'+'\n\n'.join(function(runtime,n) for n in binding_names)+'\n#include "qpk_polygon.inc"\n#include "qpk_viewport.inc"\n')
     registration={'text':('js_ui_text',6),'number':('js_ui_number',6),'setText':('js_ui_set_text',2),
       'setHidden':('js_ui_set_hidden',2),'background':('js_ui_background',1),'getSize':('js_ui_get_size',0),
       'setColor':('js_ui_set_color',2),'setStyle':('js_ui_set_style',2),'measureText':('js_ui_measure_text',2),'panel':('js_ui_panel',7),
-      'button':('js_ui_button',7),'setPos':('js_ui_set_pos',3),'setSize':('js_ui_set_size',3),
+      'present':('js_ui_present',2),'range':('js_ui_range',5),'rangeLinked':('js_ui_range',6),'button':('js_ui_button',7),'setPos':('js_ui_set_pos',3),'setSize':('js_ui_set_size',3),
       'setOpacity':('js_ui_set_opacity',2),'show':('js_ui_show',1),'hide':('js_ui_hide',1),'remove':('js_ui_remove',1),
       'rect':('js_ui_rect',5),'arc':('js_ui_arc',9),'arcSet':('js_ui_arc_set',2),'line':('js_ui_line',4),'lineSet':('js_ui_line_set',2),
       'polygon':('js_ui_polygon',5),'polygonSet':('js_ui_polygon_set',6),
       'polygonBuffer':('js_ui_polygon_buffer',5),'polygonSetBuffer':('js_ui_polygon_set_buffer',6),'front':('js_ui_front',1),
       'grokSprite':('js_ui_grok_sprite',6),'grokControl':('js_ui_grok_control',3)}
+    registration.update({'viewport':('js_ui_viewport',5),'attach':('js_ui_attach',2),'scrollInfo':('js_ui_scroll_info',1),'scrollTo':('js_ui_scroll_to',3),'scrollExtent':('js_ui_scroll_extent',2),'scrollLock':('js_ui_scroll_lock',2)})
     registration['colorWheel']=('js_ui_color_wheel',3)
     (work/'production_qpk_registration.inc').write_text('\n'.join(f'JS_SetPropertyStr(c,ui,"{name}",JS_NewCFunction(c,{fn},"{name}",{count}));' for name,(fn,count) in registration.items()))
     qrdir=apps/'graphics/lvgl/lvgl/src/libs/qrcode'
@@ -135,7 +136,8 @@ void local_video_play_path(const char *path){(void)path;}
       'hass_portal.h','hass_service.h','glass_music.h','glass_lock_photo.h','glass_chat.h','glass_ime.h',
       'glass_weather.h','glass_settings_service.h','glass_file_service.h','glass_system_monitor.h','glass_voice.h','glass_pinyin.h',
       'glass_ble.h','glass_speech.h','qpk_espdl.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
-    skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice'}
+    skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice',
+          'desktop_motion_button'}
     mocks=['#include <stdlib.h>\n#include <string.h>\n#include <stdio.h>\n#include <errno.h>\n#include <netinet/in.h>\n#include "glass_icons.h"']
     mocks += [f'#include "{name}"' for name in headers]
     prototypes={}

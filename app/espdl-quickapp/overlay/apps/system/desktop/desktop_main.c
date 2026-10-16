@@ -270,6 +270,28 @@ static uint32_t theme_accent(void)
   return g_desktop.light_theme ? 0x5860bf : 0xb4a6ff;
 }
 
+#include "glass_motion.h"
+#include "glass_ui_metrics.h"
+
+void desktop_motion_button(lv_obj_t *button)
+{
+  glass_motion_button(button);
+}
+bool desktop_motion_geometry(lv_obj_t *obj,int x,int y,int w,int h,unsigned mask,bool animate)
+{
+  return glass_motion_geometry(obj,x,y,w,h,mask,animate);
+}
+
+bool desktop_motion_color(lv_obj_t *obj,uint32_t color,bool animate)
+{ return glass_motion_color(obj,color,animate); }
+
+void desktop_motion_present(lv_obj_t **objects,unsigned count,int offset,bool horizontal)
+{ if(horizontal)glass_motion_present_axis(objects,count,offset,true);else glass_motion_present(objects,count,offset); }
+bool desktop_motion_range(lv_obj_t *obj,int stop,uint32_t accent,uint32_t background,bool animate)
+{ return glass_motion_range(obj,stop,accent,background,animate); }
+bool desktop_motion_range_linked(lv_obj_t *obj,lv_obj_t *thumb,int stop,uint32_t accent,uint32_t background,bool animate)
+{ return glass_motion_range_linked(obj,thumb,stop,accent,background,animate); }
+
 static void style_button(lv_obj_t *button, uint32_t color)
 {
   lv_obj_set_style_bg_color(button, lv_color_hex(color), 0);
@@ -280,6 +302,7 @@ static void style_button(lv_obj_t *button, uint32_t color)
   lv_obj_set_style_shadow_width(button, 0, 0);
   lv_obj_set_style_transform_width(button, 0, LV_STATE_PRESSED);
   lv_obj_set_style_transform_height(button, 0, LV_STATE_PRESSED);
+  glass_motion_button(button);
 }
 
 static void style_panel(lv_obj_t *panel, uint32_t color)
@@ -590,7 +613,14 @@ static lv_obj_t *panel_card(const char *title)
   lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
   lv_obj_center(label);
+  glass_motion_panel(card);
   return card;
+}
+
+static void toast_motion_done(lv_obj_t *toast)
+{
+  if(g_desktop.toast==toast)g_desktop.toast=NULL;
+  lv_obj_delete(toast);
 }
 
 static void toast_delete_cb(lv_timer_t *timer)
@@ -600,10 +630,9 @@ static void toast_delete_cb(lv_timer_t *timer)
       lv_obj_t *toast = g_desktop.toast;
 
       g_desktop.toast_timer = NULL;
-      g_desktop.toast = NULL;
       if (toast != NULL)
         {
-          lv_obj_delete(toast);
+          if(!glass_motion_dismiss(toast,toast_motion_done))toast_motion_done(toast);
         }
     }
 
@@ -627,6 +656,7 @@ static void show_toast(const char *text)
   lv_obj_set_style_pad_hor(g_desktop.toast, 22, 0);
   lv_obj_set_style_pad_ver(g_desktop.toast, 12, 0);
   lv_obj_align(g_desktop.toast, LV_ALIGN_BOTTOM_MID, 0, -34);
+  glass_motion_notice(g_desktop.toast);
   g_desktop.toast_timer = lv_timer_create(toast_delete_cb, 1600, NULL);
   if (g_desktop.toast_timer == NULL)
     {
@@ -853,6 +883,7 @@ static void qpk_show_dialog(const char *text)
     }
 
   lv_obj_center(label);
+  glass_motion_enter(box,false,0);
 }
 
 static void qpk_show_unresponsive(bool unresponsive);
@@ -1157,6 +1188,8 @@ static void qapp_page_commit(lv_obj_t *content)
   lv_obj_set_style_pad_all(g_desktop.panel, 0, 0);
   lv_obj_set_style_opa(page, LV_OPA_COVER, 0);
   g_desktop.current_card = page;
+  /* Camera owns the framebuffer during capture; leave that path immediate. */
+  if(!qpk_runtime_camera_busy())glass_motion_enter(page,true,0);
 }
 
 static void launch_builtin_qapp(lv_event_t *e)
@@ -1319,7 +1352,6 @@ static void launch_builtin_dafeiyu_qapp(lv_event_t *e)
   else lv_obj_delete(lv_obj_get_parent(card));
 }
 
-static void glass_homeassistant_enter(lv_obj_t *card);
 static void glass_homeassistant(lv_event_t *e);
 
 static void launch_builtin_homeassistant_qapp(lv_event_t *e)
@@ -1348,7 +1380,6 @@ static void launch_builtin_homeassistant_qapp(lv_event_t *e)
   if (ret == 0)
     {
       qapp_page_commit(card);
-      glass_homeassistant_enter(card);
     }
   else
     {
@@ -1710,6 +1741,7 @@ int main(int argc, FAR char *argv[])
       fprintf(stderr, "desktop: display init failed\n");
       return 1;
   }
+  glass_ui_metrics_attach(result.disp);
 
 #if defined(CONFIG_FS_SMARTFS) && !defined(CONFIG_DISABLE_MOUNTPOINT)
   /* Restore the existing user volume before any app loads preferences.

@@ -31,6 +31,7 @@ function boot(width = 1024, height = 600, options = {}) {
   const styles = new Map();
   const nativeWrites=[],desktopSnapshots=[];
   const saves = new Map();
+  const prompts=[];
   const responses = {
     devices: options.devices || [],
     config: { location_name: 'Lab' },
@@ -133,7 +134,7 @@ function boot(width = 1024, height = 600, options = {}) {
     line: (points, x, y, w, h) => create(x, y, w, h),
     lineSet: id => requireHandle(id, 'lineSet'),
     text: (text, x, y, w = 1, h = 1) => {const id=create(x,y,w,h);textValues.set(id,text);return id;},
-    setColor: (id,value) => {requireHandle(id, 'setColor');nativeWrites.push({method:'color',id,value});},
+    setColor: (id,value,smooth=false) => {requireHandle(id, 'setColor');nativeWrites.push({method:'color',id,value,smooth});},
     setHidden: (id,value) => {requireHandle(id, 'setHidden');hidden.set(id,!!value);nativeWrites.push({method:'hidden',id,value:!!value});},
     setStyle: (id,style) => {requireHandle(id,'setStyle');if(style.center!==undefined)assert([0,1].includes(style.center),'native center is boolean');if(style.fontSize!==undefined)assert(style.fontSize>=0&&style.fontSize<=48,'native style fontSize contract');styles.set(id,{...styles.get(id),...style});nativeWrites.push({method:'style',id,style});},
     setText(id, value) {
@@ -144,17 +145,26 @@ function boot(width = 1024, height = 600, options = {}) {
     setOpacity: id => requireHandle(id, 'setOpacity'),
     onSwipe: handler => { swipe = handler; },
     onTouch: handler => { touch = handler; },
-    setPos(id, x, y) {
+    setPos(id, x, y, smooth=false) {
       requireHandle(id, 'setPos');
       Object.assign(geometry.get(id), { x, y });
-      nativeWrites.push({method:'position',id,x,y});
+      nativeWrites.push({method:'position',id,x,y,smooth});
     },
-    setSize(id, w, h) {
+    setSize(id, w, h, smooth=false) {
       requireHandle(id, 'setSize');
       Object.assign(geometry.get(id), { w, h });
-      nativeWrites.push({method:'size',id,w,h});
+      nativeWrites.push({method:'size',id,w,h,smooth});
     }
   };
+  const viewports=new Map(),parents=new Map();
+  if(options.waterfall){
+    ui.viewport=(x,y,w,h,callback)=>{const id=create(x,y,w,h);viewports.set(id,{x,y,w,h,height:h,yScroll:0,callback,locked:false});return id;};
+    ui.attach=(id,parent)=>{requireHandle(id,'attach');assert(parent===0||viewports.has(parent));parents.set(id,parent);};
+    ui.scrollInfo=id=>{const v=viewports.get(id);assert(v);return {y:v.yScroll,max:Math.max(0,v.height-v.h),moving:false};};
+    ui.scrollTo=(id,y)=>{const v=viewports.get(id);assert(v);v.yScroll=Math.max(0,Math.min(y,v.height-v.h));v.callback(v.yScroll);};
+    ui.scrollExtent=(id,height)=>{const v=viewports.get(id);assert(v);v.height=height;};
+    ui.scrollLock=(id,locked)=>{const v=viewports.get(id);assert(v);v.locked=locked;};
+  }
   if(options.frontOrder)ui.front=id=>{requireHandle(id,'front');nativeWrites.push({method:'front',id});};
   if(options.measureMetrics)ui.measureText=options.measureMetrics;
   const context = vm.createContext({
@@ -162,7 +172,7 @@ function boot(width = 1024, height = 600, options = {}) {
       desktop:{devices:json=>{desktopSnapshots.push(JSON.parse(json));return 0;}},
       yield: () => ({ then: resolve => { deferred.push(resolve); } }),
       storage: { get: key => key==='eh_favs'?JSON.stringify(options.favorites||[]):key==='eh_scope'?(options.savedScope||''):key==='eh_card_sizes'?(options.savedLayout||''):key==='eh_card_sizes_2'?(options.savedLayout2||''):key==='eh_card_usage'?(options.savedUsage||''):key==='eh_desktop_pins'?(options.savedPins||''):'', set: (key,value) => saves.set(key,value) } },
-    ui, prompt: { input: () => {} }, console,
+    ui, prompt: { input: (options,callback) => prompts.push({options,callback}) }, console,
     setInterval(callback) { timer = callback; return 1; },
     clearInterval: () => {},
     setTimeout(callback) { deferred.push(callback); return nextTimeout++; },
@@ -171,7 +181,7 @@ function boot(width = 1024, height = 600, options = {}) {
   vm.runInContext(options.source||source, context, { filename: 'homeassistant/app.js' });
   // Creation deliberately shares several native event-loop turns.
   for(let i=0;i<30&&deferred.length;i++)deferred.shift()();
-  return { context, buttons, controls, requests, geometry, hidden, textValues, styles, saves,nativeWrites,desktopSnapshots,
+  return { context, buttons, controls, requests, geometry, hidden, textValues, styles, saves,nativeWrites,desktopSnapshots,viewports,parents,prompts,
     remoteConfigure(endpoint) {
       serviceUrl = endpoint;
       configured = !!endpoint;
@@ -184,6 +194,36 @@ function boot(width = 1024, height = 600, options = {}) {
     touch: (state, nx, ny) => touch(state, nx, ny),
     swipe: direction => swipe(direction) };
 }
+
+test('large reading snapshots avoid repeated full-list scans and follow committed states', () => {
+  const states=Array.from({length:512},(_,i)=>({entity_id:'sensor.monitor_'+i,state:String(i),
+    attributes:{friendly_name:'Monitor '+i,device_class:'temperature',unit_of_measurement:'C',
+      device_type:'air-monitor'}}));
+  const r=boot(1024,536,{states});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<30;i++)r.tick();
+  vm.runInContext(`globalThis.fullListVisits=0;
+    const originalFind=Array.prototype.find;
+    Array.prototype.find=function(predicate,thisArg){
+      const measured=this.length>=128&&this[0]&&this[0].entity_id;
+      return originalFind.call(this,function(value,index,array){
+        if(measured)fullListVisits++;return predicate.call(thisArg,value,index,array);
+      });
+    };`,r.context);
+  let state=r.context.ESPHomeHA.snapshot();
+  assert.equal(state.entities.length,512);
+  assert(r.context.fullListVisits<512*10,'snapshot must not scan all entities for every sensor');
+  states[511].state='27';
+  r.context.ESPHomeHA.refresh();for(let i=0;i<30;i++)r.tick();
+  state=r.context.ESPHomeHA.snapshot();
+  const card=state.deviceCards.find(card=>card.entity_id==='sensor.monitor_511');
+  assert(card.readings.some(row=>row.display==='27.0 C'&&row.source==='sensor.monitor_511'),JSON.stringify(card));
+  states.splice(511,1);
+  r.context.ESPHomeHA.refresh();for(let i=0;i<30;i++)r.tick();
+  assert(!r.context.ESPHomeHA.snapshot().deviceCards.some(card=>card.entity_id==='sensor.monitor_511'));
+  r.remoteConfigure('');r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().entities.length,0);
+  assert.equal(r.controls.length,0);
+});
 
 test('frontend uses the reviewed native service and completes a state sync', () => {
   const runtime = boot();
@@ -224,7 +264,7 @@ test('frontend keeps its fixed controls inside supported displays', () => {
   for (const [width, height] of [[1024, 536], [1024, 600]]) {
     const runtime = boot(width, height);
     assert.equal(runtime.buttons.length, 32);
-    assert.ok(runtime.geometry.size <= 140,
+    assert.ok(runtime.geometry.size <= 148, // Fixed search/filter icons and contextual empty-state labels.
       `${width}x${height}: ${runtime.geometry.size} native widgets exceeds the UI budget`);
     for (const box of runtime.geometry.values()) {
       assert.ok(box.x >= 0 && box.y >= 0 && box.w > 0 && box.h > 0);
@@ -570,7 +610,7 @@ test('mixed-board brightness drag owns the gesture and previews before one relea
   const rail=largeBrightnessRail(r,'light.desk'),nx=v=>(rail.rect.x+rail.rect.w*v)/1024,ny=(rail.rect.y+rail.rect.h/2)/536;
   r.touch('down',nx(.5),ny);r.touch('move',nx(.3),ny);r.swipe('left');for(let i=0;i<20;i++)r.tick();
   assert.equal(r.context.ESPHomeHA.snapshot().roomPage,0,'a brightness drag must not turn the board page');
-  assert.equal(r.textValues.get(rail.labelId),'30%');assert.equal(r.controls.length,0);
+  assert.equal(r.textValues.get(rail.labelId),'30% · 已开启');assert.equal(r.controls.length,0);
   r.touch('up',nx(.3),ny);r.swipe('left');
   assert.deepEqual(r.controls,[{entity:'light.desk',on:true,brightness:30}]);
   assert.equal(r.context.ESPHomeHA.snapshot().roomPage,0,'release gesture belongs to the same slider');
@@ -744,7 +784,7 @@ test('reference lamp small tile tracks every pointer move without repainting the
     for(let i=0;i<60;i++) {
       const percent=20+i,from=r.nativeWrites.length;r.touch('move',nx(percent/100),ny);r.tick();
       assert.equal(r.context.ESPHomeHA.snapshot().brightnessInput.percent,percent);
-      assert([...r.textValues].some(([id,v])=>!r.hidden.get(id)&&v===percent+'%'));
+      assert([...r.textValues].some(([id,v])=>!r.hidden.get(id)&&v===percent+'% · 已开启'));
       const writes=r.nativeWrites.slice(from);assert(writes.length<=3,'only fill, thumb and percentage change per pointer move');
       assert(!writes.some(v=>v.method==='position'&&v.y!==Math.round(rail.y+10)),'other cards do not move or reflow while dragging');
     }
@@ -1402,6 +1442,27 @@ test('color disc drag performs bounded native writes and never touches the HA tr
   assert.equal(r.controls.length,0);assert(r.nativeWrites.length<12,'only marker, preview chip and hex label change');
   r.context.ESPHomeHA.disconnect();r.touch('up',x/1024,y/536);assert.equal(r.controls.length,0,'stale color gesture cannot control disconnected home');
 });
+test('background refresh preserves a live color preview until cancellation restores the latest server color',()=>{
+  const r=lampFixture(),wheel=r.context.ESPHomeHA.snapshot().colorWheel,x=wheel.x+wheel.w/2,y=wheel.y+2;
+  const visibleHex=()=>[...r.textValues].find(([id,value])=>!r.hidden.get(id)&&/^#[0-9A-F]{6}$/.test(value))?.[1];
+  r.touch('down',x/1024,y/536);const preview=visibleHex();assert(preview);
+  const previewChip=r.nativeWrites.filter(write=>write.method==='color'&&write.value===parseInt(preview.slice(1),16)).at(-1);assert(previewChip);
+  r.fixtureState.attributes.rgb_color=[0,0,255];r.fixtureState.attributes.color_mode='rgb';
+  r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();
+  assert.equal(visibleHex(),preview,'background updates cannot pull the marker away from the finger');assert.equal(r.controls.length,0);
+  r.touch('cancel',x/1024,y/536);for(let i=0;i<30;i++)r.tick();assert(r.nativeWrites.some(write=>write.method==='color'&&write.id===previewChip.id&&write.value===0x0000ff));assert.equal(r.controls.length,0);
+});
+
+test('a color gesture cannot survive settings navigation or loss of color capability',()=>{
+  for(const mode of ['settings','capability']){
+    const r=lampFixture(),wheel=r.context.ESPHomeHA.snapshot().colorWheel,x=wheel.x+wheel.w/2,y=wheel.y+2;
+    r.touch('down',x/1024,y/536);
+    if(mode==='settings')r.context.ESPHomeHA.settings();
+    else{Object.assign(r.fixtureState.attributes,{supported_color_modes:['brightness'],rgb_color:null,color_mode:'brightness'});r.context.ESPHomeHA.refresh();}
+    for(let i=0;i<50;i++)r.tick();r.touch('up',x/1024,y/536);assert.equal(r.controls.length,0,mode);
+  }
+});
+
 test('lamp detail drag updates a fixed value and thumb locally then sends one release request',()=>{
   const r=lampFixture(),rail=r.context.ESPHomeHA.snapshot().parameterControls.find(row=>row.key==='brightness_pct');assert.equal(rail.h,52);
   const nx=(rail.x+rail.w*.5)/1024,ny=(rail.y+rail.h/2)/536;
@@ -1832,4 +1893,344 @@ test('desktop navigation accepts the exact endpoint already approved by the nati
   assert.equal(r.context.ESPHomeHA.openDevice(endpoint,'light.b'),true);for(let i=0;i<55;i++)r.tick();
   assert.equal(r.context.ESPHomeHA.snapshot().selectedId,'light.b');assert.equal(r.context.ESPHomeHA.snapshot().detailOpen,true);
   assert.equal(r.context.ESPHomeHA.openDevice(endpoint+'/', 'light.a'),false);assert.equal(r.controls.length,0);
+});
+
+
+test('motion presents detail and return content in opposite directions without sending commands',()=>{
+  const r=boot(1024,600),motions=[];
+  r.context.ui.present=(ids,offset)=>{assert(ids.length>0&&ids.length<=128);ids.forEach(id=>assert(r.geometry.has(id)));motions.push(offset);};
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();motions.length=0;
+  deviceBody(r,'light.desk').callback();for(let i=0;i<40;i++)r.tick();
+  assert(motions.includes(12));assert.equal(r.controls.length,0);
+  const back=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x>=164&&g.x<200&&g.y<45;});assert(back);back.callback();
+  for(let i=0;i<40;i++)r.tick();assert(motions.includes(-12));assert.equal(r.controls.length,0);
+});
+test('lamp motion smooths presets but keeps both wheel and slider drags direct',()=>{
+  const r=lampFixture(),wheel=r.context.ESPHomeHA.snapshot().colorWheel;
+  const preset=r.nativeWrites.filter(w=>w.method==='color'&&w.value===0x7facff).at(-1);assert(preset);
+  const g=r.geometry.get(preset.id);r.nativeWrites.length=0;lampClickAt(r,g.x+g.w/2,g.y+g.h/2);
+  assert(r.nativeWrites.some(w=>w.method==='position'&&w.smooth),'preset marker interpolates');
+  r.nativeWrites.length=0;r.touch('down',(wheel.x+wheel.w/2)/1024,(wheel.y+2)/536);
+  assert(r.nativeWrites.some(w=>w.method==='position'&&!w.smooth),'wheel remains attached to finger');
+  r.touch('cancel',0,0);for(let i=0;i<20;i++)r.tick();
+  const ranges=[];r.context.ui.range=(id,stop,accent,background,animate)=>ranges.push({id,stop,animate});
+  const rail=r.context.ESPHomeHA.snapshot().parameterControls.find(row=>row.key==='brightness_pct');assert(rail);
+  r.touch('down',(rail.x+rail.w*.2)/1024,(rail.y+rail.h/2)/536);
+  assert(ranges.some(row=>!row.animate));r.touch('cancel',0,0);
+  const commands=r.controls.length;r.context.ESPHomeHA.disconnect();for(let i=0;i<20;i++)r.tick();assert.equal(r.controls.length,commands);
+});
+
+
+test('sidebar moves one retained selection face beneath fixed native navigation targets',()=>{
+  const r=boot(1024,600);r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  const face=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.x===8&&g.w===148&&g.h===38&&!r.buttons.some(b=>b.id===id));assert(face);
+  const clickRow=y=>{const b=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x===8&&g.y===y&&g.w===148;});assert(b);b.callback();for(let i=0;i<40;i++)r.tick();};
+  r.nativeWrites.length=0;clickRow(208);
+  assert(r.nativeWrites.some(w=>w.method==='position'&&w.id===face[0]&&w.y===208&&w.smooth));
+  clickRow(70);assert.equal(r.geometry.get(face[0]).y,70);assert.equal(r.controls.length,0);
+});
+test('HA pagination animates card content horizontally in both directions while leaving its pager fixed',()=>{
+  const states=Array.from({length:18},(_,i)=>({entity_id:'light.motion_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:120,supported_color_modes:['brightness']}}));
+  const r=boot(1024,600,{states}),motions=[];r.context.ui.present=(ids,offset,horizontal)=>motions.push({ids,offset,horizontal});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();motions.length=0;
+  clickIndicator(r,1);for(let i=0;i<30;i++)r.tick();
+  assert(motions.some(m=>m.horizontal===true&&m.offset>0));
+  clickIndicator(r,0);for(let i=0;i<30;i++)r.tick();
+  assert(motions.some(m=>m.horizontal===true&&m.offset<0));
+  for(const m of motions.filter(m=>m.horizontal))for(const id of m.ids)assert(r.geometry.get(id).y<546,'footer remains still');
+  assert.equal(r.controls.length,0);
+});
+test('mode faces fade after a choice and purifier meters interpolate real values with an empty zero endpoint',()=>{
+  const lamp=lampFixture();lamp.nativeWrites.length=0;lampClickLabel(lamp,'夜间');
+  assert(lamp.nativeWrites.some(w=>w.method==='color'&&w.smooth),'selected mode face fades');assert.equal(lamp.controls.length,1);
+  const state=commonProfileSamples().find(row=>row.entity_id==='fan.purifier');
+  state.attributes.miot_properties={'air-purifier.filter-life-level':83};
+  const r=boot(1024,536,{states:[state],services:commonServices()});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  deviceBody(r,state.entity_id).callback();for(let i=0;i<30;i++)r.tick();
+  const initial=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.h===8&&[...r.geometry].some(([other,box])=>other!==id&&!r.hidden.get(other)&&box.h===8&&box.x===g.x&&box.y===g.y&&box.w>g.w));assert(initial);
+  const id=initial[0],width=initial[1].w;r.nativeWrites.length=0;
+  state.attributes.miot_properties['air-purifier.filter-life-level']=40;r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  assert(r.nativeWrites.some(w=>w.method==='size'&&w.id===id&&w.smooth&&w.w<width));
+  state.attributes.miot_properties['air-purifier.filter-life-level']=0;r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  assert.equal(r.hidden.get(id),true);assert(r.geometry.get(id).w>=1);assert.equal(r.controls.length,0);
+});
+
+
+function activePagerPill(r,kind='pageIndicator'){
+  const state=r.context.ESPHomeHA.snapshot(),indicator=state[kind],current=kind==='optionPageIndicator'?state.optionPicker.page:kind==='detailPageIndicator'?indicator.current:state.roomPage;
+  const active=indicator.slots.find(slot=>slot.page===current);assert(active);
+  const found=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.w===20&&g.h===6&&g.x===active.x+2&&g.y===active.y+17);assert(found);return found[0];
+}
+test('Mijia reuses one constant-width sliding pill through left, middle and right pages in both themes',()=>{
+  for(const dark of [false,true]){
+    const states=Array.from({length:18},(_,i)=>({entity_id:'light.slide_'+i,state:'on',attributes:{brightness:120,supported_color_modes:['brightness']}}));
+    const r=boot(1024,600,{states,dark});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    const id=activePagerPill(r),allocated=r.geometry.size;r.nativeWrites.length=0;
+    for(const page of [1,2,1,0]){clickIndicator(r,page);assert.equal(activePagerPill(r),id);}
+    assert(r.nativeWrites.filter(w=>w.method==='position'&&w.id===id&&w.smooth).length>=4);
+    assert(!r.nativeWrites.some(w=>w.method==='size'&&w.id===id),'pill never shrinks or stretches');
+    assert.equal(r.geometry.size,allocated);assert.equal(r.controls.length,0);
+  }
+});
+test('option picker also preserves its sliding pill across repeated page renders without requesting device actions',()=>{
+  const modes=Array.from({length:9},(_,i)=>'mode-'+i),r=profileDetailFixture('fan.standard',{preset_modes:modes,preset_mode:modes[0]});
+  lampClickLabel(r,'mode-0  >');const id=activePagerPill(r,'optionPageIndicator');r.nativeWrites.length=0;
+  for(const page of [1,2,1,0]){clickIndicator(r,page,'optionPageIndicator');assert.equal(activePagerPill(r,'optionPageIndicator'),id);}
+  assert(r.nativeWrites.filter(w=>w.method==='position'&&w.id===id&&w.smooth).length>=4);assert.equal(r.controls.length,0);
+});
+
+
+function discoveryHeader(r,width,offset){
+  const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===width-offset&&box.y===10&&box.h===44;});assert(button);button.callback();for(let i=0;i<40;i++)r.tick();
+}
+function clickNativeCaption(r,caption){const button=r.buttons.find(button=>!r.hidden.get(button.id)&&r.textValues.get(button.id)===caption);assert(button,caption);button.callback();for(let i=0;i<50;i++)r.tick();}
+test('device discovery combines room, member search and favorites without device requests',()=>{
+  const states=Array.from({length:12},(_,i)=>({entity_id:'switch.find_'+i,state:'on',attributes:{friendly_name:'插座 '+i}}));
+  const devices=states.map((state,i)=>['device_'+i,'插座 '+i,i%2?'卧室':'客厅',[state.entity_id]]);
+  const r=boot(1024,600,{states,devices,waterfall:true,favorites:['switch.find_2']});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  discoveryHeader(r,1024,136);assert(r.context.ESPHomeHA.snapshot().discovery.rooms.includes('客厅'));clickNativeCaption(r,'客厅');
+  assert.equal(r.context.ESPHomeHA.snapshot().discovery.count,6);
+  discoveryHeader(r,1024,180);assert.equal(r.prompts.length,1);r.prompts[0].callback('FIND_2');for(let i=0;i<70;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().discovery.count,1);
+  discoveryHeader(r,1024,136);clickNativeCaption(r,'仅看关注设备');assert(r.context.ESPHomeHA.snapshot().discovery.favoritesOnly);assert.equal(r.context.ESPHomeHA.snapshot().discovery.count,1);
+  discoveryHeader(r,1024,136);clickNativeCaption(r,'清除筛选');assert.equal(r.context.ESPHomeHA.snapshot().discovery.count,12);assert.equal(r.controls.length,0);
+  discoveryHeader(r,1024,180);const old=r.prompts.at(-1);r.remoteConfigure('http://192.168.1.21:8123');for(let i=0;i<80;i++)r.tick();old.callback('old-home');assert.equal(r.context.ESPHomeHA.snapshot().search,'');
+});
+
+test('room picker stays bounded and exclusive at minimum resolution and does not create devices per room',()=>{
+  const states=Array.from({length:36},(_,i)=>({entity_id:'switch.room_'+i,state:'on',attributes:{friendly_name:'设备 '+i}}));
+  const devices=states.map((state,i)=>['roomdev_'+i,state.attributes.friendly_name,'房间 '+i,[state.entity_id]]);
+  const r=boot(640,400,{states,devices,waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  discoveryHeader(r,640,136);const count=r.geometry.size;assert(r.context.ESPHomeHA.snapshot().discovery.open);
+  for(let i=0;i<10;i++)clickNativeCaption(r,'下一页');
+  for(const b of r.buttons)if(!r.hidden.get(b.id)){const g=r.geometry.get(b.id);assert(g.x>=164&&g.x+g.w<=640&&g.y>=64&&g.y+g.h<=400);assert(g.h>=40);}
+  assert.equal(r.geometry.size,count);clickNativeCaption(r,'返回');assert(!r.context.ESPHomeHA.snapshot().discovery.open);assert.equal(r.controls.length,0);
+});
+
+test('filter panel completely hides and locks the underlying waterfall and shrinks to its content',()=>{
+  const r=boot(1024,600,{waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const view=r.context.ESPHomeHA.snapshot().waterfall.viewport;r.context.ui.scrollTo(view,100,false);for(let i=0;i<40;i++)r.tick();
+  discoveryHeader(r,1024,136);assert(r.hidden.get(view),'all card labels and the native scrollbar must be hidden with their parent');assert(r.viewports.get(view).locked);
+  const clear=r.buttons.find(button=>!r.hidden.get(button.id)&&r.textValues.get(button.id)==='清除筛选');assert(clear);
+  assert(r.geometry.get(clear.id).y<330,'a single all-rooms option must not reserve a tall empty panel');
+  assert([...r.textValues].some(([id,text])=>!r.hidden.get(id)&&text==='家庭中枢尚未分配房间'));
+  clickNativeCaption(r,'返回');assert(!r.hidden.get(view));assert(!r.viewports.get(view).locked);assert.equal(r.context.ESPHomeHA.snapshot().waterfall.scrollY,100);
+  assert.equal(r.controls.length,0);
+});
+
+test('empty and filtered states offer a recovery action and the header has separate 44px touch targets',()=>{
+  for(const [width,height] of [[640,400],[1024,600]]){
+    const r=boot(width,height,{waterfall:true,states:[]});r.context.ESPHomeHA.refresh();for(let i=0;i<80;i++)r.tick();
+    assert([...r.textValues].some(([id,value])=>!r.hidden.get(id)&&value==='暂无设备'));
+    for(const offset of [180,136,92,48])assert(r.buttons.some(button=>{const g=r.geometry.get(button.id);return !r.hidden.get(button.id)&&g.x===width-offset&&g.w===44&&g.h===44;}));
+    discoveryHeader(r,width,180);r.prompts.at(-1).callback('missing');for(let i=0;i<60;i++)r.tick();assert([...r.textValues].some(([id,value])=>!r.hidden.get(id)&&value==='没有匹配的设备'));
+    clickNativeCaption(r,'清除筛选');assert.equal(r.context.ESPHomeHA.snapshot().search,'');r.context.ESPHomeHA.disconnect();for(let i=0;i<60;i++)r.tick();clickNativeCaption(r,'连接设置');assert(r.context.ESPHomeHA.snapshot().settingsOpen);
+  }
+});
+
+test('device detail provides a local follow shortcut used by discovery',()=>{
+  const r=boot(1024,600,{waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<80;i++)r.tick();deviceBody(r,'light.desk').callback();for(let i=0;i<60;i++)r.tick();clickNativeCaption(r,'关注设备');assert(r.context.ESPHomeHA.snapshot().favorites.includes('light.desk'));clickNativeCaption(r,'取消关注');assert(!r.context.ESPHomeHA.snapshot().favorites.includes('light.desk'));assert.equal(r.controls.length,0);
+});
+
+test('profile detail keeps primary controls while extra member fields expand and collapse locally',()=>{
+  const primary={entity_id:'fan.more',state:'on',attributes:{friendly_name:'风扇',percentage:40,supported_features:49}};
+  const states=[primary,...Array.from({length:9},(_,i)=>({entity_id:'sensor.more_'+i,state:String(i+20),attributes:{friendly_name:'附加读数 '+i}}))];
+  const devices=[['more_device','风扇','客厅',states.map(state=>state.entity_id)]];
+  const r=boot(1024,536,{states,devices,waterfall:true,services:commonServices(),nativeActions:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  deviceBody(r,'fan.more').callback();for(let i=0;i<60;i++)r.tick();const before=r.context.ESPHomeHA.snapshot().detailPageIndicator.total;
+  clickNativeCaption(r,'更多参数');assert(r.context.ESPHomeHA.snapshot().detailExpanded);assert(r.context.ESPHomeHA.snapshot().detailPageIndicator.total>before);
+  clickNativeCaption(r,'收起参数');assert(!r.context.ESPHomeHA.snapshot().detailExpanded);assert.equal(r.context.ESPHomeHA.snapshot().detailPageIndicator.total,before);assert.equal(r.controls.length,0);
+});
+
+test('following a grouped device removes an existing secondary-entity follow rather than adding a conflicting primary follow',()=>{
+  const states=[{entity_id:'switch.group_main',state:'on',attributes:{friendly_name:'插座'}},{entity_id:'sensor.group_watt',state:'25',attributes:{friendly_name:'功率',unit_of_measurement:'W'}}];
+  const r=boot(1024,600,{states,devices:[['groupfollow','插座','客厅',states.map(row=>row.entity_id)]],waterfall:true,favorites:['sensor.group_watt']});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<80;i++)r.tick();deviceBody(r,'switch.group_main').callback();for(let i=0;i<50;i++)r.tick();clickNativeCaption(r,'取消关注');assert.equal(r.context.ESPHomeHA.snapshot().favorites.length,0);assert.equal(r.controls.length,0);
+});
+
+test('native-capable Mi boards use one continuous shortest-column waterfall with a bounded card pool',()=>{
+  for(const [width,height] of [[1024,600],[640,400],[800,480]]){
+    const states=Array.from({length:512},(_,i)=>i%3===0?{entity_id:'light.fall_'+i,state:'on',attributes:{friendly_name:'台灯 '+i,brightness:128,supported_color_modes:['brightness']}}:i%3===1?{entity_id:'switch.fall_'+i,state:'off',attributes:{friendly_name:'插座 '+i}}:{entity_id:'sensor.fall_'+i,state:'23',attributes:{friendly_name:'温度 '+i,device_class:'temperature'}});
+    const r=boot(width,height,{states,waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+    let snap=r.context.ESPHomeHA.snapshot(),flow=snap.waterfall;assert(flow);assert.equal(snap.layoutPages.length,1);assert.equal(snap.layoutPages[0].length,512);assert(!snap.pageIndicator.visible);
+    assert.equal(flow.columns,width===1024?3:2);assert.equal(flow.poolSlots,12);assert.equal(r.buttons.length,64);
+    assert(new Set(snap.layoutPages[0].map(row=>row.h)).size>1);assert(flow.contentHeight>height);
+    const bottoms=Array(flow.columns).fill(76),xs=[...new Set(snap.layoutPages[0].map(row=>row.x))].sort((a,b)=>a-b);
+    for(const row of snap.layoutPages[0]){const col=xs.indexOf(row.x);assert.equal(row.y,Math.min(...bottoms));assert(row.x>=164&&row.x+row.w<=width-14);bottoms[col]=row.y+row.h+14;}
+    const view=flow.viewport,max=r.context.ui.scrollInfo(view).max;
+    for(let j=0;j<12;j++){r.context.ui.scrollTo(view,max*j/11,false);for(let i=0;i<35;i++)r.tick();}
+    snap=r.context.ESPHomeHA.snapshot();assert.equal(snap.waterfall.scrollY,max);assert(snap.waterfall.visibleCards.length<=12);assert(r.geometry.size<500);
+    const allocated=r.geometry.size;for(let j=0;j<50;j++){r.context.ui.scrollTo(view,max,false);for(let i=0;i<3;i++)r.tick();}assert.equal(r.geometry.size,allocated);
+    assert.equal(r.controls.length,0);
+    states.splice(1);r.context.ESPHomeHA.refresh();for(let i=0;i<80;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().waterfall.scrollY,0);assert.equal(r.context.ESPHomeHA.snapshot().layoutPages[0].length,1);
+  }
+});
+test('native scrolling within the retained window avoids JS repaints and prioritizes newly visible cards',()=>{
+  const states=Array.from({length:120},(_,i)=>({entity_id:'light.window_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+  const r=boot(1024,600,{waterfall:true,states,nowMs:()=>10000});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const view=r.context.ESPHomeHA.snapshot().waterfall.viewport,allocated=r.geometry.size;
+  r.nativeWrites.length=0;
+  for(let y=1;y<=8;y++){r.context.ui.scrollTo(view,y,false);for(let i=0;i<6;i++)r.tick();}
+  assert.equal(r.context.ESPHomeHA.snapshot().waterfall.scrollY,8);assert.equal(r.nativeWrites.length,0,'native clipping moves existing cards without repainting the page');
+  r.context.ui.scrollTo(view,3000,false);r.tick();
+  const flow=r.context.ESPHomeHA.snapshot().waterfall;
+  assert(flow.visibleCards.some(row=>row.y+row.h>64&&row.y<64+flow.h),'new visible cards are painted in the first batch');
+  for(let i=0;i<50;i++)r.tick();assert(r.geometry.size<500);assert.equal(r.controls.length,0);
+  const warm=r.geometry.size;r.context.ui.scrollTo(view,0,false);for(let i=0;i<40;i++)r.tick();r.context.ui.scrollTo(view,3000,false);for(let i=0;i<40;i++)r.tick();assert.equal(r.geometry.size,warm);
+});
+
+test('a held waterfall button cannot control a different entity after card recycling',()=>{
+  const states=Array.from({length:60},(_,i)=>({entity_id:'light.press_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+  const r=boot(1024,600,{waterfall:true,states,nativeActions:true,acceptControls:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const before=r.context.ESPHomeHA.snapshot().waterfall,row=before.visibleCards.find(row=>row.y>=64),x=row.x+row.w-36,y=row.y+38;
+  const buttonAt=()=>r.buttons.find(button=>{const g=r.geometry.get(button.id);return !r.hidden.get(button.id)&&g.w===48&&g.h===48&&x>=g.x&&x<=g.x+g.w&&y>=g.y&&y<=g.y+g.h;});
+  r.touch('down',x/1024,y/600);states.splice(0,3);r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();r.touch('up',x/1024,y/600);
+  const recycled=buttonAt();assert(recycled);recycled.callback();assert.equal(r.controls.length,0,'refresh during a press cannot retarget the command');
+  r.touch('down',x/1024,y/600);r.touch('up',x/1024,y/600);buttonAt().callback();assert.equal(r.controls.length,1,'a fresh deliberate press works');
+});
+
+test('waterfall input teardown immediately unlocks scrolling and rejects late releases',()=>{
+  for(const mode of ['disconnect','settings','settings-button','dispose','invalid-pointer','failed','removed','capability']){
+    const states=Array.from({length:24},(_,i)=>({entity_id:'light.life_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+    const options={waterfall:true,states,nativeActions:true,acceptControls:true};
+    const r=boot(1024,600,options);r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+    const snap=r.context.ESPHomeHA.snapshot(),view=snap.waterfall.viewport,rail=snap.brightnessControls[0];
+    const x=(rail.x+rail.w*.3)/1024,y=(rail.y+rail.h/2)/600;
+    r.touch('down',x,y);r.touch('move',x+30/1024,y);assert(r.viewports.get(view).locked,mode);
+    if(mode==='disconnect')r.context.ESPHomeHA.disconnect();
+    else if(mode==='settings')r.context.ESPHomeHA.settings();
+    else if(mode==='settings-button'){
+      const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===1024-92&&box.y===10;});assert(button);button.callback();
+    }
+    else if(mode==='dispose')r.context.ESPHomeHA.dispose();
+    else if(mode==='invalid-pointer')r.touch('move',NaN,y);
+    else{
+      if(mode==='failed')options.stateStatus=503;
+      if(mode==='removed')states.length=0;
+      if(mode==='capability'){states[0].attributes.supported_color_modes=['onoff'];delete states[0].attributes.brightness;}
+      r.context.ESPHomeHA.refresh();for(let i=0;i<60;i++)r.tick();
+    }
+    assert(!r.viewports.get(view).locked,mode+' releases native scroll ownership without waiting for up');
+    assert.equal(r.context.ESPHomeHA.snapshot().brightnessInput,null,mode);
+    r.touch('up',x+30/1024,y);assert.equal(r.controls.length,0,mode+' cannot submit its late release');
+  }
+});
+
+test('weak-network brightness repeats coalesce while reversal preserves the newest target',()=>{
+  let now=10000;
+  const options={waterfall:true,nativeActions:true,acceptControls:true,nowMs:()=>now};
+  const r=boot(1024,600,options);r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const rail=r.context.ESPHomeHA.snapshot().brightnessControls[0];assert(rail);
+  const drag=p=>{const x=(rail.x+rail.w*p/100)/1024,y=(rail.y+rail.h/2)/600;r.touch('down',x,y);r.touch('up',x,y);for(let i=0;i<20;i++)r.tick();};
+  options.holdRequests=true;drag(60);assert.equal(r.controls.length,1);
+  for(let i=0;i<20;i++)drag(60);
+  assert.equal(r.context.ESPHomeHA.snapshot().controlQueue.length,0,'identical in-flight targets do not queue');
+  drag(30);drag(60);drag(60);assert.equal(r.context.ESPHomeHA.snapshot().controlQueue.length,1);assert.equal(r.context.ESPHomeHA.snapshot().controlQueue[0].brightness,60,'returning to an earlier target must replace the newer unsent reversal');
+  now+=4100;for(let i=0;i<20;i++)r.tick();
+  assert(r.context.ESPHomeHA.snapshot().controlProgress.some(row=>row.entity===rail.entity&&row.slow&&!row.sent));
+  assert([...r.textValues].some(([id,text])=>!r.hidden.get(id)&&text==='等待前序操作'));
+  options.holdRequests=false;for(let i=0;i<90;i++)r.tick();assert.equal(r.controls.length,2);assert.equal(r.context.ESPHomeHA.snapshot().controlQueue.length,0);
+});
+
+test('weak-network same mode selection is deduplicated until completion then may be selected again',()=>{
+  const r=lampFixture();const transport=r.fixtureOptions;
+  transport.holdRequests=true;lampClickLabel(r,'夜间');for(let i=0;i<12;i++)lampClickLabel(r,'夜间');
+  assert.equal(r.controls.length,1);assert.equal(r.context.ESPHomeHA.snapshot().controlQueue.length,0);
+  lampClickLabel(r,'日间');lampClickLabel(r,'夜间');assert.equal(r.context.ESPHomeHA.snapshot().controlQueue.length,1);
+  transport.holdRequests=false;for(let i=0;i<80;i++)r.tick();assert.equal(r.controls.length,2);
+  lampClickLabel(r,'夜间');for(let i=0;i<40;i++)r.tick();assert.equal(r.controls.length,3,'dedupe does not suppress a later deliberate request');
+});
+
+test('slow admitted control reports waiting for the device without retrying or claiming success',()=>{
+  let now=10000;const options={waterfall:true,nativeActions:true,acceptControls:true,nowMs:()=>now};
+  const r=boot(1024,600,options);r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const rail=r.context.ESPHomeHA.snapshot().brightnessControls[0],x=(rail.x+rail.w*.55)/1024,y=(rail.y+rail.h/2)/600;
+  options.holdRequests=true;r.touch('down',x,y);r.touch('up',x,y);for(let i=0;i<20;i++)r.tick();now+=4100;
+  for(let i=0;i<40;i++)r.tick();assert.equal(r.controls.length,1);assert.equal(r.context.ESPHomeHA.snapshot().controlFeedback.length,0);
+  assert([...r.textValues].some(([id,text])=>!r.hidden.get(id)&&text==='等待设备回报'));
+  const writes=r.nativeWrites.length;for(let i=0;i<30;i++)r.tick();assert.equal(r.nativeWrites.length,writes,'waiting does not create a looping paint effect');
+  options.holdRequests=false;for(let i=0;i<90;i++)r.tick();assert(r.context.ESPHomeHA.snapshot().controlFeedback.some(row=>row.kind==='success'));assert.equal(r.controls.length,1);
+});
+
+test('waterfall refresh anchors the visible device when earlier cards disappear',()=>{
+  const states=Array.from({length:60},(_,i)=>({entity_id:'light.anchor_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+  const r=boot(1024,600,{states,waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const view=r.context.ESPHomeHA.snapshot().waterfall.viewport;r.context.ui.scrollTo(view,650,false);for(let i=0;i<40;i++)r.tick();
+  const before=r.context.ESPHomeHA.snapshot().waterfall.visibleCards.filter(row=>row.y+row.h>64).sort((a,b)=>a.y-b.y||a.x-b.x)[0];assert(before);
+  states.splice(0,3);r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const after=r.context.ESPHomeHA.snapshot().waterfall.visibleCards.find(row=>row.entity_id===before.entity_id);assert(after);
+  assert.equal(after.y,before.y,'the visible device stays at the same screen height');assert(r.context.ESPHomeHA.snapshot().waterfall.scrollY<650);
+  const scroll=r.context.ESPHomeHA.snapshot().waterfall.scrollY;r.context.ESPHomeHA.refresh();for(let i=0;i<60;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().waterfall.scrollY,scroll);
+  assert.equal(r.controls.length,0);
+});
+
+test('card readings reduce type size before truncating a long numeric value',()=>{
+  const value='1234567890123';
+  const r=boot(1024,600,{waterfall:true,states:[{entity_id:'sensor.long_reading',state:value,attributes:{friendly_name:'用电累计读数'}}]});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const reading=[...r.textValues].find(([id,text])=>!r.hidden.get(id)&&text===value);assert(reading,'retain the full number when it fits');
+  assert(r.styles.get(reading[0]).fontSize<=28);assert.equal(r.controls.length,0);
+});
+
+test('card control feedback separates pending, confirmed and unconfirmed results and expires',()=>{
+  for(const controlStatus of [200,500]){
+    let now=10000;
+    const r=boot(1024,600,{waterfall:true,nativeActions:true,acceptControls:true,controlStatus,nowMs:()=>now});
+    r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+    const rail=r.context.ESPHomeHA.snapshot().brightnessControls[0];assert(rail);
+    const x=(rail.x+rail.w*.6)/1024,y=(rail.y+rail.h/2)/600;r.touch('down',x,y);r.touch('up',x,y);
+    assert(r.context.ESPHomeHA.snapshot().controlFeedback.every(row=>row.kind!=='success'),'admission is not confirmation');
+    for(let i=0;i<60;i++)r.tick();
+    const feedback=r.context.ESPHomeHA.snapshot().controlFeedback.find(row=>row.entity===rail.entity);assert(feedback);
+    assert.equal(feedback.kind,controlStatus===200?'success':'error');assert.equal(r.controls.length,1);
+    now+=6000;for(let i=0;i<15;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().controlFeedback.length,0);assert.equal(r.controls.length,1);
+  }
+});
+
+test('waterfall scroll does not issue commands and a scrolled slider owns only its release gesture',()=>{
+  const states=Array.from({length:60},(_,i)=>({entity_id:'light.scroll_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+  const r=boot(1024,600,{states,waterfall:true,nativeActions:true,acceptControls:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const view=r.context.ESPHomeHA.snapshot().waterfall.viewport;r.context.ui.scrollTo(view,430,false);for(let i=0;i<60;i++)r.tick();assert.equal(r.controls.length,0);
+  const scroll=r.context.ESPHomeHA.snapshot().waterfall.scrollY;
+  const rail=r.context.ESPHomeHA.snapshot().brightnessControls.find(rect=>rect.y-scroll>=64&&rect.y-scroll+rect.h<546);assert(rail);
+  const x=(rail.x+rail.w*.6)/1024,y=(rail.y-scroll+rail.h/2)/600;
+  r.touch('down',x,y);assert(r.viewports.get(view).locked);r.touch('move',x,y);assert.equal(r.controls.length,0);
+  r.touch('up',x,y);assert(!r.viewports.get(view).locked);assert.equal(r.controls.length,1);
+  const count=r.controls.length;r.touch('down',x,.98);r.touch('up',x,.98);assert.equal(r.controls.length,count,'clipped rows cannot receive footer gestures');
+});
+
+
+test('waterfall slider distinguishes vertical scrolling, horizontal adjustment and a deliberate tap',()=>{
+  for(const dark of [false,true]){
+    const states=Array.from({length:30},(_,i)=>({entity_id:'light.axis_'+i,state:'on',attributes:{friendly_name:'台灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+    const r=boot(1024,600,{states,waterfall:true,nativeActions:true,acceptControls:true,dark});
+    r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+    const snapshot=r.context.ESPHomeHA.snapshot(),view=snapshot.waterfall.viewport;
+    const rail=snapshot.brightnessControls.find(row=>row.y>=64&&row.y+row.h<546);assert(rail);
+    const x=(rail.x+rail.w*.3)/1024,y=(rail.y+rail.h/2)/600;
+    r.nativeWrites.length=0;r.touch('down',x,y);r.touch('move',x+2/1024,y-3/600);
+    assert(!r.nativeWrites.some(w=>w.method==='text'&&String(w.value).includes('%')),'touch slop does not alter displayed brightness');
+    r.touch('move',x+3/1024,y-18/600);assert(!r.viewports.get(view).locked);
+    r.touch('up',x+3/1024,y-18/600);assert.equal(r.controls.length,0,'vertical scroll never submits a brightness value');
+    r.touch('down',x,y);r.touch('up',x,y-24/600);assert.equal(r.controls.length,0,'a fast vertical release also cancels adjustment');
+    r.touch('down',x,y);r.touch('move',x+30/1024,y+2/600);
+    assert(r.viewports.get(view).locked);assert.equal(r.controls.length,0);
+    assert(r.nativeWrites.some(w=>w.method==='text'&&/\d+% · 已开启/.test(w.value)),'drag retains power status');
+    r.touch('cancel',x+30/1024,y);assert(!r.viewports.get(view).locked);assert.equal(r.controls.length,0);
+    r.touch('down',x,y);r.touch('up',x,y);assert.equal(r.controls.length,1,'tap deliberately selects brightness');
+    assert.equal(r.controls[0].body.brightness_pct,30);
+  }
+});
+
+test('waterfall preserves the scrolled reading position across device details and scene controls stay explicit',()=>{
+  const states=Array.from({length:30},(_,i)=>({entity_id:'light.return_'+i,state:'on',attributes:{friendly_name:'台灯 '+i,brightness:128,supported_color_modes:['brightness']}}));
+  const r=boot(1024,600,{states,waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+  const view=r.context.ESPHomeHA.snapshot().waterfall.viewport;r.context.ui.scrollTo(view,430,false);for(let i=0;i<60;i++)r.tick();
+  const row=r.context.ESPHomeHA.snapshot().waterfall.visibleCards.find(row=>row.y>=64&&row.y+row.h<546);assert(row);
+  assert(r.context.ESPHomeHA.openDevice('http://192.168.1.20:8123',row.entity_id));for(let i=0;i<60;i++)r.tick();assert(r.hidden.get(view));
+  const back=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x===176&&g.y===16&&g.w===32;});assert(back);back.callback();for(let i=0;i<60;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().waterfall.scrollY,430);assert(!r.hidden.get(view));assert.equal(r.controls.length,0);
+  const sceneStates=Array.from({length:30},(_,i)=>({entity_id:'scene.fall_'+i,state:'unknown',attributes:{friendly_name:'场景 '+i}}));
+  const scenes=boot(1024,600,{waterfall:true,sceneSync:true,sceneStates,nativeActions:true,acceptControls:true,services:sceneServices});scenes.context.ESPHomeHA.refresh();for(let i=0;i<80;i++)scenes.tick();chooseSection(scenes,162);
+  assert.equal(scenes.context.ESPHomeHA.snapshot().layoutPages.length,1);assert.equal(scenes.context.ESPHomeHA.snapshot().layoutPages[0].length,30);assert.equal(scenes.controls.length,0);
+  const button=sceneExecuteButton(scenes,'scene.fall_0');assert(button);button.callback();assert.equal(scenes.controls.length,1);
 });

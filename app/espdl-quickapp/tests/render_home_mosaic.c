@@ -4,7 +4,7 @@
 #undef main
 extern void review_grok_fixture(int mode);
 static void mosaic_frames(unsigned count){for(unsigned i=0;i<count;i++){lv_tick_inc(50);glass_grok_test_step_visible();}}
-static void settled_home(void){glass_rebuild();for(unsigned i=0;i<GLASS_HOME_CARD_COUNT;i++){lv_anim_delete(g_glass.home_cards[i],glass_card_offset);lv_obj_set_style_translate_y(g_glass.home_cards[i],0,0);}lv_obj_update_layout(g_desktop.screen);mosaic_frames(30);lv_obj_update_layout(g_desktop.screen);}
+static void settled_home(void){glass_rebuild();for(unsigned i=0;i<GLASS_HOME_CARD_COUNT;i++)for(unsigned j=0;j<GLASS_MOTION_SLOTS;j++)if(g_motion_jobs[j].object==g_glass.home_cards[i])glass_motion_finish(&g_motion_jobs[j],false);glass_motion_idle();lv_obj_update_layout(g_desktop.screen);mosaic_frames(30);lv_obj_update_layout(g_desktop.screen);}
 int main(int argc,char **argv){
   assert(argc==3);review_out=argv[2];FILE *f=fopen(argv[1],"rb");assert(f);fseek(f,0,SEEK_END);size_t size=ftell(f);rewind(f);void *data=malloc(size);assert(data&&fread(data,1,size,f)==size);fclose(f);
   lv_init();lv_display_t *display=lv_display_create(1024,600);lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);lv_display_set_buffers(display,review_fb,NULL,sizeof(review_fb),LV_DISPLAY_RENDER_MODE_FULL);lv_display_set_flush_cb(display,review_flush);

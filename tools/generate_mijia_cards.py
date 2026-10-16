@@ -20,7 +20,7 @@ def main():
     result={'reference':'https://iot.mi.com/v2/new/doc/resources-and-services/design/feature-define/quick-card','types':list(rules),'layouts':len(unique),'variants':catalog}
     (repo/'app/homeassistant/quick-card-catalog.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     source=repo/'app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js';text=source.read_text(encoding='utf-8')
-    block='  /* MI_QUICK_RULES_BEGIN */\n  const quickReferenceRules = '+json.dumps(rules,ensure_ascii=False,separators=(',',':'))+';\n  /* MI_QUICK_RULES_END */'
+    block='  /* MI_QUICK_RULES_BEGIN */\n  const quickReferenceRules = JSON.parse('+json.dumps(json.dumps(rules,ensure_ascii=False,separators=(',',':')),ensure_ascii=False)+');\n  /* MI_QUICK_RULES_END */'
     if '/* MI_QUICK_RULES_BEGIN */' in text:
         text=re.sub(r'  /\* MI_QUICK_RULES_BEGIN \*/.*?  /\* MI_QUICK_RULES_END \*/',lambda m:block,text,flags=re.S)
     else:text=text.replace('  const thumbnailCodes =',block+'\n  const thumbnailCodes =')

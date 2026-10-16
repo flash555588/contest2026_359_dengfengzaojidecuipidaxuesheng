@@ -23,7 +23,7 @@ if '/* HA_DETAIL_DESIGN_BEGIN */' in text:
     text=re.sub(r'/\* HA_DETAIL_DESIGN_BEGIN \*/.*?/\* HA_DETAIL_DESIGN_END \*/\n',lambda _:block,text,flags=re.S)
 else:text=text.replace('  function renderProfileDetail(', '  '+block+'  function renderProfileDetail(',1)
 text,count=re.subn(r'/\* HA_COMMON_PROFILES_BEGIN \*/.*?/\* HA_COMMON_PROFILES_END \*/',
-    lambda _: '/* HA_COMMON_PROFILES_BEGIN */\n  const commonCardProfiles = '+json.dumps(profiles,ensure_ascii=True,separators=(',',':'))+';\n  /* HA_COMMON_PROFILES_END */',text,flags=re.S)
+    lambda _: '/* HA_COMMON_PROFILES_BEGIN */\n  const commonCardProfiles = JSON.parse('+json.dumps(json.dumps(profiles,ensure_ascii=False,separators=(',',':')),ensure_ascii=False)+');\n  /* HA_COMMON_PROFILES_END */',text,flags=re.S)
 assert count==1
 source.write_text(text,encoding='utf-8',newline='\n')
 data=source.read_bytes()

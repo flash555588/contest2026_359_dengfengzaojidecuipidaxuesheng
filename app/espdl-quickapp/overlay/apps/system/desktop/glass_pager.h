@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
+#include "glass_motion_hooks.h"
 #include <lvgl/lvgl.h>
 #include <stdlib.h>
 
-/* Quiet 28 px capsule, 6 px dots, 20 px selection and 40 px touch height.
+/* Quiet 28 px capsule, 6 px dots with a 20 px active pill and 40 px touch height.
  * A sliding window bounds native objects independently of the page count. */
 #define GLASS_PAGER_SLOTS 5
 struct glass_pager;
@@ -73,6 +74,7 @@ static inline void glass_pager_update_window(lv_obj_t *root,unsigned current,
   for(unsigned i=0;i<GLASS_PAGER_SLOTS;i++){
     struct glass_pager_slot *slot=&pager->slots[i];
     if(i>=count){if(slot->hit)lv_obj_add_flag(slot->hit,LV_OBJ_FLAG_HIDDEN);continue;}
+    bool created=!slot->hit;
     if(!slot->hit){
       slot->owner=pager;slot->hit=lv_button_create(root);lv_obj_remove_style_all(slot->hit);
       lv_obj_set_pos(slot->hit,8+i*24,0);lv_obj_set_size(slot->hit,24,40);
@@ -83,9 +85,15 @@ static inline void glass_pager_update_window(lv_obj_t *root,unsigned current,
       lv_obj_set_style_bg_opa(slot->mark,LV_OPA_COVER,0);lv_obj_set_style_radius(slot->mark,3,0);
     }
     slot->page=first+i;bool active=slot->page==current;
-    lv_obj_set_size(slot->mark,active?20:6,6);lv_obj_center(slot->mark);
-    lv_obj_set_style_bg_color(slot->mark,lv_color_hex(active?pager->ink:pager->muted),0);
-    lv_obj_set_style_bg_opa(slot->mark,active?LV_OPA_COVER:LV_OPA_40,0);
+    int width=active?20:6,x=(24-width)/2;
+    if(!desktop_motion_geometry||!desktop_motion_geometry(slot->mark,x,17,width,6,3,!created)){
+      lv_obj_set_pos(slot->mark,x,17);lv_obj_set_size(slot->mark,width,6);
+    }
+    lv_color_t target=active?lv_color_hex(pager->ink):
+      lv_color_mix(lv_color_hex(pager->muted),lv_obj_get_style_bg_color(pager->face,0),LV_OPA_40);
+    if(!desktop_motion_color||!desktop_motion_color(slot->mark,lv_color_to_u32(target),!created))
+      lv_obj_set_style_bg_color(slot->mark,target,0);
+    lv_obj_set_style_bg_opa(slot->mark,LV_OPA_COVER,0);
     lv_obj_remove_flag(slot->hit,LV_OBJ_FLAG_HIDDEN);
   }
   glass_pager_set_enabled(root,enabled);

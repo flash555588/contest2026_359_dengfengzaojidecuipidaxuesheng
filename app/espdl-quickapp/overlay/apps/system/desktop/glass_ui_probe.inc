@@ -314,7 +314,18 @@ static void desktop_ui_probe_service(void)
     }
   else
     {
-      if (!strcmp(command,"ha-status")) {
+      if (!strcmp(command,"render-metrics-reset")) {
+        glass_ui_metrics_reset();desktop_ui_probe_print("UI_RENDER_METRICS_RESET\n");
+      }
+      else if (!strcmp(command,"render-metrics")) {
+        uint64_t now=glass_ui_metrics_now();
+        desktop_ui_probe_print("UI_RENDER_METRICS elapsed_ms=%llu frames=%lu render_avg_us=%llu render_max_us=%lu refreshes=%lu refresh_avg_us=%llu refresh_max_us=%lu widgets=%u\n",
+          (unsigned long long)(now>=g_ui_metrics.since?(now-g_ui_metrics.since)/1000:0),(unsigned long)g_ui_metrics.frames,
+          (unsigned long long)(g_ui_metrics.frames?g_ui_metrics.render_us/g_ui_metrics.frames:0),(unsigned long)g_ui_metrics.render_max_us,
+          (unsigned long)g_ui_metrics.refreshes,(unsigned long long)(g_ui_metrics.refreshes?g_ui_metrics.refresh_us/g_ui_metrics.refreshes:0),
+          (unsigned long)g_ui_metrics.refresh_max_us,qpk_runtime_widget_count());
+      }
+      else if (!strcmp(command,"ha-status")) {
         char *status=malloc(16384);int ret=status?qpk_runtime_ha_status(status,16384):-ENOMEM;
         if(!ret)desktop_ui_probe_print("HA_STATUS %s\n",status);
         else desktop_ui_probe_print("HA_STATUS_ERROR %d\n",ret);
@@ -429,7 +440,7 @@ static int desktop_ui_probe_request(const char *command)
   const char *commands[] = {"weather", "weather-status", "weather-refresh", "home", "settings", "wifi", "bluetooth", "files", "resources",
     "music", "music-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
     "files-new", "light", "dark", "audit", "frame", "frame-free", "wifi-scan", "ble-scan", "dialog",
-    "ha-settings", "ha-address", "ha-status", "toast", "camera-start", "camera-photo", "camera-mode",
+    "ha-settings", "ha-address", "ha-status", "render-metrics", "render-metrics-reset", "toast", "camera-start", "camera-photo", "camera-mode",
     "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",

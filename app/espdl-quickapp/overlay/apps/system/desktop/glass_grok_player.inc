@@ -15,6 +15,7 @@
 #define GROK_ASSET_ROOT "/sdcard/grok"
 #endif
 #define GROK_STATES 42
+#define GROK_POLL_MS 20
 struct grok_entry {uint32_t id,count,offset;};
 struct glass_grok {
   lv_obj_t *root,*image,*notice,*overlay;lv_timer_t *timer;
@@ -24,7 +25,7 @@ struct glass_grok {
   unsigned side,bytes,period,current,epoch,front,next_frame,states,action;
   unsigned job_slot,job_id,job_frame,job_epoch,result_epoch,result_frame;
   uint32_t due,last_tick,turn_id,settled_at,polled_at,retry_at;
-  uint64_t read_us,max_read_us;unsigned displayed,reads,errors;
+  uint64_t read_us,max_read_us;unsigned displayed,reads,errors,seeks,ticks;
   int error;bool thread_started,quit,pending,busy,ready,initialized;
   bool reduced,settled,celebrating,manual,active;
   bool gaze_enabled,black,job_gaze;
@@ -52,37 +53,47 @@ static int grok_open_bank(struct glass_grok *b)
 }
 static void *grok_reader(void *opaque)
 {
-  struct glass_grok *b=opaque;int fd=-1;
+  struct glass_grok *b=opaque;int fd=-1;uint64_t cursor=UINT64_MAX;
   pthread_mutex_lock(&b->lock);
   for(;;){
     while(!b->pending&&!b->quit)pthread_cond_wait(&b->wake,&b->lock);
     if(b->quit)break;
     unsigned id=b->job_id,frame=b->job_frame,epoch=b->job_epoch,slot=b->job_slot;
     bool gaze=b->job_gaze;int gaze_x=b->job_gaze_x,gaze_y=b->job_gaze_y;
-    b->pending=false;pthread_mutex_unlock(&b->lock);uint64_t began=grok_micros();int ret=0;
+    b->pending=false;pthread_mutex_unlock(&b->lock);uint64_t began=grok_micros();int ret=0;bool sought=false;
     if(fd<0)fd=grok_open_bank(b);
     if(fd<0)ret=fd;
     else {
       unsigned i=0;while(i<b->states&&b->entries[i].id!=id)i++;
       if(i==b->states)ret=-EINVAL;
       else {
-        frame%=b->entries[i].count;off_t offset=(off_t)b->entries[i].offset+(off_t)frame*b->bytes;
-        if(lseek(fd,offset,SEEK_SET)!=offset)ret=-errno;
-        else ret=grok_read_all(fd,b->pixels[slot],b->bytes);
+        frame%=b->entries[i].count;uint64_t position=(uint64_t)b->entries[i].offset+(uint64_t)frame*b->bytes;
+        off_t offset=(off_t)position;
+        /* A successful full read already positions this private descriptor at
+         * the next frame. Seek only on a state change, loop or reopen. */
+        if(offset<0||(uint64_t)offset!=position)ret=-EOVERFLOW;
+        else if(cursor!=position){sought=true;off_t at=lseek(fd,offset,SEEK_SET);if(at!=offset)ret=at<0?-errno:-EIO;}
+        if(!ret){ret=grok_read_all(fd,b->pixels[slot],b->bytes);if(!ret)cursor=position+b->bytes;}
       }
     }
     if(!ret&&gaze)grok_gaze_frame(b->pixels[slot],b->black,id,gaze_x,gaze_y,b->gaze_scratch);
-    if(ret&&fd>=0){close(fd);fd=-1;}
+    if(ret){cursor=UINT64_MAX;if(fd>=0){close(fd);fd=-1;}}
     uint64_t duration=grok_micros()-began;pthread_mutex_lock(&b->lock);
     b->read_us+=duration;if(duration>b->max_read_us)b->max_read_us=duration;
-    b->reads++;if(ret)b->errors++;b->error=ret;b->result_epoch=epoch;b->result_frame=frame;
+    b->reads++;if(sought)b->seeks++;if(ret)b->errors++;b->error=ret;b->result_epoch=epoch;b->result_frame=frame;
     b->ready=true;b->busy=false;
   }
   pthread_mutex_unlock(&b->lock);if(fd>=0)close(fd);return NULL;
 }
+/* Input invalidates a prefetched frame's deadline on the UI thread. Restore
+ * the original polling bound without letting the reader call LVGL. */
+static void grok_wake(struct glass_grok *b)
+{
+  if(b->timer)lv_timer_set_period(b->timer,GROK_POLL_MS);
+}
 static void grok_select_id(struct glass_grok *b,unsigned id)
 {
-  id=grok_normalize(id);if(id!=b->current||b->action){b->current=id;b->action=0;b->epoch++;b->next_frame=0;b->due=lv_tick_get();b->retry_at=0;}
+  id=grok_normalize(id);if(id!=b->current||b->action){b->current=id;b->action=0;b->epoch++;b->next_frame=0;b->due=lv_tick_get();b->retry_at=0;grok_wake(b);}
 }
 static void grok_poll_state(struct glass_grok *b,uint32_t now)
 {
@@ -99,6 +110,7 @@ static void grok_poll_state(struct glass_grok *b,uint32_t now)
 static void grok_tick(lv_timer_t *timer)
 {
   struct glass_grok *b=lv_timer_get_user_data(timer);uint32_t now=lv_tick_get();
+  b->ticks++;grok_wake(b);
   if(!b->active||!lv_obj_is_visible(b->root)||(b->overlay&&lv_obj_is_visible(b->overlay)))return;
   if(now-b->last_tick>500)b->due=now;b->last_tick=now;grok_poll_state(b,now);
   pthread_mutex_lock(&b->lock);
@@ -121,6 +133,15 @@ static void grok_tick(lv_timer_t *timer)
     b->job_slot=1-b->front;b->job_id=b->action?b->action:b->current;b->job_frame=b->reduced?0:b->next_frame;b->job_epoch=b->epoch;
     b->job_gaze=b->gaze_enabled;b->job_gaze_x=b->gaze_x;b->job_gaze_y=b->gaze_y;
     b->pending=b->busy=true;pthread_cond_signal(&b->wake);
+  }
+  /* Once a frame is ready, polling cannot make it display sooner. Sleep to
+   * its deadline on the original 20 ms grid, preserving chat polling cadence.
+   * An in-flight read, stale epoch, hidden view or error keeps fast polling. */
+  if(b->ready&&!b->error&&b->result_epoch==b->epoch&&(int32_t)(b->due-now)>0){
+    uint32_t wait=b->due-now;
+    if(!b->manual){uint32_t elapsed=now-b->polled_at;uint32_t poll=elapsed<250?250-elapsed:GROK_POLL_MS;if(wait>poll)wait=poll;}
+    wait=((wait+GROK_POLL_MS-1)/GROK_POLL_MS)*GROK_POLL_MS;
+    lv_timer_set_period(timer,wait);
   }
   pthread_mutex_unlock(&b->lock);
 }
@@ -159,7 +180,7 @@ static struct glass_grok *grok_create(lv_obj_t *parent,int width,unsigned style,
 #endif
   int ret=pthread_create(&b->worker,&attr,grok_reader,b);pthread_attr_destroy(&attr);
   if(ret){lv_obj_delete(b->root);return NULL;}b->thread_started=true;
-  b->timer=lv_timer_create(grok_tick,20,b);if(!b->timer){lv_obj_delete(b->root);return NULL;}
+  b->timer=lv_timer_create(grok_tick,GROK_POLL_MS,b);if(!b->timer){lv_obj_delete(b->root);return NULL;}
   for(unsigned i=0;i<8;i++)if(!instances[i]){instances[i]=b;break;}return b;
 }
 struct glass_grok *glass_grok_create(lv_obj_t *p,int w,glass_grok_font_t f){return grok_create(p,w,4,f);}
@@ -192,21 +213,21 @@ bool glass_grok_gaze(struct glass_grok *b,int x,int y)
   if(!b->gaze_enabled||x*8/1000!=b->gaze_x*8/1000||y*6/1000!=b->gaze_y*6/1000){
     b->gaze_x=x;b->gaze_y=y;b->gaze_enabled=true;b->epoch++;
     if(b->reduced)b->next_frame=0; /* Keep expression animation progressing. */
-    b->due=lv_tick_get();
+    b->due=lv_tick_get();grok_wake(b);
   }
   return true;
 }
-void glass_grok_action(struct glass_grok *b,unsigned action){if(b&&b->states==42&&(action==0||(action>=42&&action<=51))&&action!=b->action){b->action=action;b->epoch++;b->next_frame=0;b->due=lv_tick_get();}}
-void glass_grok_set_active(struct glass_grok *b,bool active){if(b)b->active=active;}
-void glass_grok_follow_chat(struct glass_grok *b,bool follow){if(b){b->manual=!follow;b->polled_at=0;}}
-void glass_grok_set_reduced_motion(struct glass_grok *b,bool reduced){if(b)b->reduced=reduced;}
-void glass_grok_set_obscured_by(struct glass_grok *b,lv_obj_t *o){if(b)b->overlay=o;}
+void glass_grok_action(struct glass_grok *b,unsigned action){if(b&&b->states==42&&(action==0||(action>=42&&action<=51))&&action!=b->action){b->action=action;b->epoch++;b->next_frame=0;b->due=lv_tick_get();grok_wake(b);}}
+void glass_grok_set_active(struct glass_grok *b,bool active){if(b&&b->active!=active){b->active=active;grok_wake(b);}}
+void glass_grok_follow_chat(struct glass_grok *b,bool follow){if(b){b->manual=!follow;b->polled_at=0;grok_wake(b);}}
+void glass_grok_set_reduced_motion(struct glass_grok *b,bool reduced){if(b&&b->reduced!=reduced){b->reduced=reduced;grok_wake(b);}}
+void glass_grok_set_obscured_by(struct glass_grok *b,lv_obj_t *o){if(b){b->overlay=o;grok_wake(b);}}
 unsigned glass_grok_current(const struct glass_grok *b){return b?b->current:2;}
 bool glass_grok_ready(const struct glass_grok *b){return b&&b->initialized;}
 void glass_grok_debug_status(void)
 {
   for(unsigned i=0;i<8;i++)if(instances[i]){struct glass_grok *b=instances[i];pthread_mutex_lock(&b->lock);
-    printf("grok-sd %s id=%02u frames=%u reads=%u mean_us=%llu max_us=%llu errors=%u error=%d buffer=%u ready=%d visible=%d\n",b->path,b->current,b->displayed,b->reads,(unsigned long long)(b->reads?b->read_us/b->reads:0),(unsigned long long)b->max_read_us,b->errors,b->error,b->bytes*2,b->initialized,lv_obj_is_visible(b->root)&&!(b->overlay&&lv_obj_is_visible(b->overlay)));pthread_mutex_unlock(&b->lock);}
+    printf("grok-sd %s id=%02u frames=%u reads=%u mean_us=%llu max_us=%llu errors=%u error=%d buffer=%u ready=%d visible=%d seeks=%u ticks=%u\n",b->path,b->current,b->displayed,b->reads,(unsigned long long)(b->reads?b->read_us/b->reads:0),(unsigned long long)b->max_read_us,b->errors,b->error,b->bytes*2,b->initialized,lv_obj_is_visible(b->root)&&!(b->overlay&&lv_obj_is_visible(b->overlay)),b->seeks,b->ticks);pthread_mutex_unlock(&b->lock);}
 }
 #ifdef GROK_HOST_TEST
 void glass_grok_test_step(struct glass_grok *b){if(b)grok_tick(b->timer);}

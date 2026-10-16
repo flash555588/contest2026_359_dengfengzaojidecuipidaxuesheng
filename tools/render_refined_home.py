@@ -42,7 +42,7 @@ def main():
         ('static lv_obj_t *glass_box(', 'static lv_obj_t *glass_number('),
         ('static struct glass_display_s', 'static bool g_preferences_save_failed;'),
         ('static void glass_update(lv_timer_t *timer)', 'static void glass_theme_toggle('),
-        ('static void glass_fade(', 'static void glass_homeassistant_enter(')]:
+        ('static void glass_fade(', '#include "glass_home_ui.inc"')]:
         first=source.index(start);last=source.index(end,first);helpers.append(source[first:last])
     (out/'production_home_helpers.inc').write_text('\n'.join(helpers))
     # Full LV_SYMBOL coverage plus semantically named additions.

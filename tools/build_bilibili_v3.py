@@ -7,6 +7,20 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import re
+
+def storage_layout(config,requested='preserve'):
+    layouts={'12m-4m':(0xc00000,0x400000),'14m-2m':(0xe00000,0x200000)}
+    if requested!='preserve':
+        if requested not in layouts:raise ValueError('Unknown storage layout')
+        return layouts[requested]
+    values=[]
+    for key in ['OFFSET','SIZE']:
+        match=re.search(r'^CONFIG_ESPRESSIF_STORAGE_MTD_'+key+r'=(\S+)$',config,re.M)
+        if not match:raise ValueError('Missing prepared storage '+key.lower())
+        values.append(int(match.group(1),0))
+    if tuple(values) not in layouts.values():raise ValueError('Unsupported prepared storage layout; inspect the board before changing it')
+    return tuple(values)
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -16,6 +30,7 @@ def main():
     p.add_argument('--archive',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--jobs',type=int,default=4)
+    p.add_argument('--storage-layout',choices=['preserve','12m-4m','14m-2m'],default='preserve',help='Preserve the prepared data partition by default; explicit layouts do not migrate existing board data')
     p.add_argument('--l2-kb',type=int,choices=[256,512],default=256,help='P4 L2 cache experiment; 512 KiB uses 128-byte lines')
     p.add_argument('--speech-runtime',type=Path,help='Prepared, verified speech runtime directory (SD models, no flash fallback)')
     p.add_argument('--source-revision',help='Explicit 40-hex source revision for Windows-mounted Git worktrees')
@@ -67,9 +82,11 @@ def main():
     run(['../tools/mkkconfig.sh','-m','System Libraries and NSH Add-Ons','-o','Kconfig'],cwd=root/'apps/system')
     import re
     cfg=root/'nuttx/.config';s=cfg.read_text() if (root/'bilibili-clean.txt').exists() else (base/'nuttx/.config').read_text()
+    try:data_offset,data_size=storage_layout(s,a.storage_layout)
+    except ValueError as error:p.error(str(error))
     # Live FLV needs more than the baseline's 3 KiB socket window. Keep the
     # pool bounded (48 KiB payload) and leave internal RAM for DMA/threads.
-    for name,value in [('ESPRESSIF_STORAGE_MTD_OFFSET','0xe00000'),('ESPRESSIF_STORAGE_MTD_SIZE','0x200000'),('LIBM','y'),('LIBM_TOOLCHAIN','n'),('LIBM_NONE','n'),('NET_BROADCAST','y'),('SYSTEM_BILIBILI_LIVE','y'),('PTHREAD_MUTEX_TYPES','y'),('NSH_DISABLE_DATE','n'),
+    for name,value in [('ESPRESSIF_STORAGE_MTD_OFFSET',hex(data_offset)),('ESPRESSIF_STORAGE_MTD_SIZE',hex(data_size)),('LIBM','y'),('LIBM_TOOLCHAIN','n'),('LIBM_NONE','n'),('NET_BROADCAST','y'),('SYSTEM_BILIBILI_LIVE','y'),('PTHREAD_MUTEX_TYPES','y'),('NSH_DISABLE_DATE','n'),
                        ('NET_RECV_BUFSIZE','32768'),('NET_MAX_RECV_BUFSIZE','32768'),('NSH_NETINIT','n'),
                        ('IOB_NBUFFERS','96'),('IOB_BUFSIZE','512'),('RR_INTERVAL','20'),('ESP32P4_PPA','y'),
                        ('ESPRESSIF_CACHE_L2_CACHE_128KB','n'),
@@ -95,7 +112,7 @@ def main():
     run(['make','olddefconfig',cross],cwd=root/'nuttx')
     config=cfg.read_text()
     for value in ['CONFIG_SYSTEM_C6_DESKTOP=y','CONFIG_SYSTEM_BILIBILI_LIVE=y','CONFIG_ARCH_FPU=y',
-                  'CONFIG_ESPRESSIF_STORAGE_MTD_OFFSET=0xe00000','CONFIG_ESPRESSIF_STORAGE_MTD_SIZE=0x200000',
+                  f'CONFIG_ESPRESSIF_STORAGE_MTD_OFFSET={hex(data_offset)}',f'CONFIG_ESPRESSIF_STORAGE_MTD_SIZE={hex(data_size)}',
                   f'CONFIG_ESPRESSIF_CACHE_L2_CACHE_SIZE={hex(a.l2_kb*1024)}',
                   f'CONFIG_ESPRESSIF_CACHE_L2_CACHE_LINE_SIZE={64 if a.l2_kb==256 else 128}']:
         if value not in config:raise RuntimeError('Unexpected v3 configuration: '+value)
@@ -105,7 +122,7 @@ def main():
         run(['make','clean',cross],cwd=root/'nuttx');clean_stamp.write_text(config_hash+'\n')
     run(['make','context',cross,f'ESPCLAW_TLS_CFLAGS={includes}'],cwd=root/'nuttx')
     run(['make',f'-j{a.jobs}',cross,f'ESPCLAW_TLS_CFLAGS={includes}','EXTRA_LIBS='+' '.join(map(str,libs))],cwd=root/'nuttx')
-    program_limit=0xe00000
+    program_limit=data_offset
     if 0x2000+(root/'nuttx/nuttx.bin').stat().st_size>program_limit:raise RuntimeError('Firmware overlaps reserved storage')
     out.mkdir(parents=True,exist_ok=True)
     for name,target in [('nuttx.bin','nuttx.bin'),('nuttx','nuttx.elf'),('.config','resolved.config')]:shutil.copy2(root/'nuttx'/name,out/target)
@@ -121,7 +138,7 @@ def main():
               'baseline':str(base),'baseline_config_sha256':sha(base/'nuttx/.config'),
               'workspace':str(root),'tls':'existing glass_https / mbedTLS',
               'compiler':subprocess.check_output([str(tc/'riscv32-esp-elf-gcc'),'--version'],text=True).splitlines()[0],
-              'flash_offset':'0x2000','program_limit':hex(program_limit),'vision_models_sd_only':True,'data_offset':'0xe00000','data_size':'0x200000','flash_layout':'14m-firmware-2m-data','board_tested':False,'l2_cache_kb':a.l2_kb,
+              'flash_offset':'0x2000','program_limit':hex(program_limit),'vision_models_sd_only':True,'data_offset':hex(data_offset),'data_size':hex(data_size),'flash_layout':f'{data_offset//0x100000}m-firmware-{data_size//0x100000}m-data','board_tested':False,'l2_cache_kb':a.l2_kb,
               'sha256':{name:sha(out/name) for name in ['nuttx.bin','nuttx.elf','resolved.config']},
               'reused_libraries':{str(lib):sha(Path(lib)) for lib in libs if Path(lib).is_file()},
               'source_sha256':{str(f.relative_to(repo)):sha(f) for folder in [repo/'app/bilibili_live',overlay]
