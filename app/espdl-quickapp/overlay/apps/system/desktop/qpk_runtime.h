@@ -10,6 +10,10 @@
 #include <stddef.h>
 #include <lvgl/lvgl.h>
 
+/* Optional trusted native presentation hook. Standalone runtime hosts can omit
+ * it; no JavaScript capability, callback ownership or pointer bubbling changes. */
+#include "glass_motion_hooks.h"
+
 typedef const lv_font_t *(*qpk_font_cb_t)(int size);
 typedef void (*qpk_message_cb_t)(const char *message);
 /* Reported when a JavaScript entry runs past the response budget without

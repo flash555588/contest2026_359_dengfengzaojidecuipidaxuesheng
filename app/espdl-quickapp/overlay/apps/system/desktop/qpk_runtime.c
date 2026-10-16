@@ -45,6 +45,7 @@
 #include "hass_qjs.h"
 #include "hass_service.h"
 #include "hass_ui_auth.h"
+#include "qpk_compile_cache.h"
 #endif
 #include "qpk_pet.h"
 #include "glass_dashboard.h"
@@ -742,6 +743,7 @@ static JSValue qpk_call_args(JSValueConst function, unsigned int budget_ms,
   return result;
 }
 
+static void qpk_viewport_cleanup(lv_obj_t *,void *);
 static void qpk_widget_deleted(lv_event_t *event)
 {
   uintptr_t handle = (uintptr_t)lv_event_get_user_data(event);
@@ -750,6 +752,7 @@ static void qpk_widget_deleted(lv_event_t *event)
     {
       g_qpk.widgets[handle - 1] = NULL;
       g_qpk.widget_types[handle - 1] = 0;
+      qpk_viewport_cleanup(lv_event_get_target(event),g_qpk.widget_extra[handle-1]);
       free(g_qpk.widget_extra[handle - 1]);
       g_qpk.widget_extra[handle - 1] = NULL;
       if ((int)handle - 1 < g_qpk.widget_hint) g_qpk.widget_hint = handle - 1;
@@ -1002,6 +1005,8 @@ static void qpk_event_deleted(lv_event_t *event)
     }
 }
 
+#include "qpk_viewport.inc"
+
 static void qpk_event_clicked(lv_event_t *event)
 {
   struct qpk_event_s *binding = lv_event_get_user_data(event);
@@ -1093,7 +1098,9 @@ int qpk_runtime_ha_status(char *out, size_t capacity)
     "deviceCount:s.deviceCards.filter(c=>c.device_id).length,cardCount:s.deviceCards.length,"
     "roomPage:s.roomPage,selectedId:s.selectedId,detailOpen:s.detailOpen,"
     "detailAdvanced:s.detailAdvanced,layoutEditing:s.layoutEditing,"
-    "layout:s.layoutPages[s.roomPage],sliders:s.brightnessControls,parameters:s.parameterControls,"
+    "layout:s.waterfall?s.waterfall.visibleCards:s.layoutPages[s.roomPage],"
+    "waterfall:s.waterfall?{scrollY:s.waterfall.scrollY,contentHeight:s.waterfall.contentHeight,poolSlots:s.waterfall.poolSlots,columns:s.waterfall.columns}:null,"
+    "discovery:s.discovery,detailExpanded:s.detailExpanded,sliders:s.brightnessControls,parameters:s.parameterControls,"
     "functions:s.functionControls,controlQueue:s.controlQueue.length,cards:s.deviceCards.slice(0,64).map(c=>"
     "({id:c.card_id,device:c.device_id,entity:c.entity_id,name:c.name,"
     "members:c.members.length,size:c.cardSize,type:c.quickReference.type,variant:c.quickReference.variant,"
@@ -1442,7 +1449,9 @@ static JSValue js_ui_set_color(JSContext *context, JSValueConst this_value,
     }
   else
     {
-      lv_obj_set_style_bg_color(widget, lv_color_hex(color), 0);
+      bool animate=argc>2&&JS_IsBool(argv[2])&&JS_ToBool(context,argv[2]);
+      if(!desktop_motion_color||!desktop_motion_color(widget,color,animate))
+        lv_obj_set_style_bg_color(widget, lv_color_hex(color), 0);
       if (g_qpk.widget_types[handle - 1] == QPK_WIDGET_BUTTON)
         {
           lv_obj_t *label = lv_obj_get_child(widget, 0);
@@ -1608,7 +1617,14 @@ static JSValue js_ui_set_pos(JSContext *context, JSValueConst this_value,
       (argc > 2 && JS_ToInt32(context, &y, argv[2]) < 0)) return JS_EXCEPTION;
   if (!qpk_widget_current(handle, generation))
     return JS_ThrowRangeError(context, "widget changed during position conversion");
-  lv_obj_set_pos(g_qpk.widgets[handle - 1], x, y);
+  lv_obj_t *obj=g_qpk.widgets[handle-1];
+  int vx,vy;qpk_viewport_origin(lv_obj_get_parent(obj),&vx,&vy);
+  if((int64_t)x-vx<INT32_MIN||(int64_t)x-vx>INT32_MAX||(int64_t)y-vy<INT32_MIN||(int64_t)y-vy>INT32_MAX)
+    return JS_ThrowRangeError(context,"position exceeds viewport coordinates");
+  x-=vx;y-=vy;
+  bool animate=argc>3&&JS_IsBool(argv[3])&&JS_ToBool(context,argv[3]);
+  if(!desktop_motion_geometry||!desktop_motion_geometry(obj,x,y,lv_obj_get_width(obj),lv_obj_get_height(obj),1,animate))
+    lv_obj_set_pos(obj,x,y);
   return JS_UNDEFINED;
 }
 
@@ -1631,12 +1647,85 @@ static JSValue js_ui_set_size(JSContext *context, JSValueConst this_value,
       (argc > 2 && JS_ToInt32(context, &height, argv[2]) < 0)) return JS_EXCEPTION;
   if (!qpk_widget_current(handle, generation))
     return JS_ThrowRangeError(context, "widget changed during size conversion");
+  if(qpk_viewport_object(g_qpk.widgets[handle-1])&&(width<1||height<1||width>4096||height>4096))
+    return JS_ThrowRangeError(context,"invalid viewport size");
   int wheel=qpk_color_wheel_resize(g_qpk.widgets[handle - 1],width,height);
   if(wheel<0)return JS_ThrowRangeError(context,"invalid color wheel size");
-  if(!wheel)lv_obj_set_size(g_qpk.widgets[handle - 1], width, height);
+  if(!wheel){
+    lv_obj_t *obj=g_qpk.widgets[handle-1];
+    bool animate=argc>3&&JS_IsBool(argv[3])&&JS_ToBool(context,argv[3]);
+    if(!desktop_motion_geometry||!desktop_motion_geometry(obj,lv_obj_get_x(obj),lv_obj_get_y(obj),width,height,2,animate))
+      lv_obj_set_size(obj,width,height);
+  }
   return JS_UNDEFINED;
 }
 
+/* Bounded presentation-only APIs. Parse every JS value before using pointers;
+ * getters can remove widgets or reuse handles while arguments are converted. */
+static JSValue js_ui_present(JSContext *context,JSValueConst this_value,int argc,JSValueConst *argv)
+{
+  (void)this_value;
+  if(argc<2)return JS_ThrowTypeError(context,"present expects an array");
+  int array=JS_IsArray(context,argv[0]);if(array<0)return JS_EXCEPTION;
+  if(!array)return JS_ThrowTypeError(context,"present expects an array");
+  int32_t offset=0;uint32_t count=0;
+  if(JS_ToInt32(context,&offset,argv[1])<0)return JS_EXCEPTION;
+  JSValue length=JS_GetPropertyStr(context,argv[0],"length");
+  if(JS_IsException(length))return JS_EXCEPTION;
+  int rc=JS_ToUint32(context,&count,length);JS_FreeValue(context,length);if(rc<0)return JS_EXCEPTION;
+  if(count>128||offset < -24||offset>24)return JS_ThrowRangeError(context,"presentation exceeds limits");
+  int32_t handles[128];uint64_t generations[128];lv_obj_t *objects[128];
+  for(unsigned i=0;i<count;i++){
+    JSValue value=JS_GetPropertyUint32(context,argv[0],i);if(JS_IsException(value))return JS_EXCEPTION;
+    rc=JS_ToInt32(context,&handles[i],value);JS_FreeValue(context,value);if(rc<0)return JS_EXCEPTION;
+    int h=handles[i];if(h<=0||h>g_qpk.widget_capacity||!g_qpk.widgets[h-1])return JS_ThrowRangeError(context,"invalid presentation handle");
+    generations[i]=g_qpk.widget_generations[h-1];
+  }
+  for(unsigned i=0;i<count;i++){
+    if(!qpk_widget_current(handles[i],generations[i]))return JS_ThrowRangeError(context,"widget changed during presentation conversion");
+    objects[i]=g_qpk.widgets[handles[i]-1];
+  }
+  bool horizontal=argc>2&&JS_IsBool(argv[2])&&JS_ToBool(context,argv[2]);
+  if(desktop_motion_present)desktop_motion_present(objects,count,offset,horizontal);
+  return JS_UNDEFINED;
+}
+static JSValue js_ui_range(JSContext *context,JSValueConst this_value,int argc,JSValueConst *argv)
+{
+  (void)this_value;
+  int handle=qpk_arg_int(context,argc,argv,0,0);
+  if(handle<=0||handle>g_qpk.widget_capacity||!g_qpk.widgets[handle-1])return JS_ThrowRangeError(context,"invalid range handle");
+  uint64_t generation=g_qpk.widget_generations[handle-1];
+  int32_t stop=0;uint32_t accent=0,background=0;
+  int32_t thumb_handle=0;uint64_t thumb_generation=0;
+  if(argc<4)return JS_ThrowTypeError(context,"range expects stop and colors");
+  if(argc>5){
+    if(!JS_IsNumber(argv[5]))return JS_ThrowTypeError(context,"range thumb handle must be numeric");
+    if(JS_ToInt32(context,&thumb_handle,argv[5])<0)return JS_EXCEPTION;
+    if(thumb_handle<=0||thumb_handle>g_qpk.widget_capacity||!g_qpk.widgets[thumb_handle-1]||thumb_handle==handle||
+       g_qpk.widget_types[thumb_handle-1]!=QPK_WIDGET_PANEL||
+       lv_obj_get_parent(g_qpk.widgets[thumb_handle-1])!=lv_obj_get_parent(g_qpk.widgets[handle-1]))
+      return JS_ThrowRangeError(context,"range thumb requires a sibling decorative panel");
+    thumb_generation=g_qpk.widget_generations[thumb_handle-1];
+  }
+  if(JS_ToInt32(context,&stop,argv[1])<0||JS_ToUint32(context,&accent,argv[2])<0||JS_ToUint32(context,&background,argv[3])<0)return JS_EXCEPTION;
+  if(!qpk_widget_current(handle,generation))return JS_ThrowRangeError(context,"widget changed during range conversion");
+  if(thumb_handle&&(!qpk_widget_current(thumb_handle,thumb_generation)||
+     lv_obj_get_parent(g_qpk.widgets[thumb_handle-1])!=lv_obj_get_parent(g_qpk.widgets[handle-1])))
+    return JS_ThrowRangeError(context,"range thumb changed during conversion");
+  if(stop<0||stop>255||accent>0xffffff||background>0xffffff)return JS_ThrowRangeError(context,"invalid range style");
+  if(g_qpk.widget_types[handle-1]!=QPK_WIDGET_PANEL&&g_qpk.widget_types[handle-1]!=QPK_WIDGET_RECT)return JS_ThrowTypeError(context,"range requires a decorative panel");
+  bool animate=argc>4&&JS_IsBool(argv[4])&&JS_ToBool(context,argv[4]);
+  lv_obj_t *obj=g_qpk.widgets[handle-1];lv_obj_set_style_bg_grad_dir(obj,LV_GRAD_DIR_HOR,0);
+  if(thumb_handle&&desktop_motion_range_linked){
+    desktop_motion_range_linked(obj,g_qpk.widgets[thumb_handle-1],stop,accent,background,animate);return JS_UNDEFINED;
+  }
+  if(!desktop_motion_range||!desktop_motion_range(obj,stop,accent,background,animate)){
+    lv_obj_set_style_bg_color(obj,lv_color_hex(stop?accent:background),0);
+    lv_obj_set_style_bg_grad_color(obj,lv_color_hex(stop==255?accent:background),0);
+    lv_obj_set_style_bg_main_stop(obj,stop,0);lv_obj_set_style_bg_grad_stop(obj,stop,0);
+  }
+  return JS_UNDEFINED;
+}
 static JSValue js_ui_set_opacity(JSContext *context,
                                  JSValueConst this_value,
                                  int argc, JSValueConst *argv)
@@ -1821,6 +1910,7 @@ static lv_obj_t *qpk_input_button(lv_obj_t *parent, const char *text,
   lv_obj_set_style_transform_width(button, 0, LV_STATE_PRESSED);
   lv_obj_set_style_transform_height(button, 0, LV_STATE_PRESSED);
   lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, NULL);
+  if(desktop_motion_button)desktop_motion_button(button);
   label = lv_label_create(button);
   if (label == NULL)
     {
@@ -2240,6 +2330,7 @@ static JSValue js_ui_button(JSContext *context, JSValueConst this_value,
   lv_obj_set_style_radius(button, 8, 0);
   lv_obj_set_style_transform_width(button, 0, LV_STATE_PRESSED);
   lv_obj_set_style_transform_height(button, 0, LV_STATE_PRESSED);
+  if(desktop_motion_button)desktop_motion_button(button);
   label = lv_label_create(button);
   if (label == NULL)
     {
@@ -3819,6 +3910,15 @@ static void qpk_install_api(JSContext *context)
   JS_SetPropertyStr(context, object, "onSwipe",
                     JS_NewCFunction(context, js_ui_on_swipe,
                                     "onSwipe", 1));
+  JS_SetPropertyStr(context,object,"viewport",JS_NewCFunction(context,js_ui_viewport,"viewport",5));
+  JS_SetPropertyStr(context,object,"attach",JS_NewCFunction(context,js_ui_attach,"attach",2));
+  JS_SetPropertyStr(context,object,"scrollInfo",JS_NewCFunction(context,js_ui_scroll_info,"scrollInfo",1));
+  JS_SetPropertyStr(context,object,"scrollTo",JS_NewCFunction(context,js_ui_scroll_to,"scrollTo",3));
+  JS_SetPropertyStr(context,object,"scrollExtent",JS_NewCFunction(context,js_ui_scroll_extent,"scrollExtent",2));
+  JS_SetPropertyStr(context,object,"scrollLock",JS_NewCFunction(context,js_ui_scroll_lock,"scrollLock",2));
+  JS_SetPropertyStr(context,object,"present",JS_NewCFunction(context,js_ui_present,"present",2));
+  JS_SetPropertyStr(context,object,"range",JS_NewCFunction(context,js_ui_range,"range",5));
+  if(desktop_motion_range_linked)JS_SetPropertyStr(context,object,"rangeLinked",JS_NewCFunction(context,js_ui_range,"rangeLinked",6));
   JS_SetPropertyStr(context, object, "setPos",
                     JS_NewCFunction(context, js_ui_set_pos, "setPos", 3));
   JS_SetPropertyStr(context, object, "setSize",
@@ -4073,9 +4173,19 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   const uint64_t startup_began = qpk_now_ms();
   g_qpk.hang_fired = false;
   uint64_t previous = qpk_deadline_begin(QPK_COMPILE_BUDGET);
+  bool compile_cache_hit = false;
+#ifdef CONFIG_SYSTEM_HASS
+  result = qpk_compile_cached(g_qpk.context, source, source_len,
+                              filename ? filename : "app.js",
+                              g_qpk.ha_config_access &&
+                              g_qpk.hass_grants ==
+                                (HASS_READ | HASS_CONTROL | HASS_CONFIGURE),
+                              &compile_cache_hit);
+#else
   result = JS_Eval(g_qpk.context, source, source_len,
                    filename ? filename : "app.js",
                    JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+#endif
   qpk_deadline_end(previous);
   const uint64_t compiled_at = qpk_now_ms();
   if (JS_IsException(result))
@@ -4101,10 +4211,11 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   int jobs_result = qpk_run_jobs();
   qpk_deadline_end(previous);
   if (jobs_result < 0) { qpk_runtime_stop(); return -ENOEXEC; }
-  printf("[qpk] started %s (%s %s) with QuickJS compile_ms=%lu execute_ms=%lu\n",
+  printf("[qpk] started %s (%s %s) with QuickJS compile_ms=%lu execute_ms=%lu cache=%s\n",
          g_qpk.name, g_qpk.package, g_qpk.version,
          (unsigned long)(compiled_at - startup_began),
-         (unsigned long)(qpk_now_ms() - compiled_at));
+         (unsigned long)(qpk_now_ms() - compiled_at),
+         compile_cache_hit ? "hit" : "miss");
   return 0;
 }
 

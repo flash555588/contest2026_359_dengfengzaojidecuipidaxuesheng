@@ -74,14 +74,22 @@ double qpk_review_number(const char *source)
 }
 void qpk_review_root_area(lv_area_t *area){lv_obj_update_layout(g_qpk.root);lv_obj_get_coords(g_qpk.root,area);}
 /* Dispatch through the real LVGL button callback, in app-root coordinates. */
+lv_obj_t *qpk_review_widget(int handle)
+{return handle>0&&handle<=g_qpk.widget_capacity?g_qpk.widgets[handle-1]:NULL;}
 int qpk_review_click_at(int x,int y)
 {
   if(!g_qpk.root)return -ENOENT;
   lv_obj_update_layout(g_qpk.root);
   lv_area_t root;lv_obj_get_coords(g_qpk.root,&root);
   for(struct qpk_event_s *b=g_qpk.events;b;b=b->next){
-    if(!b->used||!b->owner||!lv_obj_is_visible(b->owner))continue;
+    if(!b->used||!b->owner||!lv_obj_is_visible(b->owner)||!lv_obj_check_type(b->owner,&lv_button_class))continue;
     lv_area_t a;lv_obj_get_coords(b->owner,&a);
+    bool clipped=false;
+    for(lv_obj_t *parent=lv_obj_get_parent(b->owner);parent;parent=lv_obj_get_parent(parent))if(qpk_viewport_object(parent)){
+      lv_area_t clip;lv_obj_get_coords(parent,&clip);
+      if(x+root.x1<clip.x1||x+root.x1>clip.x2||y+root.y1<clip.y1||y+root.y1>clip.y2)clipped=true;
+    }
+    if(clipped)continue;
     if(x+root.x1>=a.x1&&x+root.x1<=a.x2&&y+root.y1>=a.y1&&y+root.y1<=a.y2){
       lv_obj_send_event(b->owner,LV_EVENT_CLICKED,NULL);return 0;
     }

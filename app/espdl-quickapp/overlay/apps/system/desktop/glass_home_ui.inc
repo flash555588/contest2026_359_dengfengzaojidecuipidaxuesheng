@@ -4,6 +4,7 @@
  * Shared helpers and application lifetimes remain owned by glass_ui.inc.
  */
 #include "glass_icons.h"
+#include "glass_motion.h"
 #include "glass_home_gradient.inc"
 
 static lv_font_t *g_home_font12;
@@ -133,7 +134,7 @@ static lv_obj_t *home_button(lv_obj_t *parent, const char *text,
   lv_obj_set_style_bg_color(button, lv_color_hex(fill), 0);
   lv_obj_set_style_bg_opa(button, LV_OPA_COVER, 0);
   lv_obj_set_style_bg_opa(button, 210, LV_STATE_PRESSED);
-  lv_obj_set_style_translate_y(button, 1, LV_STATE_PRESSED);
+  glass_motion_button(button);
   lv_obj_set_style_bg_opa(button, LV_OPA_40, LV_STATE_DISABLED);
   lv_obj_remove_flag(button, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_EVENT_BUBBLE);
   if (callback) lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, data);
@@ -204,24 +205,16 @@ static void glass_home_finish(void)
   for (unsigned i = 0; i < GLASS_HOME_CARD_COUNT; i++)
     {
       lv_obj_t *card = g_glass.home_cards[i];
-      lv_obj_set_style_translate_y(card, 1, LV_STATE_PRESSED);
       if (!g_glass.reduced_motion)
         {
-          lv_anim_t animation;
-          lv_anim_init(&animation);
-          lv_anim_set_var(&animation, card);
-          lv_anim_set_values(&animation, 8, 0);
-          lv_anim_set_delay(&animation, i * 25);
-          lv_anim_set_duration(&animation, 180);
-          lv_anim_set_path_cb(&animation, lv_anim_path_ease_out);
-          lv_anim_set_exec_cb(&animation, glass_card_offset);
-          lv_anim_start(&animation);
+          glass_motion_begin(card,MOTION_Y,8,0,GLASS_MOTION_ENTER,i*20);
         }
     }
 }
 
 static void glass_rebuild(void)
 {
+  glass_motion_set_reduced(g_glass.reduced_motion);
   const bool light = g_desktop.light_theme;
   const uint32_t ink = home_ink(), muted = home_muted();
   const uint32_t paper = home_paper(), accent = home_accent();

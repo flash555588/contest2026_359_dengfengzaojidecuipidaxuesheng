@@ -16,9 +16,12 @@ def main():
     for n in ['prepared','firmware','cache','output']:p.add_argument('--'+n,type=Path,required=True)
     a=p.parse_args();repo=Path(__file__).resolve().parents[1]
     metadata=json.loads((a.firmware/'BUILD-METADATA.json').read_text())
-    assert metadata['vision_models_sd_only'] and metadata['program_limit']=='0xe00000' and metadata['data_size']=='0x200000'
+    assert metadata['vision_models_sd_only']
+    data_offset=int(metadata['data_offset'],0);data_size=int(metadata['data_size'],0)
+    assert (data_offset,data_size) in [(0xc00000,0x400000),(0xe00000,0x200000)]
+    assert int(metadata['program_limit'],0)==data_offset
     assert sha(a.firmware/'nuttx.bin')==metadata['sha256']['nuttx.bin']
-    assert (a.firmware/'nuttx.bin').stat().st_size+0x2000<=0xe00000
+    assert (a.firmware/'nuttx.bin').stat().st_size+0x2000<=data_offset
     assert all(sha(repo/name)==value for name,value in metadata['source_sha256'].items())
     lock=repo/'app/espdl-quickapp/speech/upstream.lock.json'
     assert sha(lock)==metadata['speech']['lock_sha256']
@@ -58,8 +61,8 @@ def main():
         target=source_root/'upstream'/entry['cache']/entry['path'];target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target)
     records={f.relative_to(tree).as_posix():{'bytes':f.stat().st_size,'sha256':sha(f)}
              for f in sorted(tree.rglob('*')) if f.is_file() and f.name!='DEPLOYMENT-MANIFEST.json'}
-    (tree/'DEPLOYMENT-MANIFEST.json').write_text(json.dumps({'board':'ESP32-P4 v3','board_tested':False,'flash_offset':'0x2000','userdata_offset':'0xe00000','userdata_size':'0x200000','layout':'14m-firmware-2m-data','files':records},indent=2)+'\n')
-    archive=a.output/'p4-v3-14m-2m-sdapps-zh.zip'
+    (tree/'DEPLOYMENT-MANIFEST.json').write_text(json.dumps({'board':'ESP32-P4 v3','board_tested':False,'flash_offset':'0x2000','userdata_offset':hex(data_offset),'userdata_size':hex(data_size),'layout':metadata['flash_layout'],'files':records},indent=2)+'\n')
+    archive=a.output/f'p4-v3-{data_offset//0x100000}m-{data_size//0x100000}m-sdapps-zh.zip'
     with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
         for f in sorted(tree.rglob('*')):
             if f.is_file():z.write(f,f.relative_to(tree).as_posix())

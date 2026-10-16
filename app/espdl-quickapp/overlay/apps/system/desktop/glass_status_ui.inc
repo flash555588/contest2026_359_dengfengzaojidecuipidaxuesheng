@@ -1,23 +1,41 @@
 /* SPDX-License-Identifier: Apache-2.0
- * One shared 32 px safe area. No extra thread, image buffer or animation.
+ * One shared 32 px safe area. Sheet motion uses the desktop shared timer.
  * Updated by the desktop's existing one-second timer; compare owned strings
  * because LV_LABEL_LONG_DOT may change the label's internal text buffer.
  */
 static struct {
   lv_obj_t *bar, *network, *music, *more;
   uint32_t background;
-  lv_obj_t *sheet, *sheet_network, *sheet_music, *sheet_play;
+  lv_obj_t *sheet, *sheet_card, *sheet_network, *sheet_music, *sheet_play;
   char time[16], track[256];
   unsigned network_state, play_state;
-  bool valid, light;
+  bool valid, light, closing;
 } g_status_ui;
 
 static void glass_status_close(lv_event_t *e)
 {
   LV_UNUSED(e);
-  if (g_status_ui.sheet) lv_obj_delete(g_status_ui.sheet);
-  g_status_ui.sheet = g_status_ui.sheet_network = NULL;
-  g_status_ui.sheet_music = g_status_ui.sheet_play = NULL;
+  lv_obj_t *sheet=g_status_ui.sheet;
+  g_status_ui.sheet=g_status_ui.sheet_card=g_status_ui.sheet_network=NULL;
+  g_status_ui.sheet_music=g_status_ui.sheet_play=NULL;g_status_ui.closing=false;
+  if(sheet)lv_obj_delete(sheet);
+}
+static void glass_status_deleted(lv_event_t *event)
+{
+  if(g_status_ui.sheet==lv_event_get_target(event)){
+    g_status_ui.sheet=g_status_ui.sheet_card=g_status_ui.sheet_network=NULL;
+    g_status_ui.sheet_music=g_status_ui.sheet_play=NULL;g_status_ui.closing=false;
+  }
+}
+static void glass_status_closed(lv_obj_t *card)
+{if(card==g_status_ui.sheet_card)glass_status_close(NULL);}
+static void glass_status_dismiss(lv_event_t *event)
+{
+  LV_UNUSED(event);
+  if(!g_status_ui.sheet||g_status_ui.closing)return;
+  struct glass_motion_job *job=glass_motion_begin(g_status_ui.sheet_card,MOTION_Y,0,-12,GLASS_MOTION_EXIT,0);
+  if(!job){glass_status_close(NULL);return;}
+  g_status_ui.closing=true;job->done=glass_status_closed;
 }
 
 static void glass_status_action(lv_event_t *e)
@@ -56,19 +74,28 @@ static lv_obj_t *status_button(lv_obj_t *parent, const char *text,
 static void glass_status_expand(lv_event_t *e)
 {
   LV_UNUSED(e);
-  if (g_status_ui.sheet) { glass_status_close(NULL); return; }
+  if(g_status_ui.sheet){
+    if(g_status_ui.closing){
+      g_status_ui.closing=false;
+      struct glass_motion_job *job=glass_motion_begin(g_status_ui.sheet_card,MOTION_Y,0,0,GLASS_MOTION_ENTER,0);
+      if(job)job->done=NULL;
+    }else glass_status_dismiss(NULL);
+    return;
+  }
   if (g_lock_ui.root) return;
   lv_obj_t *shade = glass_box(lv_layer_top(), 0, GLASS_STATUS_HEIGHT,
                              1024, GLASS_CONTENT_HEIGHT, 0x000000, 0);
   g_status_ui.sheet = shade;
+  lv_obj_add_event_cb(shade,glass_status_deleted,LV_EVENT_DELETE,NULL);
   lv_obj_set_style_bg_opa(shade, LV_OPA_40, 0);
-  glass_clickable(shade, glass_status_close, NULL);
+  glass_clickable(shade, glass_status_dismiss, NULL);
   lv_obj_remove_flag(shade, LV_OBJ_FLAG_GESTURE_BUBBLE);
   lv_obj_t *card = glass_box(shade, 594, 12, 414, 304, detail_paper(), 18);
+  g_status_ui.sheet_card=card;
   lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(card, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
   home_text(card, "快捷控制", 20, 18, 270, 20, home_ink());
-  status_button(card, "收起", 334, 12, 64, 36, glass_status_close, NULL);
+  status_button(card, "收起", 334, 12, 64, 36, glass_status_dismiss, NULL);
   g_status_ui.sheet_network = status_text(card, "", 20, 58, 374);
   g_status_ui.sheet_music = status_text(card, "", 20, 94, 374);
   status_button(card, "上一首", 20, 128, 112, 44, glass_status_skip, (void *)-1);
@@ -81,6 +108,7 @@ static void glass_status_expand(lv_event_t *e)
   status_button(card, "进入锁屏", 212, 246, 182, 44, glass_status_action, (void *)2);
   g_status_ui.valid = false;
   glass_status_tick();
+  glass_motion_begin(card,MOTION_Y,-12,0,GLASS_MOTION_ENTER,0);
 }
 
 static void glass_status_visibility(bool locked)

@@ -78,6 +78,8 @@
   let selectedId = '';
   let filter = 'all';
   let search = '';
+  let selectedArea='',favoritesOnly=false,discoveryRevision=0,browseOpen=false,browsePage=0,browseUi=null;
+  let detailExpanded=false;
   let page = 0;
   let settingsOpen = false;
   let detailOpen = false;
@@ -88,6 +90,14 @@
   let quickDrag = null, quickGestureOwned = false;
   let brightnessIntent = null;
   let controlQueue=[],controlTargets=Object.create(null),controlSequence=0,controlRevision=0;
+  const controlFeedback=Object.create(null);
+  function markControlFeedback(entity,kind,text){
+    if(!entity)return;
+    delete controlFeedback[entity];
+    controlFeedback[entity]={kind,text,expires:steadyNow()+(kind==='error'?5000:1800)};
+    const keys=Object.keys(controlFeedback);while(keys.length>32)delete controlFeedback[keys.shift()];
+    controlRevision++;
+  }
   let usageServer='',usageCounts=Object.create(null),homeWeights=Object.create(null),homeOrderRevision=0;
   let usageDirty=false,usageSaveAt=Infinity;
   let desktopPins=[],desktopServer='',desktopPublished='',desktopInputKey='',desktopRevision=0,pendingDesktop=null;
@@ -102,7 +112,7 @@
     if(activityLog.length>32)activityLog.length=32;
   }
   let layoutEditing = false, sizeRevision = 0, sizesUrl = '';
-  let cardSizePrefs = Object.create(null), boardCacheKey = '', boardCache = [];
+  let cardSizePrefs = Object.create(null), boardCacheKey = '', boardCache = [],boardCacheNav='',boardCacheGeneration=-1;
   let quickGroupBuilding = false, quickGroupTarget = 0, layoutSaveError = false;
   let connected = false;
   let phase = 'disconnected';
@@ -129,7 +139,7 @@
   let dashboardCacheKey = '';
   let dashboardCache = [];
   let cardRenderKey = '';
-  let cardRenderCursor = 0;
+  let cardRenderCursor = 0,cardRenderOrder=[];
   let renderRunning = false;
   let renderAgain = false;
   let detailBuilding = false;
@@ -351,6 +361,9 @@
   }
 
   function invalidate() {
+    cancelInputs();
+    search='';selectedArea='';favoritesOnly=false;browseOpen=false;discoveryRevision++;
+    Object.keys(controlFeedback).forEach(id=>delete controlFeedback[id]);
     sceneEntities=[];sceneSyncReady=false;sceneTotal=0;sceneSyncError='';sceneSyncAt=0;
     lastSceneAcceptance=null;
     entityRevision++;
@@ -511,7 +524,20 @@
     if(sceneSyncReady)return sceneTotal>MAX_SCENES?'显示前 128 / '+sceneTotal+' 个':count?'已同步 '+count+' 个 · HA 联动':'HA 中暂无场景或脚本';
     return supportsSceneSync()?'等待同步 HA 场景':count?'功能按原生服务能力展示':'暂无已同步的场景或脚本';
   }
-  function lookupEntity(id){return sceneSyncReady&&/^(scene|script)\./.test(id)?sceneEntities.find(item=>item.entity_id===id):entities.find(item=>item.entity_id===id);}
+  // Rebuild at most once per committed revision; controls always resolve
+  // the newest entity rather than retaining a row captured by an old card.
+  let entityIndexRevision=-1,entityIndexRows=null,sceneIndexRows=null;
+  let entityIndex=Object.create(null),sceneIndex=Object.create(null);
+  function indexedEntity(id,scene=false){
+    if(entityIndexRevision!==entityRevision||entityIndexRows!==entities||sceneIndexRows!==sceneEntities){
+      entityIndex=Object.create(null);sceneIndex=Object.create(null);
+      entities.forEach(row=>{if(!entityIndex[row.entity_id])entityIndex[row.entity_id]=row;});
+      sceneEntities.forEach(row=>{if(!sceneIndex[row.entity_id])sceneIndex[row.entity_id]=row;});
+      entityIndexRows=entities;sceneIndexRows=sceneEntities;entityIndexRevision=entityRevision;
+    }
+    return (scene?sceneIndex:entityIndex)[id]||null;
+  }
+  function lookupEntity(id){return indexedEntity(id,sceneSyncReady&&/^(scene|script)\./.test(id));}
   function sceneTimestamp(item){
     const stamp=item.domain==='scene'?item.state:item.last_triggered;
     if(!stamp||!/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(stamp)||!Number.isFinite(Date.parse(stamp)))return '暂无触发记录';
@@ -686,11 +712,13 @@
   }
 
   function fail(request, text, auth) {
+    if(request.kind==='service'||request.kind==='verify')markControlFeedback(request.entityId,'error','结果未确认');
     if(request.kind==='scenes')sceneSyncError=text;
     if(request.kind==='scenes'&&!auth){
       sceneSyncError=text;sceneEntities.forEach(item=>item.stale=true);entityRevision++;
       message=text;appendActivity('场景同步失败',text);nextRefresh=steadyNow()+30000;render();return;
     }
+    cancelInputs();
     brightnessIntent=null;
     controlQueue=[];controlTargets=Object.create(null);controlRevision++;
     queued = null;
@@ -745,6 +773,7 @@
     }
     if (request.kind === 'service') {
       if(['scene','script'].includes(request.data.domain)){
+        markControlFeedback(request.entityId,'accepted','已受理');
         const item=lookupEntity(request.entityId),intent=controlTargets[request.entityId];
         if(intent&&intent.sequence===request.data.sequence){delete controlTargets[request.entityId];controlRevision++;}
         phase='ready';message='HA 已接受执行：'+(item?item.name:request.entityId);
@@ -853,6 +882,7 @@
           connected = true;
           phase = 'ready';
           message = '状态已达到目标：' + item.name;
+          markControlFeedback(item.entity_id,'success','已确认');
           appendActivity('操作已确认',item.name);
           const intent=controlTargets[item.entity_id];
           if(intent&&intent.sequence===target.sequence){delete controlTargets[item.entity_id];controlRevision++;}
@@ -870,6 +900,10 @@
 
   function tick() {
     if (disposed || !bridgeReady) return;
+    let feedbackExpired=false;
+    Object.keys(controlTargets).forEach(id=>{const target=controlTargets[id];if(!target.slow&&steadyNow()-target.createdAt>=4000){target.slow=true;feedbackExpired=true;}});
+    Object.keys(controlFeedback).forEach(id=>{if(steadyNow()>=controlFeedback[id].expires){delete controlFeedback[id];feedbackExpired=true;}});
+    if(feedbackExpired){controlRevision++;render();}
     try { if (reloadNativeConfiguration()) return; }
     catch (_) { /* Retry the shared configuration check on the next tick. */ }
     if (pending && !pending.abandoned &&
@@ -922,8 +956,8 @@
   }
 
   function current() {
-    if(nav==='scenes'&&sceneSyncReady)return sceneEntities.find(item=>item.entity_id===selectedId)||null;
-    return entities.find(item => item.entity_id === selectedId) || null;
+    if(nav==='scenes'&&sceneSyncReady)return indexedEntity(selectedId,true);
+    return indexedEntity(selectedId);
   }
 
   function available(item) {
@@ -967,8 +1001,14 @@
     const parameterKey=params?Object.keys(params).sort().join(','):'power';
     const commandKey=item.entity_id+'|'+(brightness!==undefined?'brightness':parameterKey);
     const index=controlQueue.findIndex(command=>command.key===commandKey);
+    const previous=index>=0?controlQueue[index]:controlTargets[item.entity_id];
+    const sameParams=(a,b)=>{const keys=Object.keys(a||{}).sort(),other=Object.keys(b||{}).sort();
+      return keys.length===other.length&&keys.every((key,i)=>key===other[i]&&JSON.stringify(a[key])===JSON.stringify(b[key]));};
+    if(previous&&previous.generation===generation&&previous.key===commandKey&&previous.service===service&&previous.brightness===brightness&&sameParams(previous.params,params)){
+      render();return;
+    }
     if(index<0&&controlQueue.length>=16){message='待执行操作已达 16 项';render();return;}
-    const command={entity:item.entity_id,service,brightness,params,expected,key:commandKey,generation,sequence:++controlSequence};
+    const command={entity:item.entity_id,service,brightness,params,expected,key:commandKey,generation,sequence:++controlSequence,createdAt:steadyNow(),slow:false};
     appendActivity('提交操作',item.name+' · '+service);
     recordUsage(item);
     if(queued&&queued.kind==='service'&&queued.entityId===item.entity_id&&queued.data.key===commandKey){
@@ -976,6 +1016,7 @@
       queued.data={domain:item.domain,service,body,expected,key:commandKey,sequence:command.sequence};
     }else if(index<0)controlQueue.push(command);else controlQueue[index]=command;
     controlTargets[item.entity_id]=command;controlRevision++;
+    delete controlFeedback[item.entity_id];
     if(brightness!==undefined)brightnessIntent={entity:item.entity_id,generation,percent:brightness,sent:false,sequence:command.sequence};
     else if(brightnessIntent&&brightnessIntent.entity===item.entity_id)brightnessIntent=null;
     message=pending||queued||nativeBusy?'待执行：'+item.name:'正在发送控制请求';
@@ -1013,7 +1054,7 @@
   function deviceFunctions(){
     const card=currentDeviceCard(),ids=card&&card.device_entities||[selectedId];
     if(nav==='scenes'&&current())return [current()];
-    return ids.map(id=>entities.find(e=>e.entity_id===id)).filter(Boolean).sort((a,b)=>
+    return ids.map(id=>indexedEntity(id)).filter(Boolean).sort((a,b)=>
       Number(functionControls(b).length>0)-Number(functionControls(a).length>0));
   }
   function functionControls(item){
@@ -1135,6 +1176,13 @@
     save('eh_favs', JSON.stringify(favorites));
     render();
   }
+  function toggleDeviceFollow(){
+    const card=currentDeviceCard();if(!card)return;
+    if(card.device_entities.some(id=>favorites.includes(id)))favorites=favorites.filter(id=>!card.device_entities.includes(id));
+    else if(favorites.length<MAX_FAVORITES)favorites.push(card.entity_id);
+    else{message='关注列表已达 16 个实体';render();return;}
+    save('eh_favs',JSON.stringify(favorites));render();
+  }
 
   function promptUrl() {
     const openedGeneration = generation;
@@ -1196,158 +1244,20 @@
   }
 
   function promptSearch() {
+    const revision=generation;
+    cancelInputs();browseOpen=false;
     prompt.input({ title: '搜索名称或实体 ID', value: search, maxLength: 64 }, value => {
-      if (disposed || value === null || value === undefined) return;
+      if (disposed || revision!==generation || value === null || value === undefined) return;
       search = clean(value, 64).trim().toLowerCase();
+      discoveryRevision++;resetBoardScroll();roomPage=0;
       selectedId = '';
       page = 0;
       settingsOpen = false;
       detailOpen = false;
       render();
     });
+    render();
   }
-
-  /* Legacy dashboard helpers retained as source reference only.
-  function visibleEntities() {
-    return entities.filter(item => {
-      if (filter === 'favorites' && !favorites.includes(item.entity_id)) return false;
-      if (filter === 'controls' &&
-          !['light', 'switch', 'input_boolean', 'fan'].includes(item.domain)) return false;
-      if (filter === 'sensors' && !['sensor', 'binary_sensor'].includes(item.domain)) return false;
-      return !search || (item.name + ' ' + item.entity_id).toLowerCase().includes(search);
-    });
-  }
-
-  function stateText(item) {
-    const translated = { on: '开启', off: '关闭', unavailable: '离线', unknown: '未知' };
-    return (item.stale ? '上次：' : '') +
-      (translated[item.state] || item.state) + (item.unit ? ' ' + item.unit : '');
-  }
-
-  function activeDevices() {
-    return entities.filter(item => available(item) && item.state === 'on' &&
-      ['light', 'switch', 'input_boolean', 'fan'].includes(item.domain)).length;
-  }
-
-  function controlDevices() {
-    return entities.filter(item => ['light', 'switch', 'input_boolean', 'fan']
-      .includes(item.domain)).length;
-  }
-
-  function cardStatus(item) {
-    if (!available(item)) return item.state === 'unavailable' ? '离线' : '未知';
-    if (item.state === 'on') return item.brightness === null ? '开启' : item.brightness + '%';
-    if (item.state === 'off') return '关闭';
-    return fit(stateText(item), 80, 14);
-  }
-
-  function fit(value, width, font) {
-    const text = clean(value, 160);
-    let used = 0, output = '';
-    for (const char of Array.from(text)) {
-      const step = char.charCodeAt(0) > 127 ? font : font * 0.66;
-      if (used + step > width - font) return output + '…';
-      used += step;
-      output += char;
-    }
-    return output;
-  }
-
-  function hide(id, hidden) {
-    if (id === null || id === undefined) return;
-    if (typeof id === 'object') id.hidden = hidden;
-    else pushHidden(id, hidden);
-  }
-
-  function pushStyle(id, tag, style) {
-    const key = 'y' + tag + id;
-    const value = JSON.stringify(style);
-    if (paint[key] === value) return;
-    paint[key] = value;
-    if (typeof ui.setStyle === 'function') ui.setStyle(id, style);
-  }
-
-  function buttonColor(button, color) { button.color = color; }
-  function buttonText(button, text) { button.text = text; }
-
-  function createButton(text, x, y, w, h, action, color, style) {
-    const button = { text, x, y, w, h, action, color, style: style || styles.control,
-      hidden: false, section: 'common' };
-    buttons.push(button);
-    return button;
-  }
-
-  function initializeButtonPool() {
-    for (let i = 0; i < BUTTON_SLOTS; i++) {
-      const slot = { id: 0, target: null, signature: '' };
-      slot.id = ui.button('', 0, 0, 1, 1, () => {
-        const target = slot.target;
-        if (!disposed && target && !target.hidden) target.action();
-      }, colors.surface);
-      pushHidden(slot.id, true);
-      buttonPool.push(slot);
-    }
-  }
-
-  function renderButtons() {
-    const view = settingsOpen ? 'settings' : detailOpen ? 'detail' : 'list';
-    const active = buttons.filter(button => {
-      if (button.section === 'common') return true;
-      if (button.section === 'navigation') return view !== 'settings';
-      if (button.section === 'room') return button._interactive && button._roomVisible;
-      return button.section === view;
-    });
-    if (active.length > BUTTON_SLOTS) throw new Error('Button pool capacity exceeded');
-    buttonPool.forEach(slot => {
-      if (slot.target && !active.includes(slot.target)) {
-        slot.target = null;
-        pushHidden(slot.id, true);
-      }
-    });
-    active.forEach(button => {
-      let slot = buttonPool.find(entry => entry.target === button);
-      if (!slot) {
-        slot = buttonPool.find(entry => !entry.target);
-        if (!slot) throw new Error('Button pool exhausted');
-        slot.target = button;
-      }
-      pushPos(slot.id, button.x, button.y);
-      pushSize(slot.id, button.w, button.h);
-      pushText(slot.id, button.text);
-      pushColor(slot.id, button.color);
-      pushStyle(slot.id, 'B', button.style);
-      pushHidden(slot.id, button.hidden);
-    });
-  }
-  function label(text, x, y, w, h, font, color, icon) {
-    const id = ui.text(text, x, y, font, color, icon > 1 ? icon : icon ? 1 : 0);
-    ui.setSize(id, w, h);
-    return id;
-  }
-
-  function panel(x, y, w, h, color, radius) {
-    const id = ui.panel(x, y, w, h, color);
-    if (typeof ui.setStyle === 'function') ui.setStyle(id, { radius: radius || 18, borderWidth: 0 });
-    return id;
-  }
-
-  function iconButton(symbol, x, y, action) {
-    const button = createButton('', x, y, 40, 36, action, colors.surface, styles.icon);
-    const icon = label(symbol, x + 8, y + 5, 26, 26, 24, colors.accent, true);
-    return { button, icon };
-  }
-
-  function placeIconButton(pair, x, y) {
-    pair.button.x = x;
-    pair.button.y = y;
-    ui.setPos(pair.icon, x + 8, y + 5);
-  }
-
-  function pairHidden(pair, value) {
-    hide(pair.button, value);
-    hide(pair.icon, value);
-  }
-  */
 
   function activeDevices() {
     return entities.filter(item => available(item) && item.state === 'on' &&
@@ -1364,14 +1274,88 @@
   const GRID_W = W - SIDEBAR_W;
   const MAIN_X = SIDEBAR_W + 14, MAIN_Y = HEADER_H + 16;
   const MAIN_W = W - MAIN_X - 14;
-  const CARD_COLS = W < 900 ? 2 : 3, CARD_ROWS = H < 480 ? 1 : 2;
+  const WATERFALL=['viewport','attach','scrollInfo','scrollTo','scrollExtent','scrollLock'].every(name=>typeof ui[name]==='function');
+  const VIEW_H=H-HEADER_H-FOOTER_H;
+  const CARD_COLS = WATERFALL?(GRID_W<420?1:GRID_W<700?2:3):(W<900?2:3), CARD_ROWS = H < 480 ? 1 : 2;
   const CARD_GAP = 14, CARD_MARGIN = 16;
   const CARD_W = Math.floor((GRID_W - CARD_MARGIN * 2 - CARD_GAP * (CARD_COLS - 1)) /
     CARD_COLS);
   const CARD_TOP = HEADER_H + 12;
   const CARD_H = Math.floor((H - FOOTER_H - CARD_TOP - 12 -
     CARD_GAP * (CARD_ROWS - 1)) / CARD_ROWS);
-  const SLOTS = CARD_COLS * CARD_ROWS;
+  const SLOTS = WATERFALL?12:CARD_COLS*CARD_ROWS;
+  let boardScroll=0,boardTouchActive=false,boardLocked=false,boardAnchorRestore=null,boardPress=null;
+  const attached=Object.create(null);
+  function attachToBoard(id,parent){
+    if(!WATERFALL||id===null||id===undefined||attached[id]===parent)return;
+    ui.attach(id,parent);attached[id]=parent;return true;
+  }
+  function boardLock(locked){
+    if(WATERFALL&&widgets&&widgets.boardViewport&&boardLocked!==locked){ui.scrollLock(widgets.boardViewport,locked);boardLocked=locked;}
+  }
+  function cancelInputs(consume=true){
+    const active=!!quickDrag||!!lampWheelDrag||boardTouchActive;
+    if(quickDrag&&quickDrag.group)quickDrag.group.renderKey='';
+    quickDrag=null;lampWheelDrag=null;boardTouchActive=false;boardPress=null;
+    boardLock(false);
+    if(active){cardRenderKey='';detailRenderKey='';}
+    if(consume&&active)quickGestureOwned=true;
+  }
+  function validateInputs(){
+    if(quickDrag){
+      const item=lookupEntity(quickDrag.item.entity_id),spec=quickDrag.rect.spec;
+      let valid=connected&&available(item)&&quickDrag.generation===generation&&!layoutEditing;
+      if(valid&&spec){const current=functionControls(item).find(row=>row.key===spec.key&&row.service===spec.service&&row.kind==='range');
+        valid=!!current&&current.min===spec.min&&current.max===spec.max&&current.step===spec.step;
+      }else if(valid)valid=canAdjustBrightness(item);
+      if(!valid)cancelInputs();
+    }
+    if(lampWheelDrag){
+      const item=lookupEntity(lampWheelDrag.entity);
+      if(!connected||!available(item)||lampWheelDrag.generation!==generation||!lampCanColor(item))cancelInputs();
+    }
+  }
+  function openSettings(){
+    cancelInputs();browseOpen=false;optionPicker=null;detailOpen=false;settingsOpen=true;render();
+  }
+  function resetBoardScroll(){
+    boardTouchActive=false;boardAnchorRestore=null;boardPress=null;
+    if(WATERFALL&&widgets&&widgets.boardViewport){boardLock(false);ui.scrollTo(widgets.boardViewport,0,false);}
+    boardScroll=0;
+  }
+  function boardScrolled(y){
+    if(disposed||!widgets)return;
+    y=Math.max(0,Math.round(y));
+    const moved=y!==boardScroll;boardScroll=y;if(moved&&boardTouchActive)quickGestureOwned=true;
+    if(detailOpen||settingsOpen)return;
+    // LVGL moves the clipped children. Only a changed virtual window needs JS paint.
+    const key=boardWindow(dashboardPages()[0].items).map(row=>row?row.item.entity_id:'').join(',');
+    if(key!==widgets.boardWindowKey)render();
+  }
+  function masonryHeight(item){
+    const rich=item.domain==='light'&&item.dimmable||['fan','climate','cover','humidifier','media_player','water_heater','number','input_number'].includes(item.domain);
+    const height=item.domain==='camera'?Math.max(248,Math.round((CARD_W-32)*9/16)+136):rich?212:isSceneCommand(item)?182:controllable(item)?190:168;
+    return Math.max(height,Math.ceil(VIEW_H/3));
+  }
+  function boardWindow(rows){
+    if(!WATERFALL)return rows;
+    const top=HEADER_H+boardScroll,bottom=top+VIEW_H;
+    const candidates=rows.filter(row=>row.y+row.h>top-110&&row.y<bottom+110);
+    candidates.sort((a,b)=>{
+      const distance=row=>row.y+row.h<=top?top-row.y-row.h:row.y>=bottom?row.y-bottom:0;
+      return distance(a)-distance(b)||a.y-b.y||a.x-b.x;
+    });
+    const wanted=candidates.slice(0,SLOTS),slots=Array(SLOTS).fill(null),used=new Set();
+    wanted.forEach(row=>{const index=widgets.cards.findIndex((card,i)=>!used.has(i)&&card.item&&card.item.entity_id===row.item.entity_id);if(index>=0){slots[index]=row;used.add(index);}});
+    wanted.forEach(row=>{if(slots.includes(row))return;const index=slots.indexOf(null);if(index>=0)slots[index]=row;});
+    return slots;
+  }
+  function attachCard(card){
+    if(!WATERFALL)return;
+    let changed=false;
+    ['panel','iconBase','powerHalo','switchFace','track','fill','thumb','icon','powerGlyph','name','value','unit','state','moreLabel','minusGlyph','plusGlyph','cameraGlyph'].forEach(key=>{changed=attachToBoard(card[key],widgets.boardViewport)||changed;});
+    if(changed&&typeof ui.front==='function')['icon','powerGlyph','thumb','name','state','value','unit','moreLabel','minusGlyph','plusGlyph','cameraGlyph'].forEach(key=>{if(card[key]!==null&&card[key]!==undefined)ui.front(card[key]);});
+  }
 
   const pal = dark ? {
     page: 0x14171b, card: 0x202020, line: 0x303030, ink: 0xf1f3f5,
@@ -1405,11 +1389,11 @@
     ui.setText(id, text);
   }
 
-  function pushColor(id, color) {
-    const key = 'c' + id;
-    if (paint[key] === color) return;
-    paint[key] = color;
-    ui.setColor(id, color);
+  function pushColor(id, color, smooth) {
+    const key = 'c' + id,mode='cm'+id;
+    if (paint[key] === color&&paint[mode]===!!smooth) return;
+    paint[key] = color;paint[mode]=!!smooth;
+    ui.setColor(id, color, smooth === true);
   }
 
   function pushHidden(id, hidden) {
@@ -1420,20 +1404,20 @@
     ui.setHidden(id, !!hidden);
   }
 
-  function pushSize(id, w, h) {
+  function pushSize(id, w, h, smooth) {
     const key = 's' + id;
-    const value = w + ',' + h;
+    const value = w + ',' + h + ',' + !!smooth;
     if (paint[key] === value) return;
     paint[key] = value;
-    ui.setSize(id, w, h);
+    ui.setSize(id, w, h, !!smooth);
   }
 
-  function pushPos(id, x, y) {
+  function pushPos(id, x, y, smooth) {
     const key = 'p' + id;
-    const value = x + ',' + y;
+    const value = x + ',' + y + ',' + !!smooth;
     if (paint[key] === value) return;
     paint[key] = value;
-    ui.setPos(id, x, y);
+    ui.setPos(id, x, y, !!smooth);
   }
 
   function pushStyle(id, tag, style) {
@@ -1464,6 +1448,10 @@
     const slot = { id: 0, target: null, signature: '' };
     slot.id = ui.button('', 0, 0, 4, 4, () => {
       const target = slot.target;
+      if(WATERFALL&&target&&target.viewport){
+        if(quickGestureOwned)return;
+        if(boardPress&&(boardPress.generation!==generation||!target.card||!target.card.item||boardPress.entity!==target.card.item.entity_id||Math.abs(boardScroll-boardPress.scroll)>3))return;
+      }
       if (!disposed && target && !target.hidden) target.action();
     }, pal.card);
     pushHidden(slot.id, true);
@@ -1482,7 +1470,7 @@
     const view = settingsOpen ? 'settings' : detailOpen ? 'detail' : 'list';
     // Recycle the native slots across views; hidden profile choices do not
     // allocate additional native buttons or consume the 64 visible slots.
-    const visibleButtons=buttons.filter(button=>!button.hidden&&(optionPicker?button.section==='picker':
+    const visibleButtons=buttons.filter(button=>!button.hidden&&(browseOpen?button.section==='browse':optionPicker?button.section==='picker':
       button.section==='common'||button.section==='navigation'&&view!=='settings'||
       (button.section==='card'||button.section==='cardIcon'?button._cardVisible:button.section===view)));
     if (visibleButtons.length > buttonPool.length) throw new Error('Button pool capacity exceeded');
@@ -1495,6 +1483,13 @@
       const signature = active ? [button.x, button.y, button.w, button.h, button.text,
         button.color, button.hidden ? 1 : 0, style.radius, style.borderWidth,
         style.borderColor || 0, style.fontSize || 0, style.enabled === 0 ? 0 : 1].join('|') : 'off';
+      if(WATERFALL){
+        const parent=active&&button.viewport&&view==='list'?widgets.boardViewport:0;
+        attachToBoard(slot.id,parent);
+        const opacity=active&&!button.text?0:255;
+        if(slot.opacity!==opacity){ui.setOpacity(slot.id,opacity);slot.opacity=opacity;}
+      }
+      if(active&&(browseOpen||button===widgets.emptyAction)&&typeof ui.front==='function')ui.front(slot.id);
       if (slot.signature === signature) continue;
       slot.signature = signature;
       if (!active) {
@@ -1674,451 +1669,6 @@
     return output;
   }
 
-  /* Legacy layouts retained as source reference only.
-  // ------------------------------- build ----------------------------------
-
-  function buildUi() {
-    ui.background(pal.page);
-    const out = { cards: [], settings: [] };
-    initializeButtonPool();
-
-    out.sidebar = panel(0, 0, SIDEBAR_W, H, pal.card, 0);
-    out.brand = label('Home Assistant', 12, 14, SIDEBAR_W - 24, 24, 15, pal.ink);
-    out.menu = [];
-    ['概述', '设备', '环境', '设置'].forEach((name, index) => {
-      const y = 48 + index * 40;
-      out.menu.push({
-        panel: index === 0 ? panel(8, y, SIDEBAR_W - 16, 34, pal.blueSoft, 8) : null,
-        text: label(name, 20, y + 7, SIDEBAR_W - 32, 20, 14,
-          index === 0 ? pal.blue : pal.ink)
-      });
-    });
-    out.stats = [];
-    for (let i = 0; i < 3; i++) {
-      out.stats.push({
-        dot: panel(12, 232 + i * 26, 10, 10, i === 0 ? pal.blue : pal.good, 5),
-        text: label('', 30, 228 + i * 26, SIDEBAR_W - 44, 20, 12, pal.muted)
-      });
-    }
-    out.note = label('本地数据 · 非模拟', 12, H - 26, SIDEBAR_W - 24, 18, 11, pal.muted);
-
-    out.header = panel(GRID_X, 0, GRID_W, HEADER_H, pal.blue, 0);
-    out.back = iconButton('\uf053', GRID_X + 8, 10, 28, 26, () => {
-      if (settingsOpen) { settingsOpen = false; render(); }
-    }, pal.blue);
-    out.title = label('概览', GRID_X + 44, 11, 120, 24, 19, 0xffffff);
-    out.status = label('', GRID_W - 250, 13, 190, 20, 13, 0xffffff);
-    pushStyle(out.status, 'L', { fontSize: 13, textColor: 0xffffff, center: 1 });
-    out.refresh = iconButton('\uf021', W - 44, 9, 32, 28, refresh, pal.blue);
-    out.settingsButton = iconButton('\uf013', W - 82, 9, 32, 28, () => {
-      settingsOpen = !settingsOpen;
-      render();
-    }, pal.blue);
-    const topW = Math.floor((GRID_W - 3 * M) / 2);
-    out.syncButton = createButton('同步状态', GRID_X + M, HEADER_H + 8, topW,
-      TOPROW_H - 16, refresh, pal.card,
-      { radius: 8, borderWidth: 1, fontSize: 14 });
-    out.linkButton = createButton('连接设置', GRID_X + 2 * M + topW, HEADER_H + 8,
-      topW, TOPROW_H - 16, () => { settingsOpen = !settingsOpen; render(); },
-      pal.card, { radius: 8, borderWidth: 1, fontSize: 14 });
-    out.syncButton.section = 'list';
-    out.linkButton.section = 'list';
-
-    for (let index = 0; index < SLOTS; index++) {
-      const cx = GRID_X + M + (index % COLS) * (CARD_W + GAP);
-      const cy = GRID_Y + M + Math.floor(index / COLS) * (CARD_H + GAP);
-      const card = {
-        item: null,
-        panel: borderedPanel(cx, cy, CARD_W, CARD_H, pal.card, 10),
-        icon: label('', cx + 14, cy + 12, 24, 24, 20, pal.muted, true),
-        name: label('', cx + 46, cy + 14, CARD_W - 58, 22, 14, pal.ink),
-        value: label('', cx + 16, cy + 48, CARD_W - 32, 34, 26, pal.ink),
-        state: label('', cx + 16, cy + 88, CARD_W - 32, 18, 12, pal.muted),
-        track: panel(cx + 16, cy + CARD_H - 24, CARD_W - 32, 6, pal.track, 3),
-        fill: panel(cx + 16, cy + CARD_H - 24, 2, 6, pal.blue, 3)
-      };
-      const button = createButton('', cx, cy, CARD_W, CARD_H, () => {
-        if (!card.item) return;
-        selectOrToggle(card.item);
-      }, pal.card, { radius: 10, borderWidth: 0 });
-      button.section = 'card';
-      button._cardVisible = false;
-      card.button = button;
-      out.cards.push(card);
-    }
-
-    out.footer = panel(GRID_X, H - FOOTER_H, GRID_W, FOOTER_H, pal.card, 0);
-    out.footerLine = panel(GRID_X, H - FOOTER_H, GRID_W, 1, pal.line, 0);
-    out.selectedName = label('', GRID_X + 12, H - FOOTER_H + 8, 300, 22, 15, pal.ink);
-    out.selectedState = label('', GRID_X + 12, H - FOOTER_H + 30, 300, 16, 12, pal.muted);
-    out.on = createButton('开启', GRID_X + 320, H - FOOTER_H + 10, 72, 32,
-      () => control('turn_on'), pal.blueSoft, { radius: 8, borderWidth: 0, fontSize: 14 });
-    out.off = createButton('关闭', GRID_X + 400, H - FOOTER_H + 10, 72, 32,
-      () => control('turn_off'), pal.card, { radius: 8, borderWidth: 1, fontSize: 14 });
-    out.minus = createButton('\uf068', GRID_X + 486, H - FOOTER_H + 10, 34, 32,
-      () => changeBrightness(-10), pal.card, { radius: 8, borderWidth: 0, fontSize: 14 });
-    out.level = label('', GRID_X + 522, H - FOOTER_H + 15, 56, 22, 14, pal.ink);
-    out.plus = createButton('\uf067', GRID_X + 580, H - FOOTER_H + 10, 34, 32,
-      () => changeBrightness(10), pal.card, { radius: 8, borderWidth: 0, fontSize: 14 });
-    out.pages = label('', GRID_X + GRID_W - 300, H - FOOTER_H + 16, 200, 20, 13, pal.muted);
-    pushStyle(out.pages, 'L', { fontSize: 13, textColor: pal.muted, center: 1 });
-    out.previous = iconButton('\uf053', W - 100, H - FOOTER_H + 11, 36, 30, () => {
-      if (roomPage > 0) roomPage--;
-      render();
-    }, pal.card);
-    out.next = iconButton('\uf054', W - 58, H - FOOTER_H + 11, 36, 30, () => {
-      if (roomPage + 1 < pageCount()) roomPage++;
-      render();
-    }, pal.card);
-    [out.on, out.off, out.minus, out.plus].forEach(button => {
-      button.section = 'common';
-    });
-
-    out.settingsPanel = borderedPanel(GRID_X + M, GRID_Y + M, GRID_W - 2 * M,
-      GRID_H - 2 * M, pal.card, 10);
-    out.url = label('', GRID_X + 24, GRID_Y + 24, GRID_W - 48, 24, 16, pal.ink);
-    out.secret = label('', GRID_X + 24, GRID_Y + 54, GRID_W - 48, 24, 14, pal.muted);
-    out.transport = label('', GRID_X + 24, GRID_Y + 84, GRID_W - 48, 24, 14, pal.warn);
-    const settingsWidth = Math.floor((GRID_W - 60) / 2);
-    [
-      ['服务端', promptUrl], ['访问令牌', promptToken],
-      ['允许 HTTP', () => {
-        if (httpAllowed) { invalidate(); httpAllowed = false; }
-        else httpAllowed = true;
-        message = httpAllowed ? '已允许本次局域网明文连接' : '已撤销 HTTP 授权';
-        render();
-      }],
-      ['全部实体', () => {
-        if (pending || nativeBusy || queued) { message = '请求结束后才能切换范围'; render(); return; }
-        scope = scope === 'all' ? 'favorites' : 'all';
-        save('eh_scope', scope); selectedId = '';
-        if (connected) { beginStates(); startQueued(); }
-        render();
-      }],
-      ['添加关注', addFavorite], ['连接', connect], ['断开', disconnect]
-    ].forEach((entry, index) => {
-      const button = createButton(entry[0], GRID_X + 24 + (index % 2) * (settingsWidth + 12),
-        GRID_Y + 130 + Math.floor(index / 2) * 46, settingsWidth, 36, entry[1],
-        index === 5 ? pal.blueSoft : pal.card,
-        { radius: 8, borderWidth: 1, fontSize: 14 });
-      button.section = 'settings';
-      out.settings.push(button);
-    });
-    return out;
-  }
-
-  // ------------------------------- render ---------------------------------
-
-  function pageCount() {
-    return Math.max(1, Math.ceil(Math.max(0, entities.length) / SLOTS));
-  }
-
-  function rankOf(item) {
-    if (controllable(item)) return 0;
-    if (isNumeric(item) && isHumidity(item)) return 1;
-    if (isNumeric(item) && isTemperature(item)) return 2;
-    if (isNumeric(item)) return 3;
-    return 4;
-  }
-
-  function renderCard(card, item) {
-    const x = card.button.x, y = card.button.y;
-    card.item = item;
-    card.button._cardVisible = false;
-    hide(card.panel, !item);
-    hide(card.icon, !item);
-    hide(card.name, !item);
-    hide(card.value, !item);
-    hide(card.state, !item);
-    hide(card.track, true);
-    hide(card.fill, true);
-    if (!item) return;
-    card.button._cardVisible = true;
-    const tint = available(item) ? (controllable(item) && item.state !== 'on' ?
-      pal.muted : pal.blue) : pal.warn;
-    pushText(card.icon, cardIcon(item));
-    pushColor(card.icon, tint);
-    pushText(card.name, fit(item.name, CARD_W - 58, 14));
-    pushText(card.value, fit(cardValue(item), CARD_W - 32, 26));
-    pushColor(card.value, available(item) ? pal.ink : pal.muted);
-    pushText(card.state, fit(cardSubtitle(item), CARD_W - 32, 12));
-    pushColor(card.state, available(item) ? pal.muted : pal.warn);
-    if (item.dimmable && item.brightness !== null) {
-      const pct = Math.max(0, Math.min(100, item.brightness || 0));
-      pushSize(card.fill, Math.max(2, Math.round((CARD_W - 32) * pct / 100)), 6);
-      pushColor(card.fill, item.state === 'on' ? pal.blue : pal.muted);
-      hide(card.track, false);
-      hide(card.fill, false);
-    }
-  }
-
-  function render() {
-    if (!widgets || !uiReady || disposed) return;
-    if (entities.length !== loggedEntities) {
-      loggedEntities = entities.length;
-      try {
-        if (typeof console !== 'undefined' && console && typeof console.log === 'function') {
-          console.log('ha-data entities=' + entities.length + ' scope=' + scope +
-            ' cached=' + lastCached);
-        }
-      } catch (logError) { }
-    }
-    const showDashboard = !settingsOpen;
-    const selected = current();
-    const pages = pageCount();
-    if (roomPage > pages - 1) roomPage = pages - 1;
-
-    hide(widgets.sidebar, !showDashboard);
-    hide(widgets.brand, !showDashboard);
-    hide(widgets.note, !showDashboard);
-    hide(widgets.header, !showDashboard);
-    hide(widgets.title, !showDashboard);
-    hide(widgets.status, !showDashboard);
-    hide(widgets.footer, !showDashboard);
-    hide(widgets.footerLine, !showDashboard);
-    hide(widgets.selectedName, !showDashboard);
-    hide(widgets.selectedState, !showDashboard);
-    hide(widgets.pages, !showDashboard);
-    widgets.menu.forEach((entry, index) => {
-      hide(entry.text, !showDashboard);
-      if (entry.panel) hide(entry.panel, !showDashboard);
-      pushColor(entry.text, index === 0 ? pal.blue : pal.ink);
-    });
-    const controls = entities.filter(controllable);
-    const online = entities.filter(available).length;
-    const running = entities.filter(item => available(item) && item.state === 'on').length;
-    widgets.stats.forEach((entry, index) => {
-      hide(entry.dot, !showDashboard);
-      hide(entry.text, !showDashboard);
-      pushText(entry.text, index === 0 ? '设备 ' + controls.length :
-        index === 1 ? '在线 ' + online : '运行 ' + running);
-    });
-    pairHidden(widgets.refresh, !showDashboard);
-    pairHidden(widgets.settingsButton, settingsOpen);
-    pairHidden(widgets.back, !settingsOpen);
-    pushText(widgets.status, connected ? (lastCached ? '缓存状态' : '已同步') : '连接中…');
-    pushText(widgets.pages, '第 ' + (roomPage + 1) + ' / ' + pages + ' 页 · ' +
-      entities.length + ' 个实体');
-    pushText(widgets.selectedName, selected ? selected.name : '未选择设备');
-    pushText(widgets.selectedState, selected ?
-      (selected.entity_id + ' · ' + cardSubtitle(selected)) : message);
-    pairHidden(widgets.previous, !showDashboard || roomPage === 0);
-    pairHidden(widgets.next, !showDashboard || roomPage + 1 >= pages);
-
-    const usable = showDashboard && selected && connected && available(selected) &&
-      controllable(selected) && !pending && !queued && !nativeBusy;
-    hide(widgets.on, !usable || !supports(selected, 'turn_on'));
-    hide(widgets.off, !usable || !supports(selected, 'turn_off'));
-    const dimmer = usable && selected.dimmable && selected.brightness !== null &&
-      supports(selected, 'turn_on');
-    [widgets.minus, widgets.level, widgets.plus].forEach(id => hide(id, !dimmer));
-    if (dimmer) pushText(widgets.level, selected.brightness + '%');
-
-    const ranked = entities.slice().sort((a, b) =>
-      (a._rank === undefined ? (a._rank = rankOf(a)) : a._rank) -
-      (b._rank === undefined ? (b._rank = rankOf(b)) : b._rank));
-    const offset = roomPage * SLOTS;
-    widgets.cards.forEach((card, index) =>
-      renderCard(card, ranked[offset + index] || null));
-
-    hide(widgets.settingsPanel, !settingsOpen);
-    [widgets.url, widgets.secret, widgets.transport].forEach(id => hide(id, !settingsOpen));
-    widgets.settings.forEach(button => hide(button, !settingsOpen));
-    if (settingsOpen) {
-      pushText(widgets.url, fit('家庭中枢 · ' + url, GRID_W - 48, 16));
-      pushText(widgets.secret, token ? '令牌：已输入（仅本次会话）' :
-        nativeManaged ? '令牌：由本地服务管理' : '令牌：未输入');
-      pushText(widgets.transport, httpAllowed || nativeManaged ?
-        '本地网络 · HTTP 明文连接' : '连接前需要确认本地 HTTP 风险');
-      buttonText(widgets.settings[2], httpAllowed ? 'HTTP 已允许' : '允许 HTTP');
-      buttonText(widgets.settings[3], scope === 'favorites' ? '仅关注' : '全部实体');
-      buttonText(widgets.settings[5], connected ? '重新同步' : '连接家庭');
-    }
-    renderButtons();
-  }
-
-  // Reference dashboard layout. It leaves the transport/state machine untouched.
-  function buildUiReferenceLegacy() {
-    ui.background(pal.page);
-    const out = { cards: [], settings: [], deviceRows: [], summary: [] };
-    initializeButtonPool();
-    out.sidebar = panel(0, 0, SIDEBAR_W, H, pal.card, 0);
-    out.brand = label('Home Assistant', 16, 22, SIDEBAR_W - 26, 26, 16, pal.ink);
-    out.menu = [];
-    ['\u603b\u89c8', '\u8bbe\u5907', '\u73af\u5883', '\u8bbe\u7f6e'].forEach((name, index) => {
-      const y = 78 + index * 44;
-      out.menu.push({ panel: index === 0 ? panel(7, y, SIDEBAR_W - 14, 36, pal.blueSoft, 10) : null,
-        text: label(name, 24, y + 8, SIDEBAR_W - 38, 20, 15, index === 0 ? pal.blue : pal.ink) });
-    });
-    out.stats = [];
-    for (let i = 0; i < 3; i++) out.stats.push({
-      dot: panel(18, 332 + i * 34, 10, 10, i === 0 ? pal.blue : pal.good, 5),
-      text: label('', 36, 328 + i * 34, SIDEBAR_W - 48, 20, 13, pal.muted)
-    });
-    out.note = label('\u672c\u6b21\u8fd0\u884c  ·  \u672c\u5730\u91c7\u6837', 16, H - 52, SIDEBAR_W - 26, 18, 11, pal.muted);
-
-    out.header = panel(GRID_X, 0, GRID_W, HEADER_H, pal.blue, 0);
-    out.back = iconButton('\uf053', GRID_X + 12, 16, 30, 30, () => { if (settingsOpen) { settingsOpen = false; render(); } }, pal.blue);
-    out.title = label('\u6982\u89c8', GRID_X + 54, 17, 108, 28, 20, 0xffffff);
-    out.tabs = [label('\u6807\u51c6', GRID_X + 228, 21, 54, 22, 14, 0xffffff),
-      label('\u7d27\u51d1', GRID_X + 294, 21, 54, 22, 14, 0xffffff),
-      label('\u8212\u9002', GRID_X + 360, 21, 54, 22, 14, 0xffffff),
-      panel(GRID_X + 430, 11, 62, 42, 0xffffff, 22),
-      label('\u5206\u7ec4', GRID_X + 506, 21, 54, 22, 14, 0xffffff)];
-    for (const id of [out.tabs[0], out.tabs[1], out.tabs[2], out.tabs[4]]) pushStyle(id, 'L', { center: 1 });
-    out.classic = label('\u7ecf\u5178', GRID_X + 434, 21, 54, 22, 14, pal.blue);
-    pushStyle(out.classic, 'L', { center: 1 });
-    out.status = label('', W - 220, 21, 110, 22, 13, 0xffffff); pushStyle(out.status, 'L', { center: 1 });
-    out.refresh = iconButton('\uf021', W - 44, 16, 32, 28, refresh, pal.blue);
-    out.settingsButton = iconButton('\uf013', W - 82, 16, 32, 28, () => { settingsOpen = !settingsOpen; render(); }, pal.blue);
-
-    const topY = HEADER_H + 16, leftX = SIDEBAR_W + 14;
-    out.syncButton = createButton('\u540c\u6b65\u72b6\u6001', leftX, topY, 126, 46, refresh, pal.card,
-      { radius: 12, borderWidth: 1, borderColor: pal.line, fontSize: 14 });
-    out.linkButton = createButton('\u8fde\u63a5\u8bbe\u7f6e', leftX + 138, topY, 126, 46,
-      () => { settingsOpen = !settingsOpen; render(); }, pal.card,
-      { radius: 12, borderWidth: 1, borderColor: pal.line, fontSize: 14 });
-    out.syncButton.section = 'list'; out.linkButton.section = 'list';
-    const deviceY = topY + 60;
-    out.devicePanel = borderedPanel(leftX, deviceY, 264, 244, pal.card, 10);
-    out.deviceTitle = label('\u8bbe\u5907', leftX + 16, deviceY + 16, 180, 24, 17, pal.ink);
-    ['\u7a7a\u6c14\u51c0\u5316\u5668', '\u4e66\u623f\u98ce\u6247', '\u5496\u5561\u673a\u63d2\u5ea7', '\u4e66\u684c\u7535\u6e90'].forEach((name, index) => {
-      const y = deviceY + 52 + index * 44;
-      const row = { item: null, name: label(name, leftX + 16, y, 160, 18, 14, pal.ink),
-        state: label('', leftX + 16, y + 20, 150, 16, 12, pal.muted), button: null, knob: null };
-      pushStyle(row.name, 'L', { ellipsis: 1 });
-      row.button = createButton('', leftX + 190, y + 2, 54, 28, () => { if (row.item) selectOrToggle(row.item); }, pal.blue, { radius: 14, borderWidth: 0 });
-      row.knob = panel(leftX + 194, y + 6, 20, 20, pal.card, 10);
-      row.button.section = 'card'; row.button._cardVisible = true;
-      out.deviceRows.push(row);
-    });
-
-    function lamp(x, y, title) {
-      const c = { kind: 'lamp', item: null, panel: borderedPanel(x, y, LAMP_W, LAMP_H, pal.card, 10),
-        arc: ui.arc(x + 17, y + 7, 92, 92, 0, pal.track, pal.blue),
-        icon: label('\uf0e7', x + 47, y + 31, 32, 32, 28, pal.yellow, true),
-        name: label(title, x + 8, y + 105, LAMP_W - 16, 20, 14, pal.ink),
-        state: label('', x + 8, y + 125, LAMP_W - 16, 18, 12, pal.muted), button: null };
-      pushStyle(c.name, 'L', { center: 1 }); pushStyle(c.state, 'L', { center: 1 });
-      c.button = createButton('', x, y, LAMP_W, LAMP_H, () => { if (c.item) selectOrToggle(c.item); }, pal.card, { radius: 10, borderWidth: 0 });
-      c.button.section = 'card'; c.button._cardVisible = true; out.cards.push(c);
-    }
-    const lampX = leftX + 282;
-    lamp(lampX, topY, '\u5ba2\u5385\u4e3b\u706f'); lamp(lampX + LAMP_W + LAMP_GAP, topY, '\u5367\u5ba4\u706f');
-    lamp(lampX, topY + LAMP_H + LAMP_GAP, '\u9910\u5385\u540a\u706f'); lamp(lampX + LAMP_W + LAMP_GAP, topY + LAMP_H + LAMP_GAP, '\u7384\u5173\u706f\u5e26');
-    const sensorX = leftX + 560, sensorW = W - sensorX - 14;
-    const temp = { kind: 'temp', item: null, panel: borderedPanel(sensorX, topY, sensorW, 145, pal.card, 10),
-      name: label('\u5ba2\u5385\u6e29\u5ea6', sensorX + 16, topY + 16, sensorW - 32, 22, 16, pal.ink),
-      value: label('--', sensorX + 16, topY + 48, sensorW - 32, 36, 27, pal.ink),
-      line: ui.line([[0, 22], [20, 31], [40, 16], [60, 24], [80, 32], [100, 12], [120, 21], [140, 30], [160, 6], [180, 16], [200, 8], [220, 20]], sensorX + 16, topY + 87, sensorW - 32, 34, 0, pal.blue),
-      range: label('\u672c\u6b21 23.0 - 24.8', sensorX + 16, topY + 124, sensorW - 32, 16, 11, pal.muted) };
-    temp.button = createButton('', sensorX, topY, sensorW, 145, () => { if (temp.item) selectedId = temp.item.entity_id; render(); }, pal.card, { radius: 10, borderWidth: 0 }); temp.button.section = 'card'; temp.button._cardVisible = true; out.cards.push(temp);
-    const hy = topY + 155;
-    const humidity = { kind: 'humidity', item: null, panel: borderedPanel(sensorX, hy, sensorW, 145, pal.card, 10),
-      name: label('\u5ba4\u5185\u6e7f\u5ea6', sensorX + 16, hy + 16, sensorW - 32, 22, 16, pal.ink), value: label('--', sensorX + 16, hy + 48, 120, 36, 27, pal.ink),
-      arc: ui.arc(sensorX + sensorW - 145, hy + 25, 112, 84, 48, pal.track, pal.teal, 180, 180), range: label('0 - 100%', sensorX + sensorW - 145, hy + 116, 112, 16, 11, pal.muted) };
-    pushStyle(humidity.range, 'L', { center: 1 }); humidity.button = createButton('', sensorX, hy, sensorW, 145, () => { if (humidity.item) selectedId = humidity.item.entity_id; render(); }, pal.card, { radius: 10, borderWidth: 0 }); humidity.button.section = 'card'; humidity.button._cardVisible = true; out.cards.push(humidity);
-
-    const summaryY = H - FOOTER_H - 84;
-    ['\u5bb6\u5ead\u6982\u51b5', '\u5bb6\u5ead\u4e2d\u67a2', '\u5165\u6237\u95e8\u7a97'].forEach((title, index) => {
-      const x = leftX + index * 278;
-      const value = label('', x + 16, summaryY + 36, 238, 24, index === 1 ? 12 : 20, pal.ink);
-      pushStyle(value, 'L', { ellipsis: 1 });
-      out.summary.push({ panel: borderedPanel(x, summaryY, 264, 72, pal.card, 10), title: label(title, x + 16, summaryY + 13, 230, 18, 13, pal.muted), value });
-    });
-
-    out.footer = panel(GRID_X, H - FOOTER_H, GRID_W, FOOTER_H, pal.card, 0); out.footerLine = panel(GRID_X, H - FOOTER_H, GRID_W, 1, pal.line, 0);
-    out.selectedName = label('', GRID_X + 16, H - FOOTER_H + 8, 260, 22, 16, pal.ink); out.selectedState = label('', GRID_X + 16, H - FOOTER_H + 31, 260, 16, 12, pal.muted);
-    out.on = createButton('\u5f00\u542f', GRID_X + 320, H - FOOTER_H + 10, 72, 32, () => control('turn_on'), pal.blueSoft, { radius: 8, borderWidth: 0, fontSize: 14 });
-    out.off = createButton('\u5173\u95ed', GRID_X + 400, H - FOOTER_H + 10, 72, 32, () => control('turn_off'), pal.card, { radius: 8, borderWidth: 1, fontSize: 14 });
-    out.minus = createButton('\uf068', GRID_X + 486, H - FOOTER_H + 10, 34, 32, () => changeBrightness(-10), pal.card, { radius: 8, borderWidth: 0, fontSize: 14 });
-    out.level = label('', GRID_X + 522, H - FOOTER_H + 15, 56, 22, 14, pal.ink); out.plus = createButton('\uf067', GRID_X + 580, H - FOOTER_H + 10, 34, 32, () => changeBrightness(10), pal.card, { radius: 8, borderWidth: 0, fontSize: 14 });
-    out.pages = label('', GRID_X + GRID_W - 300, H - FOOTER_H + 16, 200, 20, 13, pal.muted); pushStyle(out.pages, 'L', { center: 1 });
-    out.previous = iconButton('\uf053', W - 100, H - FOOTER_H + 11, 36, 30, () => {}, pal.card); out.next = iconButton('\uf054', W - 58, H - FOOTER_H + 11, 36, 30, () => {}, pal.card);
-    [out.on, out.off, out.minus, out.plus].forEach(button => { button.section = 'common'; });
-    out.settingsPanel = borderedPanel(GRID_X + 18, GRID_Y + 18, GRID_W - 36, H - GRID_Y - FOOTER_H - 36, pal.card, 10);
-    out.url = label('', GRID_X + 42, GRID_Y + 42, GRID_W - 84, 24, 16, pal.ink); out.secret = label('', GRID_X + 42, GRID_Y + 72, GRID_W - 84, 24, 14, pal.muted); out.transport = label('', GRID_X + 42, GRID_Y + 102, GRID_W - 84, 24, 14, pal.warn);
-    const settingsWidth = Math.floor((GRID_W - 84) / 2);
-    [['\u670d\u52a1\u7aef', promptUrl], ['\u8bbf\u95ee\u4ee4\u724c', promptToken], ['\u5141\u8bb8 HTTP', () => { httpAllowed = !httpAllowed; render(); }], ['\u5168\u90e8\u5b9e\u4f53', () => { scope = scope === 'all' ? 'favorites' : 'all'; save('eh_scope', scope); if (connected) { beginStates(); startQueued(); } render(); }], ['\u6dfb\u52a0\u5173\u6ce8', addFavorite], ['\u8fde\u63a5', connect], ['\u65ad\u5f00', disconnect]].forEach((entry, index) => { const b = createButton(entry[0], GRID_X + 42 + (index % 2) * (settingsWidth + 12), GRID_Y + 142 + Math.floor(index / 2) * 46, settingsWidth, 36, entry[1], index === 5 ? pal.blueSoft : pal.card, { radius: 8, borderWidth: 1, fontSize: 14 }); b.section = 'settings'; out.settings.push(b); });
-    return out;
-  }
-
-  function referenceEntity(list, predicate, offset) {
-    const matches = list.filter(predicate || (() => true));
-    return matches[offset || 0] || list[offset || 0] || null;
-  }
-
-  function renderReferenceLegacy() {
-    if (!widgets || disposed) return;
-    const show = !settingsOpen;
-    const controls = entities.filter(controllable);
-    const sensors = entities.filter(item => isNumeric(item));
-    const lights = controls.filter(item => item.domain === 'light');
-    const temp = referenceEntity(sensors, isTemperature, 0);
-    const humidity = referenceEntity(sensors, isHumidity, 0);
-    const selected = current();
-    const hideAll = [widgets.sidebar, widgets.brand, widgets.footer, widgets.footerLine,
-      widgets.selectedName, widgets.selectedState, widgets.pages, widgets.devicePanel, widgets.deviceTitle,
-      widgets.note, widgets.syncButton, widgets.linkButton];
-    hideAll.forEach(id => hide(id, !show));
-    widgets.menu.forEach(entry => { hide(entry.text, !show); if (entry.panel) hide(entry.panel, !show); });
-    widgets.stats.forEach((entry, index) => {
-      hide(entry.dot, !show); hide(entry.text, !show);
-      pushText(entry.text, index === 0 ? '\u8bbe\u5907 ' + controls.length : index === 1 ? '\u5728\u7ebf ' + entities.filter(available).length : '\u8fd0\u884c ' + activeDevices());
-    });
-    widgets.tabs.forEach(id => hide(id, !show)); hide(widgets.classic, !show);
-    hide(widgets.header, false); hide(widgets.title, false);
-    pairHidden(widgets.back, !settingsOpen);
-    pairHidden(widgets.refresh, !show);
-    pairHidden(widgets.settingsButton, !show);
-    widgets.deviceRows.forEach((row, index) => {
-      const item = controls[index] || null; row.item = item; hide(row.name, !show); hide(row.state, !show); hide(row.button, !show); hide(row.knob, !show);
-      pushText(row.state, item ? (available(item) ? cardSubtitle(item) : '\u4e0d\u53ef\u7528') : '\u6682\u65e0\u5b9e\u4f53');
-      pushColor(row.state, item && item.state === 'on' ? pal.blue : pal.muted);
-      buttonColor(row.button, item && item.state === 'on' ? pal.blue : pal.track);
-      pushPos(row.knob, row.button.x + (item && item.state === 'on' ? 30 : 4), row.button.y + 4);
-      row.button._cardVisible = show;
-    });
-    widgets.cards.forEach(card => {
-      hide(card.panel, !show); hide(card.button, !show); card.button._cardVisible = show;
-      let item = card.kind === 'temp' ? temp : card.kind === 'humidity' ? humidity : null;
-      if (card.kind === 'lamp') item = lights[widgets.cards.filter(x => x.kind === 'lamp').indexOf(card)] || controls[widgets.cards.indexOf(card)] || null;
-      card.item = item;
-      if (card.kind === 'lamp') {
-        const pct = item && item.brightness !== null ? item.brightness : item && item.state === 'on' ? 100 : 0;
-        if (card._value !== pct) { card._value = pct; ui.arcSet(card.arc, pct); }
-        pushColor(card.icon, item && item.state === 'on' ? pal.yellow : pal.muted);
-        pushText(card.state, item ? (item.state === 'on' ? '\u5df2\u5f00\u542f  ·  ' + pct + '%' : '\u5df2\u5173\u95ed') : '\u6682\u65e0\u5b9e\u4f53');
-        pushColor(card.state, item && item.state === 'on' ? pal.muted : pal.muted);
-      } else if (card.kind === 'temp') {
-        pushText(card.value, temp ? metricText(temp) : '--');
-      } else if (card.kind === 'humidity') {
-        const value = humidity && isNumeric(humidity) ? Math.max(0, Math.min(100, Number(humidity.state))) : 0;
-        pushText(card.value, humidity ? metricText(humidity) : '--');
-        if (card._value !== value) { card._value = value; ui.arcSet(card.arc, value); }
-      }
-    });
-    widgets.summary.forEach((card, index) => {
-      hide(card.panel, !show); hide(card.title, !show); hide(card.value, !show);
-      pushText(card.value, index === 0 ? entities.filter(available).length + ' / ' + entities.length + ' \u5728\u7ebf' : index === 1 ? url : (entities.some(item => /door|window|\u95e8|\u7a97/i.test(item.name)) ? '\u6b63\u5e38' : '\u65e0\u4f20\u611f\u5668'));
-      pushColor(card.value, index === 1 && !nativeManaged ? pal.warn : pal.ink);
-    });
-    pushText(widgets.status, connected ? (lastCached ? '\u5df2\u540c\u6b65' : '\u5df2\u540c\u6b65') : '\u672a\u8fde\u63a5');
-    pushText(widgets.selectedName, selected ? selected.name : '\u672a\u9009\u62e9\u8bbe\u5907');
-    pushText(widgets.selectedState, selected ? selected.entity_id + '  ·  ' + cardSubtitle(selected) : message);
-    pushText(widgets.pages, '\u7b2c 1 / 1 \u9875  ·  ' + entities.length + ' \u4e2a\u5b9e\u4f53');
-    const usable = show && selected && connected && available(selected) && controllable(selected) && !pending && !queued && !nativeBusy;
-    hide(widgets.on, !usable || !supports(selected, 'turn_on')); hide(widgets.off, !usable || !supports(selected, 'turn_off'));
-    const dimmer = usable && selected.dimmable && selected.brightness !== null && supports(selected, 'turn_on');
-    [widgets.minus, widgets.level, widgets.plus].forEach(id => hide(id, !dimmer)); if (dimmer) pushText(widgets.level, selected.brightness + '%');
-    pairHidden(widgets.previous, true); pairHidden(widgets.next, true);
-    hide(widgets.settingsPanel, !settingsOpen); [widgets.url, widgets.secret, widgets.transport].forEach(id => hide(id, !settingsOpen)); widgets.settings.forEach(button => hide(button, !settingsOpen));
-    if (settingsOpen) { pushText(widgets.url, '\u5bb6\u5ead\u4e2d\u67a2  ·  ' + url); pushText(widgets.secret, nativeManaged ? '\u4ee4\u724c\uff1a\u7531\u672c\u5730\u670d\u52a1\u7ba1\u7406' : '\u4ee4\u724c\uff1a\u672a\u8f93\u5165'); pushText(widgets.transport, nativeManaged ? '\u672c\u5730\u7f51\u7edc  ·  HTTP \u8fde\u63a5' : '\u8fde\u63a5\u524d\u9700\u786e\u8ba4 HTTP \u98ce\u9669'); }
-    renderButtons();
-  }
-
-  */
-
   function friendlyState(item) {
     if(item&&item.domain==='scene'&&!item.stale){
       if(item.state==='unknown')return '尚未触发';
@@ -2255,7 +1805,7 @@
   registerQuickCards('air-fryer coffee-machine cooker fruit-vegetable-purifier health-pot hood induction-cooker integrated-stove juicer kettle oven pressure-cooker water-purifier', 'kitchen', 'status');
   registerQuickCards('fridge garbage-can gateway massage mirror mosquito-dispeller moxibustion printer treadmill walking-pad', 'generic', 'status');
   /* HA_COMMON_PROFILES_BEGIN */
-  const commonCardProfiles = [{"id":"bedside-light","name":"\u706f\u5177","types":["light"],"domains":["light"],"primary":["brightness_pct","color_temp_kelvin"],"secondary":["effect"],"quick":"brightness_pct"},{"id":"outlet","name":"\u63d2\u5ea7","types":["outlet","switch","relay"],"domains":["switch","input_boolean"],"primary":[],"secondary":[],"quick":"power"},{"id":"fan","name":"\u98ce\u6247","types":["fan","ceiling-fan"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":["oscillating"],"quick":"percentage"},{"id":"air-conditioner","name":"\u7a7a\u8c03","types":["air-conditioner"],"domains":["climate"],"primary":["temperature","hvac_mode"],"secondary":["fan_mode","swing_mode","preset_mode"],"quick":"temperature"},{"id":"curtain","name":"\u7a97\u5e18","types":["curtain","airer"],"domains":["cover"],"primary":["position","open_cover","stop_cover","close_cover"],"secondary":[],"quick":"position"},{"id":"air-purifier","name":"\u7a7a\u6c14\u51c0\u5316\u5668","types":["air-purifier","air-fresh"],"domains":["fan"],"primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","reading":"pm25","readings":[["pm2.5-density","PM2.5","ug/m3"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"]]},{"id":"humidifier","name":"\u52a0\u6e7f\u5668","types":["humidifier","diffuser"],"domains":["humidifier"],"primary":["humidity","mode"],"secondary":[],"quick":"humidity","reading":"current_humidity"},{"id":"speaker","name":"\u97f3\u7bb1","types":["speaker"],"domains":["media_player"],"primary":["volume_level","media_play","media_pause"],"secondary":["is_volume_muted","source","media_previous_track","media_next_track","media_stop"],"quick":"volume_level"},{"id":"vacuum","name":"\u626b\u5730\u673a\u5668\u4eba","types":["vacuum"],"domains":["vacuum"],"primary":["start","pause","return_to_base"],"secondary":["fan_speed","stop"],"quick":"actions"},{"id":"water-heater","name":"\u70ed\u6c34\u5668","types":["water-heater"],"domains":["water_heater"],"primary":["temperature","operation_mode"],"secondary":[],"quick":"temperature","reading":"current_temperature"},{"id":"temperature-humidity","name":"\u6e29\u6e7f\u5ea6\u4f20\u611f\u5668","types":["temperature-humidity-sensor"],"domains":["sensor"],"primary":[],"secondary":[],"quick":"reading","readonly":true},{"id":"air-fryer","name":"\u7a7a\u6c14\u70b8\u9505","types":["air-fryer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"air-monitor","name":"\u7a7a\u6c14\u8d28\u91cf\u76d1\u6d4b","types":["air-monitor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["pm2.5-density","PM2.5","\u00b5g/m\u00b3"],["co2-density","\u4e8c\u6c27\u5316\u78b3","ppm"],["hcho-density","\u7532\u919b","mg/m\u00b3"],["tvoc-density","TVOC","mg/m\u00b3"],["temperature","\u6e29\u5ea6","\u00b0C"],["relative-humidity","\u6e7f\u5ea6","%"]]},{"id":"bath-heater","name":"\u6d74\u9738","types":["bath-heater"],"domains":["climate","switch"],"layout":"climate","primary":["temperature","hvac_mode"],"secondary":["fan_mode","preset_mode"],"quick":"temperature","readings":[["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"camera","name":"\u6444\u50cf\u5934","types":["camera"],"domains":["camera","switch"],"layout":"camera","primary":[],"secondary":[],"quick":"reading","notice":"\u6682\u65e0\u9884\u89c8\u753b\u9762","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"coffee-machine","name":"\u5496\u5561\u673a","types":["coffee-machine"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u5236\u4f5c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["water-level","\u6c34\u91cf","%"]]},{"id":"cooker","name":"\u7535\u996d\u7172","types":["cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"dishwasher","name":"\u6d17\u7897\u673a","types":["dishwasher"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6d17\u6da4\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["temperature","\u6c34\u6e29","\u00b0C"]]},{"id":"flowerpot","name":"\u667a\u80fd\u82b1\u76c6","types":["flowerpot"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["relative-humidity","\u571f\u58e4\u6e7f\u5ea6","%"],["illumination","\u5149\u7167","lx"],["soil-ec","\u571f\u58e4\u7535\u5bfc\u7387","\u00b5S/cm"],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"fridge","name":"\u51b0\u7bb1","types":["fridge"],"domains":[],"layout":"metrics","primary":["temperature","option"],"secondary":[],"quick":"reading","readings":[["temperature","\u51b7\u85cf\u6e29\u5ea6","\u00b0C"],["freezer-temperature","\u51b7\u51bb\u6e29\u5ea6","\u00b0C"],["mode","\u8fd0\u884c\u6a21\u5f0f",""]]},{"id":"fruit-vegetable-purifier","name":"\u679c\u852c\u51c0\u6d17\u673a","types":["fruit-vegetable-purifier"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u51c0\u6d17\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"garbage-can","name":"\u667a\u80fd\u5783\u573e\u6876","types":["garbage-can"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["target-lid-state","\u6876\u76d6\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gas-concentration","name":"\u71c3\u6c14\u6d53\u5ea6","types":["gas-concentration"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["$value","\u71c3\u6c14\u6d53\u5ea6",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gas-sensor","name":"\u71c3\u6c14\u62a5\u8b66\u5668","types":["gas-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u89e6\u53d1\u62a5\u8b66","\u68c0\u6d4b\u5230\u71c3\u6c14"],"readings":[["$state","\u62a5\u8b66\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"gateway","name":"\u7f51\u5173","types":["gateway"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["guard-mode","\u8b66\u6212\u6a21\u5f0f",""]]},{"id":"health-pot","name":"\u517b\u751f\u58f6","types":["health-pot"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u6c34\u6e29","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"heater","name":"\u53d6\u6696\u5668","types":["heater"],"domains":["climate","switch"],"layout":"climate","primary":["temperature","hvac_mode"],"secondary":["preset_mode"],"quick":"temperature","readings":[["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"hood","name":"\u6cb9\u70df\u673a","types":["hood"],"domains":["fan","switch"],"layout":"status","primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["mode","\u5de5\u4f5c\u6a21\u5f0f",""]]},{"id":"illumination-sensor","name":"\u5149\u7167\u4f20\u611f\u5668","types":["illumination-sensor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["illumination","\u5149\u7167\u5ea6","lx"],["battery-level","\u7535\u91cf","%"]]},{"id":"induction-cooker","name":"\u7535\u78c1\u7089","types":["induction-cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"integrated-stove","name":"\u96c6\u6210\u7076","types":["integrated-stove"],"domains":["fan","switch"],"layout":"appliance","primary":["percentage","preset_mode"],"secondary":[],"quick":"percentage","readings":[["mode","\u5de5\u4f5c\u6a21\u5f0f",""],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"juicer","name":"\u6599\u7406\u673a","types":["juicer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"kettle","name":"\u7535\u6c34\u58f6","types":["kettle"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u5f53\u524d\u6c34\u6e29","\u00b0C"],["target-temperature","\u76ee\u6807\u6c34\u6e29","\u00b0C"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"magnet-sensor","name":"\u95e8\u7a97\u4f20\u611f\u5668","types":["magnet-sensor"],"domains":["binary_sensor","sensor"],"layout":"status","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u95e8\u7a97\u5df2\u5173\u95ed","\u95e8\u7a97\u5df2\u6253\u5f00"],"readings":[["$state","\u95e8\u7a97\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"massage","name":"\u6309\u6469\u8bbe\u5907","types":["massage"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"mirror","name":"\u667a\u80fd\u955c","types":["mirror"],"domains":["light","switch"],"layout":"status","primary":["brightness_pct","color_temp_kelvin"],"secondary":["effect"],"quick":"brightness_pct","readings":[["$state","\u7167\u660e\u72b6\u6001",""]]},{"id":"mosquito-dispeller","name":"\u9a71\u868a\u5668","types":["mosquito-dispeller"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["repellent-left-level","\u8017\u6750\u4f59\u91cf","%"],["battery-level","\u7535\u91cf","%"],["$state","\u8fd0\u884c\u72b6\u6001",""]]},{"id":"motion-sensor","name":"\u4eba\u4f53\u4f20\u611f\u5668","types":["motion-sensor"],"domains":["binary_sensor","sensor"],"layout":"status","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u68c0\u6d4b\u5230\u6d3b\u52a8","\u68c0\u6d4b\u5230\u6d3b\u52a8"],"readings":[["$state","\u6d3b\u52a8\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"moxibustion","name":"\u827e\u7078\u8bbe\u5907","types":["moxibustion"],"domains":[],"layout":"status","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"oven","name":"\u70e4\u7bb1","types":["oven"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["temperature","\u5f53\u524d\u6e29\u5ea6","\u00b0C"],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"pet-drinking-fountain","name":"\u5ba0\u7269\u996e\u6c34\u673a","types":["pet-drinking-fountain"],"domains":["switch"],"layout":"status","primary":[],"secondary":[],"quick":"power","readings":[["$state","\u4f9b\u6c34\u72b6\u6001",""],["water-level","\u6c34\u91cf","%"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"]]},{"id":"plant-monitor","name":"\u690d\u7269\u76d1\u6d4b\u4eea","types":["plant-monitor"],"domains":["sensor"],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readonly":true,"readings":[["relative-humidity","\u571f\u58e4\u6e7f\u5ea6","%"],["illumination","\u5149\u7167","lx"],["soil-ec","\u571f\u58e4\u7535\u5bfc\u7387","\u00b5S/cm"],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"pressure-cooker","name":"\u7535\u538b\u529b\u9505","types":["pressure-cooker"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u70f9\u996a\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""]]},{"id":"printer","name":"\u6253\u5370\u673a","types":["printer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6253\u5370\u72b6\u6001",""],["progress","\u4efb\u52a1\u8fdb\u5ea6","%"]]},{"id":"smoke-sensor","name":"\u70df\u96fe\u62a5\u8b66\u5668","types":["smoke-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u89e6\u53d1\u62a5\u8b66","\u68c0\u6d4b\u5230\u70df\u96fe"],"readings":[["$state","\u62a5\u8b66\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"submersion-sensor","name":"\u6c34\u6d78\u4f20\u611f\u5668","types":["submersion-sensor"],"domains":["binary_sensor","sensor"],"layout":"alarm","primary":[],"secondary":[],"quick":"reading","readonly":true,"states":["\u672a\u68c0\u6d4b\u5230\u6f0f\u6c34","\u68c0\u6d4b\u5230\u6f0f\u6c34"],"readings":[["$state","\u6c34\u6d78\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"towel-rack","name":"\u7535\u70ed\u6bdb\u5dfe\u67b6","types":["towel-rack"],"domains":["climate","switch"],"layout":"climate","primary":["temperature"],"secondary":[],"quick":"temperature","readings":[["$state","\u8fd0\u884c\u72b6\u6001",""],["temperature","\u6e29\u5ea6","\u00b0C"]]},{"id":"treadmill","name":"\u8dd1\u6b65\u673a","types":["treadmill"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["current-distance","\u8fd0\u52a8\u8ddd\u79bb","km"],["working-time","\u8fd0\u52a8\u65f6\u957f","min"],["speed","\u5f53\u524d\u901f\u5ea6","km/h"]]},{"id":"video-doorbell","name":"\u53ef\u89c6\u95e8\u94c3","types":["video-doorbell"],"domains":["camera","binary_sensor"],"layout":"camera","primary":[],"secondary":[],"quick":"reading","notice":"\u6682\u65e0\u9884\u89c8\u753b\u9762","readings":[["$state","\u8bbe\u5907\u72b6\u6001",""],["battery-level","\u7535\u91cf","%"]]},{"id":"walking-pad","name":"\u8d70\u6b65\u673a","types":["walking-pad"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["current-distance","\u8fd0\u52a8\u8ddd\u79bb","km"],["working-time","\u8fd0\u52a8\u65f6\u957f","min"],["speed","\u5f53\u524d\u901f\u5ea6","km/h"]]},{"id":"washer","name":"\u6d17\u8863\u673a","types":["washer"],"domains":[],"layout":"appliance","primary":[],"secondary":[],"quick":"reading","readings":[["$state","\u6d17\u6da4\u72b6\u6001",""],["left-time","\u5269\u4f59\u65f6\u95f4",""],["progress","\u4efb\u52a1\u8fdb\u5ea6","%"]]},{"id":"water-dispenser","name":"\u996e\u6c34\u673a","types":["water-dispenser"],"domains":[],"layout":"appliance","primary":["temperature"],"secondary":[],"quick":"reading","readings":[["temperature","\u5f53\u524d\u6c34\u6e29","\u00b0C"],["target-temperature","\u76ee\u6807\u6c34\u6e29","\u00b0C"],["water-level","\u6c34\u91cf","%"]]},{"id":"water-purifier","name":"\u51c0\u6c34\u5668","types":["water-purifier"],"domains":[],"layout":"metrics","primary":[],"secondary":[],"quick":"reading","readings":[["tds-out","\u51fa\u6c34 TDS","ppm"],["filter-life-level","\u6ee4\u82af\u4f59\u91cf","%"],["$state","\u8fd0\u884c\u72b6\u6001",""]]}];
+  const commonCardProfiles = JSON.parse("[{\"id\":\"bedside-light\",\"name\":\"灯具\",\"types\":[\"light\"],\"domains\":[\"light\"],\"primary\":[\"brightness_pct\",\"color_temp_kelvin\"],\"secondary\":[\"effect\"],\"quick\":\"brightness_pct\"},{\"id\":\"outlet\",\"name\":\"插座\",\"types\":[\"outlet\",\"switch\",\"relay\"],\"domains\":[\"switch\",\"input_boolean\"],\"primary\":[],\"secondary\":[],\"quick\":\"power\"},{\"id\":\"fan\",\"name\":\"风扇\",\"types\":[\"fan\",\"ceiling-fan\"],\"domains\":[\"fan\"],\"primary\":[\"percentage\",\"preset_mode\"],\"secondary\":[\"oscillating\"],\"quick\":\"percentage\"},{\"id\":\"air-conditioner\",\"name\":\"空调\",\"types\":[\"air-conditioner\"],\"domains\":[\"climate\"],\"primary\":[\"temperature\",\"hvac_mode\"],\"secondary\":[\"fan_mode\",\"swing_mode\",\"preset_mode\"],\"quick\":\"temperature\"},{\"id\":\"curtain\",\"name\":\"窗帘\",\"types\":[\"curtain\",\"airer\"],\"domains\":[\"cover\"],\"primary\":[\"position\",\"open_cover\",\"stop_cover\",\"close_cover\"],\"secondary\":[],\"quick\":\"position\"},{\"id\":\"air-purifier\",\"name\":\"空气净化器\",\"types\":[\"air-purifier\",\"air-fresh\"],\"domains\":[\"fan\"],\"primary\":[\"percentage\",\"preset_mode\"],\"secondary\":[],\"quick\":\"percentage\",\"reading\":\"pm25\",\"readings\":[[\"pm2.5-density\",\"PM2.5\",\"ug/m3\"],[\"filter-life-level\",\"滤芯余量\",\"%\"]]},{\"id\":\"humidifier\",\"name\":\"加湿器\",\"types\":[\"humidifier\",\"diffuser\"],\"domains\":[\"humidifier\"],\"primary\":[\"humidity\",\"mode\"],\"secondary\":[],\"quick\":\"humidity\",\"reading\":\"current_humidity\"},{\"id\":\"speaker\",\"name\":\"音箱\",\"types\":[\"speaker\"],\"domains\":[\"media_player\"],\"primary\":[\"volume_level\",\"media_play\",\"media_pause\"],\"secondary\":[\"is_volume_muted\",\"source\",\"media_previous_track\",\"media_next_track\",\"media_stop\"],\"quick\":\"volume_level\"},{\"id\":\"vacuum\",\"name\":\"扫地机器人\",\"types\":[\"vacuum\"],\"domains\":[\"vacuum\"],\"primary\":[\"start\",\"pause\",\"return_to_base\"],\"secondary\":[\"fan_speed\",\"stop\"],\"quick\":\"actions\"},{\"id\":\"water-heater\",\"name\":\"热水器\",\"types\":[\"water-heater\"],\"domains\":[\"water_heater\"],\"primary\":[\"temperature\",\"operation_mode\"],\"secondary\":[],\"quick\":\"temperature\",\"reading\":\"current_temperature\"},{\"id\":\"temperature-humidity\",\"name\":\"温湿度传感器\",\"types\":[\"temperature-humidity-sensor\"],\"domains\":[\"sensor\"],\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true},{\"id\":\"air-fryer\",\"name\":\"空气炸锅\",\"types\":[\"air-fryer\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"烹饪状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"],[\"temperature\",\"温度\",\"°C\"]]},{\"id\":\"air-monitor\",\"name\":\"空气质量监测\",\"types\":[\"air-monitor\"],\"domains\":[\"sensor\"],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"readings\":[[\"pm2.5-density\",\"PM2.5\",\"µg/m³\"],[\"co2-density\",\"二氧化碳\",\"ppm\"],[\"hcho-density\",\"甲醛\",\"mg/m³\"],[\"tvoc-density\",\"TVOC\",\"mg/m³\"],[\"temperature\",\"温度\",\"°C\"],[\"relative-humidity\",\"湿度\",\"%\"]]},{\"id\":\"bath-heater\",\"name\":\"浴霸\",\"types\":[\"bath-heater\"],\"domains\":[\"climate\",\"switch\"],\"layout\":\"climate\",\"primary\":[\"temperature\",\"hvac_mode\"],\"secondary\":[\"fan_mode\",\"preset_mode\"],\"quick\":\"temperature\",\"readings\":[[\"temperature\",\"当前温度\",\"°C\"],[\"$state\",\"运行状态\",\"\"]]},{\"id\":\"camera\",\"name\":\"摄像头\",\"types\":[\"camera\"],\"domains\":[\"camera\",\"switch\"],\"layout\":\"camera\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"notice\":\"暂无预览画面\",\"readings\":[[\"$state\",\"设备状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"coffee-machine\",\"name\":\"咖啡机\",\"types\":[\"coffee-machine\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"制作状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"],[\"water-level\",\"水量\",\"%\"]]},{\"id\":\"cooker\",\"name\":\"电饭煲\",\"types\":[\"cooker\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"烹饪状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"],[\"temperature\",\"温度\",\"°C\"]]},{\"id\":\"dishwasher\",\"name\":\"洗碗机\",\"types\":[\"dishwasher\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"洗涤状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"],[\"temperature\",\"水温\",\"°C\"]]},{\"id\":\"flowerpot\",\"name\":\"智能花盆\",\"types\":[\"flowerpot\"],\"domains\":[\"sensor\"],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"readings\":[[\"relative-humidity\",\"土壤湿度\",\"%\"],[\"illumination\",\"光照\",\"lx\"],[\"soil-ec\",\"土壤电导率\",\"µS/cm\"],[\"temperature\",\"温度\",\"°C\"]]},{\"id\":\"fridge\",\"name\":\"冰箱\",\"types\":[\"fridge\"],\"domains\":[],\"layout\":\"metrics\",\"primary\":[\"temperature\",\"option\"],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"temperature\",\"冷藏温度\",\"°C\"],[\"freezer-temperature\",\"冷冻温度\",\"°C\"],[\"mode\",\"运行模式\",\"\"]]},{\"id\":\"fruit-vegetable-purifier\",\"name\":\"果蔬净洗机\",\"types\":[\"fruit-vegetable-purifier\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"净洗状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"garbage-can\",\"name\":\"智能垃圾桶\",\"types\":[\"garbage-can\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"运行状态\",\"\"],[\"target-lid-state\",\"桶盖状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"gas-concentration\",\"name\":\"燃气浓度\",\"types\":[\"gas-concentration\"],\"domains\":[\"sensor\"],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"readings\":[[\"$value\",\"燃气浓度\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"gas-sensor\",\"name\":\"燃气报警器\",\"types\":[\"gas-sensor\"],\"domains\":[\"binary_sensor\",\"sensor\"],\"layout\":\"alarm\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"states\":[\"未触发报警\",\"检测到燃气\"],\"readings\":[[\"$state\",\"报警状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"gateway\",\"name\":\"网关\",\"types\":[\"gateway\"],\"domains\":[],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"设备状态\",\"\"],[\"guard-mode\",\"警戒模式\",\"\"]]},{\"id\":\"health-pot\",\"name\":\"养生壶\",\"types\":[\"health-pot\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[\"temperature\"],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"temperature\",\"水温\",\"°C\"],[\"$state\",\"运行状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"heater\",\"name\":\"取暖器\",\"types\":[\"heater\"],\"domains\":[\"climate\",\"switch\"],\"layout\":\"climate\",\"primary\":[\"temperature\",\"hvac_mode\"],\"secondary\":[\"preset_mode\"],\"quick\":\"temperature\",\"readings\":[[\"temperature\",\"当前温度\",\"°C\"],[\"$state\",\"运行状态\",\"\"]]},{\"id\":\"hood\",\"name\":\"油烟机\",\"types\":[\"hood\"],\"domains\":[\"fan\",\"switch\"],\"layout\":\"status\",\"primary\":[\"percentage\",\"preset_mode\"],\"secondary\":[],\"quick\":\"percentage\",\"readings\":[[\"$state\",\"运行状态\",\"\"],[\"mode\",\"工作模式\",\"\"]]},{\"id\":\"illumination-sensor\",\"name\":\"光照传感器\",\"types\":[\"illumination-sensor\"],\"domains\":[\"sensor\"],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"readings\":[[\"illumination\",\"光照度\",\"lx\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"induction-cooker\",\"name\":\"电磁炉\",\"types\":[\"induction-cooker\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"烹饪状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"integrated-stove\",\"name\":\"集成灶\",\"types\":[\"integrated-stove\"],\"domains\":[\"fan\",\"switch\"],\"layout\":\"appliance\",\"primary\":[\"percentage\",\"preset_mode\"],\"secondary\":[],\"quick\":\"percentage\",\"readings\":[[\"mode\",\"工作模式\",\"\"],[\"$state\",\"运行状态\",\"\"]]},{\"id\":\"juicer\",\"name\":\"料理机\",\"types\":[\"juicer\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"运行状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"kettle\",\"name\":\"电水壶\",\"types\":[\"kettle\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[\"temperature\"],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"temperature\",\"当前水温\",\"°C\"],[\"target-temperature\",\"目标水温\",\"°C\"],[\"$state\",\"运行状态\",\"\"]]},{\"id\":\"magnet-sensor\",\"name\":\"门窗传感器\",\"types\":[\"magnet-sensor\"],\"domains\":[\"binary_sensor\",\"sensor\"],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"states\":[\"门窗已关闭\",\"门窗已打开\"],\"readings\":[[\"$state\",\"门窗状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"massage\",\"name\":\"按摩设备\",\"types\":[\"massage\"],\"domains\":[],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"运行状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"mirror\",\"name\":\"智能镜\",\"types\":[\"mirror\"],\"domains\":[\"light\",\"switch\"],\"layout\":\"status\",\"primary\":[\"brightness_pct\",\"color_temp_kelvin\"],\"secondary\":[\"effect\"],\"quick\":\"brightness_pct\",\"readings\":[[\"$state\",\"照明状态\",\"\"]]},{\"id\":\"mosquito-dispeller\",\"name\":\"驱蚊器\",\"types\":[\"mosquito-dispeller\"],\"domains\":[],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"repellent-left-level\",\"耗材余量\",\"%\"],[\"battery-level\",\"电量\",\"%\"],[\"$state\",\"运行状态\",\"\"]]},{\"id\":\"motion-sensor\",\"name\":\"人体传感器\",\"types\":[\"motion-sensor\"],\"domains\":[\"binary_sensor\",\"sensor\"],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"states\":[\"未检测到活动\",\"检测到活动\"],\"readings\":[[\"$state\",\"活动状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"moxibustion\",\"name\":\"艾灸设备\",\"types\":[\"moxibustion\"],\"domains\":[],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"运行状态\",\"\"],[\"temperature\",\"温度\",\"°C\"]]},{\"id\":\"oven\",\"name\":\"烤箱\",\"types\":[\"oven\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[\"temperature\"],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"烹饪状态\",\"\"],[\"temperature\",\"当前温度\",\"°C\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"pet-drinking-fountain\",\"name\":\"宠物饮水机\",\"types\":[\"pet-drinking-fountain\"],\"domains\":[\"switch\"],\"layout\":\"status\",\"primary\":[],\"secondary\":[],\"quick\":\"power\",\"readings\":[[\"$state\",\"供水状态\",\"\"],[\"water-level\",\"水量\",\"%\"],[\"filter-life-level\",\"滤芯余量\",\"%\"]]},{\"id\":\"plant-monitor\",\"name\":\"植物监测仪\",\"types\":[\"plant-monitor\"],\"domains\":[\"sensor\"],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"readings\":[[\"relative-humidity\",\"土壤湿度\",\"%\"],[\"illumination\",\"光照\",\"lx\"],[\"soil-ec\",\"土壤电导率\",\"µS/cm\"],[\"temperature\",\"温度\",\"°C\"]]},{\"id\":\"pressure-cooker\",\"name\":\"电压力锅\",\"types\":[\"pressure-cooker\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"烹饪状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"]]},{\"id\":\"printer\",\"name\":\"打印机\",\"types\":[\"printer\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"打印状态\",\"\"],[\"progress\",\"任务进度\",\"%\"]]},{\"id\":\"smoke-sensor\",\"name\":\"烟雾报警器\",\"types\":[\"smoke-sensor\"],\"domains\":[\"binary_sensor\",\"sensor\"],\"layout\":\"alarm\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"states\":[\"未触发报警\",\"检测到烟雾\"],\"readings\":[[\"$state\",\"报警状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"submersion-sensor\",\"name\":\"水浸传感器\",\"types\":[\"submersion-sensor\"],\"domains\":[\"binary_sensor\",\"sensor\"],\"layout\":\"alarm\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readonly\":true,\"states\":[\"未检测到漏水\",\"检测到漏水\"],\"readings\":[[\"$state\",\"水浸状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"towel-rack\",\"name\":\"电热毛巾架\",\"types\":[\"towel-rack\"],\"domains\":[\"climate\",\"switch\"],\"layout\":\"climate\",\"primary\":[\"temperature\"],\"secondary\":[],\"quick\":\"temperature\",\"readings\":[[\"$state\",\"运行状态\",\"\"],[\"temperature\",\"温度\",\"°C\"]]},{\"id\":\"treadmill\",\"name\":\"跑步机\",\"types\":[\"treadmill\"],\"domains\":[],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"current-distance\",\"运动距离\",\"km\"],[\"working-time\",\"运动时长\",\"min\"],[\"speed\",\"当前速度\",\"km/h\"]]},{\"id\":\"video-doorbell\",\"name\":\"可视门铃\",\"types\":[\"video-doorbell\"],\"domains\":[\"camera\",\"binary_sensor\"],\"layout\":\"camera\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"notice\":\"暂无预览画面\",\"readings\":[[\"$state\",\"设备状态\",\"\"],[\"battery-level\",\"电量\",\"%\"]]},{\"id\":\"walking-pad\",\"name\":\"走步机\",\"types\":[\"walking-pad\"],\"domains\":[],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"current-distance\",\"运动距离\",\"km\"],[\"working-time\",\"运动时长\",\"min\"],[\"speed\",\"当前速度\",\"km/h\"]]},{\"id\":\"washer\",\"name\":\"洗衣机\",\"types\":[\"washer\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"$state\",\"洗涤状态\",\"\"],[\"left-time\",\"剩余时间\",\"\"],[\"progress\",\"任务进度\",\"%\"]]},{\"id\":\"water-dispenser\",\"name\":\"饮水机\",\"types\":[\"water-dispenser\"],\"domains\":[],\"layout\":\"appliance\",\"primary\":[\"temperature\"],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"temperature\",\"当前水温\",\"°C\"],[\"target-temperature\",\"目标水温\",\"°C\"],[\"water-level\",\"水量\",\"%\"]]},{\"id\":\"water-purifier\",\"name\":\"净水器\",\"types\":[\"water-purifier\"],\"domains\":[],\"layout\":\"metrics\",\"primary\":[],\"secondary\":[],\"quick\":\"reading\",\"readings\":[[\"tds-out\",\"出水 TDS\",\"ppm\"],[\"filter-life-level\",\"滤芯余量\",\"%\"],[\"$state\",\"运行状态\",\"\"]]}]");
   /* HA_COMMON_PROFILES_END */
   const commonProfileTypes=Object.create(null);
   commonCardProfiles.forEach(profile=>profile.types.forEach(type=>commonProfileTypes[type]=profile));
@@ -2282,7 +1832,7 @@
     const profile=commonCardProfile(item);
     if(!profile||!profile.readings)return [];
     const type=quickCardType(item),values=item.quick_values||{},online=available(item);
-    const members=(item.device_entities||[item.entity_id]).map(id=>entities.find(row=>row.entity_id===id)).filter(Boolean);
+    const members=(item.device_entities||[item.entity_id]).map(id=>indexedEntity(id)).filter(Boolean);
     const classes={temperature:'temperature',humidity:'relative-humidity',moisture:'relative-humidity',
       illuminance:'illumination',conductivity:'soil-ec',pm25:'pm2.5-density',
       distance:'current-distance',duration:'working-time',speed:'speed',
@@ -2323,7 +1873,7 @@
     });
   }
   /* MI_QUICK_RULES_BEGIN */
-  const quickReferenceRules = {"diffuser":[[1,1,872,1000,["diffuser.on","light.on","diffuser.Help Sleep","diffuser.Week Up","diffuser.Cheerful","diffuser.Sport Mode"]]],"air-conditioner":[[1,2,1000,854,["air-conditioner.on","air-conditioner.target-temperature","air-conditioner.mode"]]],"air-fresh":[[1,3,524,540,["air-fresh.on","environment.pm2.5-density","air-fresh.mode"]],[2,4,536,354,["air-fresh.on"]]],"air-fryer":[[1,5,806,532,["air-fryer.status"]]],"air-monitor":[[1,6,776,512,["environment.hcho-density","environment.temperature","environment.relative-humidity"]],[2,6,776,512,["environment.pm2.5-density","environment.temperature","environment.relative-humidity"]],[3,6,776,512,["environment.tvoc-density","environment.temperature","environment.relative-humidity"]],[4,7,536,354,["environment.temperature","environment.relative-humidity"]],[5,8,536,354,["environment.pm2.5-density"]],[6,8,536,354,["environment.hcho-density"]]],"air-purifier":[[1,3,524,540,["air-purifier.on","environment.pm2.5-density","air-purifier.mode"]],[2,3,524,540,["air-purifier.on","environment.pm2.5-density","air-purifier.fan-level"]],[3,4,536,354,["air-purifier.on"]]],"airer":[[1,9,390,320,["airer.motor-control"]]],"bath-heater":[[1,10,682,772,["light.on","ptc-bath-heater.ventilation","ptc-bath-heater.heating","ptc-bath-heater.target-temperature"]],[2,3,524,540,["light-bath-heater.on","ptc-bath-heater.status","light-bath-heater.mode"]],[3,3,524,540,["ptc-bath-heater.on","ptc-bath-heater.status","ptc-bath-heater.mode"]],[4,11,886,774,["ptc-bath-heater.on","ptc-bath-heater.temperature","ptc-bath-heater.target-temperature"]],[5,12,860,614,["ptc-bath-heater.on","light.on","fan-control.on"]],[6,12,860,614,["light-bath-heater.on","light.on","fan-control.on"]],[7,13,540,438,["ptc-bath-heater.on","light.on"]],[8,13,540,438,["light-bath-heater.on","light.on"]],[9,13,540,438,["light.on","fan-control.on"]],[10,4,536,354,["light.on"]]],"camera":[[1,14,824,664,["camera-control.on","p2p-stream.start-p2p-stream"]],[2,15,824,662,["p2p-stream.start-p2p-stream"]],[3,4,536,354,["camera-control.on"]]],"ceiling-fan":[[1,16,536,354,["ceiling-fan.on","ceiling-fan.horizontal-swing","ceiling-fan.fan-level"]],[2,4,536,354,["ceiling-fan.on"]]],"coffee-machine":[[1,5,806,532,["coffee-machine.status"]]],"cooker":[[1,5,806,532,["cooker.status"]]],"curtain":[[1,3,524,540,["curtain.status","curtain.motor-control"]],[2,3,524,540,["curtain.current-position","curtain.motor-control"]],[3,9,390,320,["curtain.motor-control"]]],"dishwasher":[[1,5,806,532,["dishwasher.status"]]],"fan":[[1,16,536,354,["fan.on","fan.horizontal-swing","fan.fan-level"]],[2,4,536,354,["fan.on"]]],"flowerpot":[[1,6,776,512,["plant-monitor.relative-humidity","plant-monitor.illumination","plant-monitor.soil-ec"]],[2,6,776,512,["plant-monitor.relative-humidity","plant-monitor.temperature","plant-monitor.illumination"]],[3,7,536,354,["plant-monitor.relative-humidity","plant-monitor.soil-ec"]],[4,7,536,354,["plant-monitor.relative-humidity","plant-monitor.illumination"]]],"fridge":[[1,5,806,532,["fridge.mode"]]],"fruit-vegetable-purifier":[[1,5,806,532,["fruit-vegetable-purifier.status"]]],"garbage-can":[[1,17,1000,922,["battery.battery-level","garbage-can.target-lid-state","garbage-can.status","garbage-can.package"]]],"gas-concentration":[[1,5,806,532,["gas-concentration.status"]]],"gas-sensor":[[1,5,806,532,["gas-sensor.status"]]],"gateway":[[1,13,540,438,["light.on","gateway.guard-mode"]],[2,4,536,354,["gateway.guard-mode"]],[3,5,806,532,["arming.arming-mode"]],[4,18,536,354,["light.on","light.brightness"]]],"health-pot":[[1,5,806,532,["health-pot.status"]]],"heater":[[1,11,886,774,["heater.on","environment.temperature","heater.target-temperature"]],[2,4,536,354,["heater.on"]]],"hood":[[1,12,860,614,["hood.on","light.on","fan-control.on"]],[2,13,540,438,["hood.on","light.on"]],[3,4,536,354,["hood.on"]]],"humidifier":[[1,19,1000,872,["humidifier.on","environment.relative-humidity","humidifier.fan-level"]],[2,3,524,540,["humidifier.on","environment.relative-humidity","humidifier.mode"]],[3,4,536,354,["humidifier.on"]]],"illumination-sensor":[[1,8,536,354,["illumination-sensor.illumination"]]],"induction-cooker":[[1,7,536,354,["induction-cooker.status","induction-cooker.left-time"]],[2,5,806,532,["induction-cooker.status"]]],"integrated-stove":[[1,7,536,354,["integrated-stove.mode","hood.mode"]],[2,4,536,354,["light.on"]]],"juicer":[[1,7,536,354,["juicer.status","juicer.left-time"]],[2,5,806,532,["juicer.status"]]],"kettle":[[1,7,536,354,["kettle.temperature","kettle.target-temperature"]],[2,8,536,354,["kettle.temperature"]]],"light":[[1,20,682,526,["light.on","light.brightness","fan.on","fan.fan-level"]],[2,21,392,358,["light.on","light.brightness","light.color-temperature"]],[3,18,536,354,["light.on","light.brightness"]],[4,4,536,354,["light.on"]]],"magnet-sensor":[[1,22,808,532,["magnet-sensor.contact-state"]]],"massage":[[1,4,536,354,["massage.on"]]],"mirror":[[1,21,392,358,["light.on","light.brightness","light.color-temperature"]],[2,18,536,354,["light.on","light.brightness"]],[3,4,536,354,["light.on"]]],"mosquito-dispeller":[[1,7,536,354,["repellent.repellent-left-level","battery.battery-level"]],[2,8,536,354,["repellent.repellent-left-level"]],[3,4,536,354,["mosquito-dispeller.on"]]],"motion-sensor":[[1,22,808,532,["motion-sensor.motion-state"]]],"moxibustion":[[1,4,536,354,["moxibustion.on"]]],"outlet":[[1,12,860,614,["switch.on","switch.on","switch.on"]],[2,13,540,438,["switch.on","switch.on"]],[3,4,536,354,["switch.on"]]],"oven":[[1,5,806,532,["oven.status"]]],"pet-drinking-fountain":[[1,4,536,354,["pet-drinking-fountain.on"]]],"plant-monitor":[[1,6,776,512,["plant-monitor.relative-humidity","plant-monitor.illumination","plant-monitor.soil-ec"]],[2,7,536,354,["plant-monitor.relative-humidity","plant-monitor.soil-ec"]]],"pressure-cooker":[[1,7,536,354,["pressure-cooker.status","pressure-cooker.left-time"]],[2,5,806,532,["pressure-cooker.status"]]],"printer":[[1,5,806,532,["printer.status"]]],"relay":[[1,12,860,614,["switch.on","switch.on","switch.on"]],[2,13,540,438,["switch.on","switch.on"]],[3,4,536,354,["switch.on"]]],"smoke-sensor":[[1,5,806,532,["smoke-sensor.status"]]],"speaker":[[1,23,946,1000,["speaker.mute","microphone.mute","speaker.volume"]],[2,24,946,1000,["play-control.playing-state","play-control.play","play-control.pause","microphone.mute","speaker.volume"]]],"submersion-sensor":[[1,22,808,532,["submersion-sensor.submersion-state"]]],"switch":[[1,12,860,614,["switch.on","switch.on","switch.on"]],[2,13,540,438,["switch.on","switch.on"]],[3,4,536,354,["switch.on"]]],"temperature-humidity-sensor":[[1,6,776,512,["temperature-humidity-sensor.temperature","temperature-humidity-sensor.relative-humidity","temperature-humidity-sensor.atmospheric-pressure"]],[2,7,536,354,["temperature-humidity-sensor.temperature","temperature-humidity-sensor.relative-humidity"]]],"towel-rack":[[1,4,536,354,["towel-rack.on"]]],"treadmill":[[1,7,536,354,["treadmill.working-time","treadmill.current-distance"]]],"vacuum":[[1,25,524,540,["vacuum.status","vacuum.status","vacuum.start-sweep","vacuum.pause-sweeping","vacuum.status","battery.start-charge"]],[2,25,524,540,["vacuum.status","vacuum.status","vacuum.start-sweep","vacuum.pause","vacuum.status","vacuum.start-charge"]],[3,25,524,540,["vacuum.status","vacuum.status","vacuum.start-sweep","vacuum.stop-sweeping","battery.charging-state","battery.start-charge"]],[4,25,524,540,["vacuum.status","vacuum.status","vacuum.start-sweep","vacuum.stop-sweeping","vacuum.status","battery.start-charge"]],[5,25,524,540,["vacuum.status","vacuum.status","vacuum.start-sweep","vacuum.stop-sweeping","vacuum.status","vacuum.start-charge"]],[6,5,806,532,["vacuum.status"]]],"video-doorbell":[[1,22,808,532,["motion-detection.motion-detection"]]],"walking-pad":[[1,7,536,354,["walking-pad.working-time","walking-pad.current-distance"]]],"washer":[[1,5,806,532,["washer.status"]],[2,5,806,532,["washer.mode"]]],"water-dispenser":[[1,7,536,354,["water-dispenser.temperature","water-dispenser.target-temperature"]],[2,8,536,354,["water-dispenser.temperature"]]],"water-heater":[[1,4,536,354,["water-heater.on"]],[2,7,536,354,["water-heater.temperature","water-heater.status"]],[3,7,536,354,["water-heater.target-temperature","water-heater.status"]],[4,7,536,354,["water-heater.target-temperature","water-heater.temperature"]],[5,5,806,532,["water-heater.status"]],[6,8,536,354,["water-heater.temperature"]]],"water-purifier":[[1,8,536,354,["tds-sensor.tds-out"]],[2,5,806,532,["water-purifier.status"]]]};
+  const quickReferenceRules = JSON.parse("{\"diffuser\":[[1,1,872,1000,[\"diffuser.on\",\"light.on\",\"diffuser.Help Sleep\",\"diffuser.Week Up\",\"diffuser.Cheerful\",\"diffuser.Sport Mode\"]]],\"air-conditioner\":[[1,2,1000,854,[\"air-conditioner.on\",\"air-conditioner.target-temperature\",\"air-conditioner.mode\"]]],\"air-fresh\":[[1,3,524,540,[\"air-fresh.on\",\"environment.pm2.5-density\",\"air-fresh.mode\"]],[2,4,536,354,[\"air-fresh.on\"]]],\"air-fryer\":[[1,5,806,532,[\"air-fryer.status\"]]],\"air-monitor\":[[1,6,776,512,[\"environment.hcho-density\",\"environment.temperature\",\"environment.relative-humidity\"]],[2,6,776,512,[\"environment.pm2.5-density\",\"environment.temperature\",\"environment.relative-humidity\"]],[3,6,776,512,[\"environment.tvoc-density\",\"environment.temperature\",\"environment.relative-humidity\"]],[4,7,536,354,[\"environment.temperature\",\"environment.relative-humidity\"]],[5,8,536,354,[\"environment.pm2.5-density\"]],[6,8,536,354,[\"environment.hcho-density\"]]],\"air-purifier\":[[1,3,524,540,[\"air-purifier.on\",\"environment.pm2.5-density\",\"air-purifier.mode\"]],[2,3,524,540,[\"air-purifier.on\",\"environment.pm2.5-density\",\"air-purifier.fan-level\"]],[3,4,536,354,[\"air-purifier.on\"]]],\"airer\":[[1,9,390,320,[\"airer.motor-control\"]]],\"bath-heater\":[[1,10,682,772,[\"light.on\",\"ptc-bath-heater.ventilation\",\"ptc-bath-heater.heating\",\"ptc-bath-heater.target-temperature\"]],[2,3,524,540,[\"light-bath-heater.on\",\"ptc-bath-heater.status\",\"light-bath-heater.mode\"]],[3,3,524,540,[\"ptc-bath-heater.on\",\"ptc-bath-heater.status\",\"ptc-bath-heater.mode\"]],[4,11,886,774,[\"ptc-bath-heater.on\",\"ptc-bath-heater.temperature\",\"ptc-bath-heater.target-temperature\"]],[5,12,860,614,[\"ptc-bath-heater.on\",\"light.on\",\"fan-control.on\"]],[6,12,860,614,[\"light-bath-heater.on\",\"light.on\",\"fan-control.on\"]],[7,13,540,438,[\"ptc-bath-heater.on\",\"light.on\"]],[8,13,540,438,[\"light-bath-heater.on\",\"light.on\"]],[9,13,540,438,[\"light.on\",\"fan-control.on\"]],[10,4,536,354,[\"light.on\"]]],\"camera\":[[1,14,824,664,[\"camera-control.on\",\"p2p-stream.start-p2p-stream\"]],[2,15,824,662,[\"p2p-stream.start-p2p-stream\"]],[3,4,536,354,[\"camera-control.on\"]]],\"ceiling-fan\":[[1,16,536,354,[\"ceiling-fan.on\",\"ceiling-fan.horizontal-swing\",\"ceiling-fan.fan-level\"]],[2,4,536,354,[\"ceiling-fan.on\"]]],\"coffee-machine\":[[1,5,806,532,[\"coffee-machine.status\"]]],\"cooker\":[[1,5,806,532,[\"cooker.status\"]]],\"curtain\":[[1,3,524,540,[\"curtain.status\",\"curtain.motor-control\"]],[2,3,524,540,[\"curtain.current-position\",\"curtain.motor-control\"]],[3,9,390,320,[\"curtain.motor-control\"]]],\"dishwasher\":[[1,5,806,532,[\"dishwasher.status\"]]],\"fan\":[[1,16,536,354,[\"fan.on\",\"fan.horizontal-swing\",\"fan.fan-level\"]],[2,4,536,354,[\"fan.on\"]]],\"flowerpot\":[[1,6,776,512,[\"plant-monitor.relative-humidity\",\"plant-monitor.illumination\",\"plant-monitor.soil-ec\"]],[2,6,776,512,[\"plant-monitor.relative-humidity\",\"plant-monitor.temperature\",\"plant-monitor.illumination\"]],[3,7,536,354,[\"plant-monitor.relative-humidity\",\"plant-monitor.soil-ec\"]],[4,7,536,354,[\"plant-monitor.relative-humidity\",\"plant-monitor.illumination\"]]],\"fridge\":[[1,5,806,532,[\"fridge.mode\"]]],\"fruit-vegetable-purifier\":[[1,5,806,532,[\"fruit-vegetable-purifier.status\"]]],\"garbage-can\":[[1,17,1000,922,[\"battery.battery-level\",\"garbage-can.target-lid-state\",\"garbage-can.status\",\"garbage-can.package\"]]],\"gas-concentration\":[[1,5,806,532,[\"gas-concentration.status\"]]],\"gas-sensor\":[[1,5,806,532,[\"gas-sensor.status\"]]],\"gateway\":[[1,13,540,438,[\"light.on\",\"gateway.guard-mode\"]],[2,4,536,354,[\"gateway.guard-mode\"]],[3,5,806,532,[\"arming.arming-mode\"]],[4,18,536,354,[\"light.on\",\"light.brightness\"]]],\"health-pot\":[[1,5,806,532,[\"health-pot.status\"]]],\"heater\":[[1,11,886,774,[\"heater.on\",\"environment.temperature\",\"heater.target-temperature\"]],[2,4,536,354,[\"heater.on\"]]],\"hood\":[[1,12,860,614,[\"hood.on\",\"light.on\",\"fan-control.on\"]],[2,13,540,438,[\"hood.on\",\"light.on\"]],[3,4,536,354,[\"hood.on\"]]],\"humidifier\":[[1,19,1000,872,[\"humidifier.on\",\"environment.relative-humidity\",\"humidifier.fan-level\"]],[2,3,524,540,[\"humidifier.on\",\"environment.relative-humidity\",\"humidifier.mode\"]],[3,4,536,354,[\"humidifier.on\"]]],\"illumination-sensor\":[[1,8,536,354,[\"illumination-sensor.illumination\"]]],\"induction-cooker\":[[1,7,536,354,[\"induction-cooker.status\",\"induction-cooker.left-time\"]],[2,5,806,532,[\"induction-cooker.status\"]]],\"integrated-stove\":[[1,7,536,354,[\"integrated-stove.mode\",\"hood.mode\"]],[2,4,536,354,[\"light.on\"]]],\"juicer\":[[1,7,536,354,[\"juicer.status\",\"juicer.left-time\"]],[2,5,806,532,[\"juicer.status\"]]],\"kettle\":[[1,7,536,354,[\"kettle.temperature\",\"kettle.target-temperature\"]],[2,8,536,354,[\"kettle.temperature\"]]],\"light\":[[1,20,682,526,[\"light.on\",\"light.brightness\",\"fan.on\",\"fan.fan-level\"]],[2,21,392,358,[\"light.on\",\"light.brightness\",\"light.color-temperature\"]],[3,18,536,354,[\"light.on\",\"light.brightness\"]],[4,4,536,354,[\"light.on\"]]],\"magnet-sensor\":[[1,22,808,532,[\"magnet-sensor.contact-state\"]]],\"massage\":[[1,4,536,354,[\"massage.on\"]]],\"mirror\":[[1,21,392,358,[\"light.on\",\"light.brightness\",\"light.color-temperature\"]],[2,18,536,354,[\"light.on\",\"light.brightness\"]],[3,4,536,354,[\"light.on\"]]],\"mosquito-dispeller\":[[1,7,536,354,[\"repellent.repellent-left-level\",\"battery.battery-level\"]],[2,8,536,354,[\"repellent.repellent-left-level\"]],[3,4,536,354,[\"mosquito-dispeller.on\"]]],\"motion-sensor\":[[1,22,808,532,[\"motion-sensor.motion-state\"]]],\"moxibustion\":[[1,4,536,354,[\"moxibustion.on\"]]],\"outlet\":[[1,12,860,614,[\"switch.on\",\"switch.on\",\"switch.on\"]],[2,13,540,438,[\"switch.on\",\"switch.on\"]],[3,4,536,354,[\"switch.on\"]]],\"oven\":[[1,5,806,532,[\"oven.status\"]]],\"pet-drinking-fountain\":[[1,4,536,354,[\"pet-drinking-fountain.on\"]]],\"plant-monitor\":[[1,6,776,512,[\"plant-monitor.relative-humidity\",\"plant-monitor.illumination\",\"plant-monitor.soil-ec\"]],[2,7,536,354,[\"plant-monitor.relative-humidity\",\"plant-monitor.soil-ec\"]]],\"pressure-cooker\":[[1,7,536,354,[\"pressure-cooker.status\",\"pressure-cooker.left-time\"]],[2,5,806,532,[\"pressure-cooker.status\"]]],\"printer\":[[1,5,806,532,[\"printer.status\"]]],\"relay\":[[1,12,860,614,[\"switch.on\",\"switch.on\",\"switch.on\"]],[2,13,540,438,[\"switch.on\",\"switch.on\"]],[3,4,536,354,[\"switch.on\"]]],\"smoke-sensor\":[[1,5,806,532,[\"smoke-sensor.status\"]]],\"speaker\":[[1,23,946,1000,[\"speaker.mute\",\"microphone.mute\",\"speaker.volume\"]],[2,24,946,1000,[\"play-control.playing-state\",\"play-control.play\",\"play-control.pause\",\"microphone.mute\",\"speaker.volume\"]]],\"submersion-sensor\":[[1,22,808,532,[\"submersion-sensor.submersion-state\"]]],\"switch\":[[1,12,860,614,[\"switch.on\",\"switch.on\",\"switch.on\"]],[2,13,540,438,[\"switch.on\",\"switch.on\"]],[3,4,536,354,[\"switch.on\"]]],\"temperature-humidity-sensor\":[[1,6,776,512,[\"temperature-humidity-sensor.temperature\",\"temperature-humidity-sensor.relative-humidity\",\"temperature-humidity-sensor.atmospheric-pressure\"]],[2,7,536,354,[\"temperature-humidity-sensor.temperature\",\"temperature-humidity-sensor.relative-humidity\"]]],\"towel-rack\":[[1,4,536,354,[\"towel-rack.on\"]]],\"treadmill\":[[1,7,536,354,[\"treadmill.working-time\",\"treadmill.current-distance\"]]],\"vacuum\":[[1,25,524,540,[\"vacuum.status\",\"vacuum.status\",\"vacuum.start-sweep\",\"vacuum.pause-sweeping\",\"vacuum.status\",\"battery.start-charge\"]],[2,25,524,540,[\"vacuum.status\",\"vacuum.status\",\"vacuum.start-sweep\",\"vacuum.pause\",\"vacuum.status\",\"vacuum.start-charge\"]],[3,25,524,540,[\"vacuum.status\",\"vacuum.status\",\"vacuum.start-sweep\",\"vacuum.stop-sweeping\",\"battery.charging-state\",\"battery.start-charge\"]],[4,25,524,540,[\"vacuum.status\",\"vacuum.status\",\"vacuum.start-sweep\",\"vacuum.stop-sweeping\",\"vacuum.status\",\"battery.start-charge\"]],[5,25,524,540,[\"vacuum.status\",\"vacuum.status\",\"vacuum.start-sweep\",\"vacuum.stop-sweeping\",\"vacuum.status\",\"vacuum.start-charge\"]],[6,5,806,532,[\"vacuum.status\"]]],\"video-doorbell\":[[1,22,808,532,[\"motion-detection.motion-detection\"]]],\"walking-pad\":[[1,7,536,354,[\"walking-pad.working-time\",\"walking-pad.current-distance\"]]],\"washer\":[[1,5,806,532,[\"washer.status\"]],[2,5,806,532,[\"washer.mode\"]]],\"water-dispenser\":[[1,7,536,354,[\"water-dispenser.temperature\",\"water-dispenser.target-temperature\"]],[2,8,536,354,[\"water-dispenser.temperature\"]]],\"water-heater\":[[1,4,536,354,[\"water-heater.on\"]],[2,7,536,354,[\"water-heater.temperature\",\"water-heater.status\"]],[3,7,536,354,[\"water-heater.target-temperature\",\"water-heater.status\"]],[4,7,536,354,[\"water-heater.target-temperature\",\"water-heater.temperature\"]],[5,5,806,532,[\"water-heater.status\"]],[6,8,536,354,[\"water-heater.temperature\"]]],\"water-purifier\":[[1,8,536,354,[\"tds-sensor.tds-out\"]],[2,5,806,532,[\"water-purifier.status\"]]]}");
   /* MI_QUICK_RULES_END */
   const thumbnailCodes = {lamp:0xe015,plug:0xe016,fan:0xe017,sensor:0xe018,
     contact:0xe019,climate:0xe01a,media:0xe01b,generic:0xe01c,purifier:0xe01d,
@@ -2474,7 +2024,7 @@
     for(let i=0;i<3;i++)q.metrics.push({value:text(),caption:text()});
     for(let i=0;i<4;i++) {
       const a={face:box(),glyph:text(),caption:text(),item:null};
-      a.button=createButton('',0,0,4,4,()=>{if(a.item){if(a.spec)requestFunction(entities.find(e=>e.entity_id===a.item.entity_id),a.spec,a.value);else toggleItem(a.item);}},quickPalette.card,{radius:48,borderWidth:0});a.button.section='detail';
+      a.button=createButton('',0,0,4,4,()=>{if(a.item){if(a.spec)requestFunction(indexedEntity(a.item.entity_id),a.spec,a.value);else toggleItem(a.item);}},quickPalette.card,{radius:48,borderWidth:0});a.button.section='detail';
       q.actions.push(a);
     }
     for(let i=0;i<2;i++)q.ranges.push({track:box(),fill:box(),label:text(),leftFace:box(),leftGlyph:text(),rightFace:box(),rightGlyph:text()});
@@ -2491,6 +2041,10 @@
     q.renderKey=key;q.renderItem=item;
     q.all.forEach(id=>hide(id,true));q.actions.forEach(a=>{hide(a.button,true);a.item=null;a.spec=null;a.value=undefined;});hide(q.more,true);hide(q.power,true);q.brightnessRect=null;q.controlRects=[];q.sliderRects=[];q.item=item;q.embedded=!!frame;
     if(!visible)return;
+    if(q.motionEntity!==item.entity_id){
+      q.motionEntity=item.entity_id;
+      q.all.forEach(id=>{delete paint['p'+id];delete paint['s'+id];delete paint['c'+id];delete paint['r'+id];});
+    }
     const target=controlTargets[item.entity_id];
     if(target&&target.generation===generation&&target.brightness!==undefined)
       item=Object.assign({},item,{brightness:target.brightness});
@@ -2505,7 +2059,11 @@
     // Embedded cards may be only one grid row tall. Text bands need their
     // own line-height budget rather than the reference image's scale factor.
     const hh=frame?52:Math.round(82*s),fh=frame?44:Math.round(72*s),bodyY=y+hh,bodyH=ch-hh-fh;
-    function box(id,bx,by,bw,bh,color,radius){hide(id,false);pushPos(id,Math.round(bx),Math.round(by));pushSize(id,Math.max(1,Math.round(bw)),Math.max(1,Math.round(bh)));pushColor(id,color);pushStyle(id,'Q',{radius:Math.round(radius||0),borderWidth:0});}
+    function box(id,bx,by,bw,bh,color,radius){
+      const smooth=!quickDrag&&paint['p'+id]!==undefined&&q.ranges.some(r=>r.fill===id||r.thumb===id);
+      hide(id,false);pushPos(id,Math.round(bx),Math.round(by),smooth);pushSize(id,Math.max(1,Math.round(bw)),Math.max(1,Math.round(bh)),smooth);
+      pushColor(id,color,id===q.powerFace&&paint['c'+id]!==undefined);pushStyle(id,'Q',{radius:Math.round(radius||0),borderWidth:0});
+    }
     function text(id,value,bx,by,bw,bh,font,color,icon,center){hide(id,false);pushPos(id,Math.round(bx),Math.round(by));pushSize(id,Math.max(1,Math.round(bw)),Math.max(1,Math.round(bh)));pushText(id,String(value));pushColor(id,color);pushStyle(id,'Q',{fontSize:font,icon:icon||0,center:center===false?0:1,ellipsis:1});}
     box(q.panel,x,y,cw,ch,c.card,28*s);box(q.headerLine,x+1,y+hh,cw-2,1,c.line);box(q.footerLine,x+1,y+ch-fh,cw-2,1,c.line);
     const commonProfile=commonCardProfile(item);
@@ -2567,7 +2125,7 @@
       for(let i=0;i<count;i++)action(glyphs[i],labels[i],x+24*s+i*gap+(gap-d)/2,ay,d,i===active,c.paleBlue,glyphs[i].charCodeAt(0)>=0xe000);}
     const middle=bodyY+Math.max(16*s,(bodyH-92*s)/2);
     if(commonProfile&&commonProfile.id!=='bedside-light'){
-      const main=entities.find(row=>row.entity_id===item.entity_id)||item,spec=profileQuickControl(item);
+      const main=indexedEntity(item.entity_id)||item,spec=profileQuickControl(item);
       const inset=Math.min(24,Math.max(12,cw*.055)),rw=cw-inset*2;
       const specs=profileControls(item),actions=specs.filter(spec=>spec.kind==='action'&&!['turn_on','turn_off'].includes(spec.service)).slice(0,3);
       if(commonProfile.layout&&!spec){
@@ -2613,7 +2171,7 @@
         if(commonProfile.reading&&item[commonProfile.reading]!==null&&bodyH>=150){
           pushPos(q.ranges[0].track,x+inset,bodyY+bodyH-rh-10);pushPos(q.ranges[0].fill,x+inset,bodyY+bodyH-rh-10);
           pushPos(q.ranges[0].label,x+inset+12,bodyY+bodyH-rh-10+(rh-30)/2);r.y=bodyY+bodyH-rh-10;
-          if(r.thumb)pushPos(r.thumb,r.x+20+(r.w-20)*Math.max(0,Math.min(100,percent))/100-18,r.y+(rh-32)/2);
+          if(r.thumb)pushPos(r.thumb,r.x+20+(r.w-20)*Math.max(0,Math.min(100,percent))/100-18,r.y+(rh-32)/2,!quickDrag&&!lampWheelDrag&&paint['p'+r.thumb]!==undefined);
           const title=commonProfile.reading==='pm25'?'PM2.5':commonProfile.reading==='current_humidity'?'当前湿度':'当前温度';
           text(q.metrics[0].value,numberText(item[commonProfile.reading]),x+inset,bodyY+10,rw,44,32,pal.ink,0,false);
           text(q.metrics[0].caption,title,x+inset,bodyY+54,rw,24,14,pal.muted,0,false);
@@ -2645,7 +2203,7 @@
     else if(layout===16){action('\uf2dc',item.oscillating?'摇头':'送风',x+40*s,bodyY+(bodyH-66*s)/2,66*s,item.oscillating,c.blue,true);range(item.percentage===null?'风速 --':'风速 '+item.percentage+'%',item.percentage,x+132*s,bodyY+(bodyH-66*s)/2,cw-172*s,66*s,false);}
     else if(layout===2){range('设定温度 '+(item.temperature===null?'--':numberText(item.temperature)+'°C'),item.temperature===null?0:Math.min(100,item.temperature/40*100),x+112*s,bodyY+30*s,cw-224*s,64*s,true);modes(3,bodyY+122*s,['自动','制冷','制热'],['A','\ue014','\ue00f']);}
     else if([3,19,11].includes(layout)){metric(readings[0],x+20*s,bodyY+36*s,cw-40*s);if(layout===3)modes(3,bodyY+164*s,['自动','强力','睡眠'],['AUTO','\uf0e7','\uf04c']);else range(layout===19?'风速 '+(item.percentage===null?'--':item.percentage+'%'):'温度 '+(item.temperature===null?'--':numberText(item.temperature)+'°C'),layout===19?item.percentage:50,x+(layout===11?112:40)*s,bodyY+186*s,cw-(layout===11?224:80)*s,68*s,layout===11);}
-    else if([12,13].includes(layout)){const count=layout===12?3:2;const toggles=records.filter(r=>r.property==='on');const d=100*s,gap=(cw-40*s)/count;for(let i=0;i<count;i++){const linked=entities.find(e=>e.entity_id===(item.members||[])[i]);action('\uf011',linked?fit(linked.name,90*s,14):'开关 '+(i+1),x+20*s+i*gap+(gap-d)/2,bodyY+(bodyH-d-50*s)/2,d,linked?linked.state==='on':toggles[i]&&toggles[i].value===true,c.green,true,linked);}}
+    else if([12,13].includes(layout)){const count=layout===12?3:2;const toggles=records.filter(r=>r.property==='on');const d=100*s,gap=(cw-40*s)/count;for(let i=0;i<count;i++){const linked=indexedEntity((item.members||[])[i]);action('\uf011',linked?fit(linked.name,90*s,14):'开关 '+(i+1),x+20*s+i*gap+(gap-d)/2,bodyY+(bodyH-d-50*s)/2,d,linked?linked.state==='on':toggles[i]&&toggles[i].value===true,c.green,true,linked);}}
     else if(layout===10){modes(3,bodyY+28*s,['照明','换气','加热'],['\uf011','\uf011','\uf011']);range('温度 '+(item.temperature===null?'--':numberText(item.temperature)+'°C'),50,x+112*s,bodyY+208*s,cw-224*s,64*s,true);}
     else if(layout===9){modes(3,bodyY+(bodyH-130*s)/2,['打开','暂停','关闭'],['\uf077','\uf04c','\uf078']);}
     else if([14,15].includes(layout)){box(q.camera,x+44*s,bodyY+32*s,cw-88*s,bodyH-64*s,dark?0x343044:0x555063,15*s);text(q.cameraGlyph,layout===14?'\uf021':'\uf04b',x+44*s,bodyY+bodyH/2-16,cw-88*s,36,24,0xc8c5cc,1);}
@@ -2915,12 +2473,14 @@
   function dashboardEntities() {
     if(nav==='logs')return activityLog;
     ensureUsage();
-    const cacheKey = entityRevision + '|' + nav + '|' + favorites.join(',')+'|'+homeOrderRevision;
+    const cacheKey = entityRevision + '|' + nav + '|' + favorites.join(',')+'|'+homeOrderRevision+'|'+discoveryRevision;
     if (dashboardCacheKey === cacheKey) return dashboardCache;
     const cards=groupedDeviceCards();
     const list = nav === 'scenes' ? (sceneSyncReady?sceneEntities:entities.filter(item=>['scene','script'].includes(item.domain))).map(item=>Object.assign({},item,{device_entities:[item.entity_id]})) : nav === 'overview' ? cards.slice() :
       cards.filter(item => item.device_sections.includes(nav));
-    dashboardCache = list.map((item, index) => {
+    const filtered=list.filter(item=>(!selectedArea||item.area===selectedArea)&&(!favoritesOnly||item.device_entities.some(id=>favorites.includes(id)))&&
+      (!search||(item.name+' '+item.entity_id+' '+(item.area||'')+' '+item.device_entities.join(' ')).toLowerCase().includes(search)));
+    dashboardCache = filtered.map((item, index) => {
       let score = item.device_entities.some(id=>favorites.includes(id)) ? -100 : 0;
       if (!available(item)) score += 80;
       if (['light','switch','input_boolean','fan'].includes(item.domain)&&controllable(item)) score -= 40;
@@ -2941,16 +2501,29 @@
 
   function dashboardPages() {
     const items=dashboardEntities();if(items.length)cardSize(items[0]);
-    const key=entityRevision+'|'+nav+'|'+(nav==='logs'?logSequence:0)+'|'+sizeRevision+'|'+layoutEditing+'|'+favorites.join(',')+'|'+homeOrderRevision;
+    const key=entityRevision+'|'+nav+'|'+(nav==='logs'?logSequence:0)+'|'+sizeRevision+'|'+layoutEditing+'|'+favorites.join(',')+'|'+homeOrderRevision+'|'+discoveryRevision;
     if(boardCacheKey===key)return boardCache;
+    const previousRows=WATERFALL&&boardCacheNav===nav&&boardCacheGeneration===generation&&boardCache.length?boardCache[0].items:[];
+    const anchorRows=boardScroll>0&&!boardTouchActive&&!quickDrag?previousRows.filter(row=>row.y+row.h>HEADER_H+boardScroll).sort((a,b)=>a.y-b.y||a.x-b.x):[];
     const common=nav==='overview'?items.filter(preferredHomeCard):[],commonSet=new Set(common);
     const ordered=common.concat(items.filter(item=>!commonSet.has(item))),pages=[];
-    for(let start=0;start<Math.max(1,ordered.length);start+=SLOTS){
+    if(WATERFALL){
+      const columns=Array(CARD_COLS).fill(CARD_TOP),rows=ordered.map(item=>{
+        const column=columns.indexOf(Math.min(...columns)),h=nav==='logs'?Math.max(172,Math.ceil(VIEW_H/3)):masonryHeight(item);
+        const row={item,large:false,x:GRID_X+CARD_MARGIN+column*(CARD_W+CARD_GAP),y:columns[column],w:CARD_W,h,column};
+        columns[column]+=h+CARD_GAP;return row;
+      });
+      pages.push({items:rows,height:Math.max(VIEW_H,Math.max(...columns)-HEADER_H)});
+      for(const anchor of anchorRows){
+        const next=rows.find(row=>row.item.entity_id===anchor.item.entity_id);
+        if(next){boardAnchorRestore=Math.max(0,Math.min(pages[0].height-VIEW_H,boardScroll+next.y-anchor.y));break;}
+      }
+    }else for(let start=0;start<Math.max(1,ordered.length);start+=SLOTS){
       pages.push({items:ordered.slice(start,start+SLOTS).map((item,index)=>({item,large:false,
         x:GRID_X+CARD_MARGIN+(index%CARD_COLS)*(CARD_W+CARD_GAP),
         y:CARD_TOP+Math.floor(index/CARD_COLS)*(CARD_H+CARD_GAP),w:CARD_W,h:CARD_H}))});
     }
-    boardCache=pages;boardCacheKey=key;return pages;
+    boardCache=pages;boardCacheKey=key;boardCacheNav=nav;boardCacheGeneration=generation;return pages;
   }
 
   function toggleCardSize(item) {
@@ -2973,13 +2546,47 @@
     },20);
   }
 
+  function applyDiscovery(){
+    cancelInputs();discoveryRevision++;browseOpen=false;selectedId='';roomPage=0;resetBoardScroll();render();
+  }
+  function clearDiscovery(){search='';selectedArea='';favoritesOnly=false;applyDiscovery();}
+  function openBrowse(){cancelInputs();browseOpen=true;browsePage=0;boardLock(true);render();}
+  function roomChoices(){return ['',...new Set(groupedDeviceCards().map(item=>item.area).filter(Boolean))].sort((a,b)=>a===''?-1:b===''?1:a.localeCompare(b));}
+  function browsePageSize(){return H<450?2:3;}
+  function renderBrowse(){
+    if(!browseOpen){if(browseUi){if(browseUi.locked){boardLock(false);browseUi.locked=false;}browseUi.decor.forEach(id=>hide(id,true));browseUi.buttons.forEach(button=>hide(button,true));}return;}
+    if(!browseUi){
+      const u={decor:[],buttons:[],rooms:[]},keep=id=>{u.decor.push(id);return id;};
+      u.face=keep(panel(0,0,1,1,pal.card,20));u.title=keep(label('',0,0,1,1,20,pal.ink));u.note=keep(label('',0,0,1,1,13,pal.muted));
+      const make=(text,action)=>{const b=createButton(text,0,0,1,1,action,pal.page,{radius:10,borderWidth:0,fontSize:15});b.section='browse';u.buttons.push(b);return b;};
+      u.favorite=make('',()=>{favoritesOnly=!favoritesOnly;applyDiscovery();});
+      for(let i=0;i<3;i++)u.rooms.push(make('',()=>{const rooms=roomChoices(),index=browsePage*browsePageSize()+i;if(index<rooms.length){selectedArea=rooms[index];applyDiscovery();}}));
+      u.prev=make('上一页',()=>{browsePage=Math.max(0,browsePage-1);render();});u.next=make('下一页',()=>{browsePage++;render();});
+      u.clear=make('清除筛选',clearDiscovery);u.close=make('返回',()=>{browseOpen=false;render();});browseUi=u;
+    }
+    const rooms=roomChoices(),count=browsePageSize(),pages=Math.max(1,Math.ceil(rooms.length/count));browsePage=Math.min(browsePage,pages-1);
+    const shown=Math.min(count,rooms.length-browsePage*count);
+    const u=browseUi,x=GRID_X+18,y=HEADER_H+12,w=GRID_W-36,h=Math.min(H-HEADER_H-26,186+shown*44+(pages>1?44:0)),pad=16,inner=w-32;
+    boardLock(true);u.locked=true;
+    u.decor.forEach(id=>hide(id,false));pushPos(u.face,x,y);pushSize(u.face,w,h);
+    detailText(u.title,'筛选设备',x+pad,y+12,inner,28,20,pal.ink);
+    detailText(u.note,(search?'搜索：'+search+' · ':'')+(rooms.length>1?(rooms.length-1)+' 个房间'+(pages>1?' · 第 '+(browsePage+1)+' / '+pages+' 页':''):'家庭中枢尚未分配房间'),x+pad,y+43,inner,22,13,pal.muted);
+    const draw=(b,text,bx,by,bw,bh,active)=>{buttonText(b,text);Object.assign(b,{x:bx,y:by,w:bw,h:bh,color:active?pal.blueSoft:pal.page,style:{radius:10,borderWidth:0,fontSize:15}});hide(b,false);};
+    draw(u.favorite,favoritesOnly?'已选：关注设备':'仅看关注设备',x+pad,y+70,inner,40,favoritesOnly);
+    u.rooms.forEach((b,index)=>{const room=rooms[browsePage*count+index];if(index>=count||room===undefined){hide(b,true);return;}draw(b,(room===selectedArea?'已选 · ':'')+(room||'全部房间'),x+pad,y+118+index*44,inner,40,room===selectedArea);});
+    const half=Math.floor((inner-8)/2),bottom=y+h-48;
+    draw(u.prev,'上一页',x+pad,bottom-44,half,40,false);draw(u.next,'下一页',x+pad+half+8,bottom-44,half,40,false);hide(u.prev,browsePage===0);hide(u.next,browsePage===pages-1);
+    draw(u.clear,'清除筛选',x+pad,bottom,half,40,false);draw(u.close,'返回',x+pad+half+8,bottom,half,40,false);
+    if(typeof ui.front==='function')u.decor.forEach(id=>ui.front(id));
+  }
   function selectSection(section) {
     const previousSection=nav;
-    quickDrag=null;
+    cancelInputs(false);
     quickGestureOwned=false;
     if(section==='overview'){ensureUsage();homeWeights=Object.assign(Object.create(null),usageCounts);homeOrderRevision++;}
     nav = section;
-    roomPage = 0;
+    browseOpen=false;
+    resetBoardScroll();roomPage = 0;
     selectedId = '';
     settingsOpen = false;
     detailOpen = false;
@@ -3024,23 +2631,37 @@
     out.header = panel(GRID_X, 0, GRID_W, HEADER_H, pal.page, 0);
     out.back = iconButton('\uf053', GRID_X + 12, 16, 32, 30,
       () => {
-        if (detailOpen) {detailOpen=false;optionPicker=null;quickDrag=null;quickGestureOwned=false;}
+        cancelInputs(false);
+        if (detailOpen) {detailOpen=false;optionPicker=null;quickGestureOwned=false;}
         else settingsOpen = false;
         render();
       }, pal.page);
     out.title = label('', GRID_X + 56, 17, 280, 30, 24, pal.ink);
     out.desktopPin=createButton('',W-160,10,144,40,toggleDesktopPin,pal.blueSoft,{radius:12,borderWidth:0,fontSize:15});out.desktopPin.section='detail';
+    out.followButton=createButton('',W-278,10,110,44,toggleDeviceFollow,pal.blueSoft,{radius:12,borderWidth:0,fontSize:15});out.followButton.section='detail';
     out.status = label('', W - 370, 21, 110, 20, 13, pal.muted);
     pushStyle(out.status, 'L', { center: 1 });
-    out.refresh = iconButton('\uf021', W - 44, 16, 32, 28, refresh, pal.page);
-    out.settingsButton = iconButton('\uf013', W - 82, 16, 32, 28,
-      () => { detailOpen = false; settingsOpen = true; render(); }, pal.page);
-    out.layoutEdit=createButton('编辑卡片',W-246,10,144,40,()=>{quickGestureOwned=false;quickDrag=null;layoutEditing=!layoutEditing;roomPage=0;render();},pal.page,{radius:12,borderWidth:0,fontSize:16});out.layoutEdit.section='list';
+    out.refresh = iconButton('\uf021', W - 48, 10, 44, 44, refresh, pal.page);
+    out.settingsButton = iconButton('\uf013', W - 92, 10, 44, 44,
+      openSettings, pal.page);
+    out.searchButton=iconButton('\uf002',W-180,10,44,44,promptSearch,pal.page);
+    out.browseButton=iconButton('\ue003',W-136,10,44,44,openBrowse,pal.page);
+    out.emptyTitle=label('',GRID_X+24,HEADER_H+60,GRID_W-48,36,23,pal.ink);
+    out.emptyNote=label('',GRID_X+24,HEADER_H+106,GRID_W-48,56,15,pal.muted);
+    out.emptyAction=createButton('',GRID_X+24,HEADER_H+176,180,44,()=>{
+      if(search||selectedArea||favoritesOnly)clearDiscovery();else if(!connected)openSettings();else refresh();
+    },pal.blueSoft,{radius:12,borderWidth:0,fontSize:16});out.emptyAction.section='list';
+    [out.emptyTitle,out.emptyNote,out.emptyAction].forEach(id=>hide(id,true));
+    out.layoutEdit=createButton('编辑卡片',W-246,10,144,40,()=>{cancelInputs(false);quickGestureOwned=false;layoutEditing=!layoutEditing;roomPage=0;render();},pal.page,{radius:12,borderWidth:0,fontSize:16});out.layoutEdit.section='list';
     out.layoutEditFace=panel(W-246,10,144,40,pal.blueSoft,12);
     out.layoutEditIcon=label('\ue003',W-232,20,24,24,18,pal.blue,true);
     out.layoutEditLabel=label('编辑卡片',W-202,20,90,24,16,pal.blue);pushStyle(out.layoutEditLabel,'L',{center:1});
     yield out;
 
+    if(WATERFALL){
+      expandButtonPool();out.boardViewport=ui.viewport(GRID_X,HEADER_H,GRID_W,VIEW_H,boardScrolled);
+      hide(out.boardViewport,true);
+    }
     for (let index = 0; index < SLOTS; index++) {
       const x = GRID_X + CARD_MARGIN + (index % CARD_COLS) * (CARD_W + CARD_GAP);
       const y = CARD_TOP + Math.floor(index / CARD_COLS) * (CARD_H + CARD_GAP);
@@ -3066,21 +2687,21 @@
       card.button = createButton('', x, y, CARD_W, CARD_H,
         () => { if (card.item&&!layoutEditing&&!quickGestureOwned&&!card.passivePressed)openDetail(card.item); }, pal.card,
         { radius: 18, borderWidth: 0 });
-      card.button.section = 'card';
+      card.button.section = 'card';card.button.viewport=true;card.button.card=card;
       card.button._cardVisible = false;
       card.iconButton = createButton('', x + CARD_W - 68, y + 18, 48, 48,
         () => { if (card.item&&!quickGestureOwned) {if(layoutEditing)toggleCardSize(card.item);else toggleItem(card.item);} }, pal.card,
         { radius: 24, borderWidth: 0, enabled: 1 });
-      card.iconButton.section = 'cardIcon';
+      card.iconButton.section = 'cardIcon';card.iconButton.viewport=true;card.iconButton.card=card;
       card.iconButton._cardVisible = false;
       card.moreLabel=card.unit;card.minusGlyph=null;card.plusGlyph=null;
       for(const direction of [-1,1]){
         const button=createButton('',0,0,40,44,()=>{
           if(isSceneCommand(card.item)){activateScene(card.item);return;}
-          const main=card.item&&entities.find(row=>row.entity_id===card.item.entity_id),spec=card.quickSpec;
+          const main=card.item&&indexedEntity(card.item.entity_id),spec=card.quickSpec;
           if(main&&spec)requestFunction(main,spec,Number(controlValue(main,spec))+direction*spec.step);
         },pal.track,{radius:14,borderWidth:0});
-        button.section='list';hide(button,true);if(direction<0)card.minus=button;else card.plus=button;
+        button.section='list';button.viewport=true;button.card=card;hide(button,true);if(direction<0)card.minus=button;else card.plus=button;
       }
       [card.moreLabel,card.minusGlyph,card.plusGlyph].forEach(id=>hide(id,true));
       [card.panel, card.iconBase, card.icon, card.powerHalo, card.powerGlyph, card.name, card.value, card.unit, card.state,
@@ -3154,6 +2775,7 @@
     out.detailPager=createPageIndicator('detail',target=>{controlPage=target;render();},remember);
     out.detailEntity=remember(label('',cx+20,bottom-24,cw-40,20,11,pal.muted));
     out.detailAvailability=remember(label('',cx+20,bottom,cw-212,30,13,pal.muted));
+    out.detailMore=createButton('',W-162,H-44,144,40,()=>{cancelInputs(false);detailExpanded=!detailExpanded;controlPage=0;detailRenderKey='';render();},pal.page,{radius:12,borderWidth:0,fontSize:14});out.detailMore.section='detail';hide(out.detailMore,true);
     out.detailControlRows=[];
     out.detailControlCount=Math.max(1,Math.min(3,Math.floor((dh-146)/90)));
     out.detailAuxCount=out.detailControlCount;
@@ -3186,7 +2808,7 @@
       openOptionPicker(item,spec);
     }else if(spec.kind==='text'){
       const entity=item.entity_id,revision=generation;
-      prompt.input({title:spec.title,value:item.state,maxLength:128},value=>{if(revision!==generation||value===null||value===undefined)return;requestFunction(entities.find(e=>e.entity_id===entity),spec,value);});
+      prompt.input({title:spec.title,value:item.state,maxLength:128},value=>{if(revision!==generation||value===null||value===undefined)return;requestFunction(indexedEntity(entity),spec,value);});
     }else requestFunction(item,spec);
   }
   function optionLabel(value){const names={day:'日间',night:'夜间',relax:'放松',quiet:'安静',silent:'静音',sleep:'睡眠',normal:'标准',natural:'自然风',boost:'强力',eco:'节能',comfort:'舒适',low:'低',medium:'中',high:'高',vertical:'上下',horizontal:'左右',both:'全向',none:'无'};return value===true?'开启':value===false?'关闭':names[String(value).toLowerCase()]||STATE_WORDS[String(value)]||String(value);}
@@ -3209,7 +2831,7 @@
     }
     Object.assign(button,{x:Math.round(x),y:Math.round(y),w:Math.floor(w),h:Math.floor(h),color:active?pal.blueSoft:pal.track,
       style:{radius:12,borderWidth:0,fontSize:font,enabled:usable?1:0}});buttonText(button,caption);hide(button,!usable);
-    hide(button.face,false);pushPos(button.face,x,y);pushSize(button.face,w,h);pushColor(button.face,button.color);
+    hide(button.face,false);pushPos(button.face,x,y);pushSize(button.face,w,h);pushColor(button.face,button.color,usable&&paint['c'+button.face]!==undefined);
     detailText(button.caption,caption,x+4,y+(h-26)/2,w-8,26,font,!usable?pal.muted:active?pal.blue:pal.ink,true);
     if(typeof ui.front==='function'){ui.front(button.face);ui.front(button.caption);}
   }
@@ -3220,7 +2842,7 @@
     const caption=(value,index)=>actions?value.title:presets?spec.labels[index]:optionLabel(value);
     if(values.some((value,index)=>fit(caption(value,index),width-12,font)!==caption(value,index)))return false;
     if(!row.optionButtons)row.optionButtons=Array.from({length:4},(_,index)=>{
-      const button=createButton('',0,0,4,4,()=>{if(row.item&&row.spec){const current=entities.find(e=>e.entity_id===row.item.entity_id);if(row.spec.kind==='actions')requestFunction(current,row.spec.actions[index]);else requestFunction(current,row.spec.kind==='presets'?row.spec.target:row.spec,row.spec.options[index]);}},pal.track,{radius:12,borderWidth:0,fontSize:14});button.section='detail';hide(button,true);return button;
+      const button=createButton('',0,0,4,4,()=>{if(row.item&&row.spec){const current=indexedEntity(row.item.entity_id);if(row.spec.kind==='actions')requestFunction(current,row.spec.actions[index]);else requestFunction(current,row.spec.kind==='presets'?row.spec.target:row.spec,row.spec.options[index]);}},pal.track,{radius:12,borderWidth:0,fontSize:14});button.section='detail';hide(button,true);return button;
     });
     const value=controlValue(item,presets?spec.target:spec);
     row.optionButtons.forEach((button,index)=>{const visible=index<values.length;hide(button,!visible);hide(button.face,!visible);hide(button.caption,!visible);if(!visible)return;
@@ -3239,13 +2861,13 @@
   }
   function renderOptionPicker(){
     if(!optionPicker)return;
-    const item=entities.find(row=>row.entity_id===optionPicker.entity),spec=item&&functionControls(item).find(row=>row.service===optionPicker.service&&row.key===optionPicker.key);
+    const item=indexedEntity(optionPicker.entity),spec=item&&functionControls(item).find(row=>row.service===optionPicker.service&&row.key===optionPicker.key);
     if(optionPicker.generation!==generation||!item||!spec||!available(item)||settingsOpen||!detailOpen){optionPicker=null;return;}
     const out=widgets,box=out.activeDetailBox||out.detailBox;if(!box){optionPicker=null;return;}
     if(!optionPickerUi){
       const make=(text,action)=>{const button=createButton(text,0,0,4,4,action,pal.track,{radius:12,borderWidth:0,fontSize:18});button.section='picker';hide(button,true);return button;};
       optionPickerUi={choices:Array.from({length:4},(_,index)=>make('',()=>{
-        if(!optionPicker)return;const state=optionPicker,entity=entities.find(row=>row.entity_id===state.entity),current=entity&&functionControls(entity).find(row=>row.service===state.service&&row.key===state.key);
+        if(!optionPicker)return;const state=optionPicker,entity=indexedEntity(state.entity),current=entity&&functionControls(entity).find(row=>row.service===state.service&&row.key===state.key);
         const value=current&&current.options[state.page*4+index];optionPicker=null;detailRenderKey='';if(value!==undefined)requestFunction(entity,current,value);render();
       })),close:make('返回',()=>{optionPicker=null;detailRenderKey='';render();})};
       optionPickerUi.pager=createPageIndicator('picker',target=>{if(optionPicker){optionPicker.page=target;render();}},id=>out.detailWidgets.push(id));
@@ -3308,7 +2930,7 @@
   function placeWheelMarker(u,rgb){
     if(!u.wheelRect)return;const r=u.wheelRect,hsv=rgbHsv(rgb),angle=(hsv.h-90)*Math.PI/180;
     const radius=hsv.s*(r.w/2-7);hide(u.marker,false);
-    pushPos(u.marker,Math.round(r.x+r.w/2+Math.cos(angle)*radius-7),Math.round(r.y+r.h/2+Math.sin(angle)*radius-7));
+    pushPos(u.marker,Math.round(r.x+r.w/2+Math.cos(angle)*radius-7),Math.round(r.y+r.h/2+Math.sin(angle)*radius-7),!quickDrag&&!lampWheelDrag&&paint['p'+u.marker]!==undefined);
     if(typeof ui.front==='function')ui.front(u.marker);
   }
   function handleLampWheel(state,nx,ny){
@@ -3326,7 +2948,7 @@
     if(!lampWheelDrag)return false;
     if(lampWheelDrag.generation!==generation||lampWheelDrag.entity!==r.entity){lampWheelDrag=null;return true;}
     if(state==='down'||state==='move'){
-      const rgb=wheelRgb(r,x,y);placeWheelMarker(u,rgb);pushColor(u.preview,rgbColor(rgb));
+      const rgb=wheelRgb(r,x,y);placeWheelMarker(u,rgb);pushColor(u.preview,rgbColor(rgb),!quickDrag&&!lampWheelDrag&&paint['c'+u.preview]!==undefined);
       pushText(u.colorLabel,'#'+rgbColor(rgb).toString(16).padStart(6,'0').toUpperCase());
     }
     if(state==='up'){const rgb=wheelRgb(r,x,y);lampWheelDrag=null;detailRenderKey='';setLampRgb(r.entity,rgb);render();}
@@ -3345,7 +2967,7 @@
     const text=(id,value,x,y,w,h,font,ink)=>{hide(id,false);pushPos(id,x,y);pushSize(id,w,h);pushStyle(id,'L',{fontSize:font,center:0,ellipsis:1});pushColor(id,ink===undefined?pal.ink:ink);pushText(id,value);};
     const button=(b,caption,x,y,w,h,active)=>{
       Object.assign(b,{x:Math.round(x),y:Math.round(y),w:Math.floor(w),h:Math.floor(h),color:active?pal.blueSoft:pal.track,style:{radius:12,borderWidth:0,fontSize:16,enabled:usable?1:0}});buttonText(b,caption);hide(b,!usable);
-      if(b.face){hide(b.face,false);pushPos(b.face,x,y);pushSize(b.face,w,h);pushColor(b.face,b.color);
+      if(b.face){hide(b.face,false);pushPos(b.face,x,y);pushSize(b.face,w,h);pushColor(b.face,b.color,usable&&paint['c'+b.face]!==undefined);
         text(b.caption,caption,x,y+(h-24)/2,w,24,16,!usable?pal.muted:active?pal.blue:pal.ink);pushStyle(b.caption,'L',{fontSize:16,center:1});}
     };
     hide(u.icon,false);pushPos(u.icon,left,box.y+25);pushSize(u.icon,46,46);pushColor(u.icon,pal.blueSoft);pushStyle(u.icon,'S',{radius:15});
@@ -3364,13 +2986,13 @@
       let rect;
       if(warm){
         hide(row.fill,true);hide(row.track,false);pushPos(row.track,left,ry);pushSize(row.track,rw,rh);pushColor(row.track,0xffb16e);pushStyle(row.track,'S',{radius:18,borderWidth:0});pushStyle(row.track,'G',{gradientHorizontal:1,gradientVertical:0,gradientEnd:0xfffdfa,gradientMainStop:0,gradientEndStop:255});
-        hide(row.thumb,false);pushPos(row.thumb,left+12+(rw-30)*percent/100,ry+12);pushSize(row.thumb,6,28);pushStyle(row.thumb,'S',{radius:4,borderWidth:1,borderColor:0x6d8092});
+        hide(row.thumb,false);pushPos(row.thumb,left+12+(rw-30)*percent/100,ry+12,!quickDrag&&!lampWheelDrag&&paint['p'+row.thumb]!==undefined);pushSize(row.thumb,6,28);pushStyle(row.thumb,'S',{radius:4,borderWidth:1,borderColor:0x6d8092});
         rect={x:left,y:ry,w:rw,h:rh,inputX:left+15,inputW:rw-30,thumbTrack:true,thumbH:28,fill:row.fill,thumb:row.thumb,label:row.value,valueOnly:true,labelColor:pal.ink,spec,item,gradient:true};
       }else rect=designSlider(row,row.track,row.value,item,spec,left,ry,rw,rh,percent,0xffa64e);
       out.detailDragGroup.sliderRects.push(rect);if(usable)out.detailDragGroup.controlRects.push(rect);
     });
     const owner=out.detailControlRows[0],px=box.x+box.w-64,py=box.y+25;
-    hide(out.detailLampPowerFace,!power);pushPos(out.detailLampPowerFace,px,py);pushSize(out.detailLampPowerFace,46,46);pushStyle(out.detailLampPowerFace,'S',{radius:23});pushColor(out.detailLampPowerFace,item.state==='on'?(dark?0x204b39:0xdff5e7):pal.track);
+    hide(out.detailLampPowerFace,!power);pushPos(out.detailLampPowerFace,px,py);pushSize(out.detailLampPowerFace,46,46);pushStyle(out.detailLampPowerFace,'S',{radius:23});pushColor(out.detailLampPowerFace,item.state==='on'?(dark?0x204b39:0xdff5e7):pal.track,!quickDrag&&!lampWheelDrag&&paint['c'+out.detailLampPowerFace]!==undefined);
     if(power){
       detailIcon(owner.minusGlyph,'\uf011',px,py,46,46,1,item.state==='on'?0xb9f0d0:pal.muted);
       Object.assign(owner.minus,{x:px-1,y:py-1,w:48,h:48});buttonText(owner.minus,'');hide(owner.minus,!usable);
@@ -3411,7 +3033,7 @@
         hide(u.wheel,false);pushPos(u.wheel,right,nextY);pushSize(u.wheel,Math.round(diameter),Math.round(diameter));
         u.wheelRect={x:right,y:nextY,w:diameter,h:diameter,entity:item.entity_id};
         text(u.colorLabel,'颜色选择',right+diameter+12,nextY+diameter/2-13,auxW-diameter-12,28,16);
-        hide(u.preview,false);pushPos(u.preview,right+diameter+12,nextY+diameter/2+23);pushSize(u.preview,28,18);pushColor(u.preview,rgbColor(lampRgb(item)));
+        hide(u.preview,false);pushPos(u.preview,right+diameter+12,nextY+diameter/2+23);pushSize(u.preview,28,18);pushColor(u.preview,rgbColor(lampRgb(item)),!quickDrag&&!lampWheelDrag&&paint['c'+u.preview]!==undefined);
         placeWheelMarker(u,lampRgb(item));nextY+=diameter+10;
       }
     }
@@ -3469,8 +3091,8 @@
       if(range){
         const v=Number.isFinite(value)?value:spec.min,percent=Math.max(0,Math.min(100,(v-spec.min)*100/(spec.max-spec.min)));
       const width=27+(box.w-27)*percent/100;
-        pushPos(row.fill,box.x,y+30);pushSize(row.fill,width,52);pushColor(row.fill,pal.blue);pushStyle(row.fill,'S',{radius:18});
-        pushPos(row.thumb,box.x+12+(box.w-30)*percent/100,y+40);pushSize(row.thumb,6,32);
+        pushPos(row.fill,box.x,y+30);pushSize(row.fill,width,52,!quickDrag&&paint['s'+row.fill]!==undefined);pushColor(row.fill,pal.blue);pushStyle(row.fill,'S',{radius:18});
+        pushPos(row.thumb,box.x+12+(box.w-30)*percent/100,y+40,!quickDrag&&!lampWheelDrag&&paint['p'+row.thumb]!==undefined);pushSize(row.thumb,6,32);
         const rect={x:box.x,y:y+30,w:box.w,h:52,minFill:27,inputX:box.x+15,inputW:box.w-30,thumbTrack:true,
           fill:row.fill,thumb:row.thumb,thumbH:32,label:row.name,labelColor:pal.ink,labelName:item.name,spec,item};
         out.detailDragGroup.sliderRects.push(rect);if(usable)out.detailDragGroup.controlRects.push(rect);
@@ -3491,8 +3113,17 @@
     if(row[name]===undefined){row[name]=color===undefined?label('',0,0,4,4,15,pal.ink):panel(0,0,4,4,color,12);widgets.detailWidgets.push(row[name]);(widgets.detailDecorations||(widgets.detailDecorations=[])).push(row[name]);}
     return row[name];
   }
-  function paintSliderTrack(track,percent,accent){
+  function paintSliderTrack(track,percent,accent,thumb){
     const stop=Math.max(0,Math.min(255,Math.round(percent*255/100)));
+    // Native stop interpolation keeps the fill edge and thumb on the UI cadence.
+    if(typeof ui.range==='function'){
+      delete paint['c'+track];delete paint['yG'+track];
+      const key='r'+track,animate=!quickDrag&&paint[key]!==undefined;
+      const linked=thumb!==undefined&&typeof ui.rangeLinked==='function';
+      const value=stop+'|'+accent+'|'+pal.track+'|'+animate+'|'+(linked?thumb+'|'+paint['p'+track]+'|'+paint['s'+track]:'');
+      if(paint[key]!==value){paint[key]=value;if(linked)ui.rangeLinked(track,stop,accent,pal.track,animate,thumb);else ui.range(track,stop,accent,pal.track,animate);}
+      return;
+    }
     // Equal gradient stops still paint an endpoint pixel in LVGL.
     pushColor(track,percent<=0?pal.track:accent);
     pushStyle(track,'G',{gradientHorizontal:1,gradientVertical:0,gradientEnd:percent>=100?accent:pal.track,gradientMainStop:stop,gradientEndStop:stop});
@@ -3500,8 +3131,13 @@
   function designSlider(row,track,valueLabel,item,spec,x,y,w,h,percent,accent){
     hide(track,false);pushPos(track,x,y);pushSize(track,w,h);
     pushStyle(track,'S',{radius:h===48?16:detailDesign.rangeRadius,borderWidth:0});
-    paintSliderTrack(track,percent,accent);
-    hide(row.fill,true);hide(row.thumb,false);pushPos(row.thumb,Math.round(x+12+(w-30)*percent/100),Math.round(y+(h-detailDesign.thumbHeight)/2));pushSize(row.thumb,6,detailDesign.thumbHeight);pushColor(row.thumb,0xffffff);pushStyle(row.thumb,'S',{radius:4,borderWidth:0});
+    const linked=typeof ui.rangeLinked==='function';
+    hide(row.fill,true);hide(row.thumb,false);if(!linked)pushPos(row.thumb,Math.round(x+12+(w-30)*percent/100),Math.round(y+(h-detailDesign.thumbHeight)/2),!quickDrag&&!lampWheelDrag&&paint['p'+row.thumb]!==undefined);pushSize(row.thumb,6,detailDesign.thumbHeight);pushColor(row.thumb,0xffffff);pushStyle(row.thumb,'S',{radius:4,borderWidth:0});
+    // Linking requires siblings, including the first render of a lazy thumb.
+    if(linked&&WATERFALL&&attached[track]!==undefined)attachToBoard(row.thumb,attached[track]);
+    paintSliderTrack(track,percent,accent,row.thumb);
+    // A recycled waterfall card can bring its track above an existing thumb.
+    if(typeof ui.front==='function')ui.front(row.thumb);
     return {x,y,w,h,inputX:x+15,inputW:w-30,cssRange:true,track,accent,fill:row.fill,thumb:row.thumb,thumbTrack:true,thumbH:detailDesign.thumbHeight,label:valueLabel,valueOnly:true,labelColor:pal.ink,spec,item};
   }
   function renderProfileDetail(item,device,profile,members){
@@ -3523,7 +3159,7 @@
     const power=all.find(f=>own(f)&&f.spec.kind==='action'&&['turn_on','turn_off'].includes(f.spec.service));if(power)used.add(power);
     const usable=connected&&available(item)&&!layoutEditing&&!item.product_readonly,px=box.x+box.w-D.padding-44,py=box.y+25;
     hide(out.detailLampPowerFace,!power);hide(u.power,!power||!usable);hide(u.powerGlyph,!power);
-    if(power){Object.assign(u.power,{x:px-2,y:py-2,w:48,h:48});pushPos(out.detailLampPowerFace,px,py);pushSize(out.detailLampPowerFace,44,44);pushStyle(out.detailLampPowerFace,'S',{radius:22});pushColor(out.detailLampPowerFace,powerIsOn(item)?dark?0x234936:0xdcf7e8:pal.track);detailIcon(u.powerGlyph,'\uf011',px,py,44,44,1,powerIsOn(item)?dark?0xc7ffdf:0x13744d:pal.muted);}
+    if(power){Object.assign(u.power,{x:px-2,y:py-2,w:48,h:48});pushPos(out.detailLampPowerFace,px,py);pushSize(out.detailLampPowerFace,44,44);pushStyle(out.detailLampPowerFace,'S',{radius:22});pushColor(out.detailLampPowerFace,powerIsOn(item)?dark?0x234936:0xdcf7e8:pal.track,!quickDrag&&!lampWheelDrag&&paint['c'+out.detailLampPowerFace]!==undefined);detailIcon(u.powerGlyph,'\uf011',px,py,44,44,1,powerIsOn(item)?dark?0xc7ffdf:0x13744d:pal.muted);}
     const find=key=>{const f=all.find(f=>!used.has(f)&&own(f)&&(f.spec.key||f.spec.service)===key);if(f)used.add(f);return f;};
     const reading=(key,title,unit)=>{
       const existing=all.find(f=>!used.has(f)&&f.spec.kind==='read'&&(f.spec.key===key||f.item.device_class===key));
@@ -3575,7 +3211,8 @@
     const bodyY=box.y+D.padding+D.headerHeight+D.headerGap+1,bodyHeight=box.h-(bodyY-box.y)-D.padding;
     const paginate=fields=>{const pages=[[]];let size=0;for(const f of fields){const h=height(f),gap=size?(grid?18:D.fieldGap):0;if(pages.at(-1).length===3||size+gap+h>bodyHeight&&size){pages.push([]);size=0;}pages.at(-1).push(f);size+= (size?(grid?18:D.fieldGap):0)+h;}return pages;};
     const leftPages=paginate(main),rightPages=paginate(side),basePages=Math.max(leftPages.length,rightPages.length);
-    const extraPages=paginate(extras),pages=basePages+(extras.length?extraPages.length:0);controlPage=Math.min(controlPage,pages-1);
+    const extraPages=paginate(extras),pages=basePages+(detailExpanded&&extras.length?extraPages.length:0);controlPage=Math.min(controlPage,pages-1);
+    hide(out.detailMore,!extras.length);buttonText(out.detailMore,detailExpanded?'收起参数':'更多参数');
     const paintRow=(row,field,x,y,w,aux)=>{
       row.item=field&&field.item;row.spec=field&&field.spec;
       const ids=aux?[row.face,row.name,row.state,row.fill,row.thumb]:[row.title,row.track,row.fill,row.thumb,row.value,row.minusGlyph,row.plusGlyph];ids.forEach(id=>hide(id,true));if(!field)return;
@@ -3586,7 +3223,7 @@
         detailText(title,spec.title,x,y+11,w-146,28,16,pal.ink);
         detailText(valueLabel,value?'已开启':'已关闭',x+w-134,y+15,80,22,13,pal.muted,true);
         hide(track,false);pushPos(track,x+w-46,y+10);pushSize(track,46,28);pushColor(track,value?pal.blue:pal.track);pushStyle(track,'S',{radius:14,borderWidth:0});pushStyle(track,'G',{gradientHorizontal:0,gradientVertical:0});
-        hide(row.thumb,false);pushPos(row.thumb,x+w-46+(value?21:3),y+13);pushSize(row.thumb,22,22);pushStyle(row.thumb,'S',{radius:11,borderWidth:0});pushColor(row.thumb,value||!dark?0xffffff:0xbcc7d0);
+        hide(row.thumb,false);pushPos(row.thumb,x+w-46+(value?21:3),y+13,!quickDrag&&!lampWheelDrag&&paint['p'+row.thumb]!==undefined);pushSize(row.thumb,22,22);pushStyle(row.thumb,'S',{radius:11,borderWidth:0});pushColor(row.thumb,value||!dark?0xffffff:0xbcc7d0);
         const b=aux?row.button:row.plus;Object.assign(b,{x,y,w,h:48,style:{radius:0,borderWidth:0,enabled:enabled?1:0}});buttonText(b,'');hide(b,!enabled);
         if(aux)row.plusAction=()=>requestFunction(lookupEntity(entity.entity_id),spec,!controlValue(entity,spec));else row.plusAction=()=>requestFunction(lookupEntity(entity.entity_id),spec,!controlValue(entity,spec));return;
       }
@@ -3614,7 +3251,7 @@
           const offset=unitMetrics?Math.max(0,measured.height-measured.baseline-unitMetrics.height+unitMetrics.baseline):Math.max(0,font-18);
           detailText(detailExtra(row,'unitLabel'),unit,x+uw+7,ry+offset,Math.max(20,w-uw-7),24,15,pal.muted);
         }
-        if(spec.key==='filter-life-level'&&numeric){const meter=detailExtra(row,'meter',pal.track),fill=detailExtra(row,'meterFill',pal.blue);hide(meter,false);pushPos(meter,x,ry+54);pushSize(meter,w,8);hide(fill,false);pushPos(fill,x,ry+54);pushSize(fill,w*Math.max(0,Math.min(100,Number(raw)))/100,8);}
+        if(spec.key==='filter-life-level'&&numeric){const meter=detailExtra(row,'meter',pal.track),fill=detailExtra(row,'meterFill',pal.blue);hide(meter,false);pushPos(meter,x,ry+54);pushSize(meter,w,8);hide(fill,false);pushPos(fill,x,ry+54);pushSize(fill,Math.max(1,w*Math.max(0,Math.min(100,Number(raw)))/100),8,paint['s'+fill]!==undefined);hide(fill,Number(raw)<=0);}
         return;
       }
       const ry=y+40;
@@ -3646,7 +3283,13 @@
     const key=[visible,selected&&selected.entity_id,generation,entityRevision,controlRevision,controlPage,connected,layoutEditing].join('|');
     if(detailRenderKey===key)return;
     detailRenderKey=key;
-    const out=widgets;out.detailWidgets.forEach(id=>hide(id,!visible));
+    const out=widgets;
+    hide(out.detailMore,true);
+    if(visible&&selected&&out.motionEntity!==selected.entity_id){
+      out.motionEntity=selected.entity_id;
+      out.detailWidgets.forEach(id=>{delete paint['p'+id];delete paint['s'+id];delete paint['c'+id];delete paint['r'+id];});
+    }
+    out.detailWidgets.forEach(id=>hide(id,!visible));
     (out.detailDecorations||[]).forEach(id=>hide(id,true));
     if(out.profileUi){[out.profileUi.icon,out.profileUi.glyph,out.profileUi.powerGlyph,out.profileUi.power].forEach(id=>hide(id,true));}
     if(out.lampUi){out.lampUi.wheelRect=null;hide(out.lampUi.wheel,true);hide(out.lampUi.marker,true);}
@@ -3656,7 +3299,7 @@
     out.detailMembers.forEach(row=>{row.minusAction=row.plusAction=null;hide(row.button,!visible);});
     out.detailControlRows.forEach(row=>{row.minusAction=row.plusAction=null;hide(row.minus,true);hide(row.plus,true);});
     hide(out.detailLampPowerFace,true);
-    hidePageIndicator(out.detailPager);
+    if(!visible)hidePageIndicator(out.detailPager);
     out.detailAuxRowHeight=0;out.activeDetailBox=out.detailBox;pushSize(out.detailPanel,out.detailBox.w,out.detailBox.h);
     out.detailDragGroup={item:selected,brightnessRect:null,sliderRects:[],controlRects:[]};
     if(!visible)return;
@@ -3681,9 +3324,15 @@
     if(selected.domain==='light'&&specs.length){renderLampDetail(selected,specs);return;}
     if(profile){renderProfileDetail(selected,device,profile,members);return;}
     pushSize(out.detailName,out.detailBox.w-100,32);
-    const fields=deviceFields(members),readOnlyProfile=profile&&profile.layout&&fields.every(field=>field.spec.kind==='read');
-    const mainCount=readOnlyProfile?Math.min(out.detailControlCount,Math.ceil(fields.length/2)):out.detailControlCount;
-    const perPage=mainCount+out.detailAuxCount,pages=Math.max(1,Math.ceil(fields.length/perPage));
+    const allFields=deviceFields(members).map((field,index)=>({field,index})).sort((a,b)=>{
+      const rank=entry=>(entry.field.item.entity_id===primary.entity_id?0:10)+(entry.field.spec.kind==='range'?0:entry.field.spec.kind==='action'?1:entry.field.spec.kind==='options'?2:3);
+      return rank(a)-rank(b)||a.index-b.index;
+    }).map(entry=>entry.field);
+    const readOnlyProfile=profile&&profile.layout&&allFields.every(field=>field.spec.kind==='read');
+    const mainCount=readOnlyProfile?Math.min(out.detailControlCount,Math.ceil(allFields.length/2)):out.detailControlCount;
+    const perPage=mainCount+out.detailAuxCount,fields=detailExpanded?allFields:allFields.slice(0,perPage),pages=Math.max(1,Math.ceil(fields.length/perPage));
+    hide(out.detailMore,allFields.length<=perPage);buttonText(out.detailMore,detailExpanded?'收起参数':'更多参数');
+    if(allFields.length>perPage){pushSize(out.detailName,out.detailBox.w-180,32);pushSize(out.detailState,out.detailBox.w-180,24);}
     controlPage=Math.min(controlPage,pages-1);
     const offset=controlPage*perPage;
     renderAuxFields([],fields.slice(offset+mainCount,offset+perPage),pages);
@@ -3729,7 +3378,7 @@
         pushColor(row.track,temperature?temperatureColor(spec.min):dark?0x303740:0xeef0f2);pushColor(row.fill,pal.blue);
         pushStyle(row.track,'G',{gradientEnd:temperature?temperatureColor(spec.max):0xffffff,gradientHorizontal:temperature?1:0,gradientVertical:0});
         pushStyle(row.thumb,'G',{borderWidth:temperature?1:0,borderColor:0x65717f});
-        pushSize(row.fill,Math.round(width),52);pushPos(row.thumb,Math.round(row.x+width-18),row.y+40);
+        pushSize(row.fill,Math.round(width),52,!quickDrag&&paint['s'+row.fill]!==undefined);pushPos(row.thumb,Math.round(row.x+width-18),row.y+40,!quickDrag&&!lampWheelDrag&&paint['p'+row.thumb]!==undefined);
         // Range gestures own the full track, including disabled controls.
         const rect={x:row.x,y:row.y+30,w:row.w,h:52,inputX:row.x+5,inputW:row.w-20,minFill:20,
           fill:row.fill,thumb:row.thumb,label:row.title,labelColor:pal.ink,spec,item,gradient:temperature};
@@ -3767,21 +3416,40 @@
 
   function renderNow() {
     if (!widgets || !uiReady || disposed) return;
+    validateInputs();
     // A pointer update paints only its slider. Background state sync may
     // finish, but must not rebuild hit targets or overwrite the live preview.
-    if(quickDrag&&!settingsOpen&&!layoutEditing)return;
+    if((quickDrag||lampWheelDrag)&&!settingsOpen&&!layoutEditing)return;
     let selected = detailOpen ? current() : currentDeviceCard();
     if (detailOpen && !selected) detailOpen = false;
     const listView = !settingsOpen && !detailOpen;
+    const motionView=settingsOpen?'settings':detailOpen?'detail:'+selectedId+':'+(optionPicker?'picker:'+optionPicker.page:controlPage):'list:'+nav+':'+roomPage;
+    if(widgets.motionView!==motionView){
+      if(widgets.motionView!==undefined){
+        const paging=listView&&widgets.motionView.startsWith('list:'+nav+':')&&widgets.motionPage!==roomPage;
+        widgets.motionHorizontal=paging;
+        widgets.motionPending=paging?(roomPage>widgets.motionPage?12:-12):listView?-12:12;
+      }
+      widgets.motionView=motionView;widgets.motionPage=roomPage;
+    }
     const detailRequested = !settingsOpen && detailOpen && !!selected;
     const detailView = detailRequested && !!widgets.detailWidgets;
     const list = dashboardEntities();
     const boardPages=dashboardPages();const pages=boardPages.length;
     if (roomPage >= pages) roomPage = pages - 1;
+    if(WATERFALL){
+      hide(widgets.boardViewport,!listView||browseOpen);boardScroll=Math.max(0,Math.round(ui.scrollInfo(widgets.boardViewport).y));ui.scrollExtent(widgets.boardViewport,boardPages[0].height);
+      if(boardAnchorRestore!==null){const target=boardAnchorRestore;boardAnchorRestore=null;if(target!==boardScroll){boardScroll=target;ui.scrollTo(widgets.boardViewport,target,false);}}
+      const max=Math.max(0,boardPages[0].height-VIEW_H);
+      if(boardScroll>max){boardScroll=max;ui.scrollTo(widgets.boardViewport,max,false);}
+    }
+    const boardRows=WATERFALL?boardWindow(boardPages[0].items):boardPages[roomPage].items;
+    const windowKey=WATERFALL?boardRows.map(row=>row?row.item.entity_id:'').join(','):'';
+    if(WATERFALL)widgets.boardWindowKey=windowKey;
     const sectionNames = {
       overview: '\u603b\u89c8', devices: '\u8bbe\u5907', scenes: '场景', logs: '日志'
     };
-    const nextCardKey = entityRevision + '|' + nav + '|' + roomPage + '|' +
+    const nextCardKey = discoveryRevision+'|'+windowKey+'|'+entityRevision + '|' + nav + '|' + roomPage + '|' +
       selectedId + '|' + connected + '|' + (pending ? pending.kind : '') + '|' +
       !!queued + '|' + nativeBusy + '|' + (nav==='logs'?logSequence:0)+'|'+sizeRevision+'|'+layoutEditing+'|'+
       controlRevision+'|'+
@@ -3789,6 +3457,14 @@
     if (nextCardKey !== cardRenderKey) {
       cardRenderKey = nextCardKey;
       cardRenderCursor = 0;
+      cardRenderOrder=Array.from({length:SLOTS},(_,index)=>index);
+      if(WATERFALL){
+        const rank=index=>{const row=boardRows[index];if(!row)return 4;
+          const visible=row.y+row.h>HEADER_H+boardScroll&&row.y<HEADER_H+boardScroll+VIEW_H;
+          const retained=widgets.cards[index].item&&widgets.cards[index].item.entity_id===row.item.entity_id;
+          return (visible?0:2)+(retained?1:0);};
+        cardRenderOrder.sort((a,b)=>rank(a)-rank(b)||a-b);
+      }
     }
 
     hide(widgets.sidebar, false); hide(widgets.brand, false); hide(widgets.note, false);
@@ -3796,39 +3472,58 @@
     hide(widgets.header, false); hide(widgets.title, false);
     widgets.menu.forEach(row => {
       const active = row.key === (detailRequested?'devices':nav);
-      hide(row.panel, settingsOpen); hide(row.icon, settingsOpen); hide(row.text, settingsOpen);
+      hide(row.panel, row!==widgets.menu[0]||settingsOpen); hide(row.icon, settingsOpen); hide(row.text, settingsOpen);
       hide(row.button, settingsOpen);
-      pushColor(row.panel, active ? pal.blueSoft : pal.card);
+      /* One retained highlight moves beneath the fixed labels and touch targets. */
       pushColor(row.icon, active ? pal.blue : pal.muted);
       pushColor(row.text, active ? pal.blue : pal.ink);
     });
+    const selection=widgets.menu[0].panel,activeRow=widgets.menu.find(row=>row.key===(detailRequested?'devices':nav))||widgets.menu[0];
+    hide(selection,settingsOpen);pushColor(selection,pal.blueSoft);
+    pushPos(selection,8,activeRow.button.y,widgets.menuSelectionVisible&&!settingsOpen);
+    widgets.menuSelectionVisible=!settingsOpen;
     const statistics=dashboardStats();
     widgets.stats.forEach((entry, index) => {
       hide(entry.dot, settingsOpen); hide(entry.text, settingsOpen);
       pushText(entry.text,statistics[index]);
     });
     pushText(widgets.title, settingsOpen ? '\u8fde\u63a5\u8bbe\u7f6e' :
-      detailRequested ? '更多功能' : sectionNames[nav]);
+      detailRequested ? '更多功能' : !connected?(pending||queued||nativeBusy?'同步中 · ':'未连接 · ')+sectionNames[nav]:sectionNames[nav]);
     pushText(widgets.status, connected ? '\u5df2\u540c\u6b65' : '\u672a\u8fde\u63a5');
+    if(listView){pushSize(widgets.title,Math.max(80,GRID_W-250),30);hide(widgets.status,true);}
+    else pushSize(widgets.title,detailView?Math.max(80,GRID_W-350):280,30);
     pairHidden(widgets.back, !settingsOpen && !detailRequested);
     ensureDesktopPins();
     hide(widgets.desktopPin,!detailView);
+    hide(widgets.followButton,!detailView);
+    if(detailView){const card=currentDeviceCard();buttonText(widgets.followButton,card&&card.device_entities.some(id=>favorites.includes(id))?'取消关注':'关注设备');}
     [widgets.desktopPinFace,widgets.desktopPinLabel].forEach(id=>hide(id,!detailView));
     if(detailView)pushText(widgets.desktopPinLabel,desktopPins.includes(deviceCardKey(currentDeviceCard()))?'取消桌面固定':desktopPins.length>=2?'桌面已固定两台':'固定到桌面');
     pairHidden(widgets.refresh, !listView);
     pairHidden(widgets.settingsButton, !listView);
+    pairHidden(widgets.searchButton,!listView||nav==='logs');pairHidden(widgets.browseButton,!listView||nav==='logs');
+    pushColor(widgets.searchButton.icon,search?pal.blue:pal.muted);pushColor(widgets.browseButton.icon,selectedArea||favoritesOnly?pal.blue:pal.muted);
+    const empty=listView&&!browseOpen&&list.length===0;
+    hide(widgets.emptyTitle,!empty);hide(widgets.emptyNote,!empty);hide(widgets.emptyAction,!empty);
+    if(empty){
+      const filtered=!!(search||selectedArea||favoritesOnly),loading=!!(pending||queued||nativeBusy);
+      pushText(widgets.emptyTitle,filtered?'没有匹配的设备':!connected?(loading?'正在同步设备':'尚未连接家庭'):nav==='logs'?'暂无操作记录':nav==='scenes'?'暂无场景':'暂无设备');
+      pushText(widgets.emptyNote,filtered?'调整搜索或房间筛选，也可以清除全部筛选。':!connected?(phase==='error'?fit(message,GRID_W-48,15):'连接家庭中枢后，这里会显示已同步的设备。'):nav==='logs'?'设备操作及同步结果会显示在这里。':'刷新设备列表，或在家庭中枢中添加设备。');
+      buttonText(widgets.emptyAction,filtered?'清除筛选':!connected?'连接设置':'刷新列表');
+      if(typeof ui.front==='function'){ui.front(widgets.emptyTitle);ui.front(widgets.emptyNote);}
+    }
     hide(widgets.layoutEdit,true);buttonText(widgets.layoutEdit,'');
     [widgets.layoutEditFace,widgets.layoutEditIcon,widgets.layoutEditLabel].forEach(id=>hide(id,true));
     pushColor(widgets.layoutEditFace,layoutEditing?pal.blue:pal.blueSoft);
     pushColor(widgets.layoutEditLabel,layoutEditing?0xffffff:pal.blue);pushColor(widgets.layoutEditIcon,layoutEditing?0xffffff:pal.blue);
     pushText(widgets.layoutEditLabel,layoutEditing?'完成编辑':'编辑卡片');
 
-    const boardRows=boardPages[roomPage].items;
     const cardsNeedUpdate = cardRenderCursor < SLOTS;
     const cardStart = cardRenderCursor;
-    const cardEnd = Math.min(SLOTS, cardStart + 1);
+    const cardEnd = Math.min(SLOTS, cardStart + (WATERFALL?CARD_COLS:1));
+    const cardWork=new Set(cardRenderOrder.slice(cardStart,cardEnd));
     widgets.cards.forEach((card, index) => {
-      if (index < cardStart || index >= cardEnd) return;
+      if (!cardWork.has(index)) return;
       const entry=listView?boardRows[index]||null:null;
       const item=entry?entry.item:null;
       card.item = item;
@@ -3847,8 +3542,8 @@
       hide(card.button, hidden);
       hide(card.iconButton, hidden || !controllable(item));
       if (!item) return;
-      if(nav==='logs'){renderActivityTile(card,item,entry);return;}
-      renderUnifiedTile(card,item,entry);
+      if(nav==='logs')renderActivityTile(card,item,entry);else renderUnifiedTile(card,item,entry);
+      attachCard(card);
     });
     cardRenderCursor = cardEnd;
     if (cardsNeedUpdate && cardRenderCursor < SLOTS) renderAgain = true;
@@ -3860,7 +3555,7 @@
     pushSize(widgets.selectedState, footerTextWidth, 24);
     pushStyle(widgets.selectedName, 'L', { ellipsis: 1 });
     pushStyle(widgets.selectedState, 'L', { ellipsis: 1 });
-    pushText(widgets.selectedName,fit(nav==='logs'?'本次会话日志 · 最多 32 条':nav==='scenes'?'场景与脚本':layoutEditing?'编辑卡片布局':selected?selected.name:'轻点卡片 · 更多操作',footerTextWidth,15));
+    pushText(widgets.selectedName,fit(nav==='logs'?'本次会话日志 · 最多 32 条':nav==='scenes'?'场景与脚本':search||selectedArea||favoritesOnly?list.length+' 台 · '+[selectedArea,favoritesOnly?'关注设备':'',search?'搜索 '+search:''].filter(Boolean).join(' · '):layoutEditing?'编辑卡片布局':selected?selected.name:(WATERFALL?'上下滑动浏览 · 轻点更多功能':'轻点卡片 · 更多操作'),footerTextWidth,15));
     const selectedTarget=selected&&controlTargets[selected.entity_id];
     pushText(widgets.selectedState,layoutEditing?(layoutSaveError?'布局未保存，请重试':'选择尺寸后，点击完成编辑查看组合'):
       nav==='logs'?'仅记录本页面 · 关闭后清除':nav==='scenes'?sceneStatusText(list.length):phase==='error'?message:selectedTarget?(selectedTarget.sent?'正在同步状态':'待执行 · 前一设备仍在执行'):selected?fit(quickCardModel(selected).subtitle,278,11):message);
@@ -3880,7 +3575,7 @@
       buttonText(widgets.settings[3], scope === 'favorites' ? '\u4ec5\u5173\u6ce8' : '\u5168\u90e8\u5b9e\u4f53');
       buttonText(widgets.settings[5], connected ? '\u91cd\u65b0\u540c\u6b65' : '\u8fde\u63a5');
     }
-    const largeRows=listView?boardRows.filter(row=>row.large):[];
+    const largeRows=listView?boardRows.filter(row=>row&&row.large):[];
     if(largeRows.length)ensureQuickGroups(largeRows.length);
     if(widgets.quickGroups)widgets.quickGroups.forEach((q,index)=>{
       if(listView&&largeRows[index])renderQuickCard(largeRows[index].item,true,largeRows[index],index);
@@ -3889,14 +3584,26 @@
     if(quickDrag&&quickDrag.generation===generation&&quickDrag.group.item&&
        (quickDrag.rect.item||quickDrag.group.item).entity_id===quickDrag.item.entity_id&&(quickDrag.group.brightnessRect||quickDrag.rect.spec))
       previewQuickBrightness(quickDrag,quickDrag.percent);
-    if(optionPickerUi)Object.values(optionPickerUi).flat().forEach(button=>{if(button&&button.slots)hidePageIndicator(button);else hide(button,true);});
+    if(optionPickerUi)Object.values(optionPickerUi).flat().forEach(button=>{if(button&&button.slots){if(!optionPicker)hidePageIndicator(button);}else hide(button,true);});
     renderOptionPicker();
+    renderBrowse();
     renderButtons();
+    if(widgets.motionPending&&cardRenderCursor>=SLOTS&&(!detailRequested||detailView)){
+      if(!WATERFALL||!listView)presentContent(widgets.motionPending,widgets.motionHorizontal);widgets.motionPending=0;
+    }
   }
 
+  function presentContent(offset,horizontal){
+    if(typeof ui.present!=='function')return;
+    const ids=Object.keys(paint).filter(key=>/^p[0-9]+$/.test(key)).map(key=>{
+      const id=Number(key.slice(1)),xy=paint[key].split(',').map(Number);
+      return paint['h'+id]!==1&&xy[0]>=GRID_X&&xy[1]>=HEADER_H&&(!horizontal||xy[1]<H-FOOTER_H)?id:0;
+    }).filter(Boolean).slice(0,128);
+    ui.present(ids,offset,horizontal===true);
+  }
   function createPageIndicator(section,select,remember){
     const keep=id=>{if(remember)remember(id);hide(id,true);return id;};
-    const pager={face:keep(panel(0,0,40,28,dark?0x2e303d:0xf3f2f7,14)),slots:[],keep};
+    const pager={face:keep(panel(0,0,40,28,dark?0x2e303d:0xf3f2f7,14)),indicator:keep(panel(0,0,20,6,dark?0xeeeef5:0x292c38,3)),slots:[],keep};
     for(let index=0;index<5;index++){
       const slot={page:-1,mark:null};
       slot.button=createButton('',0,0,24,40,()=>{
@@ -3908,11 +3615,12 @@
     return pager;
   }
   function hidePageIndicator(pager){
-    if(!pager)return;pager.visible=false;pager.frontKey='';hide(pager.face,true);
+    if(!pager)return;pager.visible=false;pager.frontKey='';hide(pager.face,true);hide(pager.indicator,true);
     pager.slots.forEach(slot=>{slot.page=-1;hide(slot.button,true);hide(slot.mark,true);});
   }
   function updatePageIndicator(pager,current,total,visible,centerX,y,background){
     if(!pager)return;
+    const wasVisible=pager.visible;
     visible=visible&&total>1;pager.visible=visible;pager.current=current;pager.total=total;
     const count=Math.min(pager.slots.length,total);
     const first=Math.max(0,Math.min(current-Math.floor(count/2),total-count));
@@ -3923,14 +3631,20 @@
       const shown=visible&&index<count;slot.page=shown?first+index:-1;
       hide(slot.button,!shown);hide(slot.mark,!shown);if(!shown)return;
       const created=!slot.mark;if(created)slot.mark=pager.keep(panel(0,0,6,6,pal.muted,3));
-      const active=slot.page===current,markWidth=active?20:6;
       Object.assign(slot.button,{x:x+8+index*24,y,color:background});
-      hide(slot.mark,false);pushPos(slot.mark,slot.button.x+(24-markWidth)/2,y+17);pushSize(slot.mark,markWidth,6);
-      pushColor(slot.mark,active?(dark?0xeeeef5:0x292c38):(dark?0x5c606e:0xc5c6ce));
+      hide(slot.mark,false);pushPos(slot.mark,slot.button.x+9,y+17);pushSize(slot.mark,6,6);
+      pushColor(slot.mark,dark?0x5c606e:0xc5c6ce);
       if((created||pager.frontKey!==frontKey)&&typeof ui.front==='function')ui.front(slot.mark);
-    });pager.frontKey=frontKey;
+    });
+    // One retained pill follows the selected page; its underlying dots stay still.
+    hide(pager.indicator,!visible);
+    pushPos(pager.indicator,x+10+Math.max(0,Math.min(count-1,current-first))*24,y+17,wasVisible&&visible);
+    pushSize(pager.indicator,20,6);pushColor(pager.indicator,dark?0xeeeef5:0x292c38);
+    if(visible&&typeof ui.front==='function')ui.front(pager.indicator);
+    pager.frontKey=frontKey;
   }
   function renderPageIndicator(listView,total){
+    if(WATERFALL){hidePageIndicator(widgets.pager);return GRID_W-32;}
     updatePageIndicator(widgets.pager,roomPage,total,listView,GRID_X+GRID_W/2,H-FOOTER_H+7,pal.card);
     const width=16+Math.min(5,total)*24,x=Math.floor(GRID_X+(GRID_W-width)/2);
     return listView&&total>1?Math.max(1,Math.min(278,x-GRID_X-32)):278;
@@ -3958,12 +3672,15 @@
   }
 
   function openDetail(item) {
+    cancelInputs(false);
+    browseOpen=false;detailExpanded=false;
     recordUsage(item);
     layoutEditing=false;
     optionPicker=null;quickDrag=null;quickGestureOwned=false;controlPage=0;
     selectedId = item.entity_id;
     settingsOpen = false;
     detailOpen = true;
+    boardLock(false);
     ensureDetailUi();
     render();
   }
@@ -3972,7 +3689,7 @@
     if(layoutEditing)return;
     if(isSceneCommand(item))return;
     if(!controllable(item))return;
-    item=entities.find(row=>row.entity_id===item.entity_id)||item;
+    item=indexedEntity(item.entity_id)||item;
     selectedId = item.entity_id;
     if (!controllable(item) || !connected || !available(item)) {
       render();
@@ -3997,6 +3714,7 @@
       nativeManaged,
       desktopPins:desktopPins.slice(),desktopCards:desktopCards().map(card=>({entity:card.entity_id,key:deviceCardKey(card),name:card.name,pinned:desktopPins.includes(deviceCardKey(card))})),
       favorites: favorites.slice(), filter, search, page, nav, roomPage, layoutStyle,
+      discovery:{area:selectedArea,favoritesOnly,open:browseOpen,page:browsePage,rooms:browseOpen?roomChoices():[],count:dashboardEntities().length},detailExpanded,
       pageIndicator:widgets&&widgets.pager?{visible:!settingsOpen&&!detailOpen&&pageCount()>1,
         total:pageCount(),slots:widgets.pager.slots.filter(slot=>slot.page>=0).map(slot=>({
           page:slot.page,active:slot.page===roomPage,x:slot.button.x,y:slot.button.y,w:24,h:40}))}:null,
@@ -4022,6 +3740,8 @@
       brightnessInput:quickDrag?{dragging:true,entity:quickDrag.item.entity_id,percent:quickDrag.percent}:
         brightnessIntent?{dragging:false,entity:brightnessIntent.entity,percent:brightnessIntent.percent,pending:!brightnessIntent.sent}:null,
       controlQueue:controlQueue.map(command=>({entity:command.entity,service:command.service,brightness:command.brightness})),
+      controlProgress:Object.keys(controlTargets).map(entity=>({entity,sent:!!controlTargets[entity].sent,slow:!!controlTargets[entity].slow})),
+      controlFeedback:Object.keys(controlFeedback).map(entity=>({entity,kind:controlFeedback[entity].kind,text:controlFeedback[entity].text})),
       brightnessControls:[widgets&&widgets.detailDragGroup].concat(widgets&&widgets.quickGroups||[],widgets&&widgets.cards||[])
         .filter(q=>q&&q.item&&q.brightnessRect).map(q=>({entity:q.item.entity_id,
           x:q.brightnessRect.inputX===undefined?q.brightnessRect.x:q.brightnessRect.inputX,
@@ -4031,6 +3751,8 @@
         entity_id:card.entity_id,name:card.name,model:card.device_model,readonly:!!card.product_readonly,
         members:card.device_entities,quickReference:selectQuickReference(card),cardSize:cardSize(card),commonProfile:commonCardProfile(card)?.id||null,
         readings:profileReadings(card).map(row=>({key:row.key,title:row.title,display:row.display,source:row.source,alert:row.alert}))})),
+      waterfall:WATERFALL?{viewport:widgets&&widgets.boardViewport,x:GRID_X,y:HEADER_H,w:GRID_W,h:VIEW_H,columns:CARD_COLS,scrollY:boardScroll,contentHeight:dashboardPages()[0].height,poolSlots:SLOTS,
+        visibleCards:widgets?widgets.cards.filter(card=>card.item).map(card=>{const row=dashboardPages()[0].items.find(row=>row.item.entity_id===card.item.entity_id);return row?{entity_id:row.item.entity_id,x:row.x,y:row.y-boardScroll,w:row.w,h:row.h}:null;}).filter(Boolean):[]}:null,
       layoutPages:dashboardPages().map(p=>p.items.map(r=>({entity_id:r.item.entity_id,size:r.large?'large':'small',x:r.x,y:r.y,w:r.w,h:r.h}))),
       entities: entities.map(row => Object.assign({}, row, {cardSize:cardSize(row),cardStyle:quickCardModel(row).variant,
         quickReference:selectQuickReference(row)}))
@@ -4057,6 +3779,7 @@
   renderNow();
   if (nativeManaged && bridgeReady) connect();
   ui.onSwipe(direction => {
+    if(WATERFALL)return;
     if (disposed || settingsOpen || detailOpen || optionPicker || quickGestureOwned) return;
     const pages = pageCount();
     if (direction === 'left' && roomPage + 1 < pages) roomPage++;
@@ -4068,15 +3791,15 @@
     const r=drag.rect;drag.percent=percent;
     const width=(r.minFill||0)+(r.w-(r.minFill||0))*percent/100;
     const height=(r.minFill||0)+(r.h-(r.minFill||0))*percent/100;
-    if(r.cssRange)paintSliderTrack(r.track,percent,r.accent);
+    if(r.cssRange)paintSliderTrack(r.track,percent,r.accent,r.thumb);
     if(!r.gradient&&!r.noFill&&!r.cssRange){
-      if(r.vertical){pushSize(r.fill,r.w,Math.round(height));pushPos(r.fill,r.x,Math.round(r.y+r.h-height));}
-      else pushSize(r.fill,Math.max(1,Math.round(width)),Math.round(r.h));hide(r.fill,percent===0);
+      if(r.vertical){pushSize(r.fill,r.w,Math.round(height),!quickDrag&&paint['s'+r.fill]!==undefined);pushPos(r.fill,r.x,Math.round(r.y+r.h-height));}
+      else pushSize(r.fill,Math.max(1,Math.round(width)),Math.round(r.h),!quickDrag&&paint['s'+r.fill]!==undefined);hide(r.fill,percent===0);
     }
-    pushText(r.label,r.spec?(r.valueOnly?'':(r.labelName||r.spec.title)+' ')+formatControl(r.spec,rangeValue(r,percent)):(r.labelPrefix===undefined?'亮度 ':r.labelPrefix)+percent+'%');
+    pushText(r.label,(r.spec?(r.valueOnly?'':(r.labelName||r.spec.title)+' ')+formatControl(r.spec,rangeValue(r,percent)):(r.labelPrefix===undefined?'亮度 ':r.labelPrefix)+percent+'%')+(r.labelSuffix||''));
     if(r.extraValue!==undefined)pushText(r.extraValue,numberText(rangeValue(r,percent)));
     pushColor(r.label,r.labelColor===undefined?(percent>30?0xffffff:quickPalette.muted):r.labelColor);
-    if(r.thumb)pushPos(r.thumb,r.vertical?Math.round(r.x+(r.w-40)/2):Math.round(r.thumbTrack?r.x+12+(r.w-30)*percent/100:r.x+width-(r.thumbInset||18)),r.vertical?Math.round(r.y+r.h-height+10):Math.round(r.y+(r.h-(r.thumbH||32))/2));
+    if(r.thumb&&!(r.cssRange&&typeof ui.rangeLinked==='function'))pushPos(r.thumb,r.vertical?Math.round(r.x+(r.w-40)/2):Math.round(r.thumbTrack?r.x+12+(r.w-30)*percent/100:r.x+width-(r.thumbInset||18)),r.vertical?Math.round(r.y+r.h-height+10):Math.round(r.y+(r.h-(r.thumbH||32))/2),!quickDrag&&!lampWheelDrag&&paint['p'+r.thumb]!==undefined);
   }
   function canAdjustBrightness(item) {
     return !!item&&item.domain==='light'&&item.dimmable&&!item.product_readonly&&!layoutEditing&&
@@ -4122,7 +3845,16 @@
     hide(card.value,false);pushPos(card.value,x+16,y+60);pushSize(card.value,w-32,64);pushStyle(card.value,'L',{fontSize:16,ellipsis:1,center:0});pushColor(card.value,pal.ink);pushText(card.value,fit(item.detail,w-32,16));
     hide(card.state,false);pushPos(card.state,x+16,y+h-35);pushSize(card.state,w-32,26);pushStyle(card.state,'L',{fontSize:14,center:0});pushColor(card.state,pal.muted);pushText(card.state,item.time);
   }
+  function bindCardMotion(card,item,entry){
+    const layout=entry.x+','+entry.y+','+entry.w+','+entry.h;
+    if(card.motionEntity===item.entity_id&&card.motionLayout===layout)return;
+    card.motionEntity=item.entity_id;card.motionLayout=layout;
+    [card.thumb,card.fill].forEach(id=>{if(id!==undefined){delete paint['p'+id];delete paint['s'+id];}});
+    [card.track].forEach(id=>{if(id!==undefined)delete paint['r'+id];});
+    [card.switchFace,card.powerHalo].forEach(id=>{if(id!==undefined)delete paint['c'+id];});
+  }
   function renderUnifiedTile(card,item,entry) {
+    bindCardMotion(card,item,entry);
     const {x,y,w,h}=entry,main=lookupEntity(item.entity_id)||item;
     const model=quickCardModel(item),light=item.domain==='light',candidate=profileQuickControl(item);
     const spec=light&&candidate&&candidate.key==='brightness_pct'?null:candidate;
@@ -4136,20 +3868,25 @@
     pushPos(card.panel,x,y);pushSize(card.panel,w,h);pushColor(card.panel,pal.card);
     pushStyle(card.panel,'S',{radius:20,borderWidth:0});
     hide(card.powerHalo,false);pushPos(card.powerHalo,x+16,y+18);pushSize(card.powerHalo,40,40);
-    pushStyle(card.powerHalo,'S',{radius:20});pushColor(card.powerHalo,pal.blueSoft);
+    pushStyle(card.powerHalo,'S',{radius:20});pushColor(card.powerHalo,pal.blueSoft,!quickDrag&&!lampWheelDrag&&paint['c'+card.powerHalo]!==undefined);
     hide(card.icon,false);pushPos(card.icon,x+24,y+26);pushSize(card.icon,24,28);
     pushStyle(card.icon,'I',{fontSize:24,icon:1,center:1});pushText(card.icon,commonCardProfile(item)?.readonly?'\uf071':dashboardIcon(item));pushColor(card.icon,pal.blue);if(typeof ui.front==='function')ui.front(card.icon);
     card.passiveRegion={x:x+16,y:y+18,w:40,h:40};
     hide(card.name,false);pushPos(card.name,x+66,y+17);pushSize(card.name,w-(power?126:82),26);
     pushStyle(card.name,'L',{fontSize:18,ellipsis:1});pushText(card.name,fit(item.name,w-(power?126:82),18));pushColor(card.name,pal.ink);
-    hide(card.state,false);pushPos(card.state,x+66,y+44);pushSize(card.state,w-82,24);
+    hide(card.state,false);pushPos(card.state,x+66,y+44);pushSize(card.state,w-(power?126:82),24);
     pushStyle(card.state,'L',{fontSize:14,ellipsis:1,center:0});pushColor(card.state,pal.muted);
     const status=range?spec?formatControl(spec,controlValue(main,spec)):displayBrightness(item)+'%':model.subtitle;
-    pushText(card.state,fit(!available(item)?(item.state==='unknown'?'状态未知':'设备离线'):status+(power?' · '+(on?'已开启':'已关闭'):''),w-82,14));
+    const intent=controlTargets[item.entity_id],feedback=controlFeedback[item.entity_id];
+    const progress=intent?(intent.slow?(intent.sent?'等待设备回报':'等待前序操作'):intent.sent?(pending&&pending.kind==='verify'&&pending.entityId===item.entity_id?'正在核对':'正在提交'):'等待执行'):feedback&&feedback.text;
+    const powerText=on?'已开启':'已关闭';
+    const stateText=!connected?'缓存 · 待同步':!available(item)?(item.state==='unknown'?'状态未知':'设备离线'):status+(power&&status.indexOf(powerText)<0?' · '+powerText:'');
+    pushText(card.state,fit(progress||stateText,w-(power?126:82),14));
+    pushColor(card.state,feedback&&!intent?(feedback.kind==='error'?pal.warn:pal.good):pal.muted);
     hide(card.powerGlyph,!power);pushPos(card.powerGlyph,x+w-46,y+26);pushSize(card.powerGlyph,24,28);
     pushStyle(card.powerGlyph,'I',{fontSize:24,icon:1,center:1});pushText(card.powerGlyph,'\uf011');pushColor(card.powerGlyph,on?(dark?0xc7ffdf:0x13744d):pal.muted);
     if(power){if(!card.switchFace)card.switchFace=panel(0,0,36,36,pal.track,18);hide(card.switchFace,false);
-      pushPos(card.switchFace,x+w-52,y+20);pushSize(card.switchFace,36,36);pushStyle(card.switchFace,'S',{radius:18});pushColor(card.switchFace,on?(dark?0x234936:0xdcf7e8):pal.track);
+      pushPos(card.switchFace,x+w-52,y+20);pushSize(card.switchFace,36,36);pushStyle(card.switchFace,'S',{radius:18});pushColor(card.switchFace,on?(dark?0x234936:0xdcf7e8):pal.track,!quickDrag&&!lampWheelDrag&&paint['c'+card.switchFace]!==undefined);
       if(typeof ui.front==='function')ui.front(card.powerGlyph);}
     Object.assign(card.iconButton,{x:x+w-60,y:y+14,w:48,h:48});card.iconButton._cardVisible=power;
     card.iconButton.style.enabled=usable?1:0;hide(card.iconButton,!power);
@@ -4177,20 +3914,26 @@
       return;
     }
     if(commonCardProfile(item)?.layout==='camera'){
+      const previewH=WATERFALL?Math.max(48,h-136):48;
       pushText(card.state,fit(available(item)?friendlyState(item):'设备离线',w-82,14));
-      hide(card.track,false);pushPos(card.track,x+16,body);pushSize(card.track,rw,48);pushColor(card.track,pal.page);
+      hide(card.track,false);pushPos(card.track,x+16,body);pushSize(card.track,rw,previewH);pushColor(card.track,pal.page);
       pushStyle(card.track,'S',{radius:12,borderWidth:0});pushStyle(card.track,'G',{gradientHorizontal:0,gradientVertical:0});
       if(!card.cameraGlyph)card.cameraGlyph=label('',0,0,32,36,32,pal.muted,3);
-      detailIcon(card.cameraGlyph,'\ue002',x+24,body,32,48,3,pal.muted);
-      pushPos(card.value,x+66,body+15);pushSize(card.value,rw-58,24);pushStyle(card.value,'L',{fontSize:13,center:0,icon:0,ellipsis:1});pushColor(card.value,pal.muted);pushText(card.value,'暂无预览画面');
+      detailIcon(card.cameraGlyph,'\ue002',x+24,body+(previewH-48)/2,32,48,3,pal.muted);
+      pushPos(card.value,x+66,body+(previewH-24)/2);pushSize(card.value,rw-58,24);pushStyle(card.value,'L',{fontSize:13,center:0,icon:0,ellipsis:1});pushColor(card.value,pal.muted);pushText(card.value,'暂无预览画面');
       if(typeof ui.front==='function'){ui.front(card.track);ui.front(card.cameraGlyph);ui.front(card.value);}return;
     }
-    if(!range){pushText(card.value,fit(model.value||friendlyState(item),rw,28));return;}
+    if(!range){
+      const text=model.value||friendlyState(item);
+      const widthAt=font=>typeof ui.measureText==='function'?ui.measureText(text,font).width:Array.from(text).reduce((width,char)=>width+(char.charCodeAt(0)>127?font:font*.66),0);
+      const font=widthAt(28)>rw?widthAt(24)>rw?20:24:28;
+      pushStyle(card.value,'L',{fontSize:font,center:0,ellipsis:1});pushText(card.value,widthAt(font)<=rw?text:fit(text,rw,font));return;
+    }
     if(stepper){
       const bw=40,center=rw-2*bw-12;pushPos(card.track,x+16+bw+6,body);pushSize(card.track,center,44);
       pushColor(card.track,pal.page);pushStyle(card.track,'S',{radius:14,borderWidth:1,borderColor:pal.line});
-      pushPos(card.fill,x+16,body);pushSize(card.fill,bw,44);pushColor(card.fill,pal.track);pushStyle(card.fill,'S',{radius:14});
-      pushPos(card.thumb,x+w-16-bw,body);pushSize(card.thumb,bw,44);pushColor(card.thumb,pal.track);pushStyle(card.thumb,'S',{radius:14});
+      pushPos(card.fill,x+16,body);pushSize(card.fill,bw,44,!quickDrag&&paint['s'+card.fill]!==undefined);pushColor(card.fill,pal.track);pushStyle(card.fill,'S',{radius:14});
+      pushPos(card.thumb,x+w-16-bw,body,!quickDrag&&!lampWheelDrag&&paint['p'+card.thumb]!==undefined);pushSize(card.thumb,bw,44);pushColor(card.thumb,pal.track);pushStyle(card.thumb,'S',{radius:14});
       pushPos(card.value,x+16+bw+6,body+5);pushSize(card.value,center,34);pushStyle(card.value,'L',{fontSize:26,center:1});pushText(card.value,numberText(controlValue(main,spec)));
       buttonText(card.minus,'-');buttonText(card.plus,'+');card.minus.style.fontSize=card.plus.style.fontSize=26;
       Object.assign(card.minus,{x:x+16,y:body,w:bw,h:44});Object.assign(card.plus,{x:x+w-16-bw,y:body,w:bw,h:44});
@@ -4200,7 +3943,7 @@
     const value=spec?controlValue(main,spec):displayBrightness(item),percent=spec?(value-spec.min)*100/(spec.max-spec.min):value;
     const pct=Math.max(0,Math.min(100,Number.isFinite(percent)?percent:0));
     const rect=designSlider(card,card.track,card.state,main,spec,x+16,body,rw,rh,pct,light?0xffa64e:pal.blue);
-    Object.assign(rect,{valueOnly:false,labelPrefix:'',labelColor:pal.muted});
+    Object.assign(rect,{valueOnly:true,labelPrefix:'',labelColor:pal.muted,labelSuffix:power?' · '+(on?'已开启':'已关闭'):''});
     card.sliderRects=[rect];if(spec){if(usable)card.controlRects=[rect];}else if(canAdjustBrightness(item))card.brightnessRect=rect;
   }
 
@@ -4217,7 +3960,7 @@
     pushStyle(card.panel,'S',{radius:18,borderWidth:1,borderColor:dark?0x303030:0xe7e7e7});
     Object.assign(card.button,{x,y,w,h});card.button._cardVisible=true;
     pushPos(card.powerHalo,x+16,y+20);pushSize(card.powerHalo,48,48);hide(card.powerHalo,false);
-    pushColor(card.powerHalo,active?(dark?0x4c3825:0xffead6):pal.track);
+    pushColor(card.powerHalo,active?(dark?0x4c3825:0xffead6):pal.track,!quickDrag&&!lampWheelDrag&&paint['c'+card.powerHalo]!==undefined);
     pushPos(card.powerGlyph,x+24,y+28);pushSize(card.powerGlyph,32,32);pushStyle(card.powerGlyph,'I',{fontSize:32,icon:3,center:1});
     pushText(card.powerGlyph,'\uf0eb');pushColor(card.powerGlyph,active?accent:pal.muted);
     card.passiveRegion={x:x+16,y:y+20,w:48,h:48};
@@ -4231,7 +3974,7 @@
     hide(card.value,false);pushText(card.value,available(item)?hasSlider?percent+'%':friendlyState(item):
       item.state==='unavailable'?'设备离线':'状态未知');
     pushColor(card.value,available(item)?(dark?0xb7d9ed:0x667888):pal.muted);
-    hide(card.switchFace,false);pushPos(card.switchFace,x+w-54,y+20);pushColor(card.switchFace,active?quickPalette.green:pal.track);
+    hide(card.switchFace,false);pushPos(card.switchFace,x+w-54,y+20);pushColor(card.switchFace,active?quickPalette.green:pal.track,!quickDrag&&!lampWheelDrag&&paint['c'+card.switchFace]!==undefined);
     hide(card.icon,false);pushPos(card.icon,x+w-48,y+26);pushSize(card.icon,24,24);
     pushStyle(card.icon,'I',{fontSize:24,icon:1,center:1});pushText(card.icon,'\uf011');pushColor(card.icon,active?0xffffff:pal.muted);
     Object.assign(card.iconButton,{x:x+w-60,y:y+14,w:48,h:48});
@@ -4242,9 +3985,9 @@
     if(hasSlider) {
       pushPos(card.track,rx,ry);pushSize(card.track,rw,rh);pushColor(card.track,dark?0x4b3928:0xf5e9dd);
       pushStyle(card.track,'S',{radius:18,borderWidth:0});pushPos(card.fill,rx,ry);
-      pushSize(card.fill,Math.max(1,Math.round(fillWidth)),rh);pushColor(card.fill,available(item)?accent:pal.muted);
+      pushSize(card.fill,Math.max(1,Math.round(fillWidth)),rh,!quickDrag&&paint['s'+card.fill]!==undefined);pushColor(card.fill,available(item)?accent:pal.muted);
       pushStyle(card.fill,'S',{radius:18,borderWidth:0});
-      pushPos(card.thumb,Math.round(rx+fillWidth-15-3),ry+16);
+      pushPos(card.thumb,Math.round(rx+fillWidth-15-3),ry+16,!quickDrag&&!lampWheelDrag&&paint['p'+card.thumb]!==undefined);
       card.sliderRects=[{x:rx,y:ry,w:rw,h:rh}];
       if(canAdjustBrightness(item))card.brightnessRect={x:rx,y:ry,w:rw,h:rh,
         inputX:rx+5,inputW:rw-20,minFill:20,
@@ -4253,7 +3996,7 @@
     if(layoutEditing){pushPos(card.state,x+16,y+h-28);pushSize(card.state,w-32,22);pushText(card.state,'小卡 · 点按改为大卡');}
   }
   function renderCommonRangeTile(card,item,entry) {
-    const {x,y,w,h}=entry,main=entities.find(row=>row.entity_id===item.entity_id)||item,spec=profileQuickControl(item);
+    const {x,y,w,h}=entry,main=indexedEntity(item.entity_id)||item,spec=profileQuickControl(item);
     const value=controlValue(main,spec),percent=Number.isFinite(value)?Math.max(0,Math.min(100,(value-spec.min)*100/(spec.max-spec.min))):0;
     const powerService=item.state==='off'?'turn_on':'turn_off',hasPower=supports(item,powerService),usable=connected&&available(main)&&!layoutEditing;
     const on=!['off','closed','unavailable','unknown'].includes(item.state);
@@ -4265,13 +4008,13 @@
     card.passiveRegion={x:x+16,y:y+16,w:48,h:50};
     pushPos(card.name,x+76,y+18);pushSize(card.name,w-(hasPower?138:92),26);pushStyle(card.name,'L',{fontSize:20,ellipsis:1});pushText(card.name,fit(item.name,w-(hasPower?138:92),20));pushColor(card.name,pal.ink);
     hide(card.value,false);pushPos(card.value,x+76,y+48);pushSize(card.value,w-92,25);pushStyle(card.value,'L',{fontSize:16,ellipsis:1});pushColor(card.value,pal.muted);pushText(card.value,spec.title+' '+formatControl(spec,value));
-    hide(card.powerHalo,!hasPower);hide(card.powerGlyph,!hasPower);pushPos(card.powerHalo,x+w-54,y+18);pushSize(card.powerHalo,36,36);pushStyle(card.powerHalo,'S',{radius:18});pushColor(card.powerHalo,on?quickPalette.green:pal.track);
+    hide(card.powerHalo,!hasPower);hide(card.powerGlyph,!hasPower);pushPos(card.powerHalo,x+w-54,y+18);pushSize(card.powerHalo,36,36);pushStyle(card.powerHalo,'S',{radius:18});pushColor(card.powerHalo,on?quickPalette.green:pal.track,!quickDrag&&!lampWheelDrag&&paint['c'+card.powerHalo]!==undefined);
     pushPos(card.powerGlyph,x+w-48,y+24);pushSize(card.powerGlyph,24,24);pushText(card.powerGlyph,'\uf011');pushStyle(card.powerGlyph,'I',{fontSize:24,icon:1,center:1});pushColor(card.powerGlyph,on?0xffffff:pal.muted);
     Object.assign(card.iconButton,{x:x+w-60,y:y+12,w:48,h:48});card.iconButton._cardVisible=hasPower;card.iconButton.style.enabled=usable?1:0;hide(card.iconButton,!hasPower);
     const rx=x+16,ry=y+h-80,rw=w-32,rh=64,width=20+(rw-20)*percent/100;
     if(!card.thumb)card.thumb=panel(0,0,6,32,0xffffff,3);
     hide(card.track,false);hide(card.fill,false);hide(card.thumb,!available(main));pushPos(card.track,rx,ry);pushSize(card.track,rw,rh);pushColor(card.track,pal.track);pushStyle(card.track,'S',{radius:18,borderWidth:0});
-    pushPos(card.fill,rx,ry);pushSize(card.fill,width,rh);pushColor(card.fill,pal.blue);pushStyle(card.fill,'S',{radius:18,borderWidth:0});pushPos(card.thumb,rx+width-18,ry+16);pushSize(card.thumb,6,32);
+    pushPos(card.fill,rx,ry);pushSize(card.fill,width,rh,!quickDrag&&paint['s'+card.fill]!==undefined);pushColor(card.fill,pal.blue);pushStyle(card.fill,'S',{radius:18,borderWidth:0});pushPos(card.thumb,rx+width-18,ry+16,!quickDrag&&!lampWheelDrag&&paint['p'+card.thumb]!==undefined);pushSize(card.thumb,6,32);
     const rect={x:rx,y:ry,w:rw,h:rh,inputX:rx+5,inputW:rw-20,minFill:20,fill:card.fill,thumb:card.thumb,label:card.value,labelColor:pal.muted,spec,item:main};
     card.sliderRects=[rect];card.controlRects=usable?[rect]:[];
   }
@@ -4282,10 +4025,28 @@
     return Math.max(0,Math.min(100,Math.round((x-start)*100/width)));
   }
   ui.onTouch((state,nx,ny) => {
+    if(browseOpen)return;
+    if(!Number.isFinite(nx)||!Number.isFinite(ny)){cancelInputs();render();return;}
+    validateInputs();
+    if(WATERFALL&&widgets&&widgets.boardViewport){
+      boardScroll=Math.max(0,Math.round(ui.scrollInfo(widgets.boardViewport).y));
+      if(state==='up'||state==='cancel'){boardTouchActive=false;boardLock(false);}
+      else if(state==='down')boardTouchActive=!detailOpen&&!settingsOpen&&nx*W>=GRID_X&&ny*H>=HEADER_H&&ny*H<H-FOOTER_H;
+    }
     if(handleLampWheel(state,nx,ny))return;
     if(state==='down')quickGestureOwned=false;
+    if(WATERFALL&&state==='down'){
+      boardPress=null;
+      if(boardTouchActive){
+        const px=nx*W,py=ny*H+boardScroll;
+        const row=dashboardPages()[0].items.find(row=>px>=row.x&&px<=row.x+row.w&&py>=row.y&&py<=row.y+row.h);
+        boardPress={entity:row?row.item.entity_id:'',scroll:boardScroll,generation};
+      }
+    }
+    if(WATERFALL&&state==='cancel')quickGestureOwned=true;
+    if(WATERFALL&&!detailOpen&&!settingsOpen&&state==='down'&&(nx*W<GRID_X||ny*H<HEADER_H||ny*H>=H-FOOTER_H)){quickDrag=null;return;}
     if(disposed||settingsOpen||optionPicker||!Number.isFinite(nx)||!Number.isFinite(ny)){quickDrag=null;return;}
-    const px=nx*W,py=ny*H;
+    const px=nx*W,py=ny*H+(WATERFALL&&!detailOpen&&!settingsOpen?boardScroll:0);
     if(state==='down'){
       (widgets.cards||[]).forEach(card=>{const r=card.passiveRegion;card.passivePressed=!!r&&px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h;});
       const groups=detailOpen?[widgets.detailDragGroup]:(widgets.quickGroups||[]).concat(widgets.cards||[]);
@@ -4294,14 +4055,26 @@
         if(px<r.x||px>r.x+r.w||py<(r.hitY===undefined?r.y:r.hitY)||py>(r.hitY===undefined?r.y:r.hitY)+(r.hitH||r.h))return false;
         if(r.spec?connected&&available(r.item||q.item):canAdjustBrightness(q.item)){group=q;rect=r;return true;}return false;});});
       quickDrag=group?{rect,item:rect.item||group.item,group,generation,percent:rect.spec?Math.max(0,Math.min(100,(Number(controlValue(rect.item||group.item,rect.spec))-rect.spec.min)*100/(rect.spec.max-rect.spec.min))):group.item.brightness}:null;
+      if(quickDrag&&WATERFALL&&!detailOpen&&!rect.vertical){
+        quickDrag.pendingAxis=true;quickDrag.startX=nx*W;quickDrag.startY=ny*H;
+      }
       quickGestureOwned=!!quickDrag||groups.some(q=>(q.sliderRects||[]).some(r=>px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h));
     }
     if(layoutEditing){quickDrag=null;return;}
-    if(quickDrag&&quickDrag.generation!==generation){quickDrag=null;render();return;}
-    if((state==='down'||state==='move')&&quickDrag)
+    if(quickDrag&&quickDrag.generation!==generation){quickDrag=null;boardLock(false);render();return;}
+    if((state==='move'||state==='up')&&quickDrag&&quickDrag.pendingAxis){
+      const dx=Math.abs(nx*W-quickDrag.startX),dy=Math.abs(ny*H-quickDrag.startY);
+      if(dy>=8&&dy>dx*1.2){
+        // Let LVGL continue the vertical gesture without submitting a value.
+        quickDrag=null;quickGestureOwned=true;boardLock(false);return;
+      }
+      if(dx>=5&&dx>=dy)quickDrag.pendingAxis=false;
+    }
+    if(WATERFALL&&quickDrag&&(state==='down'||state==='move'))boardLock(true);
+    if((state==='down'||state==='move')&&quickDrag&&!quickDrag.pendingAxis)
       previewQuickBrightness(quickDrag,pointerBrightness(quickDrag.rect,px,py));
     if(state==='up'&&quickDrag){const active=quickDrag;quickDrag=null;if(!detailOpen)selectedId=active.item.entity_id;
-      const target=entities.find(item=>item.entity_id===active.item.entity_id);
+      const target=indexedEntity(active.item.entity_id);
       if(!connected||!available(target)){render();return;}
       if(active.rect.spec)requestFunction(target,active.rect.spec,rangeValue(active.rect,pointerBrightness(active.rect,px,py)));
       else if(canAdjustBrightness(target))control('turn_on',pointerBrightness(active.rect,px,py));
@@ -4310,7 +4083,7 @@
   });
   globalThis.ESPHomeHA = {
     refresh, disconnect, openDevice:openDesktopDevice,
-    settings: () => { detailOpen = false; settingsOpen = true; render(); },
+    settings: openSettings,
     snapshot,
     dispose: () => {
       flushUsage();
