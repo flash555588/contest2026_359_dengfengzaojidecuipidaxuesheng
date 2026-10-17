@@ -106,6 +106,18 @@ def prepare(cache, output):
     for directory in (cache / 'esp-sr-2.4.6/model').glob('*/*'):
         if directory.is_dir():
             shutil.copytree(directory, sd / 'esp-sr' / directory.name, dirs_exist_ok=True)
+    # Required even when no precompiled FST is distributed. The pinned vendor
+    # constructor builds its bootstrap graph from this ID,pinyin file.
+    fst=sd/'esp-sr/fst';fst.mkdir(parents=True,exist_ok=True)
+    grammar=repo/'app/espdl-quickapp/speech/commands_cn.txt'
+    (fst/'commands_cn.txt').write_bytes(grammar.read_bytes())
+    custom=repo/'app/espdl-quickapp/models/nihao_openvela.gkw'
+    trained=json.loads(custom.with_suffix('.training.json').read_text(encoding='utf-8'))
+    if not trained['synthetic_gate_passed'] or hashlib.sha256(custom.read_bytes()).hexdigest()!=trained['model_sha256']:
+        raise ValueError('Custom wake model does not match its training record')
+    (sd/'custom').mkdir(exist_ok=True)
+    shutil.copy2(custom,sd/'custom'/custom.name)
+    shutil.copy2(custom.with_suffix('.training.json'),sd/'custom/nihao_openvela.training.json')
     licences = sd / 'licenses'
     licences.mkdir(exist_ok=True)
     for name, source in [('sanoTTS-MIT.txt', sano / 'LICENSE.MIT'), ('sanoTTS-GPL3.txt', sano / 'LICENSE'),

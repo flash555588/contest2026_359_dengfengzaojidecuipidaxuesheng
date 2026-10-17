@@ -111,11 +111,11 @@ static void glass_resources_page(void *unused)
   detail_sidebar(card,"性能",GLASS_ICON_SLIDERS,panel_hide);
   detail_text(card,"系统性能",216,26,400,28,detail_ink());detail_text(card,"资源占用与运行趋势",216,66,500,14,detail_muted());
   for(unsigned i=0;i<2;i++){
-    lv_obj_t *tile=detail_tile(card,16,104+i*160,158,140);g_resources.tiles[i]=tile;glass_clickable(tile,resources_select,(void *)(uintptr_t)i);
-    detail_text(tile,i?"内存":"CPU",14,12,128,14,detail_muted());g_resources.labels[i]=detail_text(tile,"--",14,38,132,32,detail_ink());
-    g_resources.mini[i]=resources_chart(tile,14,90,130,32,i,&g_resources.mini_series[i]);
+    lv_obj_t *tile=detail_tile(card,12,104+i*160,140,140);g_resources.tiles[i]=tile;glass_clickable(tile,resources_select,(void *)(uintptr_t)i);
+    detail_text(tile,i?"内存":"CPU",12,12,116,14,detail_muted());g_resources.labels[i]=detail_text(tile,"--",12,38,116,28,detail_ink());
+    g_resources.mini[i]=resources_chart(tile,12,90,116,32,i,&g_resources.mini_series[i]);
   }
-  detail_text(card,"监测范围",24,442,142,12,detail_muted());detail_text(card,"CPU · 系统堆",24,464,142,14,detail_ink());
+  detail_text(card,"监测范围",24,442,128,12,detail_muted());detail_text(card,"CPU · 系统堆",24,464,128,14,detail_ink());
   lv_obj_t *graph=detail_tile(card,216,104,784,320);g_resources.heading=detail_text(graph,"CPU",24,22,300,28,detail_ink());
   g_resources.labels[6]=detail_text(graph,"--",520,20,236,34,detail_ink());lv_obj_set_style_text_align(g_resources.labels[6],LV_TEXT_ALIGN_RIGHT,0);
   g_resources.labels[4]=detail_text(graph,"",24,60,650,12,detail_muted());

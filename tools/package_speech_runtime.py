@@ -46,13 +46,13 @@ def main():
     source_root=tree/'source';source_root.mkdir(exist_ok=True)
     shutil.copy2(lock,source_root/lock.name)
     desktop=repo/'app/espdl-quickapp/overlay/apps/system/desktop'
-    for source in [*desktop.glob('glass_speech*'),desktop/'glass_voice_capture.inc',desktop/'glass_voice.c',desktop/'glass_music_pcm.c',desktop/'glass_music_pcm.h',desktop/'qpk_espdl_store.c']:
+    for source in [*desktop.glob('glass_speech*'),*desktop.glob('glass_custom_wake*'),*desktop.glob('glass_wake*'),desktop/'glass_voice_capture.inc',desktop/'glass_voice.c',desktop/'glass_music_pcm.c',desktop/'glass_music_pcm.h',desktop/'qpk_espdl_store.c']:
         if source.is_file():shutil.copy2(source,source_root/source.name)
-    for name in ['qpk_volume.h','desktop_main.c','qpk_runtime.c','glass_portal_files.c','glass_qpk_builder.c','glass_qpk_builder.h','glass_qpk_remove.inc','glass_ui.inc','glass_chat_ui.inc','qpk_hardware.c','qpk_hardware.h','qpk_hardware_js.inc','qpk_hw_platform.c','qpk_hw_audio.c','espdl_assets.h']:
+    for name in ['qpk_volume.h','desktop_main.c','qpk_runtime.c','glass_portal_files.c','glass_qpk_builder.c','glass_qpk_builder.h','glass_qpk_remove.inc','glass_ui.inc','glass_chat_ui.inc','glass_chat_cards.inc','qpk_hardware.c','qpk_hardware.h','qpk_hardware_js.inc','qpk_hw_platform.c','qpk_hw_audio.c','espdl_assets.h']:
         shutil.copy2(desktop/name,source_root/name)
     shutil.copytree(desktop/'portal',source_root/'portal',dirs_exist_ok=True)
     shutil.copytree(desktop/'speech_port',source_root/'speech_port',dirs_exist_ok=True)
-    for name in ['prepare_speech_runtime.py','build_speech_runtime.py','build_bilibili_v3.py','test_speech_host.py','test_speech_g2p.mjs','package_speech_runtime.py','backup_storage_export.py','test_install_volumes.py','test_storage_layout.py']:
+    for name in ['prepare_speech_runtime.py','build_speech_runtime.py','build_bilibili_v3.py','test_speech_host.py','test_speech_g2p.mjs','package_speech_runtime.py','prepare_custom_wake.py','train_custom_wake.py','test_custom_wake.py','test_wake_scenarios.py','wake_streaming.py','wake_augmentation.py','deploy_speech_models.py','backup_storage_export.py','test_install_volumes.py','test_storage_layout.py']:
         shutil.copy2(repo/'tools'/name,source_root/name)
     # Preserve every locked original upstream source and notice, including voice metadata.
     for entry in json.loads(lock.read_text())['sources']:

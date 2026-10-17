@@ -29,7 +29,11 @@ static lv_obj_t *g_files_input;
 static lv_obj_t *g_files_shell;
 static lv_obj_t *g_files_title;
 static lv_obj_t *g_files_auxiliary;
-struct files_tile {lv_obj_t *button,*name,*image,*type;};
+struct files_tile {
+  lv_obj_t *button,*name,*image,*type;
+  unsigned revision,pressed_revision;
+  bool pressed;
+};
 static struct
 {
   lv_obj_t *card;
@@ -266,17 +270,32 @@ static void glass_files_error(int error)
   snprintf(g_files_error, sizeof(g_files_error), "%s (%d)", strerror(error), error);
 }
 
+static void files_tile_guard(lv_event_t *e)
+{
+  struct files_tile *tile=lv_event_get_user_data(e);
+  lv_event_code_t code=lv_event_get_code(e);
+  if(code==LV_EVENT_PRESSED){tile->pressed=true;tile->pressed_revision=tile->revision;}
+  else if(code==LV_EVENT_SHORT_CLICKED||code==LV_EVENT_LONG_PRESSED){
+    bool stale=tile->pressed&&tile->pressed_revision!=tile->revision;
+    tile->pressed=false;
+    if(stale||!lv_obj_get_user_data(tile->button)||lv_obj_has_flag(tile->button,LV_OBJ_FLAG_HIDDEN))
+      lv_event_stop_processing(e);
+  }else if(code==LV_EVENT_PRESS_LOST)tile->pressed=false;
+}
+
 static void files_tile_set(size_t index,const struct glass_file_entry *entry)
 {
   const int width=232,height=96,gap=16;
   const struct files_design *design=entry->directory?NULL:files_design(entry->name);
   struct files_tile *tile=&g_files_browser.tiles[index];
+  tile->revision++;
   if(!tile->button) {
     tile->button=files_button(g_files_browser.list,entry->name,
       (index%4)*(width+gap),(index/4)*(height+gap),width,detail_paper(),NULL,NULL);
     lv_obj_set_height(tile->button,height);
     lv_obj_set_style_bg_color(tile->button,lv_color_hex(detail_paper()),0);
     lv_obj_set_style_radius(tile->button,12,0);
+    lv_obj_add_event_cb(tile->button,files_tile_guard,LV_EVENT_ALL,tile);
     lv_obj_add_event_cb(tile->button,glass_files_select,LV_EVENT_SHORT_CLICKED,NULL);
     lv_obj_add_event_cb(tile->button,glass_files_select,LV_EVENT_LONG_PRESSED,NULL);
     tile->name=lv_obj_get_child(tile->button,0);

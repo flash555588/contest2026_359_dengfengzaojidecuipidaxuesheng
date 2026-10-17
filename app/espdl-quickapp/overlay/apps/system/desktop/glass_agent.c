@@ -3,6 +3,11 @@
 #include "glass_qpk_builder.h"
 #include "glass_chat.h"
 #include "glass_agent_profiles.h"
+#include "glass_board.h"
+#include "qpk_hardware.h"
+#include "glass_board_reference.h"
+#include <limits.h>
+#include <pthread.h>
 #ifndef AGENT_PROFILE_ROOT
 #define AGENT_PROFILE_ROOT "/sdcard/espclaw/agents"
 #endif
@@ -31,16 +36,25 @@ struct agent_server {
   char name[49],url[513],token[513],allowed[513],session[129],version[16];
 };
 struct glass_agent {
+  bool board_discovered;
+  unsigned board_jobs;
+  struct qpk_hw_session *hardware;
   atomic_bool *cancel;bool skills_enabled;unsigned skills,next_id;
   enum glass_agent_mode mode;char *profile;
   struct agent_skill skill[SKILL_COUNT];
   struct agent_server servers[AGENT_MCP_SERVERS];
 };
+static void board_hardware_detach(struct glass_agent *a);
 static const char *jstring(const cJSON *obj,const char *key)
 {const cJSON *v=cJSON_GetObjectItemCaseSensitive(obj,key);return cJSON_IsString(v)?v->valuestring:"";}
 static bool cancelled(struct glass_agent *a){return a->cancel&&atomic_load(a->cancel);}
 static char *error_result(const char *code)
 {cJSON *o=cJSON_CreateObject();if(!o)return NULL;cJSON_AddBoolToObject(o,"ok",false);cJSON_AddStringToObject(o,"error",code);char *s=cJSON_PrintUnformatted(o);cJSON_Delete(o);return s;}
+/* Optional in-process smart home provider; NULL without the shared service. */
+static const struct glass_board_home *g_board_home;
+void glass_agent_set_board_home(const struct glass_board_home *home){g_board_home=home;}
+static const struct glass_board_home *g_board_music;
+void glass_agent_set_board_music(const struct glass_board_home *music){g_board_music=music;}
 static bool skill_id(const char *id)
 {size_t n=strlen(id);if(!n||n>31)return false;for(size_t i=0;i<n;i++)if(!isalnum((unsigned char)id[i])&&id[i]!='-'&&id[i]!='_')return false;return true;}
 static bool safe_directory(const char *root)
@@ -181,6 +195,7 @@ static int mcp_initialize(struct glass_agent *a,struct agent_server *s)
 void glass_agent_destroy(struct glass_agent *a)
 {
   if(!a)return;
+  board_hardware_detach(a);
   for(unsigned i=0;i<AGENT_MCP_SERVERS;i++){
     struct agent_server *s=&a->servers[i];
     if(s->session[0]){struct glass_mcp_http http={.url=s->url,.token=s->token,.session=s->session,
@@ -206,6 +221,10 @@ char *glass_agent_context(struct glass_agent *a)
   if(!a)return strdup("");cJSON *root=cJSON_CreateObject();if(!root)return NULL;
   cJSON_AddStringToObject(root,"mode",glass_agent_mode_id(a->mode));
   cJSON_AddItemToObject(root,"skills",skill_list(a));cJSON *servers=cJSON_AddArrayToObject(root,"mcp_servers");
+  if(a->mode==AGENT_MODE_ASSISTANT){
+    cJSON *item=cJSON_CreateObject();cJSON_AddStringToObject(item,"server","board");
+    cJSON_AddStringToObject(item,"name","Local development board");cJSON_AddBoolToObject(item,"calls_allowed",true);cJSON_AddItemToArray(servers,item);
+  }
   for(unsigned i=0;i<AGENT_MCP_SERVERS;i++)if(a->servers[i].enabled){
     cJSON *item=cJSON_CreateObject();char id[8];snprintf(id,sizeof(id),"mcp%u",i+1);
     cJSON_AddStringToObject(item,"server",id);cJSON_AddStringToObject(item,"name",a->servers[i].name);
@@ -230,7 +249,7 @@ char *glass_agent_tools(struct glass_agent *a,const char *existing)
     add_tool(array,"skill_list","List enabled built-in and SD-card skills.","{}","[]");
     add_tool(array,"skill_read","Read the complete instructions of a listed skill.","{\"id\":{\"type\":\"string\"}}","[\"id\"]");
   }
-  bool mcp=false;if(a)for(unsigned i=0;i<AGENT_MCP_SERVERS;i++)mcp|=a->servers[i].enabled;
+  bool mcp=a&&a->mode==AGENT_MODE_ASSISTANT;if(a)for(unsigned i=0;i<AGENT_MCP_SERVERS;i++)mcp|=a->servers[i].enabled;
   if(mcp){
     add_tool(array,"mcp_list_tools","Discover one configured MCP server's tools and inputSchema. Follow nextCursor if present.","{\"server\":{\"type\":\"string\"},\"cursor\":{\"type\":\"string\"}}","[\"server\"]");
     add_tool(array,"mcp_call_tool","Invoke a discovered, user-allowed tool on a configured MCP server. Use its exact inputSchema.","{\"server\":{\"type\":\"string\"},\"tool\":{\"type\":\"string\"},\"arguments\":{\"type\":\"object\"}}","[\"server\",\"tool\",\"arguments\"]");
@@ -251,6 +270,8 @@ static bool arguments_only(const cJSON *args,const char *keys)
     if(!strstr(keys,field))return false;for(const cJSON *next=v->next;next;next=next->next)if(!strcmp(v->string,next->string))return false;}
   return true;
 }
+#include "glass_board_agent.inc"
+
 int glass_agent_call(struct glass_agent *a,const char *name,const cJSON *args,char **out)
 {
   bool skill=!strcmp(name,"skill_list")||!strcmp(name,"skill_read");
@@ -272,6 +293,23 @@ int glass_agent_call(struct glass_agent *a,const char *name,const cJSON *args,ch
     if(!*out)*out=error_result("skill_not_found_too_large_or_invalid_arguments");return *out?1:-ENOMEM;
   }
   bool call=!strcmp(name,"mcp_call_tool");const char *server=jstring(args,"server");
+  if(!strcmp(server,"board")){
+    if(!arguments_only(args,call?",server,,tool,,arguments,":",server,")) *out=error_result("invalid_arguments");
+    else if(!call){
+      const char *extra=g_board_home?g_board_home->catalog:"";
+      const char *music=g_board_music?g_board_music->catalog:"";
+      if(!extra)extra="";if(!music)music="";
+      size_t size=strlen(board_tool_catalog),capacity=size+strlen(extra)+strlen(music)+3;
+      *out=malloc(capacity);
+      if(*out)snprintf(*out,capacity,"%.*s%s%s%s%s]}",(int)(size-2),board_tool_catalog,
+        extra[0]?",":"",extra,music[0]?",":"",music);
+      if(*out)a->board_discovered=true;
+    }
+    else if(!a->board_discovered)*out=error_result("discover_tool_with_mcp_list_tools_first");
+    else *out=board_call(a,jstring(args,"tool"),cJSON_GetObjectItemCaseSensitive(args,"arguments"));
+    if(*out&&strlen(*out)>AGENT_TOOL_BYTES){free(*out);*out=error_result("board_result_too_large");}
+    return *out?1:-ENOMEM;
+  }
   struct agent_server *s=NULL;
   if(strlen(server)==4&&!strncmp(server,"mcp",3)&&server[3]>='1'&&server[3]<='3')s=&a->servers[server[3]-'1'];
   if(!s||!s->enabled||!arguments_only(args,call?",server,,tool,,arguments,":",server,,cursor,")){

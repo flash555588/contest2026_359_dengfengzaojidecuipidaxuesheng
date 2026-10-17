@@ -365,6 +365,35 @@ static void desktop_ui_probe_service(void)
       else if (!strcmp(command, "camera-start"))
         desktop_ui_probe_print("camera start clicked=%d\n",
           desktop_ui_probe_click(g_desktop.current_card, "开始预览"));
+#ifdef GLASS_LOCAL_SPEECH
+      else if(!strcmp(command,"speech"))glass_speech_open(NULL);
+      else if(!strcmp(command,"speech-listen"))desktop_ui_probe_print("speech listen result=%d\n",glass_speech_listen());
+      else if(!strcmp(command,"speech-start")){if(g_speech_ui.root){desktop_ui_probe_click(g_speech_ui.root,"开始离线聆听");}}
+      else if(!strcmp(command,"speech-stop")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"停止");}
+      else if(!strcmp(command,"speech-bind-light")||!strcmp(command,"speech-bind-cover")||!strcmp(command,"speech-bind-fan")){
+        unsigned role=!strcmp(command,"speech-bind-light")?0:!strcmp(command,"speech-bind-cover")?1:2;
+        if(g_speech_ui.binding[role])lv_obj_send_event(lv_obj_get_parent(g_speech_ui.binding[role]),LV_EVENT_CLICKED,NULL);
+      }
+      else if(!strcmp(command,"speech-bind-back"))local_voice_picker_close(NULL);
+      else if(!strcmp(command,"speech-status"))desktop_ui_probe_print("LOCAL_VOICE page=%u owner=%lu stage=%u choices=%u list_ok=%u bound=%u\n",
+        g_speech_ui.root!=NULL,(unsigned long)g_speech_ui.owner,g_speech_ui.stage,g_speech_ui.choice_count,g_speech_ui.list_ok,
+        !!g_speech_ui.bound[0].entity[0]+!!g_speech_ui.bound[1].entity[0]+!!g_speech_ui.bound[2].entity[0]);
+      else if(!strcmp(command,"speech-probe"))desktop_ui_probe_print("speech probe result=%d\n",glass_speech_probe());
+      else if(!strcmp(command,"speech-nano-scalar"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(0));
+      else if(!strcmp(command,"speech-nano-pie"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(1));
+      else if(!strcmp(command,"speech-nano-play"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(2));
+      else if(!strcmp(command,"speech-esp-tts"))desktop_ui_probe_print("speech esp-tts result=%d\n",glass_speech_esp_tts(0));
+      else if(!strcmp(command,"speech-esp-tts-play"))desktop_ui_probe_print("speech esp-tts result=%d\n",glass_speech_esp_tts(1));
+      else if(!strcmp(command,"speech-esp-tts-export"))desktop_ui_probe_print("speech esp-tts export result=%d\n",glass_speech_esp_tts(2));
+      else if(!strcmp(command,"speech-p4tts-scalar"))desktop_ui_probe_print("speech p4tts result=%d\n",glass_speech_p4tts(0));
+      else if(!strcmp(command,"speech-p4tts-pie"))desktop_ui_probe_print("speech p4tts result=%d\n",glass_speech_p4tts(1));
+      else if(!strcmp(command,"speech-p4tts-dual"))desktop_ui_probe_print("speech p4tts result=%d\n",glass_speech_p4tts(2));
+      else if(!strcmp(command,"speech-zh-q8"))desktop_ui_probe_print("speech zh-q8 result=%d\n",glass_speech_zh_q8(0));
+      else if(!strcmp(command,"speech-zh-q8-play"))desktop_ui_probe_print("speech zh-q8 result=%d\n",glass_speech_zh_q8(1));
+      else if(!strcmp(command,"speech-zh-q8-pie"))desktop_ui_probe_print("speech zh-q8 result=%d\n",glass_speech_zh_q8(2));
+      else if(!strcmp(command,"speech-zh-q8-dual"))desktop_ui_probe_print("speech zh-q8 result=%d\n",glass_speech_zh_q8(4));
+      else if(!strncmp(command,"speech-say:",11))desktop_ui_probe_print("speech say result=%d\n",glass_speech_say(command+11));
+#endif
       else if (!strcmp(command, "camera-mode"))
         desktop_ui_probe_print("camera mode clicked=%d\n",
           desktop_ui_probe_click(g_desktop.current_card, "*MJPEG"));
@@ -385,6 +414,23 @@ static void desktop_ui_probe_service(void)
       else if (!strcmp(command, "portal-status")) portal_debug_status();
       else if (!strcmp(command, "grok-status")) glass_grok_debug_status();
       else if (!strcmp(command, "chat")) glass_chat_open(NULL);
+      else if (!strcmp(command,"voice"))glass_chat_ball_open(NULL);
+      else if (!strcmp(command,"voice-wake")){if(g_chat_ui.ball_mode)chat_ball_wake_toggle(NULL);}
+      else if (!strcmp(command,"voice-tap")){if(g_chat_ui.ball_mode)chat_ball_tap(NULL);}
+      else if (!strcmp(command,"voice-end")){if(g_chat_ui.ball_mode)chat_ball_end(NULL);}
+      else if (!strcmp(command,"voice-status")){
+        desktop_ui_probe_print("VOICE_STATUS page=%u session=%u wake=%u phase=%u request=%lu\n",
+          g_chat_ui.ball_mode,g_chat_ui.voice_session,g_chat_ui.voice_wake_mode,g_chat_ui.voice_phase,(unsigned long)g_chat_ui.voice_wake_request);
+        struct glass_voice_snapshot voice;glass_voice_get(&voice);
+        desktop_ui_probe_print("VOICE_CAPTURE active=%u phase=%u error=%u level=%u\n",voice.active,voice.phase,voice.error,voice.level);
+#ifdef GLASS_LOCAL_SPEECH
+        struct speech_snapshot speech;glass_speech_get(&speech);
+        desktop_ui_probe_print("VOICE_PLAY active=%u phase=%u error=%d backend=%s\n",speech.active,speech.phase,speech.error,glass_speech_backend());
+#endif
+        struct chat_snapshot *chat=calloc(1,sizeof(*chat));
+        if(chat){glass_chat_get_mode(chat,g_chat_ui.mode);
+          desktop_ui_probe_print("VOICE_CHAT configured=%u phase=%u turns=%u cursor=%lu\n",chat->configured,chat->phase,chat->count,(unsigned long)g_chat_ui.speech_cursor);free(chat);}
+      }
       else if (!strcmp(command, "chat-input")) { if (g_chat_ui.root) chat_ui_editor_open(NULL); }
       else if (!strcmp(command, "chat-send")) { if (g_chat_ui.root) chat_ui_send(NULL); }
       else if (!strcmp(command, "chat-cancel")) glass_chat_cancel();
@@ -438,16 +484,23 @@ static void desktop_ui_probe_service(void)
 static int desktop_ui_probe_request(const char *command)
 {
   const char *commands[] = {"weather", "weather-status", "weather-refresh", "home", "settings", "wifi", "bluetooth", "files", "resources",
+    "speech-esp-tts", "speech-esp-tts-play", "speech-esp-tts-export",
+    "speech-p4tts-scalar", "speech-p4tts-pie", "speech-p4tts-dual",
+    "speech-zh-q8", "speech-zh-q8-play", "speech-zh-q8-pie", "speech-zh-q8-dual",
     "music", "music-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
     "files-new", "light", "dark", "audit", "frame", "frame-free", "wifi-scan", "ble-scan", "dialog",
     "ha-settings", "ha-address", "ha-status", "render-metrics", "render-metrics-reset", "toast", "camera-start", "camera-photo", "camera-mode",
-    "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo",
+    "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo", "speech", "speech-listen", "speech-probe", "speech-nano-scalar", "speech-nano-pie", "speech-nano-play", "speech-start", "speech-stop", "speech-status", "speech-bind-light", "speech-bind-cover", "speech-bind-fan", "speech-bind-back",
+    "voice", "voice-wake", "voice-tap", "voice-end", "voice-status",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",
     "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet", "pet-status"};
   /* click:<label> presses one visible control by its label, which is how the
    * file manager's list rows are verified. */
   bool found =
+#ifdef GLASS_LOCAL_SPEECH
+               (!strncmp(command,"speech-say:",11)&&command[11]!='\0') ||
+#endif
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
                (!strcmp(command, "local-video")) || (!strcmp(command, "local-stop")) ||
                (!strncmp(command, "local-play:", 11) && !strncmp(command + 11, "/sdcard/", 8)) ||

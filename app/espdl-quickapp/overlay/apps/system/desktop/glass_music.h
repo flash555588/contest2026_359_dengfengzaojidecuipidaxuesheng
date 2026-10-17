@@ -40,6 +40,8 @@ void glass_music_get(struct music_snapshot *out);
 int glass_music_search(const char *query);
 int glass_music_play(const struct music_song *song);
 void glass_music_toggle(void);
+/* Idempotent transport control: never starts or toggles a different track. */
+int glass_music_set_paused(bool paused);
 void glass_music_stop(void);
 int glass_music_stop_wait(unsigned timeout_ms);
 void glass_music_volume(unsigned volume);

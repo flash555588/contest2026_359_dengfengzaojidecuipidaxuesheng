@@ -54,6 +54,7 @@ def main():
         if path.suffix in ('.h','.inc'):shutil.copy2(path,work/path.name)
     for folder in ['c6probe','hass']:
         for path in (apps/f'system/{folder}').glob('*.h'):shutil.copy2(path,work/path.name)
+    for path in (desktop.parent/'hass').glob('*.h'):shutil.copy2(path,work/path.name)
     (work/'nuttx').mkdir(exist_ok=True);(work/'netutils').mkdir(exist_ok=True)
     (work/'nuttx/config.h').write_text('''#pragma once
 #define CONFIG_SYSTEM_DESKTOP 1
@@ -135,7 +136,7 @@ void local_video_play_path(const char *path){(void)path;}
     headers=['qpk_runtime.h','qpk_storage.h','glass_qpk_builder.h','glass_portal.h',
       'hass_portal.h','hass_service.h','glass_music.h','glass_lock_photo.h','glass_chat.h','glass_ime.h',
       'glass_weather.h','glass_settings_service.h','glass_file_service.h','glass_system_monitor.h','glass_voice.h','glass_pinyin.h',
-      'glass_ble.h','glass_speech.h','qpk_espdl.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
+      'glass_ble.h','glass_status.h','glass_speech.h','qpk_espdl.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
     skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice',
           'desktop_motion_button'}
     mocks=['#include <stdlib.h>\n#include <string.h>\n#include <stdio.h>\n#include <errno.h>\n#include <netinet/in.h>\n#include "glass_icons.h"']

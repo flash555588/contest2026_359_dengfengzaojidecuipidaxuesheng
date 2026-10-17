@@ -60,6 +60,7 @@ static cJSON *defaults(const char *section)
     default_string(o,"secret_key","");
   }
   else if(!strcmp(section,"agent")) {
+    if(!cJSON_GetObjectItemCaseSensitive(o,"home_control_enabled"))cJSON_AddNumberToObject(o,"home_control_enabled",0);
     if(!cJSON_GetObjectItemCaseSensitive(o,"skills_enabled"))cJSON_AddNumberToObject(o,"skills_enabled",1);
     for(unsigned i=1;i<=AGENT_MCP_SERVERS;i++){
       char key[32];const char *names[]={"name","url","token","tools"};

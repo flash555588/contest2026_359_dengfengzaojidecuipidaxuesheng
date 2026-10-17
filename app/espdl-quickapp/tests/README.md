@@ -3,6 +3,16 @@
 本目录保存 JS 回归、C 宿主用例与少量测试输入，不是实板测试结果目录。
 返回[应用快照说明](../README.md)，已有输出见 [evidence](../evidence/README.md)。
 
+## 中文播报完整性与取消
+
+`tools/test_wake_handoff.py --output <目录>` 在 ASan/UBSan 下运行从生产源码提取的单次唤醒循环、完成状态发布及按请求取消，覆盖模型缺失、音频忙、计算失败、提前/中途取消，以及完成后取消撤销唤醒交接。另用 `voice_capture_cancel_host.c` 运行生产采集的打开/关闭和 `ws_wait_start`，检查停止音乐等待、获取音频所有权、分配驱动缓冲后取消的资源释放，以及网络已就绪与取消同时发生时拒绝进入采集。仅硬件、网络和模型适配器为夹具，不链接 MultiNet。`render_grok_conversation.c` 使用真实 LVGL 和生产语音页，在明暗主题下检查显式开启、麦克风释放后才启动 ASR、连续播报再聆听、口头结束、无语音返回等待唤醒、迟到事件/新任务隔离、14 秒连接延迟后的完整聆听窗口和退出清理；这些测试不验证真人检出率或云端识别质量。
+
+`tools/test_speech_host.py` 使用锁定中文模型执行真实 G2P、时长前端和解码器，ASan/UBSan 检查真实计算中途取消、调用者 arena 清理，以及 `speech_compute_host.c` 的嵌套作用域、八线程隔离和重新使用。生成音频须与未加取消检查的同一模型 PCM 逐字节一致。数学核生成规则由 `tools/build_speech_runtime.py` 校验锁定原始文件的大小、SHA-256 和循环布局后执行，不修改缓存原件。
+
+`speech_conv_host.c` 将 256 采样分块卷积与单独编译的锁定上游参考核逐位比较：560 组覆盖短输入、256 边界及尾块、20992 采样长行、1/3/5/7 核、1/2/3/6/12 膨胀、零权重和累加模式。保留每个输出采样原有的输入通道与卷积核累加顺序，未启用 fast-math，不增加模型 arena。完整中文音频仍与上一版 PCM 逐字节一致。分块同时增加取消检查点。
+
+`python -m unittest discover -s tools/tests -p test_speech_deploy.py -v` 不访问串口，覆盖 TTS 运行文件与许可选择、同大小损坏拒绝、清单与编译资产表不符拒绝、缺失资源及保留已有冲突文件。实板首 PCM 耗时、计算中取消、音频互斥及相机复开结果保存在工作区 `output/speech-tts-20261016/`；最新分块版为 `output/speech-tts-latency-20261016/`。人工听音和真人唤醒不由这些测试代替。
+
 ## Node.js 回归
 
 在仓库根目录、具备 `node --test` 的 Node.js 环境运行：
@@ -151,3 +161,59 @@ Only a built-in HA launch with the exact reviewed SHA256 and all existing grants
 ### Entity lookup and static frontend data
 
 Live entity/scene lookups use null-prototype indexes rebuilt lazily on committed revision or array replacement. Source state remains authoritative: late callbacks resolve the latest row, and disconnect/configuration changes cannot reuse old entities. The 512-sensor regression checks bounded full-list traversal, refreshed reading provenance, removal and configuration reset. Static profile/reference catalogs use safely JSON-encoded data with identical contents, avoiding object-literal initialization bytecode. The common profile generator owns this encoding and still regenerates exact-source authorization. Commented obsolete layouts are removed from the shipped script.
+
+## 其他原生页面交互回归
+
+`render_other_pages.c` 通过 `render_all_ui.py --harness-source` 运行真实页面与 ASan/UBSan。覆盖首页、设置、应用、文件、网络、资源、相册和音乐的明暗主题；系统入口导航继续使用真实生产回调。应用列表固定保留 9 个槽位，连续 30 次翻页验证对象身份不变，按下后换页或移除目标不会触发替换应用/删除确认。文件卡片刷新后，旧按压的短按和长按均被拒绝，新按压仍可正常打开。亮度只预览数字，取消恢复已提交值；硬件 PWM 仍只在松手时执行，固定亮度设备继续禁用滑块。开关点击范围扩大且相邻区域不重叠。
+
+该宿主用例不测硬件亮度、蓝牙/网络连接或文件操作性能。原始全页渲染器中的旧 HA 坐标断言尚需更新；其他页面使用独立聚焦用例验证，没有删除原始断言。
+
+## 无浮动页面与床头灯紧凑布局（当前行为）
+
+所有页面、弹窗、卡片和分页不再添加装饰性位移；首页卡片取消错峰上浮，按压反馈仅改变颜色，提示条仅改变透明度，顶部快捷控制面板原位打开/关闭。原生滚动、范围值/分页指示器变化和用户主动边缘拖动仍属于功能输入。旧文档中的页面进入/上浮描述由本节取代。
+
+`render_bedside_layout.c` 按实板状态栏 32px + 快应用标题 64px，验证真实 504px 内容区、明暗主题和实际 LVGL 指针命中。常用预设和自选色盘保持同时展示，空间不足时缩小色点与间距，效果/辅助功能入口保留独立空间；预设白色按钮带边框，灯具主要界面显式隐藏未使用分页器，避免左侧残留胶囊。顶部首页品牌标识已移除。139 项 JS 测试包含紧凑布局按钮交叠、取消上浮和分页位移检查。
+
+## 相机录像
+
+相机录像回归：`python app/espdl-quickapp/tests/run_camera_video.py --output /tmp/camera-video-test` 使用真实录像线程、帧队列和 AVI 写入器，并模拟麦克风/存储状态。ASan/UBSan 覆盖 CSI 1024×600、USB 640×480 输入、缺存储、麦克风失败、立即停止、重复启动拦截、保存、再次录制与权限撤销；FFmpeg 检查文件完整解码、视频和音频参数及小于 110ms 的时长差。`camera_upgrade.test.cjs` 另检查照片/视频切换、保存期间禁用启动与错误反馈，`render_camera_upgrade.c` 用生产 LVGL/QuickJS 检查视频界面。实板录像验证需单独执行，宿主麦克风为模拟。物理控制台的 `desktop camera-video-mode/start/stop` 由长期桌面任务调度，防止临时 NSH 任务退出时销毁录制线程；必须已打开内置相机并开始预览才能录制。
+
+## 统一应用侧栏
+
+`glass_sidebar.h` 定义原生侧栏 164px、内边距 12px、功能项 140×44px、间距 8px、圆角 12px；设置、性能、音乐、ESPClaw 和原生 HA 使用同一表面/选中态样式。米家 JS 的对应常量由几何契约测试与原生头文件核对，涵盖 640×400、800×450、1024×504 和 1024×600。原生图标独立使用图标字体，避免统一文字字体后出现缺字框。
+
+`render_other_pages.c` 额外验证设置/音乐/AI 侧栏宽度、按钮尺寸、圆角和明暗底色，保留真实导航回调；性能侧栏图表属于信息组件，仅统一宽度，保留图表高度。没有侧栏的全屏相册、相机和文件工具栏继续采用原有导航方式。米家选中态原位更新，不恢复浮动效果。
+
+### 侧栏滑动选择
+
+侧栏按住纵向移动超过 5px 后，光标直接跟随指针；松手吸附到最近的可用按钮并执行一次原有导航。经过按钮时不切页，不增加惯性或页面上浮。普通点击保留；取消、页面销毁及移出侧栏松手会清理拖动。原生侧栏临时光标每次手势仅创建一次，米家复用既有选中背景，移动过程只更新坐标。
+
+`render_other_pages.c` 用真实 LVGL 指针验证原生跟手、松手单次回调、普通点击、移出取消和销毁清理；`render_waterfall.c` 用真实 LVGL/QuickJS 验证跨按钮仍保持捕获、松手后不会补发起点点击，均覆盖明暗主题。141 项 JS 回归另覆盖取消、失效代次和导航按钮复用；`pressLock` 只用于侧栏导航，槽位复用到其他用途时重置。
+
+
+## 端侧语音控制
+
+`render_local_voice.c` 编译生产 LVGL 页面与离线指令分发逻辑，模拟语音事件和 HA 网络。覆盖明暗主题、三类显式绑定、六种设备动作、请求所有权、过期与重复事件、目标状态去重、实际状态核对、丢失控制响应、不可用设备、未确认结果不重发、退出取消、返回桌面和停止聆听。候选列表排除车库门，绑定本身不发送控制。运行方式与其他聚焦渲染器相同：
+
+```sh
+python tools/render_all_ui.py --apps /path/to/apps --cache /path/to/native-lvgl-cache --output /tmp/local-voice-ui --harness-source app/espdl-quickapp/tests/render_local_voice.c --grok-assets /path/to/sdcard
+python tools/test_ha_configuration.py --apps /path/to/apps --output /tmp/ha-service-test
+python tools/test_wake_handoff.py --output /tmp/wake-handoff-test
+```
+
+HA 服务测试使用真实 `hass_service.c`，包含带配置版本的控制提交检查：旧版本/零版本在调用传输层之前被拒绝，当前版本才可发送。渲染器优先使用所选源码旁的 HA 头文件，避免已同步工作区的旧接口掩盖源码变化。
+
+停止回归另覆盖：识别事件残留时点击停止、停止/返回桌面与控制前状态响应同时到达、控制已发送后的停止提示、停止后新旧事件均不执行，以及显式重启后恢复控制。两种主题均运行这些断言；网络动作使用模拟服务。
+
+TTS 的 `speech_tts_host.c` 使用真实中文模型验证首次与缓存命中后的 PCM 逐采样一致，并在 PCM 回调中请求清除缓存：正在使用的权重必须保留到合成结束，后续分段仍能正确生成，返回后缓存必须为空。重复清除也须安全。通过 `tools/test_speech_host.py` 在 ASan/UBSan 下运行。
+
+双线程卷积沿用同一逐位参考，并在完整中文推理内覆盖计算中取消。`speech_compute_host.c` 另用原子屏障确认两个任务都已进入，随后触发取消，验证 join 后能开启新的双任务计算范围并完成全部工作。板端验证检查 CPU 0/1 记录、推理期间 UI 响应、首音与内部阶段耗时、取消、模型缓存回收、麦克风和相机复开。
+
+物理控制台可用 `desktop ui speech` 打开页面，`speech-start`/`speech-stop` 执行本页启停，`speech-status` 只读页面所有权、请求阶段、候选数量和绑定数量。`speech-bind-light`/`speech-bind-cover`/`speech-bind-fan` 只打开选择器并读取候选，`speech-bind-back` 关闭选择器；这些命令不自动绑定设备或发送控制。实板持续采音与反复启停不代替真人唤醒、指令识别或实际设备动作验收。
+
+
+### 合并状态岛
+
+`render_statusbar.c` 使用真实 LVGL 输入验证浅色/深色状态岛：默认无边框、按下才显示圆角边框、松开异步进入控制面板，背景音乐继续播放，锁屏隐藏与恢复。32 张截图覆盖强弱 RSSI、蓝牙已连接数量、电量和独立充电闪电；首页内容上移 40px。RSSI 每 5 秒从已有串行 RPC 邮箱读取，链接代次变化立即失效；未测得信号不猜测强度。蓝牙 HID 后端当前仅支持一个连接，扫描数量不作为连接数。电池通过 BATIOC_CAPACITY/BATIOC_STATE 读取；未启用电量计或读数不可用时显示 --%，不会虚构电量或充电。当前 overlay 配置尚未启用 CONFIG_BATTERY_GAUGE，实板电量及充电显示需匹配实际电源硬件。
+
+`status_rssi_host.c` 链接准备树的实际 protobuf 实现，验证线上请求编码、强弱信号、超时、错误响应、非法数值和响应释放，使用 ASan/UBSan。

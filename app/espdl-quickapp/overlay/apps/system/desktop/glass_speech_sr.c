@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_speech_sr.h"
 #include "glass_speech_assets.h"
-#include "esp_wn_iface.h"
+#include "glass_custom_wake.h"
+#include "glass_speech_commands.h"
 #include "esp_mn_iface.h"
 #include "esp_mn_speech_commands.h"
 #define ESP_PLATFORM 1
@@ -12,22 +13,60 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#ifdef __NuttX__
+#include <nuttx/config.h>
+#endif
 
 #if UINTPTR_MAX==UINT32_MAX
 _Static_assert(offsetof(srmodel_list_t,model_data)==20&&sizeof(srmodel_list_t)==24,"Pinned ESP-SR registry ABI");
 #endif
 /* Direct handles avoid pulling unselected WakeNet10/English model families. */
-extern const esp_wn_iface_t esp_sr_wakenet9_quantized;
 extern const esp_mn_iface_t esp_sr_multinet7_quantized;
 static srmodel_list_t *speech_models;
+static char speech_model_base[256];
 srmodel_list_t *get_static_srmodels(void){return speech_models;}
-char *get_model_base_path(void){return "/sdcard/speech/esp-sr";}
+char *get_model_base_path(void){return speech_model_base;}
+
+/* The pinned vendor constructor dereferences NULL when FST inputs are absent.
+ * Fail before loading model blobs or calling that constructor. */
+static int speech_model_inputs(const char *root)
+{
+  int n=snprintf(speech_model_base,sizeof(speech_model_base),"%s/esp-sr",root);
+  if(n<0||(size_t)n>=sizeof(speech_model_base))return -ENAMETOOLONG;
+  const char *names[]={"fst/commands_cn.txt","mn7_cn/vocab"};
+  for(unsigned i=0;i<2;i++){
+    char path[320];
+    n=snprintf(path,sizeof(path),"%s/%s",speech_model_base,names[i]);
+    if(n<0||(size_t)n>=sizeof(path))return -ENAMETOOLONG;
+    int fd=open(path,O_RDONLY|O_NOFOLLOW);if(fd<0)return -errno;
+    struct stat st;int ret=fstat(fd,&st)?-errno:
+      !S_ISREG(st.st_mode)||st.st_size<=0?-EBADMSG:0;
+    if(!ret&&i==0){
+      char grammar[sizeof(glass_speech_bootstrap_commands)];
+      size_t expected=sizeof(glass_speech_bootstrap_commands)-1,used=0;
+      if(st.st_size!=(off_t)expected)ret=-EBADMSG;
+      while(!ret&&used<expected){
+        ssize_t got=read(fd,grammar+used,expected-used);
+        if(got<0&&errno==EINTR)continue;
+        if(got<=0){ret=got<0?-errno:-EBADMSG;break;}
+        used+=(size_t)got;
+      }
+      if(!ret&&memcmp(grammar,glass_speech_bootstrap_commands,expected))ret=-EBADMSG;
+    }
+    close(fd);if(ret)return ret;
+  }
+  return 0;
+}
 struct glass_sr {
   srmodel_list_t models;
   srmodel_data_t data[2];srmodel_data_t *data_ptr[2];
   char *names[2],*infos[2];
   char *files[2][3],*blobs[2][3];int sizes[2][3];
-  model_iface_data_t *wake,*multi;
+  struct glass_custom_wake *wake;
+  model_iface_data_t *multi;
   int16_t *buffer;unsigned chunk,used,window;
   bool commands;
   int command_ids[GLASS_SPEECH_MAX_COMMANDS];size_t command_count;
@@ -38,7 +77,7 @@ void glass_sr_destroy(struct glass_sr *s)
   if(!s)return;
   if(s->commands)esp_mn_commands_free();
   if(s->multi)esp_sr_multinet7_quantized.destroy(s->multi);
-  if(s->wake)esp_sr_wakenet9_quantized.destroy(s->wake);
+  glass_custom_wake_destroy(s->wake);
   if(speech_models==&s->models)speech_models=NULL;
   for(unsigned i=0;i<2;i++){
     free(s->infos[i]);for(unsigned j=0;j<3;j++)free(s->blobs[i][j]);}
@@ -48,13 +87,14 @@ int glass_sr_create(const char *root,const struct speech_command *commands,size_
 {
   if(!out||!root||!commands||!count||count>GLASS_SPEECH_MAX_COMMANDS)return -EINVAL;
   *out=NULL;if(speech_models)return -EBUSY;
+  int inputs=speech_model_inputs(root);if(inputs)return inputs;
   struct glass_sr *s=calloc(1,sizeof(*s));if(!s)return -ENOMEM;
   int ret=-EBADMSG;
-  s->names[0]="wn9_hilexin";s->names[1]="mn7_cn";
-  const char *files[2][3]={{"wn9_index","wn9_data",NULL},{"mn7_index","mn7_data","vocab"}};
+  s->names[0]="mn7_cn";
+  const char *files[1][3]={{"mn7_index","mn7_data","vocab"}};
   s->models.model_name=s->names;s->models.model_info=s->infos;
-  s->models.model_data=s->data_ptr;s->models.num=2;
-  for(unsigned i=0;i<2;i++){
+  s->models.model_data=s->data_ptr;s->models.num=1;
+  for(unsigned i=0;i<1;i++){
     char relative[128];size_t size;
     snprintf(relative,sizeof(relative),"esp-sr/%s/_MODEL_INFO_",s->names[i]);
     s->infos[i]=glass_speech_asset(root,relative,&size);if(!s->infos[i])goto fail;
@@ -66,14 +106,18 @@ int glass_sr_create(const char *root,const struct speech_command *commands,size_
     }
   }
   speech_models=&s->models;
-  s->wake=esp_sr_wakenet9_quantized.create(s->names[0],DET_MODE_90);
-  if(!s->wake){ret=-ENOMEM;goto fail;}
-  s->multi=esp_sr_multinet7_quantized.create(s->names[1],6000);
+  ret=glass_custom_wake_create(root,&s->wake);if(ret)goto fail;
+#if defined(__riscv) && defined(CONFIG_ARCH_CHIP_ESP32P4)
+  unsigned pie,loop;
+  __asm__ volatile("csrr %0, 0x7f2\ncsrr %1, 0x7f1":"=r"(pie),"=r"(loop));
+  printf("[speech] model context pie=%u hwlp=%u\n",pie,loop);
+  __asm__ volatile("csrwi 0x7f2, 1\ncsrwi 0x7f1, 1" ::: "memory");
+#endif
+  s->multi=esp_sr_multinet7_quantized.create(s->names[0],6000);
   if(!s->multi){ret=-ENOMEM;goto fail;}
   ret=-EBADMSG;
-  int chunk=esp_sr_wakenet9_quantized.get_samp_chunksize(s->wake);
-  if(chunk<=0||chunk>2048||chunk!=esp_sr_multinet7_quantized.get_samp_chunksize(s->multi)||
-    esp_sr_wakenet9_quantized.get_samp_rate(s->wake)!=16000||esp_sr_multinet7_quantized.get_samp_rate(s->multi)!=16000)goto fail;
+  int chunk=esp_sr_multinet7_quantized.get_samp_chunksize(s->multi);
+  if(chunk<=0||chunk>2048||esp_sr_multinet7_quantized.get_samp_rate(s->multi)!=16000)goto fail;
   s->chunk=chunk;s->buffer=calloc(chunk,sizeof(int16_t));if(!s->buffer){ret=-ENOMEM;goto fail;}
   if(esp_mn_commands_alloc(&esp_sr_multinet7_quantized,s->multi))goto fail;
   s->commands=true;
@@ -98,7 +142,8 @@ int glass_sr_feed(struct glass_sr *s,const int16_t *pcm,size_t frames,int *comma
     memcpy(s->buffer+s->used,pcm,n*sizeof(*pcm));s->used+=n;pcm+=n;frames-=n;
     if(s->used<s->chunk)continue;s->used=0;
     if(!s->window){
-      if(esp_sr_wakenet9_quantized.detect(s->wake,s->buffer)>0){
+      int wake=glass_custom_wake_feed(s->wake,s->buffer,s->chunk);if(wake<0)return wake;
+      if(wake>0){
         s->window=16000*6;esp_sr_multinet7_quantized.clean(s->multi);if(event!=2)event=1;
       }
     }else{
@@ -112,9 +157,14 @@ int glass_sr_feed(struct glass_sr *s,const int16_t *pcm,size_t frames,int *comma
           }
         }
       }else if(result==ESP_MN_STATE_TIMEOUT)s->window=0;
-      if(!s->window){if(event!=2)event=3;esp_sr_multinet7_quantized.clean(s->multi);esp_sr_wakenet9_quantized.clean(s->wake);}
+      if(!s->window){if(event!=2)event=3;esp_sr_multinet7_quantized.clean(s->multi);glass_custom_wake_reset(s->wake);}
     }
     /* Consume every supplied sample, including a partial frame after an event. */
   }
   return event;
+}
+void glass_sr_metrics(struct glass_sr *s,unsigned *evaluations,float *score)
+{
+  if(evaluations)*evaluations=s?glass_custom_wake_evaluations(s->wake):0;
+  if(score)*score=s?glass_custom_wake_score(s->wake):0;
 }

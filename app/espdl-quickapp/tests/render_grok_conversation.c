@@ -130,7 +130,12 @@ static void run_voice_cases(lv_display_t *display)
     review_chat_reply_fixture("接着聊。",true);frames(4);
     launch_builtin_ouo_qapp(NULL);frames(4);assert(g_chat_ui.snapshot->count==4);
     assert(!g_chat_ui.voice_session&&review_speech_count()==calls); /* No replay of history. */
-    tap();review_voice_error_fixture();frames(4);assert(!g_chat_ui.voice_session);
+    tap();unsigned silence_starts=review_voice_start_count();
+    review_voice_error_fixture();frames(12);
+    assert(g_chat_ui.voice_session&&g_chat_ui.voice_phase==BALL_LISTEN);
+    assert(review_voice_start_count()==silence_starts+1);
+    extern void review_voice_network_error_fixture(void);
+    review_voice_network_error_fixture();frames(4);assert(!g_chat_ui.voice_session);
     assert(glass_grok_current(g_chat_ui.ball)==34&&g_chat_ui.voice_wave==BALL_WAVE_OFF);
     review_capture(display,"voice-error","语音小球 · 识别失败可重试");
     /* A longer UTF-8 reply is spoken in order, without truncation or replay. */
@@ -169,6 +174,61 @@ static void run_voice_cases(lv_display_t *display)
     review_capture(display,"mode-assistant","ESPClaw · 独立助手模式");panel_hide(NULL);
   }
 }
+extern void review_wake_fixture(bool),review_speech_replace_fixture(void);
+extern void review_voice_phase_fixture(enum glass_voice_phase);
+static void run_wake_cases(lv_display_t *display)
+{
+  assert(chat_ball_end_phrase("  结束对话。！ \n"));
+  assert(chat_ball_end_phrase("停止聆听"));
+  assert(!chat_ball_end_phrase("请解释结束对话的含义。"));
+  assert(!chat_ball_end_phrase("结束对话之后怎么办？"));
+  for(unsigned theme=0;theme<2;theme++){
+    panel_hide(NULL);review_chat_dialog_fixture(true);g_desktop.light_theme=theme==0;
+    chat_interface_modes[1]=AGENT_MODE_CHAT;glass_rebuild();glass_chat_ball_open(NULL);frames(4);
+    assert(!g_chat_ui.voice_session&&!review_voice_start_count());
+    chat_ball_wake_toggle(NULL);frames(4);
+    assert(g_chat_ui.voice_wake_mode&&g_chat_ui.voice_phase==BALL_WAKE&&!review_voice_start_count());
+    uint32_t request=g_chat_ui.voice_wake_request;assert(request);
+    review_capture(display,"voice-wake-waiting","等待你好 openvela 唤醒");
+    review_wake_fixture(false);frames(5);assert(!review_voice_start_count()); /* capture still owned */
+    review_wake_fixture(true);frames(4);
+    assert(g_chat_ui.voice_phase==BALL_LISTEN&&review_voice_start_count()==1&&!g_chat_ui.voice_wake_request);
+    review_voice_text_fixture("帮我安排今天的学习");frames(4);assert(review_chat_send_count()==1);
+    review_chat_reply_fixture("先学习二十分钟。",true);frames(4);assert(review_speech_count()==1);
+    assert(review_voice_start_count()==1); /* no mic during playback */
+    review_speech_done_fixture(0);frames(12);assert(review_voice_start_count()==2);
+    review_voice_text_fixture("结束对话。");frames(4);
+    assert(!g_chat_ui.voice_session&&!g_chat_ui.voice_wake_mode&&review_chat_send_count()==1);
+    /* Empty recognition returns to local wake; never uploads endless silence. */
+    chat_ball_wake_toggle(NULL);review_wake_fixture(true);frames(4);
+    unsigned starts=review_voice_start_count();review_voice_error_fixture();frames(12);
+    assert(g_chat_ui.voice_phase==BALL_WAKE&&g_chat_ui.voice_wake_mode&&review_voice_start_count()==starts);
+    /* A wake result while capture is stopping cannot restart after End. */
+    review_wake_fixture(false);frames(4);chat_ball_end(NULL);review_wake_fixture(true);frames(8);
+    assert(!g_chat_ui.voice_session&&review_voice_start_count()==starts);
+    /* Never stop a newer owner's audio session or accept its wake event. */
+    chat_ball_wake_toggle(NULL);review_speech_replace_fixture();frames(4);
+    struct speech_snapshot current;glass_speech_get(&current);
+    assert(!g_chat_ui.voice_session&&current.active&&current.phase==SPEECH_WAKE);
+    review_speech_done_fixture(0);
+    chat_ball_wake_toggle(NULL);panel_hide(NULL);review_wake_fixture(true);frames(8);
+    assert(!g_chat_ui.root&&review_voice_start_count()==starts);
+    glass_chat_ball_open(NULL);review_speech_failure_fixture(-ENOENT);chat_ball_wake_toggle(NULL);frames(4);
+    assert(!g_chat_ui.voice_session&&!g_chat_ui.voice_wake_request);
+    review_speech_failure_fixture(0);panel_hide(NULL);
+    /* A slow network connection must not consume the listening window. */
+    review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);chat_ball_wake_toggle(NULL);
+    review_wake_fixture(true);chat_ball_refresh();
+    assert(g_chat_ui.voice_phase==BALL_LISTEN&&!g_chat_ui.voice_listen_at);
+    review_voice_phase_fixture(GLASS_VOICE_CONNECTING);frames(140);
+    assert(g_chat_ui.voice_session&&!g_chat_ui.voice_listen_at);
+    review_voice_phase_fixture(GLASS_VOICE_LISTENING);frames(4);
+    struct glass_voice_snapshot voice;glass_voice_get(&voice);
+    assert(g_chat_ui.voice_listen_at&&voice.active&&voice.phase==GLASS_VOICE_LISTENING);
+    chat_ball_end(NULL);panel_hide(NULL);
+  }
+  puts("WAKE_CONVERSATION_UI_OK: both themes; explicit arming, capture release gate, continuous turns, spoken end, silence rearm, stale-owner rejection and exit cleanup");
+}
 int main(int argc,char **argv)
 {
   assert(argc==3);review_out=argv[2];
@@ -194,6 +254,7 @@ int main(int argc,char **argv)
   char path[1024];snprintf(path,sizeof(path),"%s/screens.json",review_out);review_manifest=fopen(path,"w");assert(review_manifest);fputs("[\n",review_manifest);
   glass_edge_back_create();glass_status_create();
   run_voice_cases(display);
+  run_wake_cases(display);
   review_chat_dialog_fixture(false);fputs("\n]\n",review_manifest);fclose(review_manifest);
   printf("GROK_VOICE_CHAT_OK: %u captures; shared ESPClaw; continuous voice, silence/send/TTS/drain/relisten/interrupt/errors/lifecycle\n",review_count);return 0;
 }

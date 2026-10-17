@@ -7,12 +7,13 @@ static void glass_settings(lv_event_t *e)
   lv_obj_add_event_cb(card,glass_control_deleted,LV_EVENT_DELETE,NULL);
   lv_obj_remove_event_cb(g_desktop.panel,glass_control_outside);
   detail_sidebar(card,"设置",GLASS_ICON_SLIDERS,glass_settings_back);
-  lv_obj_t *selected=glass_box(card,16,104,158,48,detail_soft(),12);
-  home_icon(selected,GLASS_ICON_GRID,14,14,20,detail_accent());
-  detail_text(selected,"控制面板",46,14,100,14,detail_accent());
-  detail_nav(card,"Wi-Fi 网络",LV_SYMBOL_WIFI,174,150,glass_system_page_open,NULL);
-  detail_nav(card,"存储与文件",LV_SYMBOL_DIRECTORY,230,150,glass_system_page_open,(void *)1);
-  detail_nav(card,"系统性能",GLASS_ICON_SLIDERS,286,150,glass_system_page_open,(void *)3);
+  lv_obj_t *selected=glass_box(card,12,104,140,44,detail_soft(),12);
+  lv_obj_add_flag(selected,LV_OBJ_FLAG_CLICKABLE);glass_sidebar_track(selected);
+  home_icon(selected,GLASS_ICON_GRID,12,12,20,detail_accent());
+  detail_text(selected,"控制面板",42,12,94,14,detail_accent());
+  lv_obj_t *row=detail_nav(card,"Wi-Fi 网络",LV_SYMBOL_WIFI,156,140,glass_system_page_open,NULL);glass_sidebar_item(row,false);
+  row=detail_nav(card,"存储与文件",LV_SYMBOL_DIRECTORY,208,140,glass_system_page_open,(void *)1);glass_sidebar_item(row,false);
+  row=detail_nav(card,"系统性能",GLASS_ICON_SLIDERS,260,140,glass_system_page_open,(void *)3);glass_sidebar_item(row,false);
   detail_text(card,"控制面板",216,26,300,28,detail_ink());
   detail_text(card,"显示、连接与个性化",216,66,400,14,detail_muted());
   g_preferences_status=detail_text(card,glass_preferences_status_text(),626,36,374,14,detail_muted());
@@ -38,6 +39,8 @@ static void glass_settings(lv_event_t *e)
   lv_obj_set_style_shadow_width(brightness,0,LV_PART_KNOB);
   lv_slider_set_range(brightness,10,100);
   lv_slider_set_value(brightness,g_screen_brightness,LV_ANIM_OFF);
+  lv_obj_add_event_cb(brightness,glass_brightness_preview,LV_EVENT_VALUE_CHANGED,value);
+  lv_obj_add_event_cb(brightness,glass_brightness_preview,LV_EVENT_PRESS_LOST,value);
 #ifdef GLASS_PWM_BACKLIGHT
   lv_label_set_text_fmt(value,"%d%%",g_screen_brightness);
   lv_obj_add_event_cb(brightness,glass_brightness_changed,LV_EVENT_RELEASED,value);
@@ -62,6 +65,7 @@ static void glass_settings(lv_event_t *e)
   lv_obj_t *sw=lv_switch_create(appearance);g_glass.settings_switch=sw;
   glass_control_switch_style(sw);
   lv_obj_set_pos(sw,366,66);lv_obj_set_size(sw,52,28);
+  lv_obj_set_ext_click_area(sw,8);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_MAIN);
   lv_obj_set_style_bg_color(sw,lv_color_hex(detail_accent()),LV_PART_INDICATOR|LV_STATE_CHECKED);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_INDICATOR|LV_STATE_CHECKED);
@@ -71,6 +75,7 @@ static void glass_settings(lv_event_t *e)
   sw=lv_switch_create(appearance);g_glass.motion_switch=sw;
   glass_control_switch_style(sw);
   lv_obj_set_pos(sw,366,110);lv_obj_set_size(sw,52,28);
+  lv_obj_set_ext_click_area(sw,8);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_MAIN);
   lv_obj_set_style_bg_color(sw,lv_color_hex(detail_accent()),LV_PART_INDICATOR|LV_STATE_CHECKED);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_INDICATOR|LV_STATE_CHECKED);

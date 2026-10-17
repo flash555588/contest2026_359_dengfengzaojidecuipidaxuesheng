@@ -16,6 +16,8 @@ flags=['-std=gnu11','-O1','-g','-D_GNU_SOURCE','-fsanitize=address,undefined','-
 flags+=['-DAGENT_PROFILE_ROOT="'+str(profiles)+'"']
 env={**os.environ,'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}
 sources=[repo/'app/espdl-quickapp/tests/agent_host.c',desktop/'glass_agent.c',desktop/'glass_agent_config.c',desktop/'glass_portal_config.c',desktop/'glass_chat_store.c',cjson/'cJSON.c']
+board_sources=[repo/'app/espdl-quickapp/tests/board_agent_platform_host.c',desktop/'qpk_hardware.c']
+sources+=board_sources
 subprocess.run(['gcc',*flags,'-DAGENT_SKILL_ROOT="'+str(skills)+'"',*map(str,sources),'-Wl,--gc-sections','-o',str(a.output/'agent-host')],check=True)
 subprocess.run([str(a.output/'agent-host'),str(skills)],check=True,env=env)
 (a.output/'netutils').mkdir(exist_ok=True)
@@ -38,11 +40,14 @@ int webclient_perform(struct webclient_context *);
 subprocess.run(['gcc',*flags,str(repo/'app/espdl-quickapp/tests/mcp_http_host.c'),str(desktop/'glass_agent_config.c'),str(cjson/'cJSON.c'),'-o',str(a.output/'mcp-http-host')],check=True)
 subprocess.run([str(a.output/'mcp-http-host')],check=True,env=env)
 bridge_flags=flags+['-I'+str(repo/'app/espdl-quickapp/overlay/apps/system/espclaw/include'),'-I'+str(a.apps/'system/espclaw/include'),'-I'+str(desktop/'espdl_port/include')]
-subprocess.run(['gcc',*bridge_flags,str(repo/'app/espdl-quickapp/tests/agent_bridge_host.c'),str(desktop/'glass_agent.c'),str(desktop/'glass_agent_config.c'),str(desktop/'glass_chat_store.c'),str(cjson/'cJSON.c'),'-Wl,--gc-sections','-o',str(a.output/'agent-bridge-host')],check=True)
+subprocess.run(['gcc',*bridge_flags,str(repo/'app/espdl-quickapp/tests/agent_bridge_host.c'),str(desktop/'glass_agent.c'),str(desktop/'glass_agent_config.c'),str(desktop/'glass_chat_store.c'),str(cjson/'cJSON.c'),*map(str,board_sources),'-Wl,--gc-sections','-o',str(a.output/'agent-bridge-host')],check=True)
 subprocess.run([str(a.output/'agent-bridge-host')],check=True,env=env)
 
 mode_flags=bridge_flags+['-DCHAT_DATA_ROOT="'+str(a.output/'chat-data')+'"']
 subprocess.run(['gcc',*mode_flags,str(repo/'app/espdl-quickapp/tests/agent_modes_host.c'),str(desktop/'glass_chat_service.c'),str(desktop/'glass_chat_store.c'),str(cjson/'cJSON.c'),'-Wl,--gc-sections','-o',str(a.output/'agent-modes-host')],check=True)
 subprocess.run([str(a.output/'agent-modes-host')],check=True,env=env)
+hass=repo/'app/espdl-quickapp/overlay/apps/system/hass'
+subprocess.run(['gcc',*mode_flags,'-I'+str(hass),str(repo/'app/espdl-quickapp/tests/board_home_host.c'),str(desktop/'glass_agent.c'),str(desktop/'glass_board_home.c'),str(desktop/'glass_agent_config.c'),str(desktop/'glass_portal_config.c'),str(desktop/'glass_chat_store.c'),str(hass/'hass_service.c'),*map(str,board_sources),str(cjson/'cJSON.c'),'-Wl,--gc-sections','-o',str(a.output/'board-home-host')],check=True)
+subprocess.run([str(a.output/'board-home-host')],check=True,env=env)
 subprocess.run(['gcc',*flags,str(repo/'app/espdl-quickapp/tests/chat_markup_host.c'),'-o',str(a.output/'chat-markup-host')],check=True)
 subprocess.run([str(a.output/'chat-markup-host')],check=True,env=env)

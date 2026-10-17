@@ -34,6 +34,11 @@ int hass_get_state(uint32_t client, const char *entity);
 int hass_control(uint32_t client, const char *entity, bool on, int brightness);
 int hass_call_service(uint32_t client, const char *entity, const char *service,
                       const char *body);
+/* Reject stale bindings atomically with transport submission. */
+int hass_control_checked(uint32_t client, const char *entity, bool on, int brightness,
+                         uint32_t configuration);
+int hass_call_service_checked(uint32_t client, const char *entity, const char *service,
+                              const char *body, uint32_t configuration);
 int hass_poll(uint32_t client, struct hass_result_s *result);
 void hass_result_free(struct hass_result_s *result);
 void hass_status(bool *configured, bool *busy, unsigned *clients);

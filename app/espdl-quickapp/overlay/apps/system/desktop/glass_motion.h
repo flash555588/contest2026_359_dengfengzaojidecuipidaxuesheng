@@ -19,7 +19,9 @@
 #define GLASS_MOTION_ENTER 240
 #define GLASS_MOTION_NOTICE 200
 #define GLASS_MOTION_EXIT 140
-enum glass_motion_kind { MOTION_PRESS, MOTION_X, MOTION_Y, MOTION_NOTICE, MOTION_RECT, MOTION_COLOR, MOTION_RANGE, MOTION_BATCH };
+#define GLASS_MOTION_PAGE 160
+#define GLASS_MOTION_DRAWER 260
+enum glass_motion_kind { MOTION_PRESS, MOTION_X, MOTION_Y, MOTION_NOTICE, MOTION_RECT, MOTION_COLOR, MOTION_RANGE, MOTION_BATCH, MOTION_SCRIM };
 struct glass_motion_job {
   lv_obj_t *object,*range_thumb;
   void (*done)(lv_obj_t *);
@@ -96,6 +98,7 @@ static void glass_motion_restore(struct glass_motion_job *job)
   lv_obj_t *obj=job->object;
   if(job->kind==MOTION_BATCH){glass_motion_batch_clear(NULL);return;}
   if(job->kind==MOTION_RANGE){glass_motion_range_paint(job,job->to);return;}
+  if(job->kind==MOTION_SCRIM){lv_obj_set_style_bg_opa(obj,(unsigned)job->bg_opa*job->to/1024,0);return;}
   if(job->kind==MOTION_COLOR){
     lv_obj_set_style_bg_color(obj,job->last_color,0);return;
   }
@@ -149,6 +152,9 @@ static void glass_motion_apply(struct glass_motion_job *job,int value)
       lv_style_value_t offset={.num=(g_motion_members[i].local?g_motion_members[i].saved.num:0)+value};
       lv_obj_set_local_style_prop(g_motion_members[i].object,g_motion_batch_prop,offset,0);
     }
+  }else if(job->kind==MOTION_SCRIM){
+    if(value<0)value=0;if(value>1024)value=1024;
+    lv_obj_set_style_bg_opa(obj,(unsigned)job->bg_opa*value/1024,0);
   }else if(job->kind==MOTION_RANGE)glass_motion_range_paint(job,value);
   else if(job->kind==MOTION_RECT){
     if(job->geometry_mask&1)lv_obj_set_pos(obj,glass_motion_round(job->position[0]),glass_motion_round(job->position[1]));
@@ -166,9 +172,8 @@ static void glass_motion_apply(struct glass_motion_job *job,int value)
     lv_obj_set_style_bg_color(obj,fill,0);
     lv_obj_set_style_bg_color(obj,fill,LV_STATE_PRESSED);
     job->last_color=fill;job->painted=true;
-    lv_obj_set_style_translate_y(obj,job->base_offset+(value*2+512)/1024,0);
+    /* Press feedback changes color only; no decorative floating geometry. */
   }else if(job->kind==MOTION_NOTICE){
-    lv_obj_set_style_translate_y(obj,job->base_offset+12*(1024-value)/1024,0);
     /* This object is a label: animate its primitive fills, never group alpha. */
     lv_obj_set_style_bg_opa(obj,(unsigned)job->bg_opa*value/1024,0);
     lv_obj_set_style_text_opa(obj,(unsigned)job->text_opa*value/1024,0);
@@ -222,7 +227,7 @@ static struct glass_motion_job *glass_motion_begin(lv_obj_t *obj,enum glass_moti
                                                    int from,int to,unsigned duration,unsigned delay)
 {
   if(!obj||g_motion_reduced)return NULL;
-  struct glass_motion_job *job=NULL;
+  struct glass_motion_job *job=NULL;bool fresh=false;
   for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)if(g_motion_jobs[i].object==obj){
     /* Decorative geometry, fill and batch translation are independent. */
     if(kind==MOTION_BATCH||g_motion_jobs[i].kind==MOTION_BATCH||
@@ -240,6 +245,7 @@ static struct glass_motion_job *glass_motion_begin(lv_obj_t *obj,enum glass_moti
     for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)if(!g_motion_jobs[i].object){job=&g_motion_jobs[i];break;}
     if(!job)return NULL; /* Saturation leaves the existing functional UI intact. */
     memset(job,0,sizeof(*job));job->object=obj;job->kind=kind;
+    fresh=true;
     lv_style_prop_t offset=kind==MOTION_X?LV_STYLE_TRANSLATE_X:LV_STYLE_TRANSLATE_Y;
     job->had_offset=lv_obj_get_local_style_prop(obj,offset,&job->saved_offset,0)==LV_STYLE_RES_FOUND;
     job->base_offset=kind==MOTION_X?lv_obj_get_style_translate_x(obj,0):lv_obj_get_style_translate_y(obj,0);
@@ -255,6 +261,10 @@ static struct glass_motion_job *glass_motion_begin(lv_obj_t *obj,enum glass_moti
   }
   if(kind!=MOTION_RECT){
     job->start[0]=job->position[0];job->initial_velocity[0]=job->velocity[0];job->target[0]=to;
+    /* Spatial arrival starts moving immediately, then decelerates. A retarget
+     * still inherits its measured velocity instead of restarting the curve. */
+    if(fresh&&duration&&(kind==MOTION_X||kind==MOTION_Y||kind==MOTION_BATCH||kind==MOTION_SCRIM))
+      job->initial_velocity[0]=((int64_t)to*GLASS_MOTION_FIXED-job->start[0])*3/duration;
   }
   job->from=from;job->to=to;job->duration=duration;job->delay=delay;job->started=lv_tick_get();job->done=NULL;
   if(!g_motion_timer)g_motion_timer=lv_timer_create(glass_motion_tick,GLASS_MOTION_TICK,NULL);
@@ -382,26 +392,22 @@ static void glass_motion_button(lv_obj_t *obj)
 }
 static void glass_motion_enter(lv_obj_t *obj,bool horizontal,unsigned delay)
 {
-  glass_motion_begin(obj,horizontal?MOTION_X:MOTION_Y,horizontal?20:14,0,GLASS_MOTION_ENTER,delay);
+  LV_UNUSED(obj);LV_UNUSED(horizontal);LV_UNUSED(delay);
+  /* All page/dialog entrances use their final geometry immediately. */
 }
 static void glass_motion_page_ready(void *object)
 {glass_motion_enter(object,false,0);}
 static void glass_motion_panel(lv_obj_t *obj)
 {
-  if(!obj||g_motion_reduced)return;
-  /* Constructors may restyle their card after panel_card returns. Apply the
-   * initial position after construction; deletion cancels this exact callback. */
-  glass_motion_watch(obj);lv_async_call_cancel(glass_motion_page_ready,obj);
-  lv_async_call(glass_motion_page_ready,obj);
+  LV_UNUSED(obj); /* Page construction already uses the final geometry. */
 }
 static void glass_motion_notice(lv_obj_t *obj)
 {glass_motion_begin(obj,MOTION_NOTICE,0,1024,GLASS_MOTION_NOTICE,0);}
 static bool glass_motion_dismiss(lv_obj_t *obj,void (*done)(lv_obj_t *))
 {
-  struct glass_motion_job *job=glass_motion_begin(obj,MOTION_NOTICE,1024,0,GLASS_MOTION_EXIT,0);
-  if(!job)return false;
-  job->done=done;
-  return true;
+  LV_UNUSED(done);
+  glass_motion_cancel(obj);
+  return false; /* The caller performs immediate cleanup. */
 }
 static void glass_motion_set_reduced(bool reduced)
 {

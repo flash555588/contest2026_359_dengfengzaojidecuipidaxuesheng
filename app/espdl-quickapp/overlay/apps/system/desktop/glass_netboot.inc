@@ -25,6 +25,7 @@
 #endif
 #include "c6net.h"
 #include "link_state.h"
+#include "../c6probe/status_rssi.h"
 
 #define GLASS_NET_IFNAME C6NET_IFNAME
 /* The companion-radio bring-up and the DHCP client run on these threads and
@@ -52,7 +53,8 @@ static void glass_status_network_publish(bool wired, bool linked, bool usable)
 {
   pthread_mutex_lock(&g_net_lock);
   if (wired) g_status_network.wired = usable;
-  else { g_status_network.wifi = usable; g_status_network.joining = linked && !usable; }
+  else { g_status_network.wifi = usable; g_status_network.joining = linked && !usable;
+    if(!linked)g_status_network.rssi_valid=false; }
   pthread_mutex_unlock(&g_net_lock);
 }
 static pthread_mutex_t g_net_dns_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -345,6 +347,7 @@ static void *glass_net_boot_thread(void *arg)
     }
 
   glass_net_clear_ipv4(GLASS_NET_IFNAME, false, &lease);
+  uint64_t rssi_at=0, rssi_generation=UINT64_MAX;
   for (;;)
     {
       struct c6_link_snapshot link;
@@ -358,8 +361,24 @@ static void *glass_net_boot_thread(void *arg)
           continue;
         }
 
+      if(link.generation!=rssi_generation){
+        rssi_generation=link.generation;rssi_at=0;
+        pthread_mutex_lock(&g_net_lock);
+        g_status_network.rssi_valid=false;
+        pthread_mutex_unlock(&g_net_lock);
+      }
       ready = link.initialized && link.ifup && link.associated &&
               link.carrier_ready;
+      if(ready&&glass_net_seconds()>=rssi_at){
+        int dbm=0;int measured=esp_hosted_rpc_wifi_rssi(&dbm);
+        struct c6_link_snapshot current;
+        bool same=c6net_get_link_snapshot(&current)==0&&current.generation==link.generation&&current.associated;
+        pthread_mutex_lock(&g_net_lock);
+        g_status_network.rssi_valid=measured==0&&same;
+        g_status_network.rssi_dbm=dbm;
+        pthread_mutex_unlock(&g_net_lock);
+        rssi_at=glass_net_seconds()+5;
+      }
       /* Keep manual requests pending until association/carrier is ready. */
 
       if (ready)

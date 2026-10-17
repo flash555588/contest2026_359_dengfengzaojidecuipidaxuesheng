@@ -33,8 +33,10 @@ def main():
     p.add_argument('--storage-layout',choices=['preserve','12m-4m','14m-2m'],default='preserve',help='Preserve the prepared data partition by default; explicit layouts do not migrate existing board data')
     p.add_argument('--l2-kb',type=int,choices=[256,512],default=256,help='P4 L2 cache experiment; 512 KiB uses 128-byte lines')
     p.add_argument('--speech-runtime',type=Path,help='Prepared, verified speech runtime directory (SD models, no flash fallback)')
+    p.add_argument('--esp-tts-prepared',type=Path,help='Pinned ESP-TTS libraries/voice; use as the normal Chinese speech backend')
     p.add_argument('--source-revision',help='Explicit 40-hex source revision for Windows-mounted Git worktrees')
     a=p.parse_args();repo=Path(__file__).resolve().parent.parent
+    if a.esp_tts_prepared and not a.speech_runtime:p.error('--esp-tts-prepared requires --speech-runtime')
     base=a.baseline.resolve();root=a.workspace.resolve();out=a.output.resolve()
     if root==base or base in root.parents: p.error('Use an isolated workspace outside baseline')
     if not (base/'tls-build-espdl/library/libmbedtls.a').exists():p.error('Prepared v3 TLS libraries required')
@@ -63,6 +65,8 @@ def main():
         data=src.read_bytes()
         if src.name.startswith('Kconfig'):data=data.replace(b'\r\n',b'\n')
         if not target.exists() or target.read_bytes()!=data:target.write_bytes(data)
+    from adapt_c6_status import apply as apply_c6_status
+    apply_c6_status(root/'apps')
     speech_libraries=[]
     desktop_make=root/'apps/system/desktop/Makefile'
     make=desktop_make.read_text()
@@ -70,7 +74,8 @@ def main():
     if a.speech_runtime:
         from build_speech_runtime import build as build_speech
         prepared=a.speech_runtime.resolve()
-        archive=build_speech(root/'apps',prepared/'vendor',out/'speech',a.toolchain.resolve())
+        archive=build_speech(root/'apps',prepared/'vendor',out/'speech',a.toolchain.resolve(),
+            esp_tts_prepared=a.esp_tts_prepared.resolve() if a.esp_tts_prepared else None)
         speech_libraries=[archive]+list((out/'speech/lib').glob('*.a'))
         make+='\n# BEGIN OPTIONAL LOCAL SPEECH\nCFLAGS += -DGLASS_LOCAL_SPEECH -DQPK_DL_SD_ONLY\n'
     desktop_make.write_text(make)
@@ -117,7 +122,7 @@ def main():
                   f'CONFIG_ESPRESSIF_CACHE_L2_CACHE_LINE_SIZE={64 if a.l2_kb==256 else 128}']:
         if value not in config:raise RuntimeError('Unexpected v3 configuration: '+value)
     clean_stamp=root/'bilibili-clean.txt'
-    config_hash=hashlib.sha256((config+'\nspeech='+str(bool(a.speech_runtime))).encode()).hexdigest()
+    config_hash=hashlib.sha256((config+'\nspeech='+str(bool(a.speech_runtime))+'\nesp_tts='+str(bool(a.esp_tts_prepared))).encode()).hexdigest()
     if not clean_stamp.exists() or clean_stamp.read_text().strip()!=config_hash:
         run(['make','clean',cross],cwd=root/'nuttx');clean_stamp.write_text(config_hash+'\n')
     run(['make','context',cross,f'ESPCLAW_TLS_CFLAGS={includes}'],cwd=root/'nuttx')

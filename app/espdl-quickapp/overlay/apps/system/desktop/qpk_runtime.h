@@ -44,6 +44,8 @@ bool qpk_runtime_camera_active(void);
 /* A hardware session cannot be replaced until cleanup has finished. */
 bool qpk_runtime_camera_busy(void);
 bool qpk_runtime_camera_capture(void);
+/* Local board diagnostics, dispatched by the persistent desktop task. */
+int qpk_runtime_camera_video_action(unsigned action);
 /* Call from the UI loop even while LVGL is suspended. Handles worker failure
  * and bounded cleanup retries; returns a one-shot full-redraw request.
  */

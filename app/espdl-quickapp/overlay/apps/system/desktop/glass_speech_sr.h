@@ -12,3 +12,4 @@ int glass_sr_create(const char *root,const struct speech_command *commands,
  * Commands are emitted as events only; this module cannot control HA. */
 int glass_sr_feed(struct glass_sr *sr,const int16_t *pcm,size_t frames,int *command);
 void glass_sr_destroy(struct glass_sr *sr);
+void glass_sr_metrics(struct glass_sr *sr,unsigned *evaluations,float *score);

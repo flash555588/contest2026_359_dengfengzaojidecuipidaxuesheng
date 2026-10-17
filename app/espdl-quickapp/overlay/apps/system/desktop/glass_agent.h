@@ -33,3 +33,13 @@ struct glass_mcp_http {
   cJSON *result;
 };
 int glass_mcp_http_perform(struct glass_mcp_http *request);
+/* Optional in-process smart home tools for the board server. The desktop build
+ * registers them only when the shared Home Assistant service is linked; tools
+ * never open a page or touch LVGL. */
+struct glass_board_home {
+  const char *catalog; /* comma-separated tool objects, no enclosing brackets */
+  char *(*call)(const char *tool,const cJSON *args,atomic_bool *cancel);
+};
+void glass_agent_set_board_home(const struct glass_board_home *home);
+/* Same in-process provider contract, independent of the HA build option. */
+void glass_agent_set_board_music(const struct glass_board_home *music);

@@ -58,6 +58,7 @@ bool c6net_is_initialized(void);
 ''')
     shutil.copy2(repo / 'tools/c6/link_state.h', root)
     shutil.copy2(desktop / 'glass_netboot.inc', root)
+    shutil.copy2(desktop / 'glass_status.h', root)
     source = (c6 / 'c6net.c').read_text()
     (root / 'reconnect.inc').write_text(
         function(source, 'c6net_disconnect') + '\n' +

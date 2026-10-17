@@ -117,6 +117,7 @@ bool qpk_runtime_running(void){return g_qpk.context!=NULL;}
 bool qpk_runtime_camera_active(void){return false;}
 bool qpk_runtime_camera_busy(void){return false;}
 bool qpk_runtime_camera_capture(void){return false;}
+int qpk_runtime_camera_video_action(unsigned action){(void)action;return -ENOSYS;}
 bool qpk_runtime_camera_poll(void){return false;}
 int qpk_runtime_touch_test(const char *state,double x,double y){(void)state;(void)x;(void)y;return 0;}
 const char *qpk_runtime_last_error(void){return review_error;}

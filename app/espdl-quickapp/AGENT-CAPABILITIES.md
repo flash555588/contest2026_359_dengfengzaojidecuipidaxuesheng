@@ -67,12 +67,46 @@ description: 用户询问天气时使用，优先调用已配置的天气工具�
 
 协议参考：[MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[生命周期](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[工具](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。
 
+## 内置智能家居工具（board · home_*）
+
+- 链接共享 Home Assistant 服务（`CONFIG_SYSTEM_HASS=y`）时，board 服务额外提供
+  `home_status`、`home_list`、`home_state`、`home_control`、`home_service` 五个进程内工具；
+  未链接该服务的构建保持原有 11 个工具，发现请求按实际构建返回工具列表。
+- 查询类工具只使用 `HASS_READ`；控制复用与原生页完全相同的白名单（`light`、`switch`、
+  `input_boolean`、`fan`）和注册服务表（`hass_actions.h`）。AI 路径没有 `HASS_CONFIGURE`，
+  不能读取地址、令牌或修改连接配置；`home_control` 的亮度仅对灯有效。
+- 控制结果不乐观改写：HTTP 2xx 后在 8 秒内最多读取 4 次，开关一致且亮度误差不超过
+  1 个百分点才算 `verified:true`；否则返回未确认说明，且不自动重发。
+- 每次成功调用返回一个设备卡片（`kind` 图标域、`name`、`state`、`level`、`on`），由对话
+  界面在消息流内渲染：每轮最多保留最近 4 张、同设备同轮去重，卡片随历史持久化。
+  工具不打开智能家居应用、不调用任何界面函数，聊天里只会出现卡片和文字回复。
+- 结果 JSON 不含地址与令牌，工具返回内容仅作为数据处理，不能提升权限。
+- 「Agent 能力 → 允许 AI 控制家居」默认关闭；查询可用，写入须显式启用。每次控制检查此配置，关闭后立即拒绝新控制。门锁、安防控制不向 AI 开放。
+- `home_service` 仅在回读属性符合请求时标记 `verified:true`；未映射的服务保留未确认状态。场景、脚本和按钮的 HTTP 成功仅表示受理，卡片显示「已受理」，不宣称设备执行成功。
+
+## 内置音乐工具（board · music_*）
+
+桌面注册 `music_status`、`music_search`、`music_play`、`music_pause`、`music_resume`、
+`music_stop`、`music_volume`、`music_skip` 八个进程内工具，仅助手模式可调用，继续遵守先发现再调用。
+它们复用系统音乐服务与后台播放器；不调用界面入口，不打开音乐应用。歌曲、歌手、服务状态和进度
+以 `kind:music` 小卡片显示在对话中，沿用每轮四张上限与历史保存。
+
+播放参数是歌名／歌手 `query`；搜索只查找歌曲，不自动播放。音量限 0–100 的整数，切歌沿用收藏列表。
+暂停与继续使用原生幂等接口，重复暂停不会切换为播放，停止后继续会返回无活动歌曲。
+播放等控制返回 `accepted:true, verified:false` 表示受理，用 `music_status` 读取后续服务状态；不将受理
+说成已听到声音。超时／取消不自动重发副作用，已受理播放继续由系统服务托管。
+地址、流 URL、封面 URL、API 密钥不进入工具结果，外部 MCP 返回内容不能伪造本机音乐卡片。
+
+`tools/test_music_background.py --apps <prepared-apps>` 将真实音乐服务、MP3 解码、音乐 MCP 与
+离线 HTTP／PCM 替身一起运行，验证搜索不播放、播放状态、幂等暂停／继续、音量、切歌、停止、
+参数拒绝和取消；不链接 LVGL。真实扬声器和外部音乐服务仍须另行联调。
+
 ## 验证
 
 对话正文支持轻量 Markdown：标题、无序／有序列表、引用、分隔线、行内强调、删除线、行内代码与带语言／行号的围栏代码块。链接保留可读的目标地址；图片和 HTML 不执行、不自动下载。当前不是完整 CommonMark 实现：嵌套列表、表格布局、数学公式暂按文本保留。英文粗体使用 DejaVu ASCII 子集，中文沿用现有字库；斜体强调以下划线显示。字体共约 31 KiB，只创建一次，中文不重复打包。
 
 思考／输出状态采用无底板的小行，展开后显示真实工具调用名称，最多保留最近 4 项和累计调用次数；不据调用推断执行成功，不显示模型内部思维。最近一轮完成后仍可查看这些本次会话的调用记录，重启后的持久历史不保存该临时过程。每条输出最多 24 个排版块、每块最多 64 个行内片段，超出部分保留原文。流式更新复用已有控件，代码横向滚动，状态动效复用现有刷新定时器并遵守减少动态效果设置。
 
-`tools/test_agent.py --apps <prepared-apps> --output <test-output>` 使用 ASan／UBSan 执行真实技能、配置、JSON-RPC、字节分片 SSE 解析、ESPClaw 工具桥接、对话线程及双槽存储；覆盖跨模式工具拒绝、上下文隔离、旧历史迁移、模式标记持久化、局部清空、重试和请求模式固定。HTTP 对端和模型调用由确定性测试替身提供。配置页另有 `portal_frontend.test.cjs`，原生 LVGL 界面和连续语音流程由 `render_grok_conversation.c` 验证。
+`tools/test_agent.py --apps <prepared-apps> --output <test-output>` 使用 ASan／UBSan 执行真实技能、配置、JSON-RPC、字节分片 SSE 解析、ESPClaw 工具桥接、对话线程及双槽存储；覆盖跨模式工具拒绝、上下文隔离、旧历史迁移、模式标记持久化、局部清空、重试和请求模式固定。其中 `board-home-host` 用真实 home_* 工具、真实共享 HA 服务和脚本化 HTTP 传输验证卡片字段、状态缓存、确认／未确认控制、白名单与参数注入拒绝。HTTP 对端和模型调用由确定性测试替身提供。配置页另有 `portal_frontend.test.cjs`，原生 LVGL 界面和连续语音流程由 `render_grok_conversation.c` 验证。
 
 尚未配置用户的实际 MCP 地址和令牌；本机测试不代表实机网络、第三方服务或模型端已验证。固件构建结果和烧录状态见本次输出目录的 `verification.json`。

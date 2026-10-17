@@ -153,8 +153,7 @@ static void music_ui_list(void)
   lv_obj_scroll_to_y(g_music_ui.list,0,LV_ANIM_OFF);
   for (unsigned i=0;i<2;i++) {
     bool selected=(i==1)==g_music_ui.favorites;
-    lv_obj_set_style_bg_color(g_music_ui.nav[i],lv_color_hex(selected?g_music_ui.surface:g_music_ui.background),0);
-    lv_obj_set_style_text_color(lv_obj_get_child(g_music_ui.nav[i],0),lv_color_hex(selected?g_music_ui.accent:g_music_ui.secondary),0);
+    glass_sidebar_item(g_music_ui.nav[i],selected);
   }
   struct music_snapshot *s=&g_music_ui.snapshot;
   lv_label_set_text(g_music_ui.heading,g_music_ui.favorites?"我喜欢的音乐":"搜索与发现");
@@ -246,15 +245,16 @@ static void glass_music_app(lv_obj_t *card)
   lv_obj_set_style_radius(card,0,0); lv_obj_set_style_border_width(card,0,0);
   lv_obj_set_style_bg_color(card,lv_color_hex(g_music_ui.background),0);
   lv_obj_add_event_cb(card,music_ui_deleted,LV_EVENT_DELETE,NULL);
-  lv_obj_t *sidebar=glass_box(card,0,0,178,468,light?0xf0edf4:0x1c1924,0);
-  music_ui_text(sidebar,"声动",24,28,130,28,g_music_ui.accent);
-  music_ui_text(sidebar,"MUSIC",26,70,128,16,g_music_ui.secondary);
-  g_music_ui.nav[0]=music_ui_button(sidebar,"搜索与发现",12,130,154,48,g_music_ui.surface,music_ui_nav,NULL,false);
-  g_music_ui.nav[1]=music_ui_button(sidebar,"我的收藏",12,190,154,48,g_music_ui.background,music_ui_nav,(void *)1,false);
+  lv_obj_t *sidebar=glass_box(card,0,0,GLASS_SIDEBAR_WIDTH,468,detail_paper(),0);
+  glass_sidebar_surface(sidebar);
+  music_ui_text(sidebar,"音乐",24,30,128,20,detail_ink());
+  g_music_ui.nav[0]=music_ui_button(sidebar,"搜索与发现",12,104,140,44,g_music_ui.surface,music_ui_nav,NULL,false);
+  g_music_ui.nav[1]=music_ui_button(sidebar,"我的收藏",12,156,140,44,g_music_ui.background,music_ui_nav,(void *)1,false);
+  glass_sidebar_item(g_music_ui.nav[0],true);glass_sidebar_item(g_music_ui.nav[1],false);
   g_music_ui.count=music_ui_text(sidebar,"0 首珍藏",26,255,132,16,g_music_ui.secondary);
-  music_ui_button(sidebar,"锁屏播放",16,324,146,44,g_music_ui.surface,glass_lock_open,NULL,false);
+  glass_sidebar_item(music_ui_button(sidebar,"锁屏播放",12,324,140,44,g_music_ui.surface,glass_lock_open,NULL,false),false);
   music_ui_text(sidebar,"退出页面继续播放",20,375,146,14,g_music_ui.secondary);
-  music_ui_button(sidebar,"返回桌面",16,402,146,44,g_music_ui.surface,panel_hide,NULL,false);
+  glass_sidebar_item(music_ui_button(sidebar,"返回桌面",12,412,140,44,g_music_ui.surface,panel_hide,NULL,false),false);
   g_music_ui.search=music_ui_button(card,"搜索歌名、歌手",202,24,476,50,g_music_ui.surface,music_ui_input_open,NULL,false);
   lv_obj_set_width(lv_obj_get_child(g_music_ui.search,0),414);
   g_music_ui.heading=music_ui_text(card,"搜索与发现",202,104,480,28,g_music_ui.primary);

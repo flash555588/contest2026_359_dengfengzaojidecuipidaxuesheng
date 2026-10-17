@@ -1,119 +1,40 @@
 /* SPDX-License-Identifier: Apache-2.0
- * One shared 32 px safe area. Sheet motion uses the desktop shared timer.
+ * 32 px status area; the combined status island opens settings when tapped.
  * Updated by the desktop's existing one-second timer; compare owned strings
  * because LV_LABEL_LONG_DOT may change the label's internal text buffer.
  */
 static struct {
-  lv_obj_t *bar, *network, *music, *more;
+  lv_obj_t *bar, *network, *music, *island, *bluetooth, *ble_count, *battery, *battery_text, *charging, *date;
+  lv_obj_t *bars[4];
   uint32_t background;
-  lv_obj_t *sheet, *sheet_card, *sheet_network, *sheet_music, *sheet_play;
-  char time[16], track[256];
+  char time[16];
   unsigned network_state, play_state;
-  bool valid, light, closing;
+  unsigned signal_level;
+  unsigned bluetooth_count;
+  int battery_percent;
+  bool valid, light;
 } g_status_ui;
 
-static void glass_status_close(lv_event_t *e)
+/* Align text and authored symbols by font baseline, not their unequal boxes. */
+static void status_align_label(lv_obj_t *label)
 {
-  LV_UNUSED(e);
-  lv_obj_t *sheet=g_status_ui.sheet;
-  g_status_ui.sheet=g_status_ui.sheet_card=g_status_ui.sheet_network=NULL;
-  g_status_ui.sheet_music=g_status_ui.sheet_play=NULL;g_status_ui.closing=false;
-  if(sheet)lv_obj_delete(sheet);
-}
-static void glass_status_deleted(lv_event_t *event)
-{
-  if(g_status_ui.sheet==lv_event_get_target(event)){
-    g_status_ui.sheet=g_status_ui.sheet_card=g_status_ui.sheet_network=NULL;
-    g_status_ui.sheet_music=g_status_ui.sheet_play=NULL;g_status_ui.closing=false;
-  }
-}
-static void glass_status_closed(lv_obj_t *card)
-{if(card==g_status_ui.sheet_card)glass_status_close(NULL);}
-static void glass_status_dismiss(lv_event_t *event)
-{
-  LV_UNUSED(event);
-  if(!g_status_ui.sheet||g_status_ui.closing)return;
-  struct glass_motion_job *job=glass_motion_begin(g_status_ui.sheet_card,MOTION_Y,0,-12,GLASS_MOTION_EXIT,0);
-  if(!job){glass_status_close(NULL);return;}
-  g_status_ui.closing=true;job->done=glass_status_closed;
+  const lv_font_t *font=lv_obj_get_style_text_font(label,0);
+  lv_obj_set_y(label,22-font->line_height+font->base_line);
 }
 
-static void glass_status_action(lv_event_t *e)
-{
-  unsigned action = (uintptr_t)lv_event_get_user_data(e);
-  glass_status_close(NULL);
-  if (action == 1) glass_music(NULL);
-  else if (action == 2) glass_lock_open(NULL);
-  else if (action == 3) settings_clicked(NULL);
-  else if (action == 4) glass_system_page_open(NULL);
-}
-
-static void glass_status_toggle(lv_event_t *e)
-{ LV_UNUSED(e); glass_music_toggle(); glass_status_tick(); }
-static void glass_status_skip(lv_event_t *e)
-{ glass_music_skip((intptr_t)lv_event_get_user_data(e)); glass_status_tick(); }
+static uint32_t status_ink(void)
+{ return g_desktop.light_theme ? 0x55515f : 0xc9c4d2; }
 
 static lv_obj_t *status_text(lv_obj_t *parent, const char *text,
                              int x, int y, int w)
-{ return home_text(parent, text, x, y, w, 14, home_ink()); }
-
-static lv_obj_t *status_button(lv_obj_t *parent, const char *text,
-                               int x, int y, int w, int h,
-                               lv_event_cb_t cb, void *data)
 {
-  lv_obj_t *button = glass_box(parent, x, y, w, h, detail_soft(), 9);
-  glass_clickable(button, cb, data);
-  lv_obj_remove_flag(button, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
-  lv_obj_set_style_bg_color(button, lv_color_hex(detail_line()), LV_STATE_PRESSED);
-  lv_obj_t *label = status_text(button, text, 0, 0, w);
-  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_center(label);
-  return button;
+  lv_obj_t *label=home_text(parent,text,x,y,w,14,status_ink());
+  status_align_label(label);return label;
 }
 
-static void glass_status_expand(lv_event_t *e)
-{
-  LV_UNUSED(e);
-  if(g_status_ui.sheet){
-    if(g_status_ui.closing){
-      g_status_ui.closing=false;
-      struct glass_motion_job *job=glass_motion_begin(g_status_ui.sheet_card,MOTION_Y,0,0,GLASS_MOTION_ENTER,0);
-      if(job)job->done=NULL;
-    }else glass_status_dismiss(NULL);
-    return;
-  }
-  if (g_lock_ui.root) return;
-  lv_obj_t *shade = glass_box(lv_layer_top(), 0, GLASS_STATUS_HEIGHT,
-                             1024, GLASS_CONTENT_HEIGHT, 0x000000, 0);
-  g_status_ui.sheet = shade;
-  lv_obj_add_event_cb(shade,glass_status_deleted,LV_EVENT_DELETE,NULL);
-  lv_obj_set_style_bg_opa(shade, LV_OPA_40, 0);
-  glass_clickable(shade, glass_status_dismiss, NULL);
-  lv_obj_remove_flag(shade, LV_OBJ_FLAG_GESTURE_BUBBLE);
-  lv_obj_t *card = glass_box(shade, 594, 12, 414, 304, detail_paper(), 18);
-  g_status_ui.sheet_card=card;
-  lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-  lv_obj_remove_flag(card, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
-  home_text(card, "快捷控制", 20, 18, 270, 20, home_ink());
-  status_button(card, "收起", 334, 12, 64, 36, glass_status_dismiss, NULL);
-  g_status_ui.sheet_network = status_text(card, "", 20, 58, 374);
-  g_status_ui.sheet_music = status_text(card, "", 20, 94, 374);
-  status_button(card, "上一首", 20, 128, 112, 44, glass_status_skip, (void *)-1);
-  lv_obj_t *play = status_button(card, "", 142, 128, 130, 44, glass_status_toggle, NULL);
-  g_status_ui.sheet_play = lv_obj_get_child(play, 0);
-  status_button(card, "下一首", 282, 128, 112, 44, glass_status_skip, (void *)1);
-  status_button(card, "网络设置", 20, 190, 182, 44, glass_status_action, (void *)4);
-  status_button(card, "系统设置", 212, 190, 182, 44, glass_status_action, (void *)3);
-  status_button(card, "打开音乐", 20, 246, 182, 44, glass_status_action, (void *)1);
-  status_button(card, "进入锁屏", 212, 246, 182, 44, glass_status_action, (void *)2);
-  g_status_ui.valid = false;
-  glass_status_tick();
-  glass_motion_begin(card,MOTION_Y,-12,0,GLASS_MOTION_ENTER,0);
-}
 
 static void glass_status_visibility(bool locked)
 {
-  glass_status_close(NULL);
   if (!g_status_ui.bar) return;
   if (locked) lv_obj_add_flag(g_status_ui.bar, LV_OBJ_FLAG_HIDDEN);
   else { lv_obj_remove_flag(g_status_ui.bar, LV_OBJ_FLAG_HIDDEN); glass_status_tick(); }
@@ -132,10 +53,12 @@ static void glass_status_tick(void)
     g_status_ui.background = background;
   }
   if (first || light != g_status_ui.light) {
-    lv_obj_t *labels[] = {g_desktop.clock_label, g_status_ui.network, g_status_ui.music, g_status_ui.more};
+    lv_obj_t *labels[] = {g_desktop.clock_label, g_status_ui.network, g_status_ui.music,
+      g_status_ui.bluetooth,g_status_ui.ble_count,g_status_ui.battery,g_status_ui.battery_text,g_status_ui.charging,g_status_ui.date};
     for (unsigned i = 0; i < sizeof(labels)/sizeof(labels[0]); i++)
-      lv_obj_set_style_text_color(labels[i], lv_color_hex(home_muted()), 0);
-    if (!first && g_status_ui.sheet) glass_status_close(NULL);
+      lv_obj_set_style_text_color(labels[i], lv_color_hex(status_ink()), 0);
+    lv_obj_set_style_bg_color(g_status_ui.island, lv_color_hex(status_ink()), 0);
+    lv_obj_set_style_border_color(g_status_ui.island, lv_color_hex(status_ink()), LV_STATE_PRESSED);
     g_status_ui.light = light;
   }
   char text[16]; struct tm local; time_t now = time(NULL);
@@ -147,33 +70,54 @@ static void glass_status_tick(void)
   if (first || strcmp(text, g_status_ui.time)) {
     strcpy(g_status_ui.time, text); lv_label_set_text(g_desktop.clock_label, text);
   }
+  char date[64];
+  if(now>1700000000&&localtime_r(&now,&local))snprintf(date,sizeof(date),"%d/%d",local.tm_mon+1,local.tm_mday);
+  else snprintf(date,sizeof(date),"时钟待校准");
+  if(strcmp(lv_label_get_text(g_status_ui.date),date))lv_label_set_text(g_status_ui.date,date);
   struct glass_status_network net = {0};
 #ifdef CONFIG_SYSTEM_C6_DESKTOP
   glass_status_network_get(&net);
 #endif
   unsigned network = net.wired ? 3 : net.wifi ? 2 : net.joining ? 1 : 0;
-  static const char *const names[] = {"网络未连接", "Wi-Fi 获取地址", "Wi-Fi 已连接", "以太网已连接"};
   if (first || network != g_status_ui.network_state) {
-    lv_label_set_text(g_status_ui.network, network == 3 ? GLASS_ICON_DEVICE_GENERIC : LV_SYMBOL_WIFI);
+    lv_label_set_text(g_status_ui.network, network == 3 ? LV_SYMBOL_USB : LV_SYMBOL_WIFI);
     lv_obj_set_style_opa(g_status_ui.network, network >= 2 ? LV_OPA_80 : LV_OPA_30, 0);
-    if (g_status_ui.sheet_network) lv_label_set_text(g_status_ui.sheet_network, names[network]);
     g_status_ui.network_state = network;
   }
+  unsigned level=net.wifi&&net.rssi_valid?(net.rssi_dbm>=-55?4:net.rssi_dbm>=-67?3:net.rssi_dbm>=-78?2:1):0;
+  g_status_ui.signal_level=level;
+  bool bars=network==2&&net.rssi_valid;
+  if(bars)lv_obj_add_flag(g_status_ui.network,LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_remove_flag(g_status_ui.network,LV_OBJ_FLAG_HIDDEN);
+  for(unsigned i=0;i<4;i++){
+    if(bars)lv_obj_remove_flag(g_status_ui.bars[i],LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(g_status_ui.bars[i],LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_bg_color(g_status_ui.bars[i],lv_color_hex(status_ink()),0);
+    lv_obj_set_style_bg_opa(g_status_ui.bars[i],i<level?LV_OPA_COVER:LV_OPA_20,0);
+  }
+  /* This board's HID backend reports one live peer; scan results are not connections. */
+  struct glass_ble_hid_state ble={0};glass_ble_hid_read(&ble);
+  g_status_ui.bluetooth_count=ble.connected?1:0;
+  char count[8];snprintf(count,sizeof(count),"%u",g_status_ui.bluetooth_count);
+  if(strcmp(lv_label_get_text(g_status_ui.ble_count),count))lv_label_set_text(g_status_ui.ble_count,count);
+  lv_obj_set_style_opa(g_status_ui.bluetooth,ble.connected?LV_OPA_COVER:LV_OPA_40,0);
+  int percent=-1;bool charging=false;glass_status_power_read(&percent,&charging);
+  g_status_ui.battery_percent=percent;
+  if(charging)lv_obj_remove_flag(g_status_ui.charging,LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_add_flag(g_status_ui.charging,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_x(g_status_ui.battery_text,charging?128:119);
+  lv_obj_set_width(g_status_ui.battery_text,charging?44:51);
+  const char *symbol=percent<0?LV_SYMBOL_BATTERY_EMPTY:
+    percent>80?LV_SYMBOL_BATTERY_FULL:percent>55?LV_SYMBOL_BATTERY_3:percent>30?LV_SYMBOL_BATTERY_2:
+    percent>10?LV_SYMBOL_BATTERY_1:LV_SYMBOL_BATTERY_EMPTY;
+  if(strcmp(lv_label_get_text(g_status_ui.battery),symbol))lv_label_set_text(g_status_ui.battery,symbol);
+  char capacity[12];if(percent>=0)snprintf(capacity,sizeof(capacity),"%d%%",percent);else strcpy(capacity,"--%");
+  if(strcmp(lv_label_get_text(g_status_ui.battery_text),capacity))lv_label_set_text(g_status_ui.battery_text,capacity);
   struct music_now_playing music; glass_music_now_playing(&music);
   bool playing = music.state == MUSIC_PLAYING && !music.pause_requested;
   unsigned state = playing ? 1 : music.state == MUSIC_LOADING ? 2 : 0;
-  const char *prefix = music.state == MUSIC_ERROR ? "播放失败" : music.state == MUSIC_ENDED ? "已播放完" :
-    music.state == MUSIC_STOPPED ? "已停止" : state == 2 ? "载入中" : playing ? "正在播放" : "已暂停";
-  char track[256];
-  if (music.name[0]) snprintf(track, sizeof(track), "%s · %s", prefix, music.name);
-  else strcpy(track, "声动 · 随时听音乐");
-  if (first || strcmp(track, g_status_ui.track)) {
-    strcpy(g_status_ui.track, track);
-    if (g_status_ui.sheet_music) lv_label_set_text(g_status_ui.sheet_music, track);
-  }
   if (first || state != g_status_ui.play_state) {
     lv_label_set_text(g_status_ui.music, state ? LV_SYMBOL_AUDIO : LV_SYMBOL_PAUSE);
-    if (g_status_ui.sheet_play) lv_label_set_text(g_status_ui.sheet_play, playing ? "暂停" : "播放 / 继续");
     g_status_ui.play_state = state;
   }
   bool active = music.name[0] && (playing || music.state == MUSIC_PAUSED || music.state == MUSIC_LOADING || music.pause_requested);
@@ -186,12 +130,32 @@ static void glass_status_create(void)
 {
   lv_obj_t *bar = glass_box(lv_layer_top(), 0, 0, 1024, GLASS_STATUS_HEIGHT, detail_paper(), 0);
   g_status_ui.bar = g_desktop.statusbar = bar;
-  glass_clickable(bar, glass_status_expand, NULL);
-  lv_obj_remove_flag(bar, LV_OBJ_FLAG_GESTURE_BUBBLE);
-  g_desktop.clock_label = status_text(bar, "--:--", 24, 8, 66);
-  lv_obj_set_style_text_font(g_desktop.clock_label, home_font(12), 0);
-  g_status_ui.music = home_icon(bar, LV_SYMBOL_AUDIO, 886, 8, 14, home_muted());
-  g_status_ui.network = home_icon(bar, LV_SYMBOL_WIFI, 934, 8, 14, home_muted());
-  g_status_ui.more = home_icon(bar, GLASS_ICON_ELLIPSIS, 982, 8, 14, home_muted());
+  lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
+  g_desktop.clock_label = status_text(bar, "--:--", 24, 8, 48);
+  g_status_ui.date=status_text(bar,"",84,8,190);
+  g_status_ui.music = home_icon(bar, LV_SYMBOL_AUDIO, 818, 8, 14, home_muted());
+  lv_obj_t *island=glass_box(bar,830,0,178,32,home_muted(),16);
+  g_status_ui.island=island;
+  glass_clickable(island,settings_clicked,NULL);
+  lv_obj_set_style_bg_opa(island,LV_OPA_TRANSP,0);
+  lv_obj_set_style_border_width(island,0,0);
+  lv_obj_set_style_shadow_width(island,0,0);
+  lv_obj_set_style_bg_opa(island,LV_OPA_20,LV_STATE_PRESSED);
+  lv_obj_set_style_border_width(island,1,LV_STATE_PRESSED);
+  lv_obj_set_style_border_color(island,lv_color_hex(status_ink()),LV_STATE_PRESSED);
+  g_status_ui.network = home_icon(island, LV_SYMBOL_WIFI, 14, 8, 14, home_muted());
+  for(unsigned i=0;i<4;i++){
+    unsigned height=4+i*3;
+    g_status_ui.bars[i]=glass_box(island,14+i*5,20-height,3,height,home_muted(),1);
+    lv_obj_remove_flag(g_status_ui.bars[i],LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  }
+  g_status_ui.bluetooth=home_icon(island,LV_SYMBOL_BLUETOOTH,48,8,14,home_muted());
+  g_status_ui.ble_count=status_text(island,"0",66,8,18);
+  g_status_ui.battery=home_icon(island,LV_SYMBOL_BATTERY_EMPTY,92,8,16,home_muted());
+  g_status_ui.charging=home_icon(island,LV_SYMBOL_CHARGE,110,8,14,home_muted());
+  g_status_ui.battery_text=status_text(island,"--%",119,8,51);
+  lv_obj_t *aligned[]={g_status_ui.music,g_status_ui.network,g_status_ui.bluetooth,
+    g_status_ui.battery,g_status_ui.charging};
+  for(unsigned i=0;i<sizeof(aligned)/sizeof(aligned[0]);i++)status_align_label(aligned[i]);
   glass_status_tick();
 }

@@ -216,12 +216,13 @@ int hass_clear_configuration(uint32_t id)
 }
 
 static int submit(uint32_t id, const char *resource, const char *entity, bool control,
-                  bool on, int brightness, const char *action, const char *data)
+                  bool on, int brightness, const char *action, const char *data, uint32_t configuration)
 {
   pthread_mutex_lock(&g_lock);
   pump();
   struct client_s *client = lookup(id);
   int ret = !client ? -EBADF : control && !(client->grants & HASS_CONTROL) ? -EACCES : 0;
+  if (!ret && configuration && configuration != g_configuration_revision) ret = -ESTALE;
   if (!ret && !g_token[0]) ret = -ENOTCONN;
   if (!ret && client->result.done) ret = -EBUSY;
   if (!ret && g_next_request > INT_MAX) ret = -EOVERFLOW;
@@ -286,13 +287,20 @@ uint32_t hass_configuration_revision(void)
   return revision;
 }
 
-int hass_get(uint32_t id, const char *resource) { return submit(id, resource, NULL, false, false, -1, NULL, NULL); }
+int hass_get(uint32_t id, const char *resource) { return submit(id, resource, NULL, false, false, -1, NULL, NULL, 0); }
 int hass_get_state(uint32_t id, const char *entity)
-{ return entity ? submit(id, NULL, entity, false, false, -1, NULL, NULL) : -EINVAL; }
+{ return entity ? submit(id, NULL, entity, false, false, -1, NULL, NULL, 0) : -EINVAL; }
 int hass_control(uint32_t id, const char *entity, bool on, int brightness)
-{ return entity ? submit(id, NULL, entity, true, on, brightness, NULL, NULL) : -EINVAL; }
+{ return entity ? submit(id, NULL, entity, true, on, brightness, NULL, NULL, 0) : -EINVAL; }
 int hass_call_service(uint32_t id, const char *entity, const char *service, const char *body)
-{ return entity && service && body ? submit(id, NULL, entity, true, false, -1, service, body) : -EINVAL; }
+{ return entity && service && body ? submit(id, NULL, entity, true, false, -1, service, body, 0) : -EINVAL; }
+
+int hass_control_checked(uint32_t id, const char *entity, bool on, int brightness,
+                         uint32_t configuration)
+{ return entity && configuration ? submit(id, NULL, entity, true, on, brightness, NULL, NULL, configuration) : -EINVAL; }
+int hass_call_service_checked(uint32_t id, const char *entity, const char *service,
+                              const char *body, uint32_t configuration)
+{ return entity && service && body && configuration ? submit(id, NULL, entity, true, false, -1, service, body, configuration) : -EINVAL; }
 
 int hass_poll(uint32_t id, struct hass_result_s *result)
 {

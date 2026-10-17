@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Bound for card JSON passed to the chat UI; it is never model-visible text. */
+#define ESP_QPK_CARD_TEXT 256
+
 static esp_err_t guide_context(const claw_core_request_t *request, claw_core_context_t *out, void *user)
 {
   (void)request; (void)user;
@@ -71,9 +74,29 @@ static esp_err_t call_tool(const char *name, const char *input, const claw_core_
   if (!cJSON_IsObject(args)) { cJSON_Delete(args); return fail(out, "invalid_arguments", "Arguments must be one complete JSON object."); }
   int handled=glass_agent_call(session->agent,name,args,out);
   if(handled){
+    const cJSON *server=cJSON_GetObjectItemCaseSensitive(args,"server");
+    const cJSON *tool=cJSON_GetObjectItemCaseSensitive(args,"tool");
+    bool local_card=!strcmp(name,"mcp_call_tool")&&cJSON_IsString(server)&&
+      !strcmp(server->valuestring,"board")&&cJSON_IsString(tool)&&
+      (!strncmp(tool->valuestring,"home_",5)||!strncmp(tool->valuestring,"music_",6));
     cJSON_Delete(args);if(handled<0)return ESP_ERR_NO_MEM;
     cJSON *extension=cJSON_Parse(*out);
     bool failed=!extension||cJSON_GetObjectItemCaseSensitive(extension,"error")||cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(extension,"isError"));
+    if(!failed&&local_card){
+      /* Device results carry a display card for the chat dialog. It travels as
+       * a stream event for the UI and is stripped from the model-visible text. */
+      cJSON *card=cJSON_GetObjectItemCaseSensitive(extension,"card");
+      if(cJSON_IsObject(card)){
+        char *text=cJSON_PrintUnformatted(card);
+        if(text){
+          if(strlen(text)<=ESP_QPK_CARD_TEXT)claw_stream_emit(CLAW_STREAM_CARD,text);
+          free(text);
+          cJSON_DeleteItemFromObjectCaseSensitive(extension,"card");
+          char *trimmed=cJSON_PrintUnformatted(extension);
+          if(trimmed){free(*out);*out=trimmed;}
+        }
+      }
+    }
     cJSON_Delete(extension);return failed?ESP_FAIL:ESP_OK;
   }
   if (!strcmp(name, "qpk_list_examples") && cJSON_GetArraySize(args) == 0) *out = glass_qpk_list_examples();
@@ -102,7 +125,7 @@ void claw_qpk_configure(claw_core_config_t *config, struct claw_qpk_session *ses
   session->agent=glass_agent_create(session->cancel,session->mode);
   config->supports_tools = session->agent && session->mode != AGENT_MODE_CHAT;
   config->call_cap = call_tool; config->cap_user_ctx = session;
-  config->max_tool_iterations = 8;
+  config->max_tool_iterations = session->mode == AGENT_MODE_ASSISTANT ? 16 : 8;
   if (config->max_context_providers < 3) config->max_context_providers = 3;
   /* A complete tool argument needs more space than a short chat answer.
    * This is a request budget; the stored provider configuration is untouched. */

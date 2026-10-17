@@ -14,10 +14,12 @@ globalThis.__audioKind='list';
 globalThis.__clips=[{clip:'rec_000001',durationMs:12500,fileBytes:400044,valid:true},{clip:'rec_000002',durationMs:32000,fileBytes:1024044,valid:true}];
 globalThis.__recording=false;
 globalThis.__cameraState={busy:false,error:0,running:false};
+globalThis.__cameraRecording={status:0,revision:0,video:false,path:''};
 globalThis.system={
  yield:()=>({then:resolve=>__reviewDeferred.push(resolve)}),
  storage:{get:()=>null,set(){},delete(){}},
  camera:{devices:()=>__devices,status:()=>__cameraState,frames:()=>0,
+   recordStatus:()=>__cameraRecording,setVideoMode:video=>{__cameraRecording.video=video;return true;},
    modes:()=>[{width:640,height:480,format:'MJPEG',fourcc:1196444237,intervals:[666666,1000000],defaultInterval:666666,continuous:false}],
    start(){__cameraState={busy:true,running:true,error:0};return 0;},stop(){__cameraState={busy:false,running:false,error:0};return 0;},photo:()=>({status:0,path:''}),preview:__nativePreview},
  espdl:{preview:__nativePreview,clear(){},cancel(){},status:()=>({busy:false,stage:0,preview:false,frame:0}),start:()=>1,render:()=>true},

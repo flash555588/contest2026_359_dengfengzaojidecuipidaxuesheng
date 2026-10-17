@@ -419,7 +419,11 @@ static int play_stream(struct music_song *song, unsigned generation)
     pthread_mutex_lock(&lock);
     bool pause = want_pause; unsigned desired_volume = state.volume;
     pthread_mutex_unlock(&lock);
-    if (pause != paused) { ret = music_pcm_pause(&pcm, pause); if (ret) break; paused = pause; }
+    if (pause != paused) {
+      /* A pause may arrive while the track is still loading, before PCM open. */
+      if (pcm.fd >= 0) { ret = music_pcm_pause(&pcm, pause); if (ret) break; }
+      paused = pause;
+    }
     if (paused) { usleep(20000); continue; }
     pthread_mutex_lock(&s.mutex);
     if (!prefilled && s.used < PREFILL && !s.done) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
@@ -613,6 +617,20 @@ void glass_music_toggle(void)
     pthread_cond_broadcast(&wake);
   }
   pthread_mutex_unlock(&lock);
+}
+
+int glass_music_set_paused(bool paused)
+{
+  pthread_mutex_lock(&lock);
+  if (state.state != MUSIC_PLAYING && state.state != MUSIC_PAUSED && state.state != MUSIC_LOADING) {
+    pthread_mutex_unlock(&lock); return -ENOENT;
+  }
+  want_pause = paused;
+  if (state.state != MUSIC_LOADING) state.state = paused ? MUSIC_PAUSED : MUSIC_PLAYING;
+  state.revision++;
+  pthread_cond_broadcast(&wake);
+  pthread_mutex_unlock(&lock);
+  return 0;
 }
 
 void glass_music_stop(void)

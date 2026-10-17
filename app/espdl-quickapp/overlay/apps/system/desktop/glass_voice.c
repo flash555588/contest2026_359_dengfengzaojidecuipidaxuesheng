@@ -462,9 +462,10 @@ static int ws_wait_start(struct voice_ws *ws)
     int ret=ws_receive(ws,left>250?250:left);
     if(ret<0) return ret;
   }
-  return ws->started?0:ws->failed?-EACCES:-ECONNRESET;
+  return atomic_load(&voice_stop)?-ECANCELED:ws->started?0:ws->failed?-EACCES:-ECONNRESET;
 }
 
+#define VOICE_CAPTURE_CANCELLED() atomic_load(&voice_stop)
 #include "glass_voice_capture.inc"
 
 static enum glass_voice_error connect_error(int ret)
@@ -482,14 +483,18 @@ static void *voice_worker(void *argument)
   int ret=voice_path(config,path,sizeof(path));
   memset(config,0,sizeof(*config));
   free(config);
+  if(atomic_load(&voice_stop)){memset(path,0,sizeof(path));voice_finish(GLASS_VOICE_ERROR_NONE,"");return NULL;}
   if(ret) { voice_finish(connect_error(ret),NULL); return NULL; }
   struct voice_ws ws;
   ret=ws_open(&ws,path);
   memset(path,0,sizeof(path));
   if(ret) { voice_finish(connect_error(ret),NULL); return NULL; }
   ret=ws_wait_start(&ws);
-  if(ret) {
+  if(ret||atomic_load(&voice_stop)) {
+    if(ret&&!atomic_load(&voice_stop))
+      printf("[voice] start failed ret=%d service_code=%d\n",ret,ws.service_code);
     enum glass_voice_error error=ws.failed?GLASS_VOICE_ERROR_AUTH:connect_error(ret);
+    if(atomic_load(&voice_stop))error=GLASS_VOICE_ERROR_NONE;
     ws_close(&ws); voice_finish(error,NULL); return NULL;
   }
   struct voice_capture capture;
@@ -497,7 +502,7 @@ static void *voice_worker(void *argument)
   if(ret) {
     capture_close(&capture);
     ws_close(&ws);
-    voice_finish(ret==-ENOMEM?GLASS_VOICE_ERROR_MEMORY:GLASS_VOICE_ERROR_AUDIO,NULL);
+    voice_finish(ret==-ECANCELED?GLASS_VOICE_ERROR_NONE:ret==-ENOMEM?GLASS_VOICE_ERROR_MEMORY:GLASS_VOICE_ERROR_AUDIO,NULL);
     return NULL;
   }
   voice_publish(GLASS_VOICE_LISTENING,"",0);

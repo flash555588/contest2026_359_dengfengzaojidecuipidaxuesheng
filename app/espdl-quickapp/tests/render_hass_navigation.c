@@ -36,7 +36,13 @@ int main(int argc,char **argv)
         "{entity_id:'script.sleep',state:'off',attributes:{friendly_name:'睡眠脚本'}},"
         "{entity_id:'sensor.room',state:'24.5',attributes:{friendly_name:'室温',device_class:'temperature',unit_of_measurement:'C'}}];"
         "ESPHomeHA.refresh();for(let i=0;i<70;i++)__reviewTick();")==0);
-      assert(qpk_review_click_at(60,181)==0);
+      lv_area_t content_area;
+      qpk_review_root_area(&content_area);
+      lv_area_t page_area;
+      lv_obj_get_coords(g_desktop.current_card,&page_area);
+      assert(content_area.y1==page_area.y1&&content_area.y2==page_area.y2);
+      review_capture(display,"ha-overview","米家 · 紧凑顶部");
+      assert(qpk_review_click_at(60,230)==0);
       assert(qpk_review_eval("for(let i=0;i<35;i++)__reviewTick();if(ESPHomeHA.snapshot().nav!=='scenes'||ESPHomeHA.snapshot().layoutPages[0].length!==2)throw Error('scene navigation failed')")==0);
       review_capture(display,"ha-scenes","场景");
       check_visible_icons(g_desktop.screen,0);
@@ -44,14 +50,18 @@ int main(int argc,char **argv)
       assert(qpk_review_click_at((int)qpk_review_number("__row.x+__row.w/2"),(int)qpk_review_number("__row.y+__row.h-24"))==0);
       assert(qpk_review_eval("for(let i=0;i<35;i++)__reviewTick();if(!ESPHomeHA.snapshot().functionControls.some(s=>s.service==='turn_on'))throw Error('scene execution missing')")==0);
       review_capture(display,"ha-scene-detail","场景详情");check_visible_icons(g_desktop.screen,0);
-      assert(qpk_review_click_at(60,227)==0);
+      assert(qpk_review_click_at(60,282)==0);
       assert(qpk_review_eval("for(let i=0;i<35;i++)__reviewTick();if(ESPHomeHA.snapshot().nav!=='logs'||!ESPHomeHA.snapshot().activityLog.length)throw Error('log navigation failed')")==0);
       review_capture(display,"ha-logs","日志");
       check_visible_icons(g_desktop.screen,0);
-      assert(qpk_review_click_at(60,135)==0);
+      assert(qpk_review_click_at(60,178)==0);
       assert(qpk_review_eval("for(let i=0;i<35;i++)__reviewTick();if(!ESPHomeHA.snapshot().layoutPages.flat().some(row=>row.entity_id==='sensor.room'))throw Error('sensor lost')")==0);
       review_capture(display,"ha-devices","设备");
       check_visible_icons(g_desktop.screen,0);
+      lv_obj_t *back_label=review_label_find(g_desktop.current_card,"返回");
+      assert(back_label);
+      lv_obj_send_event(lv_obj_get_parent(back_label),LV_EVENT_CLICKED,NULL);
+      assert(!qpk_runtime_running());
       panel_hide(NULL);
     }
   fputs("\n]\n",review_manifest);fclose(review_manifest);

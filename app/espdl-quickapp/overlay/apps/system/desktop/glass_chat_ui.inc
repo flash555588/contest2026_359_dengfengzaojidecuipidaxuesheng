@@ -6,18 +6,55 @@
 #include "qpk_espdl.h"
 #include "glass_chat_markup.h"
 #define CHAT_OUTPUT_PARTS 24
+#define CHAT_CONTENT_HEIGHT (lv_display_get_vertical_resolution(NULL))
+
+/* Keep the app edge-to-edge and restore desktop geometry on every exit. */
+static struct {
+  bool active,status_hidden;
+  int screen_x,screen_y,screen_w,screen_h,panel_x,panel_y,panel_w,panel_h;
+} chat_display;
+
+static void chat_display_restore(void)
+{
+  if(!chat_display.active)return;
+  chat_display.active=false;
+  lv_obj_set_pos(g_desktop.screen,chat_display.screen_x,chat_display.screen_y);
+  lv_obj_set_size(g_desktop.screen,chat_display.screen_w,chat_display.screen_h);
+  lv_obj_set_pos(g_desktop.panel,chat_display.panel_x,chat_display.panel_y);
+  lv_obj_set_size(g_desktop.panel,chat_display.panel_w,chat_display.panel_h);
+  if(g_desktop.statusbar&&!chat_display.status_hidden)
+    lv_obj_remove_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN);
+}
+
+static void chat_display_expand(void)
+{
+  lv_obj_update_layout(g_desktop.screen);
+  chat_display.screen_x=lv_obj_get_x(g_desktop.screen);chat_display.screen_y=lv_obj_get_y(g_desktop.screen);
+  chat_display.screen_w=lv_obj_get_width(g_desktop.screen);chat_display.screen_h=lv_obj_get_height(g_desktop.screen);
+  chat_display.panel_x=lv_obj_get_x(g_desktop.panel);chat_display.panel_y=lv_obj_get_y(g_desktop.panel);
+  chat_display.panel_w=lv_obj_get_width(g_desktop.panel);chat_display.panel_h=lv_obj_get_height(g_desktop.panel);
+  chat_display.status_hidden=!g_desktop.statusbar||lv_obj_has_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN);
+  chat_display.active=true;
+  lv_obj_set_pos(g_desktop.screen,0,0);
+  lv_obj_set_size(g_desktop.screen,lv_display_get_horizontal_resolution(NULL),CHAT_CONTENT_HEIGHT);
+  lv_obj_set_pos(g_desktop.panel,0,0);
+  lv_obj_set_size(g_desktop.panel,lv_display_get_horizontal_resolution(NULL),CHAT_CONTENT_HEIGHT);
+  if(g_desktop.statusbar)lv_obj_add_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN);
+}
 struct chat_output_part {lv_obj_t *root,*text,*caption,*numbers,*viewport;bool code,rich;uint32_t signature;};
 
-enum chat_ball_phase {BALL_IDLE,BALL_LISTEN,BALL_REPLY,BALL_SPEAK,BALL_DRAIN};
+enum chat_ball_phase {BALL_IDLE,BALL_LISTEN,BALL_REPLY,BALL_SPEAK,BALL_DRAIN,BALL_WAKE,BALL_WAKE_DELAY};
 enum chat_ball_wave {BALL_WAVE_OFF,BALL_WAVE_LISTEN,BALL_WAVE_THINK,BALL_WAVE_SPEAK};
 enum {CHAT_WORKSPACE_LEFT=196,CHAT_WORKSPACE_WIDTH=808,
       CHAT_WORKSPACE_CENTER=CHAT_WORKSPACE_LEFT+CHAT_WORKSPACE_WIDTH/2};
 static struct {
   bool voice_session,voice_owned,speech_owned,voice_heard,voice_wave_reduced;
+  bool voice_wake_mode;
+  uint32_t voice_wake_request,voice_listen_at;
   enum chat_ball_phase voice_phase;
   uint32_t voice_revision,voice_started,voice_last_sound,voice_ready_at,voice_turn;
   size_t speech_cursor;
-  lv_obj_t *voice_hint,*voice_caption,*voice_end;
+  lv_obj_t *voice_hint,*voice_caption,*voice_end,*voice_wake_label;
   lv_obj_t *voice_waveform;
   lv_obj_t *voice_face_label;
   uint32_t voice_face_request,voice_face_frame,voice_face_seen;
@@ -39,6 +76,10 @@ static struct {
   struct chat_output_part live_parts[CHAT_OUTPUT_PARTS];
   lv_obj_t *trace_root,*trace_button,*trace_details;
   bool trace_expanded;
+  lv_obj_t *cards_root;
+  int cards_h;
+  unsigned drawn_cards;
+  uint32_t drawn_cards_signature;
   unsigned live_count;
   int live_y,trace_y;
   unsigned drawn_revision;
@@ -167,7 +208,7 @@ static void chat_ui_save_app(lv_event_t *e)
 {
   LV_UNUSED(e);
   if (!g_chat_ui.root || g_chat_ui.snapshot->phase != CHAT_IDLE || g_chat_ui.confirm) return;
-  lv_obj_t *shade=glass_box(g_chat_ui.root,0,0,1024,GLASS_CONTENT_HEIGHT,0x000000,0);
+  lv_obj_t *shade=glass_box(g_chat_ui.root,0,0,1024,CHAT_CONTENT_HEIGHT,0x000000,0);
   lv_obj_set_style_bg_opa(shade,LV_OPA_60,0);g_chat_ui.confirm=shade;
   lv_obj_t *card=glass_box(shade,252,150,520,300,g_chat_ui.background,20);
   chat_ui_text(card,"选择安装位置",28,26,464,28,g_chat_ui.primary,false);
@@ -212,6 +253,7 @@ static lv_obj_t *chat_ui_button(lv_obj_t *parent, const char *text, int x, int y
 }
 
 #include "glass_chat_trace.inc"
+#include "glass_chat_cards.inc"
 
 static bool chat_ui_busy(void)
 { return g_chat_ui.snapshot->phase != CHAT_IDLE; }
@@ -275,7 +317,7 @@ static void chat_ui_editor_open(lv_event_t *e)
 {
   LV_UNUSED(e);
   if (g_chat_ui.editor) return;
-  lv_obj_t *editor = glass_box(g_chat_ui.root, 168, 0, 856, GLASS_CONTENT_HEIGHT, g_chat_ui.background, 0);
+  lv_obj_t *editor = glass_box(g_chat_ui.root, 168, 0, 856, CHAT_CONTENT_HEIGHT, g_chat_ui.background, 0);
   g_chat_ui.editor = editor;
   chat_ui_text(editor, g_chat_ui.mode==AGENT_MODE_CHAT?"写下消息":"描述任务", 26, 28, 430, 28, g_chat_ui.primary, false);
   chat_ui_button(editor, "收起", 624, 23, 88, 46, false, chat_ui_editor_close, NULL);
@@ -309,7 +351,7 @@ static void chat_ui_editor_open(lv_event_t *e)
   lv_obj_set_size(g_chat_ui.keyboard, 824, 244);
   /* lv_keyboard starts bottom-aligned; coordinates alone would move it
    * below the screen. Fix the alignment before attaching the candidate bar. */
-  lv_obj_align(g_chat_ui.keyboard, LV_ALIGN_TOP_LEFT, 16, GLASS_CONTENT_HEIGHT-260);
+  lv_obj_align(g_chat_ui.keyboard, LV_ALIGN_TOP_LEFT, 16, CHAT_CONTENT_HEIGHT-260);
   lv_keyboard_set_mode(g_chat_ui.keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
   lv_keyboard_set_textarea(g_chat_ui.keyboard, g_chat_ui.input);
   glass_ime_attach(g_chat_ui.keyboard, zh_font(20), true,
@@ -366,7 +408,7 @@ static void chat_ui_archive_open(lv_event_t *e)
   int error = glass_chat_page_request(name, 0);
   if (error) { free(p); show_toast("暂时无法读取完整回复"); return; }
   g_chat_ui.archive_page = p; snprintf(g_chat_ui.archive_name, sizeof(g_chat_ui.archive_name), "%s", name);
-  int panel_height=GLASS_CONTENT_HEIGHT-88;
+  int panel_height=CHAT_CONTENT_HEIGHT-88;
   lv_obj_t *panel = glass_box(g_chat_ui.root, 244, 64, 760, panel_height, g_chat_ui.background, 16);
   g_chat_ui.archive_panel = panel;
   g_chat_ui.archive_status = chat_ui_text(panel, "正在读取完整回复…", 20, 14, 680, 18, g_chat_ui.primary, false);
@@ -401,6 +443,7 @@ static void chat_ui_messages(void)
   lv_obj_clean(g_chat_ui.messages); g_chat_ui.waiting = g_chat_ui.live_bubble = g_chat_ui.live_reasoning = NULL;
   g_chat_ui.live_count = 0;memset(g_chat_ui.live_parts,0,sizeof(g_chat_ui.live_parts));
   g_chat_ui.trace_root=g_chat_ui.trace_button=g_chat_ui.trace_details=NULL;
+  g_chat_ui.cards_root=NULL;g_chat_ui.cards_h=0;
   if(!s->count||g_chat_ui.drawn_id!=s->turns[s->count-1].id)g_chat_ui.trace_expanded=false;
   if (!s->count) {
     chat_ui_text(g_chat_ui.messages, g_chat_ui.mode==AGENT_MODE_CREATE?"让想法开始运行。":g_chat_ui.mode==AGENT_MODE_ASSISTANT?"有什么任务交给我？":"想聊些什么？", 16, 76, CHAT_WORKSPACE_WIDTH, 28, g_chat_ui.primary, false);
@@ -440,11 +483,15 @@ static void chat_ui_messages(void)
       if (t->state == CHAT_DONE) {
         if(i==s->count-1&&t->tool_count){
           chat_ui_trace_create(t,y);
+          chat_ui_cards_attach(t);
           g_chat_ui.live_bubble=glass_box(g_chat_ui.messages,96,g_chat_ui.live_y,700,0,g_chat_ui.background,0);
           lv_obj_remove_flag(g_chat_ui.live_bubble,LV_OBJ_FLAG_CLICKABLE);
           y=g_chat_ui.live_y+chat_ui_chunks(g_chat_ui.live_bubble,t->reply,700,g_chat_ui.primary,false)+22;
           g_chat_ui.ball_anchor=g_chat_ui.live_bubble;
-        }else y = chat_ui_bubble(t->reply, y, false);
+        }else {
+          y = chat_ui_bubble(t->reply, y, false);
+          y = chat_ui_cards_inline(t, y);
+        }
         if (t->clipped) {
           if (t->archive[0]) {
             chat_ui_button(g_chat_ui.messages, "阅读完整回复", 8, y, 188, 42, false, chat_ui_archive_open, (void *)t->archive);
@@ -457,6 +504,7 @@ static void chat_ui_messages(void)
         if (t->output_limited) { chat_ui_text(g_chat_ui.messages, "已达到本次输出 Token 上限，可调整设置后继续。", 12, y, 704, 16, g_chat_ui.secondary, true); y += 38; }
       } else if (t->state == CHAT_WAITING) {
         chat_ui_trace_create(t,y);
+        chat_ui_cards_attach(t);
         g_chat_ui.live_bubble=glass_box(g_chat_ui.messages,96,g_chat_ui.live_y,700,0,g_chat_ui.background,0);
         lv_obj_remove_flag(g_chat_ui.live_bubble,LV_OBJ_FLAG_CLICKABLE);
         y=g_chat_ui.live_y+chat_ui_chunks(g_chat_ui.live_bubble,t->reply,700,g_chat_ui.primary,true)+22;
@@ -466,6 +514,7 @@ static void chat_ui_messages(void)
         if (t->archive[0]) { chat_ui_button(g_chat_ui.messages, "阅读已收到的内容", 8, y, 220, 42, false, chat_ui_archive_open, (void *)t->archive); y += 52; }
         const char *text = t->state == CHAT_CANCELLED ? "已停止这次回复。" : glass_chat_error_text(t->error);
         y = chat_ui_bubble(text, y, false);
+        y = chat_ui_cards_inline(t, y);
         if (i == s->count - 1) {
           chat_ui_button(g_chat_ui.messages, "重新发送", 8, y - 6, 128, 42, false, chat_ui_retry, NULL);
           y += 52;
@@ -480,6 +529,8 @@ static void chat_ui_messages(void)
   g_chat_ui.drawn_revision = s->revision; g_chat_ui.drawn_count = s->count;
   g_chat_ui.drawn_id = s->count ? s->turns[s->count - 1].id : 0;
   g_chat_ui.drawn_state = s->count ? s->turns[s->count - 1].state : CHAT_DONE;
+  g_chat_ui.drawn_cards = s->count ? s->turns[s->count - 1].card_count : 0;
+  g_chat_ui.drawn_cards_signature = s->count ? chat_ui_cards_signature(&s->turns[s->count - 1]) : 0;
 }
 
 static void chat_ui_live(void)
@@ -533,7 +584,7 @@ static void chat_ui_discard(lv_event_t *e)
   if (g_chat_ui.confirm) return;
   struct qpk_draft_info app; glass_qpk_get(&app);
   if (app.busy) { show_toast("正在处理草稿，请稍后重试"); return; }
-  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, GLASS_CONTENT_HEIGHT, 0x000000, 0);
+  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, CHAT_CONTENT_HEIGHT, 0x000000, 0);
   lv_obj_set_style_bg_opa(shade, LV_OPA_60, 0); g_chat_ui.confirm = shade;
   lv_obj_t *card = glass_box(shade, 252, 166, 520, 268, g_chat_ui.background, 22);
   chat_ui_text(card, "放弃这个创意？", 28, 26, 464, 28, g_chat_ui.primary, false);
@@ -547,7 +598,7 @@ static void chat_ui_new(lv_event_t *e)
   LV_UNUSED(e);
   if (g_chat_ui.confirm) return;
   if (!g_chat_ui.snapshot->count) { chat_ui_editor_open(NULL); return; }
-  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, GLASS_CONTENT_HEIGHT, 0x000000, 0);
+  lv_obj_t *shade = glass_box(g_chat_ui.root, 0, 0, 1024, CHAT_CONTENT_HEIGHT, 0x000000, 0);
   lv_obj_set_style_bg_opa(shade, LV_OPA_60, 0); g_chat_ui.confirm = shade;
   lv_obj_t *card = glass_box(shade, 272, 178, 480, 242, g_chat_ui.background, 22);
   chat_ui_text(card, "开始新对话？", 28, 26, 424, 28, g_chat_ui.primary, false);
@@ -651,7 +702,9 @@ static void chat_ui_refresh(lv_timer_t *timer)
   if (s->revision != g_chat_ui.drawn_revision && !lv_obj_is_scrolling(g_chat_ui.messages)) {
     const struct chat_turn *last = s->count ? &s->turns[s->count - 1] : NULL;
     if (last && g_chat_ui.drawn_count == s->count && g_chat_ui.drawn_id == last->id &&
-        g_chat_ui.drawn_state == CHAT_WAITING && last->state == CHAT_WAITING) chat_ui_live();
+        g_chat_ui.drawn_state == CHAT_WAITING && last->state == CHAT_WAITING &&
+        g_chat_ui.drawn_cards == last->card_count &&
+        g_chat_ui.drawn_cards_signature == chat_ui_cards_signature(last)) chat_ui_live();
     else chat_ui_messages();
   }
   const char *status = !s->loaded ? "正在载入对话" : s->phase == CHAT_CLEARING ? "正在新建对话" :
@@ -681,6 +734,7 @@ static void chat_ui_refresh(lv_timer_t *timer)
 static void chat_ui_deleted(lv_event_t *e)
 {
   LV_UNUSED(e);
+  chat_display_restore();
   if(g_chat_ui.ball_mode)chat_ball_stop();
   if(g_chat_ui.voice_face_request)qpk_dl_cancel_request(g_chat_ui.voice_face_request);
   if(g_chat_ui.voice_wave_timer)lv_timer_delete(g_chat_ui.voice_wave_timer);
@@ -747,7 +801,7 @@ static void chat_ui_modes(lv_event_t *e)
 {
   LV_UNUSED(e);if(g_chat_ui.mode_panel)return;
   if(g_chat_ui.editor||g_chat_ui.voice_session){show_toast("请先结束输入或语音对话");return;}
-  lv_obj_t *shade=glass_box(g_chat_ui.root,0,0,1024,GLASS_CONTENT_HEIGHT,0x000000,0);
+  lv_obj_t *shade=glass_box(g_chat_ui.root,0,0,1024,CHAT_CONTENT_HEIGHT,0x000000,0);
   lv_obj_set_style_bg_opa(shade,LV_OPA_60,0);g_chat_ui.mode_panel=shade;
   lv_obj_t *box=glass_box(shade,282,100,460,370,g_chat_ui.background,22);
   chat_ui_text(box,"选择模式",24,20,412,24,g_chat_ui.primary,false);
@@ -770,6 +824,7 @@ static void glass_chat_show_mode(bool from_apps,bool ball_mode)
   g_chat_ui.ball_mode=ball_mode;g_chat_ui.mode=chat_interface_modes[ball_mode?1:0];
   g_chat_ui.snapshot = calloc(1, sizeof(*g_chat_ui.snapshot));
   if (!g_chat_ui.snapshot) { memset(&g_chat_ui, 0, sizeof(g_chat_ui)); panel_hide(NULL); show_toast("内存不足，暂时无法打开聊天"); return; }
+  chat_display_expand();
   g_desktop.chat_page = true; g_desktop.chat_return_apps = from_apps;
   bool light = g_desktop.light_theme;
   g_chat_ui.background = light ? 0xf5f7f7 : 0x151b21;
@@ -788,7 +843,7 @@ static void glass_chat_show_mode(bool from_apps,bool ball_mode)
     g_chat_ui.accent=light?0x292925:0xecebe6;
     g_chat_ui.on_accent=light?0xffffff:0x1c1c1a;
   }
-  lv_obj_set_pos(card, 0, 0); lv_obj_set_size(card, 1024, GLASS_CONTENT_HEIGHT);
+  lv_obj_set_pos(card, 0, 0); lv_obj_set_size(card, 1024, CHAT_CONTENT_HEIGHT);
   lv_obj_set_style_radius(card, 0, 0); lv_obj_set_style_border_width(card, 0, 0);
   lv_obj_set_style_bg_color(card, lv_color_hex(g_chat_ui.background), 0);
   lv_obj_add_event_cb(card, chat_ui_deleted, LV_EVENT_DELETE, NULL);

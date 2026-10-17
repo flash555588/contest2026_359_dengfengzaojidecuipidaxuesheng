@@ -18,7 +18,12 @@ esp_err_t claw_core_add_context_provider(claw_core_handle_t core,const claw_core
   }
   free(context.content);providers++;return ESP_OK;
 }
-void claw_stream_emit(enum claw_stream_kind kind,const char *text){assert(kind==CLAW_STREAM_TOOL&&text);events++;}
+static char last_card[256];static unsigned card_events;
+void claw_stream_emit(enum claw_stream_kind kind,const char *text)
+{
+  if(kind==CLAW_STREAM_CARD){assert(text&&*text&&strlen(text)<sizeof(last_card));strcpy(last_card,text);card_events++;return;}
+  assert(kind==CLAW_STREAM_TOOL&&text);events++;
+}
 const char *glass_qpk_guide(void){return "Validated quick app guide";}
 const char *glass_qpk_tools(void){return "[{\"type\":\"function\",\"function\":{\"name\":\"qpk_write_draft\"}}]";}
 char *glass_qpk_list_examples(void){return strdup("{\"ok\":true}");}
@@ -27,6 +32,20 @@ char *glass_qpk_read_example(const char *e,const char *f,unsigned start,unsigned
 char *glass_qpk_write_draft(const char *text,atomic_bool *cancel){(void)cancel;assert(strlen(text)>AGENT_TOOL_BYTES);legacy_called=true;return strdup("{\"ok\":true}");}
 int portal_agent_load(cJSON **out){*out=cJSON_Parse(saved_config?saved_config:"{\"skills_enabled\":1,\"mcp1_enabled\":1,\"mcp1_url\":\"https://mcp.example/mcp\"}");return *out?0:-1;}
 int glass_mcp_http_perform(struct glass_mcp_http *r){(void)r;assert(!"No MCP endpoint configured: must not connect");return -1;}
+/* The desktop build registers the real smart home provider at this hook. */
+static const char fake_home_catalog[]=
+  "{\"name\":\"home_test\",\"description\":\"Fixture card tool.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
+  "{\"name\":\"home_status\",\"description\":\"Fixture status tool.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}}";
+static char *fake_home_call(const char *tool,const cJSON *args,atomic_bool *cancel)
+{
+  (void)args;(void)cancel;
+  if(!strcmp(tool,"home_test"))return strdup("{\"ok\":true,\"entity\":\"light.desk\",\"card\":{\"kind\":\"light\",\"name\":\"书桌灯\",\"state\":\"已开启\",\"level\":80,\"on\":true}}");
+  if(!strcmp(tool,"music_test"))return strdup("{\"ok\":true,\"accepted\":true,\"card\":{\"entity\":\"music.player\",\"kind\":\"music\",\"name\":\"测试歌曲\",\"state\":\"已请求播放\",\"level\":-1,\"on\":false}}");
+  if(!strcmp(tool,"home_status"))return strdup("{\"ok\":true,\"configured\":true}");
+  return strdup("{\"ok\":false,\"error\":\"fixture_failure\"}");
+}
+static const struct glass_board_home fake_home={fake_home_catalog,fake_home_call};
+static const struct glass_board_home fake_music={"{\"name\":\"music_test\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}}}",fake_home_call};
 int main(void)
 {
   atomic_bool cancel=false;struct claw_qpk_session session={.cancel=&cancel};claw_core_config_t config={0};
@@ -56,5 +75,20 @@ int main(void)
     }
     claw_qpk_close(&session);
   }
-  puts("AGENT_BRIDGE_OK: real core context/tool callbacks; skill calls; cancellation; existing large QPK arguments preserved; cleanup");return 0;
+  /* Board smart home tools: cards leave as stream events, stripped from text. */
+  glass_agent_set_board_home(&fake_home);
+  glass_agent_set_board_music(&fake_music);
+  session.mode=AGENT_MODE_ASSISTANT;memset(&config,0,sizeof(config));
+  claw_qpk_configure(&config,&session);assert(session.agent);
+  assert(config.call_cap("mcp_list_tools","{\"server\":\"board\"}",NULL,&out,config.cap_user_ctx)==ESP_OK);
+  assert(strstr(out,"home_test")&&strstr(out,"home_status")&&strstr(out,"music_test"));free(out);
+  assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"home_test\",\"arguments\":{}}",NULL,&out,config.cap_user_ctx)==ESP_OK);
+  assert(card_events==1&&strstr(last_card,"\"kind\":\"light\"")&&strstr(last_card,"书桌灯"));
+  assert(!strstr(out,"card")&&strstr(out,"\"ok\":true"));free(out);
+  assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"home_broken\",\"arguments\":{}}",NULL,&out,config.cap_user_ctx)==ESP_FAIL);
+  assert(card_events==1&&strstr(out,"fixture_failure"));free(out);
+  assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"music_test\",\"arguments\":{}}",NULL,&out,config.cap_user_ctx)==ESP_OK);
+  assert(card_events==2&&strstr(last_card,"\"kind\":\"music\"")&&!strstr(out,"card"));free(out);
+  glass_agent_set_board_music(NULL);glass_agent_set_board_home(NULL);claw_qpk_close(&session);
+  puts("AGENT_BRIDGE_OK: real core context/tool callbacks; skill calls; cancellation; existing large QPK arguments preserved; board card events; cleanup");return 0;
 }

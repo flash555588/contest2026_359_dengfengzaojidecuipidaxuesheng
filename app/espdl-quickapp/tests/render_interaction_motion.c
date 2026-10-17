@@ -57,6 +57,7 @@ int main(int argc,char **argv)
   lv_obj_add_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN);
   char path[1024];snprintf(path,sizeof(path),"%s/screens.json",review_out);
   review_manifest=fopen(path,"w");assert(review_manifest);fputs("[\n",review_manifest);
+  glass_status_create();
   for(unsigned theme=0;theme<2;theme++){
     g_desktop.light_theme=theme==0;g_glass.reduced_motion=false;
     glass_rebuild();motion_frames(display,"home-enter",18);
@@ -68,34 +69,25 @@ int main(int argc,char **argv)
     assert(g_desktop.apps_page&&g_desktop.current_card);
     assert(lv_obj_get_style_translate_y(g_desktop.current_card,0)==0);
     review_capture(display,"motion-apps","应用页静态布局");
-    glass_status_expand(NULL);assert(g_status_ui.sheet&&g_status_ui.sheet_card);
-    fluid_frames(display,"status-open",14);
-    lv_obj_t *sheet=g_status_ui.sheet;
-    glass_status_dismiss(NULL);fluid_frames(display,"status-close-interrupted",2);
-    glass_status_expand(NULL);assert(g_status_ui.sheet==sheet&&!g_status_ui.closing);
-    fluid_frames(display,"status-reopen",14);assert(g_status_ui.sheet==sheet);
-    glass_status_dismiss(NULL);fluid_frames(display,"status-close",10);
-    assert(!g_status_ui.sheet&&!g_status_ui.sheet_card);
-    glass_status_expand(NULL);lv_obj_delete(g_status_ui.sheet);
-    assert(!g_status_ui.sheet&&!g_status_ui.sheet_card);
-    glass_motion_set_reduced(true);glass_status_expand(NULL);
-    assert(g_status_ui.sheet&&lv_obj_get_style_translate_y(g_status_ui.sheet_card,0)==0);
-    glass_status_dismiss(NULL);assert(!g_status_ui.sheet);glass_motion_set_reduced(false);
+    assert(!lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_CLICKABLE));
+    unsigned top_children=lv_obj_get_child_count(lv_layer_top());
+    lv_obj_send_event(g_status_ui.bar,LV_EVENT_CLICKED,NULL);
+    assert(lv_obj_get_child_count(lv_layer_top())==top_children);
     lv_obj_t *apps_card=g_apps_card,*apps_pager=g_apps_pager;
     glass_apps_page(NULL,1);assert(g_apps_card==apps_card&&g_apps_pager==apps_pager);
     fluid_frames(display,"apps-page-next",18);
     glass_apps_page(NULL,0);assert(g_apps_card==apps_card&&g_apps_pager==apps_pager);
     fluid_frames(display,"apps-page-back",18);
-    /* Real LVGL pointer dispatch: a short drag springs back; a committed drag closes. */
+    /* Real LVGL pointer dispatch: a short drag restores immediately; a committed drag closes on dispatch. */
     if(theme==0)glass_edge_back_create();
     lv_indev_t *pointer=lv_indev_create();lv_indev_set_type(pointer,LV_INDEV_TYPE_POINTER);
     lv_indev_set_display(pointer,display);lv_indev_set_read_cb(pointer,motion_pointer_read);
     motion_pointer(pointer,5,300,true);motion_pointer(pointer,45,300,true);
     assert(g_edge_tracking&&lv_obj_get_style_translate_x(apps_card,0)>0);
     fluid_frames(display,"edge-follow",2);motion_pointer(pointer,45,300,false);
-    fluid_frames(display,"edge-spring-back",12);assert(lv_obj_get_style_translate_x(apps_card,0)==0);
+    assert(lv_obj_get_style_translate_x(apps_card,0)==0);fluid_frames(display,"edge-spring-back",1);
     motion_pointer(pointer,5,300,true);motion_pointer(pointer,100,300,true);
-    motion_pointer(pointer,100,300,false);fluid_frames(display,"edge-commit",10);
+    motion_pointer(pointer,100,300,false);fluid_frames(display,"edge-commit",1);
     assert(!g_desktop.current_card&&!g_apps_card&&!g_apps_pager);
     glass_apps(NULL);fluid_frames(display,"apps-reopen",12);
     apps_card=g_apps_card;
@@ -168,7 +160,7 @@ int main(int argc,char **argv)
       assert(colors==0&&geometry==1); /* The same pill moves through every node. */
       bool paging=false;
       for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)if(g_motion_jobs[i].object&&g_motion_jobs[i].kind==MOTION_BATCH)paging=true;
-      assert(paging&&g_motion_batch_prop==LV_STYLE_TRANSLATE_X);
+      assert(!paging);
       fluid_frames(display,names[step],18);
       for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)assert(!g_motion_jobs[i].object);
     }
@@ -187,7 +179,7 @@ int main(int argc,char **argv)
     review_capture(display,"fluid-ha","流畅分页 · 最终布局");
     assert(qpk_review_eval("if(!ESPHomeHA.openDevice('http://192.168.1.88:8123','light.fluid_0'))throw Error('open lamp');for(let i=0;i<50;i++)__reviewTick()")==0);
     bool batch=false;for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)if(g_motion_jobs[i].object&&g_motion_jobs[i].kind==MOTION_BATCH)batch=true;
-    assert(batch);fluid_frames(display,"detail-open",18);
+    assert(!batch);fluid_frames(display,"detail-open",18);
     assert(qpk_review_eval("__haStates[0].attributes.effect='Night';ESPHomeHA.refresh();for(let i=0;i<40;i++)__reviewTick()")==0);
     bool optionFade=false;for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)if(g_motion_jobs[i].object&&g_motion_jobs[i].kind==MOTION_COLOR)optionFade=true;
     assert(optionFade);fluid_frames(display,"mode-selection",18);
@@ -203,10 +195,13 @@ int main(int argc,char **argv)
     assert(qpk_review_eval("for(let i=0;i<40;i++)__reviewTick()")==0);
     fluid_frames(display,"detail-return",18);
     review_capture(display,"expanded-ha","补全交互 · 最终布局");
-    assert(qpk_review_click_at(80,226)==0);assert(qpk_review_eval("for(let i=0;i<40;i++)__reviewTick()")==0);
-    bool navMoving=false;for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++)if(g_motion_jobs[i].object&&g_motion_jobs[i].kind==MOTION_RECT&&g_motion_jobs[i].target[0]==8&&g_motion_jobs[i].target[1]==208)navMoving=true;
-    assert(navMoving);fluid_frames(display,"sidebar-logs",18);
-    assert(qpk_review_click_at(80,88)==0);assert(qpk_review_eval("for(let i=0;i<40;i++)__reviewTick()")==0);
+    int nav_top=qpk_review_number("ui.getSize().height<480?64:104");
+    assert(qpk_review_click_at(80,nav_top+3*52+22)==0);
+    assert(qpk_review_eval("for(let i=0;i<40;i++)__reviewTick();if(ESPHomeHA.snapshot().nav!=='logs')throw Error('logs navigation failed')")==0);
+    int cursor_y=qpk_review_number("ESPHomeHA.snapshot().sidebarCursor.y");
+    assert(cursor_y==nav_top+3*52); /* The current sidebar snaps directly. */
+    fluid_frames(display,"sidebar-logs",18);
+    assert(qpk_review_click_at(80,nav_top+22)==0);assert(qpk_review_eval("for(let i=0;i<40;i++)__reviewTick();if(ESPHomeHA.snapshot().nav!=='overview')throw Error('overview navigation failed')")==0);
     fluid_frames(display,"sidebar-home",18);
     assert(qpk_review_eval(
       "__haStates=[{entity_id:'fan.purifier',state:'on',attributes:{friendly_name:'净化器',device_type:'air-purifier',supported_features:57,percentage:40,preset_modes:['auto','quiet'],preset_mode:'auto',miot_properties:{'environment.pm2.5-density':12,'air-purifier.filter-life-level':83}}}];"
@@ -248,6 +243,6 @@ int main(int argc,char **argv)
   lv_tiny_ttf_destroy(g_home_font12);lv_tiny_ttf_destroy(g_home_font14);lv_tiny_ttf_destroy(g_home_font32);
   lv_tiny_ttf_destroy(g_home_font34);lv_tiny_ttf_destroy(g_home_font40);lv_tiny_ttf_destroy(g_home_font64);
   lv_display_delete(display);lv_deinit();free(data);
-  puts("INTERACTION_UI_OK: sheet open/close/reopen/delete/reduced; sidebar/HA paging/options/filter; native edge pointer follow/cancel/commit/destruction; pooled apps/pager; HA detail/range/wheel/power/return; stale conversions; both themes; press/release; apps/settings/dialog/toast/quickapp; reduced motion; immediate cancellation");
+  puts("INTERACTION_UI_OK: passive status strip; sidebar/HA paging/options/filter; native edge pointer follow/cancel/commit/destruction; pooled apps/pager; HA detail/range/wheel/power/return; stale conversions; both themes; press/release; apps/settings/dialog/toast/quickapp; reduced motion; immediate cancellation");
   return 0;
 }

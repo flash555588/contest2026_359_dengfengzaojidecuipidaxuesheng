@@ -80,6 +80,7 @@
   let search = '';
   let selectedArea='',favoritesOnly=false,discoveryRevision=0,browseOpen=false,browsePage=0,browseUi=null;
   let detailExpanded=false;
+  let menuDrag=null,menuClickUntil=0;
   let page = 0;
   let settingsOpen = false;
   let detailOpen = false;
@@ -142,6 +143,7 @@
   let cardRenderCursor = 0,cardRenderOrder=[];
   let renderRunning = false;
   let renderAgain = false;
+  let windowRows=null,windowColumns=[];
   let detailBuilding = false;
 
   function sharedAdapter() {
@@ -1054,8 +1056,13 @@
   function deviceFunctions(){
     const card=currentDeviceCard(),ids=card&&card.device_entities||[selectedId];
     if(nav==='scenes'&&current())return [current()];
-    return ids.map(id=>indexedEntity(id)).filter(Boolean).sort((a,b)=>
-      Number(functionControls(b).length>0)-Number(functionControls(a).length>0));
+    const members=ids.map(id=>indexedEntity(id)).filter(Boolean);
+    if(members.length<2)return members;
+    // Stable partition: generate each member's descriptors once, with current
+    // grants/capabilities/state, and retain order within both groups.
+    const actions=[],readings=[];
+    for(const item of members)(functionControls(item).length?actions:readings).push(item);
+    return actions.concat(readings);
   }
   function functionControls(item){
     if(!item)return [];
@@ -1270,6 +1277,7 @@
   // 只用面板、文本和按钮，不做逐点/逐柱的装饰图形，控件数与原生版持平。
   // ------------------------------------------------------------------
   const SIDEBAR_W = 164, HEADER_H = 64, FOOTER_H = 54;
+  const sidebarStyle={pad:12,itemWidth:140,itemHeight:44,gap:8,radius:12,paper:dark?0x22252f:0xffffff,selected:dark?0x2e303d:0xf3f2f7,accent:dark?0xc1aedb:0x77658f,ink:dark?0xeeeef5:0x292c38};
   const GRID_X = SIDEBAR_W, GRID_Y = HEADER_H;
   const GRID_W = W - SIDEBAR_W;
   const MAIN_X = SIDEBAR_W + 14, MAIN_Y = HEADER_H + 16;
@@ -1296,7 +1304,8 @@
   function cancelInputs(consume=true){
     const active=!!quickDrag||!!lampWheelDrag||boardTouchActive;
     if(quickDrag&&quickDrag.group)quickDrag.group.renderKey='';
-    quickDrag=null;lampWheelDrag=null;boardTouchActive=false;boardPress=null;
+    if(menuDrag)menuClickUntil=steadyNow()+300;
+    quickDrag=null;lampWheelDrag=null;boardTouchActive=false;boardPress=null;menuDrag=null;
     boardLock(false);
     if(active){cardRenderKey='';detailRenderKey='';}
     if(consume&&active)quickGestureOwned=true;
@@ -1340,7 +1349,22 @@
   function boardWindow(rows){
     if(!WATERFALL)return rows;
     const top=HEADER_H+boardScroll,bottom=top+VIEW_H;
-    const candidates=rows.filter(row=>row.y+row.h>top-110&&row.y<bottom+110);
+    // A layout's rows are immutable and each column has non-overlapping,
+    // increasing vertical ranges. Rebuild only when the layout is replaced.
+    if(windowRows!==rows){
+      windowColumns=Array.from({length:CARD_COLS},()=>[]);
+      for(const row of rows)windowColumns[row.column].push(row);
+      windowRows=rows;
+    }
+    const candidates=[];
+    for(const column of windowColumns){
+      let low=0,high=column.length;
+      while(low<high){const mid=(low+high)>>>1,row=column[mid];
+        if(row.y+row.h<=top-110)low=mid+1;else high=mid;}
+      for(let index=low;index<column.length;index++){
+        const row=column[index];if(row.y>=bottom+110)break;candidates.push(row);
+      }
+    }
     candidates.sort((a,b)=>{
       const distance=row=>row.y+row.h<=top?top-row.y-row.h:row.y>=bottom?row.y-bottom:0;
       return distance(a)-distance(b)||a.y-b.y||a.x-b.x;
@@ -1381,6 +1405,19 @@
   /* One cache keeps a re-render cheap: only changed widgets reach the runtime. */
   const paint = Object.create(null);
   let loggedEntities = -1;
+
+  // Per-launch FIFO; cap both entry count and retained user text.
+  const textMetrics = new Map();
+  function measureTextCached(text,font) {
+    text=String(text);
+    if(text.length>128)return ui.measureText(text,font);
+    const key=font+'\u0000'+text;
+    if(textMetrics.has(key))return textMetrics.get(key);
+    const value=ui.measureText(text,font);
+    if(textMetrics.size>=64)textMetrics.delete(textMetrics.keys().next().value);
+    textMetrics.set(key,value);
+    return value;
+  }
 
   function pushText(id, text) {
     const key = 't' + id;
@@ -1448,6 +1485,7 @@
     const slot = { id: 0, target: null, signature: '' };
     slot.id = ui.button('', 0, 0, 4, 4, () => {
       const target = slot.target;
+      if(target&&target.section==='navigation'&&steadyNow()<menuClickUntil)return;
       if(WATERFALL&&target&&target.viewport){
         if(quickGestureOwned)return;
         if(boardPress&&(boardPress.generation!==generation||!target.card||!target.card.item||boardPress.entity!==target.card.item.entity_id||Math.abs(boardScroll-boardPress.scroll)>3))return;
@@ -1482,7 +1520,7 @@
       const style = active ? button.style : null;
       const signature = active ? [button.x, button.y, button.w, button.h, button.text,
         button.color, button.hidden ? 1 : 0, style.radius, style.borderWidth,
-        style.borderColor || 0, style.fontSize || 0, style.enabled === 0 ? 0 : 1].join('|') : 'off';
+        style.borderColor || 0, style.fontSize || 0, style.enabled === 0 ? 0 : 1,button.section==='navigation'?1:0].join('|') : 'off';
       if(WATERFALL){
         const parent=active&&button.viewport&&view==='list'?widgets.boardViewport:0;
         attachToBoard(slot.id,parent);
@@ -1500,7 +1538,7 @@
       pushSize(slot.id, button.w, button.h);
       pushText(slot.id, button.text);
       pushColor(slot.id, button.color);
-      pushStyle(slot.id, 'B', button.style);
+      pushStyle(slot.id, 'B', Object.assign({},button.style,{pressLock:button.section==='navigation'?1:0}));
       pushHidden(slot.id, button.hidden);
     }
   }
@@ -2602,27 +2640,27 @@
       H - GRID_Y - FOOTER_H - 36, pal.card, 10);
     initializeButtonPool();
     yield out;
-    out.sidebar = panel(0, 0, SIDEBAR_W, H, pal.card, 0);
-    out.brand = label('我的家', 20, 20, SIDEBAR_W - 36, 28, 22, pal.ink);
+    out.sidebar = panel(0, 0, SIDEBAR_W, H, sidebarStyle.paper, 0);
+    out.brand = label('我的家', 24, 30, SIDEBAR_W - 36, 28, 20, sidebarStyle.ink);
     const sections = [
       ['overview', '\u603b\u89c8', '\uf015'], ['devices', '\u8bbe\u5907', '\uf00b'],
       ['scenes', '场景', '\ue001'], ['logs', '日志', '\uf15b']
     ];
     sections.forEach((entry, index) => {
-      const y = 70 + index * 46;
+      const y = (H<480?64:104) + index * 52;
       const row = {
-        key: entry[0], panel: panel(8, y, SIDEBAR_W - 16, 38, pal.card, 8),
-        icon: label(entry[2], 22, y + 8, 24, 22, 17, pal.muted, true),
-        text: label(entry[1], 50, y + 8, SIDEBAR_W - 62, 22, 14, pal.ink)
+        key: entry[0], panel: panel(12, y, 140, 44, sidebarStyle.paper, 12),
+        icon: label(entry[2], 24, y + 11, 24, 22, 20, pal.muted, true),
+        text: label(entry[1], 54, y + 11, 98, 22, 14, sidebarStyle.ink)
       };
-      row.button = createButton('', 8, y, SIDEBAR_W - 16, 38,
-        () => selectSection(entry[0]), pal.card, { radius: 8, borderWidth: 0 });
+      row.button = createButton('', 12, y, 140, 44,
+        () => selectSection(entry[0]), sidebarStyle.paper, { radius: 12, borderWidth: 0 });
       row.button.section = 'navigation';
       out.menu.push(row);
     });
     for (let i = 0; i < 3; i++) out.stats.push({
-      dot: panel(18, 298 + i * 32, 9, 9, i === 0 ? pal.blue : pal.good, 5),
-      text: label('', 36, 293 + i * 32, SIDEBAR_W - 48, 20, 12, pal.muted)
+      dot: panel(18, Math.min(352,H-112) + 5 + i * 28, 9, 9, i === 0 ? pal.blue : pal.good, 5),
+      text: label('', 36, Math.min(352,H-112) + i * 28, SIDEBAR_W - 48, 20, 12, pal.muted)
     });
     out.note = label('设备状态自动同步', 16, H - 36,
       SIDEBAR_W - 28, 18, 11, pal.muted);
@@ -2849,7 +2887,7 @@
       paintDetailButton(button,caption(values[index],index),x+index*(width+gap),y,width,h,!actions&&values[index]===value,connected&&available(item)&&!layoutEditing);
       if(actions){
         const code={open_cover:'\uf077',stop_cover:'\uf04d',close_cover:'\uf078',media_previous_track:'\uf048',media_play:'\uf04b',media_pause:'\uf04c',media_next_track:'\uf051',start:'\uf04b',pause:'\uf04c',return_to_base:'\uf015'}[values[index].service];
-        if(code){const tw=typeof ui.measureText==='function'?ui.measureText(caption(values[index],index),font).width:caption(values[index],index).length*font;const offset=Math.max(2,(width-tw-25)/2);
+        if(code){const tw=typeof ui.measureText==='function'?measureTextCached(caption(values[index],index),font).width:caption(values[index],index).length*font;const offset=Math.max(2,(width-tw-25)/2);
           const glyph=detailExtra(button,'actionGlyph');detailIcon(glyph,code,button.x+offset,y,22,h,1,pal.ink);pushPos(button.caption,button.x+offset+25,y+(h-26)/2);pushSize(button.caption,Math.max(20,width-offset-27),26);pushStyle(button.caption,'L',{center:0});}
       }
     });
@@ -2999,6 +3037,7 @@
       owner.minusAction=()=>toggleItem(lookupEntity(item.entity_id));
     }
     const extras=deviceFunctions().filter(member=>member.entity_id!==item.entity_id);
+    if(!extras.length||lampAuxEntity!==item.entity_id&&(temperature||color||effect))hidePageIndicator(out.detailPager);
     if(extras.length){
       const sideControls=temperature||color||effect;
       if(sideControls)button(u.extra,lampAuxEntity===item.entity_id?'返回灯光配色':'其他设备功能',right,box.y+box.h-44,auxW,34,false);
@@ -3015,19 +3054,21 @@
         const k=Math.round(temperature.min+(temperature.max-temperature.min)*i/3);values.push({kelvin:k,color:[0xffaf59,0xffd2af,0xffebd6,0xfffdfa][i]});
       }
       if(color)for(const rgb of [[127,172,255],[215,150,255],[255,158,243],[255,110,84]])values.push({rgb,color:rgbColor(rgb)});
-      const d=Math.min(44,Math.floor((auxW-3*12)/4)),stride=d+12,sy=nextY+28;
+      const dense=H<520&&color&&typeof ui.colorWheel==='function';
+      const d=Math.min(dense?24:44,Math.floor((auxW-3*12)/4)),stride=d+(dense?8:12),sy=nextY+28;
+      const presetEnd=sy+Math.ceil(values.length/4)*stride-(dense?8:12)+8;
+      const directEffect=effect&&effect.options.length<=4&&effect.options.every(v=>fit(optionLabel(v),(auxW-6*(effect.options.length-1))/effect.options.length-12,14)===optionLabel(v));
+      const reserved=(effect?directEffect?78:54:12)+(extras.length?38:0);
       u.swatches.forEach((s,index)=>{
         const value=values[index];s.value=value;if(!value)return;
-        const x=right+index%4*stride,y=sy+Math.floor(index/4)*(d+12);
+        const x=right+index%4*stride,y=sy+Math.floor(index/4)*stride;
         const currentValue=temperature&&controlValue(item,temperature);
         const selected=value.rgb?validRgb(item.rgb_color)&&item.color_mode!=='color_temp'&&item.rgb_color.every((v,i)=>Math.abs(v-value.rgb[i])<8):item.color_mode!=='rgb'&&item.color_mode!=='hs'&&item.color_mode!=='xy'&&Math.abs(currentValue-value.kelvin)<60;
-        hide(s.face,false);pushPos(s.face,x,y);pushSize(s.face,d,d);pushColor(s.face,value.color);pushStyle(s.face,'S',{radius:Math.ceil(d/2),borderWidth:selected?2:0,borderColor:pal.blue});
+        hide(s.face,false);pushPos(s.face,x,y);pushSize(s.face,d,d);pushColor(s.face,value.color);pushStyle(s.face,'S',{radius:Math.ceil(d/2),borderWidth:selected?2:1,borderColor:selected?pal.blue:pal.track});
         button(s.button,'',x-2,y-2,d+4,d+4,false);s.button.style.radius=Math.ceil(d/2);
       });
-      nextY=sy+Math.ceil(values.length/4)*(d+12)-12+8;
+      nextY=presetEnd;
       if(color&&typeof ui.colorWheel==='function'){
-        const directEffect=effect&&effect.options.length<=4&&effect.options.every(v=>fit(optionLabel(v),(auxW-6*(effect.options.length-1))/effect.options.length-12,14)===optionLabel(v));
-        const reserved=(effect?directEffect?78:54:12)+(extras.length?38:0);
         const diameter=Math.max(64,Math.min(160,auxW-82,box.y+box.h-20-nextY-reserved-10));
         if(u.wheel===undefined){u.wheel=ui.colorWheel(right,nextY,Math.round(diameter));out.detailWidgets.push(u.wheel);}
         hide(u.wheel,false);pushPos(u.wheel,right,nextY);pushSize(u.wheel,Math.round(diameter),Math.round(diameter));
@@ -3039,7 +3080,7 @@
     }
     if(effect){
       const row=u.effectRow||(u.effectRow={});row.item=item;row.spec=effect;
-      if(renderDirectOptions(row,item,effect,right,nextY+32,auxW,detailDesign.buttonHeight)){
+      if(nextY+32+detailDesign.buttonHeight<=box.y+box.h-(extras.length?54:16)&&renderDirectOptions(row,item,effect,right,nextY+32,auxW,detailDesign.buttonHeight)){
         text(u.effectTitle,'灯光效果',right,nextY,auxW,26,detailDesign.label,pal.ink);
         if(typeof ui.front==='function')ui.front(u.effectTitle);
       }else{
@@ -3245,9 +3286,9 @@
         const shown=available(entity)?numeric?String(Number(raw)):String(spec.value):'--';
         detailText(valueLabel,shown+(spec.compact&&unit?' '+unit:''),x,ry,w,spec.compact?32:52,font,spec.alert?pal.warn:pal.ink);
         if(numeric&&unit&&!spec.compact&&available(entity)){
-          const measured=typeof ui.measureText==='function'?ui.measureText(shown,font):null;
+          const measured=typeof ui.measureText==='function'?measureTextCached(shown,font):null;
           const uw=measured?measured.width:shown.length*font*.6;
-          const unitMetrics=profile.layout==='camera'&&measured?ui.measureText(unit,15):null;
+          const unitMetrics=profile.layout==='camera'&&measured?measureTextCached(unit,15):null;
           const offset=unitMetrics?Math.max(0,measured.height-measured.baseline-unitMetrics.height+unitMetrics.baseline):Math.max(0,font-18);
           detailText(detailExtra(row,'unitLabel'),unit,x+uw+7,ry+offset,Math.max(20,w-uw-7),24,15,pal.muted);
         }
@@ -3475,12 +3516,12 @@
       hide(row.panel, row!==widgets.menu[0]||settingsOpen); hide(row.icon, settingsOpen); hide(row.text, settingsOpen);
       hide(row.button, settingsOpen);
       /* One retained highlight moves beneath the fixed labels and touch targets. */
-      pushColor(row.icon, active ? pal.blue : pal.muted);
-      pushColor(row.text, active ? pal.blue : pal.ink);
+      pushColor(row.icon, active ? sidebarStyle.accent : pal.muted);
+      pushColor(row.text, active ? sidebarStyle.accent : sidebarStyle.ink);
     });
     const selection=widgets.menu[0].panel,activeRow=widgets.menu.find(row=>row.key===(detailRequested?'devices':nav))||widgets.menu[0];
-    hide(selection,settingsOpen);pushColor(selection,pal.blueSoft);
-    pushPos(selection,8,activeRow.button.y,widgets.menuSelectionVisible&&!settingsOpen);
+    hide(selection,settingsOpen);pushColor(selection,sidebarStyle.selected);
+    pushPos(selection,12,menuDrag?menuDrag.y:activeRow.button.y,false);
     widgets.menuSelectionVisible=!settingsOpen;
     const statistics=dashboardStats();
     widgets.stats.forEach((entry, index) => {
@@ -3594,12 +3635,7 @@
   }
 
   function presentContent(offset,horizontal){
-    if(typeof ui.present!=='function')return;
-    const ids=Object.keys(paint).filter(key=>/^p[0-9]+$/.test(key)).map(key=>{
-      const id=Number(key.slice(1)),xy=paint[key].split(',').map(Number);
-      return paint['h'+id]!==1&&xy[0]>=GRID_X&&xy[1]>=HEADER_H&&(!horizontal||xy[1]<H-FOOTER_H)?id:0;
-    }).filter(Boolean).slice(0,128);
-    ui.present(ids,offset,horizontal===true);
+    // All views open and change pages at their final positions.
   }
   function createPageIndicator(section,select,remember){
     const keep=id=>{if(remember)remember(id);hide(id,true);return id;};
@@ -3714,6 +3750,7 @@
       nativeManaged,
       desktopPins:desktopPins.slice(),desktopCards:desktopCards().map(card=>({entity:card.entity_id,key:deviceCardKey(card),name:card.name,pinned:desktopPins.includes(deviceCardKey(card))})),
       favorites: favorites.slice(), filter, search, page, nav, roomPage, layoutStyle,
+      sidebarCursor:widgets?{dragging:!!menuDrag,y:menuDrag?menuDrag.y:(widgets.menu.find(row=>row.key===(detailOpen?'devices':nav))||widgets.menu[0]).button.y}:null,
       discovery:{area:selectedArea,favoritesOnly,open:browseOpen,page:browsePage,rooms:browseOpen?roomChoices():[],count:dashboardEntities().length},detailExpanded,
       pageIndicator:widgets&&widgets.pager?{visible:!settingsOpen&&!detailOpen&&pageCount()>1,
         total:pageCount(),slots:widgets.pager.slots.filter(slot=>slot.page>=0).map(slot=>({
@@ -3925,7 +3962,7 @@
     }
     if(!range){
       const text=model.value||friendlyState(item);
-      const widthAt=font=>typeof ui.measureText==='function'?ui.measureText(text,font).width:Array.from(text).reduce((width,char)=>width+(char.charCodeAt(0)>127?font:font*.66),0);
+      const widthAt=font=>typeof ui.measureText==='function'?measureTextCached(text,font).width:Array.from(text).reduce((width,char)=>width+(char.charCodeAt(0)>127?font:font*.66),0);
       const font=widthAt(28)>rw?widthAt(24)>rw?20:24:28;
       pushStyle(card.value,'L',{fontSize:font,center:0,ellipsis:1});pushText(card.value,widthAt(font)<=rw?text:fit(text,rw,font));return;
     }
@@ -4024,9 +4061,39 @@
     const start=rect.inputX===undefined?rect.x:rect.inputX,width=rect.inputW===undefined?rect.w:rect.inputW;
     return Math.max(0,Math.min(100,Math.round((x-start)*100/width)));
   }
+  function handleSidebarTouch(state,nx,ny){
+    if(!widgets||settingsOpen||browseOpen||optionPicker||disposed)return false;
+    const x=nx*W,y=ny*H,rows=widgets.menu,first=rows[0].button.y,last=rows[rows.length-1].button.y;
+    const selection=rows[0].panel;
+    if(state==='down'){
+      menuClickUntil=0;
+      if(x<12||x>152||y<first||y>last+44)return false;
+      menuDrag={generation,start:y,y:Math.round(Math.max(first,Math.min(last,y-22))),moved:false};
+      return true;
+    }
+    if(!menuDrag)return false;
+    if(menuDrag.generation!==generation||!Number.isFinite(x)||!Number.isFinite(y)||state==='cancel'){
+      menuDrag=null;menuClickUntil=steadyNow()+300;render();return true;
+    }
+    if(Math.abs(y-menuDrag.start)>=5)menuDrag.moved=true;
+    menuDrag.y=Math.round(Math.max(first,Math.min(last,y-22)));
+    if(state==='move'&&menuDrag.moved)pushPos(selection,12,menuDrag.y,false);
+    if(state==='up'){
+      const drag=menuDrag;menuDrag=null;
+      if(drag.moved){
+        menuClickUntil=steadyNow()+300;
+        if(x>=0&&x<SIDEBAR_W){
+          const nearest=rows.reduce((a,b)=>Math.abs(b.button.y+22-y)<Math.abs(a.button.y+22-y)?b:a);
+          pushPos(selection,12,nearest.button.y,false);selectSection(nearest.key);
+        }else render();
+      }
+    }
+    return true;
+  }
   ui.onTouch((state,nx,ny) => {
     if(browseOpen)return;
     if(!Number.isFinite(nx)||!Number.isFinite(ny)){cancelInputs();render();return;}
+    if(handleSidebarTouch(state,nx,ny))return;
     validateInputs();
     if(WATERFALL&&widgets&&widgets.boardViewport){
       boardScroll=Math.max(0,Math.round(ui.scrollInfo(widgets.boardViewport).y));

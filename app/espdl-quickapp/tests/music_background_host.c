@@ -3,6 +3,57 @@
 #include <assert.h>
 #include <stdatomic.h>
 #include "music_service_under_test.c"
+#include "glass_agent.h"
+#include "glass_board_music.h"
+
+static const struct glass_board_home *music_provider;
+static struct music_now_playing wait_for(const char *name,enum music_state phase,enum music_lyrics_state lyric);
+void glass_agent_set_board_music(const struct glass_board_home *provider){music_provider=provider;}
+static cJSON *mcp_music(const char *tool,const char *json,bool failed)
+{
+  cJSON *args=cJSON_Parse(json);assert(args);atomic_bool cancel=false;
+  char *text=music_provider->call(tool,args,&cancel);cJSON_Delete(args);assert(text);
+  assert(!strstr(text,"https://")&&!strstr(text,"offline-fixture"));
+  cJSON *out=cJSON_Parse(text);free(text);assert(out);
+  assert((cJSON_GetObjectItem(out,"error")!=NULL)==failed);return out;
+}
+static void mcp_checks(void)
+{
+  glass_board_music_register();assert(music_provider);
+  char *schema=malloc(strlen(music_provider->catalog)+3);assert(schema);
+  sprintf(schema,"[%s]",music_provider->catalog);cJSON *catalog=cJSON_Parse(schema);
+  assert(cJSON_GetArraySize(catalog)==8);cJSON_Delete(catalog);free(schema);
+  unsigned gen=play_generation;
+  cJSON *out=mcp_music("music_search","{\"query\":\"B\"}",false);
+  assert(!strcmp(cJSON_GetObjectItem(out,"name")->valuestring,"B")&&play_generation==gen);
+  assert(!strcmp(cJSON_GetObjectItem(cJSON_GetObjectItem(out,"card"),"kind")->valuestring,"music"));cJSON_Delete(out);
+  cJSON_Delete(mcp_music("music_play","{\"query\":\"https://fixture/evil\"}",true));
+  cJSON_Delete(mcp_music("music_play","{\"query\":\"B\",\"url\":\"https://fixture/evil\"}",true));
+  assert(play_generation==gen);
+  out=mcp_music("music_play","{\"query\":\"B\"}",false);
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(out,"accepted"))&&!cJSON_IsTrue(cJSON_GetObjectItem(out,"verified")));cJSON_Delete(out);
+  cJSON_Delete(mcp_music("music_pause","{}",false));
+  cJSON_Delete(mcp_music("music_resume","{}",false));
+  wait_for("B",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  out=mcp_music("music_status","{}",false);
+  assert(!strcmp(cJSON_GetObjectItem(out,"state")->valuestring,"playing"));cJSON_Delete(out);
+  cJSON_Delete(mcp_music("music_pause","{}",false));
+  cJSON_Delete(mcp_music("music_pause","{}",false));
+  struct music_now_playing view;glass_music_now_playing(&view);assert(view.pause_requested&&view.state==MUSIC_PAUSED);
+  cJSON_Delete(mcp_music("music_resume","{}",false));
+  cJSON_Delete(mcp_music("music_resume","{}",false));
+  glass_music_now_playing(&view);assert(!view.pause_requested);
+  out=mcp_music("music_volume","{\"level\":35}",false);assert(cJSON_GetObjectItem(out,"volume")->valueint==35);cJSON_Delete(out);
+  cJSON_Delete(mcp_music("music_volume","{\"level\":101}",true));
+  cJSON_Delete(mcp_music("music_volume","{\"level\":0.5}",true));
+  cJSON_Delete(mcp_music("music_skip","{\"direction\":\"next\"}",false));
+  cJSON_Delete(mcp_music("music_skip","{\"direction\":\"next\",\"direction\":\"previous\"}",true));
+  cJSON_Delete(mcp_music("music_stop","{}",false));assert(!glass_music_stop_wait(500));
+  cJSON_Delete(mcp_music("music_resume","{}",true));
+  atomic_bool cancel=true;cJSON *args=cJSON_CreateObject();
+  char *text=music_provider->call("music_stop",args,&cancel);assert(text&&strstr(text,"cancelled"));free(text);cJSON_Delete(args);
+  puts("MUSIC_MCP_OK: real service search/play/state, idempotent pause/resume, volume/skip/stop, URL redaction, argument rejection, cancellation; no UI linked");
+}
 
 static const char *mp3_path;
 static atomic_bool hold_lyrics,lyrics_entered;
@@ -54,7 +105,7 @@ int music_pcm_open(struct music_pcm *pcm,unsigned rate,unsigned volume)
 {(void)volume;pcm->fd=3;pcm->rate=rate;atomic_fetch_add(&opens,1);return 0;}
 int music_pcm_write(struct music_pcm *pcm,const int16_t *samples,unsigned frames,unsigned channels)
 {assert(samples && (channels==1||channels==2));usleep(5000);pcm->played_samples+=frames;return 0;}
-int music_pcm_pause(struct music_pcm *pcm,bool pause){(void)pcm;(void)pause;return 0;}
+int music_pcm_pause(struct music_pcm *pcm,bool pause){assert(pcm->fd>=0);(void)pause;return 0;}
 int music_pcm_volume(struct music_pcm *pcm,unsigned volume){(void)pcm;assert(volume<=100);return 0;}
 int music_pcm_drain(struct music_pcm *pcm){(void)pcm;return 0;}
 void music_pcm_close(struct music_pcm *pcm){if(pcm->fd>=0)atomic_fetch_add(&closes,1);pcm->fd=-1;}
@@ -152,5 +203,6 @@ int main(int argc,char **argv)
   assert(!glass_music_stop_wait(3000));glass_music_now_playing(&s);assert(s.state==MUSIC_STOPPED && !s.lyrics[1][0]);
   assert(atomic_load(&opens)>2 && atomic_load(&opens)==atomic_load(&closes));
   printf("MUSIC_BACKGROUND_SERVICE_OK: real MP3 decoder/workers, pause freezes clock, resume, stale lyric cancellation, skip, missing lyrics, network failure and %u/%u PCM teardown\n",atomic_load(&opens),atomic_load(&closes));
+  mcp_checks();
   return 0;
 }

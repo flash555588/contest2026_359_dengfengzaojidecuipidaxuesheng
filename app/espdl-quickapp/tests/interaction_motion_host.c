@@ -28,7 +28,7 @@ int main(void)
   snapshot(d);memcpy(baseline,pixels,sizeof(pixels));
   lv_obj_send_event(button,LV_EVENT_PRESSED,NULL);pump(100);
   assert(jobs()==1&&lv_timer_get_paused(g_motion_timer));
-  assert(lv_obj_get_style_translate_y(button,0)==5);
+  assert(lv_obj_get_style_translate_y(button,0)==3);
   lv_obj_send_event(button,LV_EVENT_RELEASED,NULL);
   lv_obj_send_event(button,LV_EVENT_CLICKED,NULL);assert(clicks==1);
   pump(200);assert(!jobs()&&lv_timer_get_paused(g_motion_timer));
@@ -139,19 +139,20 @@ int main(void)
   pump(200);assert(!jobs());lv_obj_remove_state(button,LV_STATE_DISABLED);
   lv_obj_t *panel=lv_obj_create(root);glass_motion_panel(panel);lv_obj_delete(panel);pump(100);assert(!jobs());
   panel=lv_obj_create(root);glass_motion_panel(panel);lv_obj_remove_style_all(panel);pump(20);
-  assert(jobs()==1&&lv_obj_get_style_translate_y(panel,0)>0);pump(260);
+  assert(!jobs()&&lv_obj_get_style_translate_y(panel,0)==0);pump(260);
   assert(!jobs()&&lv_obj_get_style_translate_y(panel,0)==0);lv_obj_delete(panel);
   lv_obj_t *notice=lv_label_create(root);lv_label_set_text(notice,"Ready");
   lv_obj_set_style_bg_opa(notice,220,0);glass_motion_notice(notice);pump(220);
   assert(lv_obj_get_style_bg_opa(notice,0)==220&&!jobs());
-  assert(glass_motion_dismiss(notice,done));pump(160);assert(completed==1&&!jobs());
+  assert(!glass_motion_dismiss(notice,done));assert(completed==0&&!jobs());
+  done(notice);assert(completed==1&&!jobs());
   notice=lv_label_create(root);glass_motion_notice(notice);pump(20);lv_obj_delete(notice);pump(200);assert(!jobs());
   lv_obj_t *many[GLASS_MOTION_SLOTS];
-  for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++){many[i]=lv_obj_create(root);glass_motion_enter(many[i],false,0);}
+  for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++){many[i]=lv_obj_create(root);glass_motion_begin(many[i],MOTION_X,10,0,180,0);}
   assert(jobs()==GLASS_MOTION_SLOTS);
-  glass_motion_enter(button,false,0);assert(jobs()==GLASS_MOTION_SLOTS);
+  glass_motion_begin(button,MOTION_X,10,0,180,0);assert(jobs()==GLASS_MOTION_SLOTS);
   glass_motion_set_reduced(true);assert(!jobs());
-  for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++){assert(lv_obj_get_style_translate_y(many[i],0)==0);lv_obj_delete(many[i]);}
+  for(unsigned i=0;i<GLASS_MOTION_SLOTS;i++){assert(lv_obj_get_style_translate_x(many[i],0)==0);lv_obj_delete(many[i]);}
   glass_motion_set_reduced(false);lv_tick_inc(UINT32_MAX-lv_tick_get()-10);
   glass_motion_enter(button,true,0);pump(260);assert(!jobs());
   lv_obj_send_event(button,LV_EVENT_PRESSED,NULL);pump(20);lv_obj_delete(button);pump(200);

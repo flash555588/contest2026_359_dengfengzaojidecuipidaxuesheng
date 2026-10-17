@@ -90,7 +90,24 @@ int main(int argc,char **argv)
   unsigned before=http_calls;atomic_store(&cancel,true);cJSON_Delete(call(agent,"mcp_list_tools","{\"server\":\"mcp1\"}",true));assert(http_calls==before);
   glass_agent_destroy(agent);assert(deletes==1);atomic_store(&cancel,false);
   wrong_version=true;agent=glass_agent_create(&cancel,AGENT_MODE_ASSISTANT);cJSON_Delete(call(agent,"mcp_list_tools","{\"server\":\"mcp1\"}",true));glass_agent_destroy(agent);wrong_version=false;
-  save("{\"mcp1_enabled\":0,\"skills_enabled\":0}",0);agent=glass_agent_create(&cancel,AGENT_MODE_ASSISTANT);tools=glass_agent_tools(agent,"[]");assert(!strcmp(tools,"[]"));free(tools);cJSON_Delete(call(agent,"skill_list","{}",true));glass_agent_destroy(agent);
+  save("{\"mcp1_enabled\":0,\"skills_enabled\":0}",0);agent=glass_agent_create(&cancel,AGENT_MODE_ASSISTANT);tools=glass_agent_tools(agent,"[]");assert(strstr(tools,"mcp_call_tool"));free(tools);cJSON_Delete(call(agent,"skill_list","{}",true));
+  before=http_calls;
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"device_status\",\"arguments\":{}}",true));
+  result=call(agent,"mcp_list_tools","{\"server\":\"board\"}",false);assert(cJSON_GetArraySize(cJSON_GetObjectItem(result,"tools"))==11);cJSON_Delete(result);
+  /* Without the shared HA service the smart home tools do not exist. */
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"home_status\",\"arguments\":{}}",true));
+  cJSON_Delete(call(agent,"mcp_list_tools","{\"server\":\"board\",\"cursor\":\"bad\"}",true));
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"device_status\",\"arguments\":{}}",false));
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_capabilities\",\"arguments\":{}}",false));
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_reference\",\"arguments\":{\"section\":2}}",false));
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_reference\",\"arguments\":{\"section\":1.5}}",true));
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_submit\",\"arguments\":{\"operation\":\"shell.exec\",\"arguments\":{}}}",true));
+  result=call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_submit\",\"arguments\":{\"operation\":\"gpio.read\",\"arguments\":{\"pin\":6}}}",false);
+  assert(cJSON_GetObjectItem(result,"id")->valueint==1);cJSON_Delete(result);
+  result=call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_poll\",\"arguments\":{\"id\":1}}",false);
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(result,"done")));assert(cJSON_GetObjectItem(cJSON_GetObjectItem(result,"result"),"value")->valueint==1);cJSON_Delete(result);
+  cJSON_Delete(call(agent,"mcp_call_tool","{\"server\":\"board\",\"tool\":\"hardware_poll\",\"arguments\":{\"id\":1}}",true));
+  assert(http_calls==before);glass_agent_destroy(agent);usleep(200000);
   unlink(link);unlink(path);rmdir(dir);rmdir(scoped);
   char profile_dir[512],profile_path[600];snprintf(profile_dir,sizeof(profile_dir),AGENT_PROFILE_ROOT "/create");mkdir_checked(profile_dir);
   snprintf(profile_path,sizeof(profile_path),"%s/agent.md",profile_dir);
