@@ -6,7 +6,8 @@
 #include <nuttx/audio/audio.h>
 #define MUSIC_PCM_BUFFERS 4
 /* The I2S bus runs two 16-bit slots per frame, so one frame is four bytes. */
-#define MUSIC_PCM_FRAMES 1152
+/* Four APBs plus two lower-half DMA copies must fit the small kernel heap. */
+#define MUSIC_PCM_FRAMES 576
 struct music_pcm {
   int fd;
   mqd_t mq;
@@ -14,6 +15,7 @@ struct music_pcm {
   bool queued[MUSIC_PCM_BUFFERS], started, reserved, session_locked;
   unsigned rate, pending, played_samples;
   unsigned submitted_samples[MUSIC_PCM_BUFFERS];
+  unsigned staged_frames, staged_index;
 };
 int music_pcm_open(struct music_pcm *pcm, unsigned rate, unsigned volume);
 int music_pcm_try_open(struct music_pcm *pcm, unsigned rate, unsigned volume);

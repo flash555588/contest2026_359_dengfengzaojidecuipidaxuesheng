@@ -33,6 +33,11 @@
 - QuickJS 页面通过共享 `hass_open(HASS_READ | HASS_CONTROL)` 服务读取 `states`
   缓存，状态有效期 10 秒，并每 10 秒自动同步；控制只走 `hass_control()`，且仅
   接受 `light`、`switch`、`input_boolean`、`fan`，UI 层没有放宽服务白名单。
+- ESPClaw 的内置 MCP 服务 board 在 `CONFIG_SYSTEM_HASS=y` 时提供五个进程内
+  home_* 工具（status／list／state／control／service）：读取只用 `HASS_READ`，控制
+  复用同一白名单、服务表和读回校验，结果不含地址与令牌，也没有 `HASS_CONFIGURE`
+  路径。执行结果以设备小卡片渲染在对话内；工具不打开智能家居页面、不触碰界面。
+- AI 写入另受 Portal「允许 AI 控制家居」开关限制，默认关闭；门锁和安防控制排除。场景等动作只报告受理，其他服务按可映射属性核对回读，不能确认时明确显示未确认。
 - 控制返回 HTTP 2xx 后不会乐观改写卡片。原生页在 8 秒内最多 4 次读取原实体，
   开关状态一致且亮度误差不超过 1 个百分点才显示确认成功；否则明确提示结果未确认，
   不自动重发控制命令。没有 `brightness` 属性的灯不显示亮度滑杆。

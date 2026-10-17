@@ -9,6 +9,12 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+
+/* This vendor copy primitive uses an unaligned PIE load that traps on the
+ * current board. Model copies do not need SIMD; retain the scalar libc path. */
+void dl_esp32p4_sr_memcpy(void *destination,const void *source,size_t bytes)
+{memcpy(destination,source,bytes);}
 
 void *heap_caps_malloc(size_t n,uint32_t caps)
 {(void)caps;return memalign(16,n);}

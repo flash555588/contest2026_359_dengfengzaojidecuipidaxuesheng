@@ -10,6 +10,7 @@ static uint32_t detail_line(void){return g_desktop.light_theme?0xe8e9ef:0x383b48
 static uint32_t detail_ink(void){return g_desktop.light_theme?0x292c38:0xeeeef5;}
 static uint32_t detail_muted(void){return g_desktop.light_theme?0x808491:0xa2a7b7;}
 static uint32_t detail_accent(void){return g_desktop.light_theme?0x77658f:0xc1aedb;}
+#include "glass_sidebar.h"
 static void detail_page(lv_obj_t *card)
 {
   lv_obj_clean(card);lv_obj_remove_style_all(card);
@@ -43,17 +44,18 @@ static lv_obj_t *detail_button(lv_obj_t *parent,const char *text,int x,int y,int
 static lv_obj_t *detail_nav(lv_obj_t *parent,const char *text,const char *icon,int y,int w,lv_event_cb_t cb,void *data)
 {
   lv_obj_t *row=detail_button(parent,"",20,y,w,cb,data);
-  home_icon(row,icon,14,12,20,detail_accent());
-  detail_text(row,text,46,12,w-80,14,detail_ink());
-  home_icon(row,LV_SYMBOL_RIGHT,w-30,14,16,detail_muted());
+  home_icon(row,icon,w==GLASS_SIDEBAR_ITEM_WIDTH?12:14,12,20,detail_accent());
+  detail_text(row,text,w==GLASS_SIDEBAR_ITEM_WIDTH?42:46,12,w==GLASS_SIDEBAR_ITEM_WIDTH?w-50:w-80,14,detail_ink());
+  if(w!=GLASS_SIDEBAR_ITEM_WIDTH)home_icon(row,LV_SYMBOL_RIGHT,w-30,14,16,detail_muted());
   return row;
 }
 static void detail_sidebar(lv_obj_t *card,const char *name,const char *icon,lv_event_cb_t back)
 {
-  glass_box(card,0,0,190,GLASS_CONTENT_HEIGHT,detail_paper(),0);
-  glass_box(card,189,0,1,GLASS_CONTENT_HEIGHT,detail_line(),0);
+  lv_obj_t *sidebar=glass_box(card,0,0,GLASS_SIDEBAR_WIDTH,GLASS_CONTENT_HEIGHT,detail_paper(),0);
+  glass_sidebar_surface(sidebar);
+  glass_box(card,GLASS_SIDEBAR_WIDTH-1,0,1,GLASS_CONTENT_HEIGHT,detail_line(),0);
   home_icon(card,icon,24,30,24,detail_accent());
-  detail_text(card,name,62,30,112,20,detail_ink());
-  detail_text(card,"Vela Desk",24,68,140,12,detail_muted());
-  detail_button(card,"返回桌面",16,GLASS_CONTENT_HEIGHT-62,158,back,NULL);
+  detail_text(card,name,58,30,94,20,detail_ink());
+  lv_obj_t *button=detail_button(card,"返回桌面",GLASS_SIDEBAR_PAD,GLASS_CONTENT_HEIGHT-56,GLASS_SIDEBAR_ITEM_WIDTH,back,NULL);
+  glass_sidebar_item(button,false);
 }

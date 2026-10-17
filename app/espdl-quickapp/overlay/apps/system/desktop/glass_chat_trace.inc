@@ -26,7 +26,9 @@ static void chat_ui_trace_update(const struct chat_turn *turn)
   else lv_obj_add_flag(g_chat_ui.trace_details,LV_OBJ_FLAG_HIDDEN);
   int height=expanded?72+turn->tool_count*24:64;
   lv_obj_set_height(g_chat_ui.trace_root,height);
-  g_chat_ui.live_y=g_chat_ui.trace_y+height+8;
+  int y=g_chat_ui.trace_y+height+8;
+  if(g_chat_ui.cards_root&&g_chat_ui.cards_h){lv_obj_set_y(g_chat_ui.cards_root,y);y+=g_chat_ui.cards_h+8;}
+  g_chat_ui.live_y=y;
   if(g_chat_ui.live_bubble)lv_obj_set_y(g_chat_ui.live_bubble,g_chat_ui.live_y);
   g_chat_ui.ball_anchor=turn->reply[0]?g_chat_ui.live_bubble:g_chat_ui.trace_root;
 }

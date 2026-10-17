@@ -27,6 +27,17 @@ int main(int argc,char **argv)
       assert(qpk_mjpeg_decode(decoder,jpeg,cut,size+512,pixels,width,height,320,240)<0);
     free(pixels);
   }
+  /* A landscape preview shares each framebuffer row with a retained rail. */
+  for(unsigned mode=0;mode<2;mode++) {
+    unsigned width=mode?896:320,height=mode?600:240,stride=1024;
+    uint16_t *pixels=malloc(((size_t)stride*height+16)*2);assert(pixels);
+    for(size_t i=0;i<(size_t)stride*height+16;i++)pixels[i]=0xa55a;
+    assert(qpk_mjpeg_decode_region(decoder,jpeg,size,size+512,pixels,width,height,stride,320,240)==0);
+    for(unsigned y=0;y<height;y++)for(unsigned x=width;x<stride;x++)assert(pixels[y*stride+x]==0xa55a);
+    for(unsigned i=0;i<16;i++)assert(pixels[stride*height+i]==0xa55a);
+    assert(qpk_mjpeg_decode_region(decoder,jpeg,size,size+512,pixels,width,height,width-1,320,240)<0);
+    free(pixels);
+  }
   qpk_mjpeg_destroy(decoder);free(jpeg);
   puts("PASS: actual MJPEG decoder, four scales, repeat, output bounds and truncated input");
 }

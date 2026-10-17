@@ -84,7 +84,7 @@ static void *qpk_camera_usb_thread(pthread_addr_t arg)
   if (!input || !decoder) { error = -ENOMEM; goto done; }
   uint64_t last_frame = qpk_now_ms();
   unsigned decode_failures = 0;
-  int bar_status[QPK_CAMERA_FRAMEBUFFER_COUNT];
+  uint64_t bar_status[QPK_CAMERA_FRAMEBUFFER_COUNT];
   bool bar_valid[QPK_CAMERA_FRAMEBUFFER_COUNT] = { false };
   struct pollfd pfd = { .fd = camera->fd, .events = POLLIN };
   while (!qpk_camera_cancelled())
@@ -100,12 +100,13 @@ static void *qpk_camera_usb_thread(pthread_addr_t arg)
       if (!size) continue;
       unsigned next = (camera->fb_page + 1) % QPK_CAMERA_FRAMEBUFFER_COUNT;
       uint16_t *target = (uint16_t *)((uint8_t *)camera->fb_plane.fbmem + next * QPK_CAMERA_FRAME_SIZE);
-      ret = qpk_mjpeg_decode(decoder, input, size, mode.max_frame_size + 512,
-                             target, QPK_CAMERA_RAW_WIDTH, QPK_CAMERA_BAR_TOP,
+      ret = qpk_mjpeg_decode_region(decoder, input, size, mode.max_frame_size + 512,
+                             target, QPK_CAMERA_BAR_LEFT, QPK_CAMERA_RAW_HEIGHT, QPK_CAMERA_RAW_WIDTH,
                              mode.width, mode.height);
       if (ret < 0)
         { if (++decode_failures == 10) { error = ret; break; } continue; }
       decode_failures = 0;
+      qpk_video_frame(target,QPK_CAMERA_BAR_LEFT,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
       last_frame = qpk_now_ms();
       camera->captured_frames++;
       if (qpk_camera_cancelled()) break;
@@ -119,12 +120,15 @@ static void *qpk_camera_usb_thread(pthread_addr_t arg)
                                QPK_CAMERA_CORNER_RADIUS);
       qpk_camera_save_jpeg(input, qpk_mjpeg_frame_size(decoder));
       photo_status = qpk_camera_bar_status();
-      size_t dirty_bytes = QPK_CAMERA_RAW_WIDTH * QPK_CAMERA_BAR_TOP * sizeof(uint16_t);
+      unsigned elapsed=0;int recording=qpk_video_status(&elapsed);
+      uint64_t bar_key=(uint32_t)photo_status|((uint64_t)qpk_video_selected()<<32)|
+        ((uint64_t)(uint8_t)recording<<33)|((uint64_t)(elapsed/1000)<<41);
+      size_t dirty_bytes = QPK_CAMERA_FRAME_SIZE;
       /* The decoder owns only the image area. Preserve each off-screen
        * page's controls instead of clearing/rebuilding them for every frame. */
-      if (!bar_valid[next] || bar_status[next] != photo_status)
+      if (!bar_valid[next] || bar_status[next] != bar_key)
         {
-          bar_status[next] = qpk_camera_bar_blit(target);
+          qpk_camera_bar_blit(target);bar_status[next]=bar_key;
           bar_valid[next] = true;
           dirty_bytes = QPK_CAMERA_FRAME_SIZE;
         }

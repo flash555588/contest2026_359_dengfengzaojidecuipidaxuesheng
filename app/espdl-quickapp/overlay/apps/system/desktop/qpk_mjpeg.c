@@ -91,12 +91,13 @@ int qpk_mjpeg_probe(const uint8_t *input, size_t size, unsigned *width,
   return result == JDR_OK ? 0 : -EBADMSG;
 }
 
-int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity,
-                    uint16_t *output, unsigned width, unsigned height,
-                    unsigned expected_width, unsigned expected_height)
+int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t capacity,
+                           uint16_t *output, unsigned width, unsigned height, unsigned stride,
+                           unsigned expected_width, unsigned expected_height)
 {
   struct mjpeg_decoder *d = decoder;
-  if (!d || !input || !output || !width || !height || size > capacity) return -EINVAL;
+  if (!d || !input || !output || !width || !height || stride < width ||
+      stride > 4096 || height > 4096 || size > capacity) return -EINVAL;
   int ret = jpeg_tables(input, &size, capacity);
   if (ret < 0) return ret;
   d->input = input; d->size = size; d->position = 0;
@@ -111,7 +112,7 @@ int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity
   /* The AI preview exactly matches the reduced JPEG. Decode into its worker
    * buffer and publish only on success, avoiding a temporary frame and copy. */
   bool direct = d->width == width && d->height == height;
-  d->pixels = direct ? output : malloc(pixels * 2); d->stride = d->width;
+  d->pixels = direct ? output : malloc(pixels * 2); d->stride = direct ? stride : d->width;
   if (!d->pixels) return -ENOMEM;
   JRESULT result = qpk_jd_decomp(&d->jpeg, jpeg_output, scale);
   if (result != JDR_OK) {
@@ -122,13 +123,21 @@ int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity
   unsigned dw = width, dh = (uint64_t)d->height * width / d->width;
   if (dh > height) { dh = height; dw = (uint64_t)d->width * height / d->height; }
   unsigned ox = (width - dw) / 2, oy = (height - dh) / 2;
-  memset(output, 0, (size_t)width * height * 2);
+  for (unsigned y = 0; y < height; y++) memset(output + (size_t)y * stride, 0, (size_t)width * 2);
   for (unsigned y = 0; y < dh; y++)
     {
       const uint16_t *src = d->pixels + (size_t)(y * d->height / dh) * d->width;
-      uint16_t *dst = output + (size_t)(y + oy) * width + ox;
+      uint16_t *dst = output + (size_t)(y + oy) * stride + ox;
       for (unsigned x = 0; x < dw; x++) dst[x] = src[x * d->width / dw];
     }
   free(d->pixels); d->pixels = NULL;
   return 0;
+}
+
+int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity,
+                    uint16_t *output, unsigned width, unsigned height,
+                    unsigned expected_width, unsigned expected_height)
+{
+  return qpk_mjpeg_decode_region(decoder,input,size,capacity,output,width,height,width,
+                                 expected_width,expected_height);
 }

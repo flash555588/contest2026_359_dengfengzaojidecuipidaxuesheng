@@ -14,6 +14,7 @@ with tempfile.TemporaryDirectory(prefix='music-background-') as tmp:
  flags=['cc','-D_GNU_SOURCE','-std=gnu11','-O1','-g','-pthread','-fsanitize=address,undefined','-fno-omit-frame-pointer',
   '-I'+str(root),'-I'+str(desktop),'-I'+str(a.apps/'netutils/cjson/cJSON')]
  subprocess.run([*flags,str(repo/'app/espdl-quickapp/tests/music_background_host.c'),str(desktop/'glass_music_parse.c'),
+  str(desktop/'glass_board_music.c'),str(desktop/'glass_chat_store.c'),
   str(a.apps/'netutils/cjson/cJSON/cJSON.c'),'-lm','-o',str(root/'test')],check=True)
  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=16:sample_rate=22050',
   '-codec:a','libmp3lame','-b:a','64k',str(root/'fixture.mp3')],check=True)

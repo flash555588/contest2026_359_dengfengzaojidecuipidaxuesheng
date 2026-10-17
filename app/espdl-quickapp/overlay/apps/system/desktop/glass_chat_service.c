@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_chat.h"
 #include "glass_chat_backend.h"
+#include <cJSON.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -46,6 +47,66 @@ static void changed(void)
 
 static uint32_t now_ms(void)
 { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return (uint32_t)((uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000); }
+
+/* Cards come from in-process board tools; every field is re-validated here so
+ * a damaged event can never reach the dialog or the stored history. */
+static bool chat_card_text(const char *text, size_t limit, bool empty)
+{
+  if (!text) return false;
+  size_t used = 0;
+  const unsigned char *p = (const unsigned char *)text;
+  while (*p) {
+    unsigned code = *p, extra = 0, minimum = 0;
+    if (code < 128) {
+      if (code < 32 || code == 127) return false;
+      if (++used > limit) return false;
+      p++;
+      continue;
+    }
+    if (code >= 0xc2 && code <= 0xdf) { code &= 31; extra = 1; minimum = 0x80; }
+    else if (code >= 0xe0 && code <= 0xef) { code &= 15; extra = 2; minimum = 0x800; }
+    else if (code >= 0xf0 && code <= 0xf4) { code &= 7; extra = 3; minimum = 0x10000; }
+    else return false;
+    p++;
+    for (unsigned i = 0; i < extra; i++) {
+      if ((*p & 0xc0) != 0x80) return false;
+      code = (code << 6) | (*p++ & 63);
+    }
+    if (code < minimum || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return false;
+    used += extra + 1;
+    if (used > limit) return false;
+  }
+  return empty || used > 0;
+}
+
+static bool chat_card_parse(const char *text, struct chat_card *out)
+{
+  if (!text || strlen(text) > CHAT_CARD_TEXT) return false;
+  cJSON *root = cJSON_ParseWithOpts(text, NULL, true);
+  const cJSON *entity = cJSON_GetObjectItemCaseSensitive(root, "entity");
+  const cJSON *kind = cJSON_GetObjectItemCaseSensitive(root, "kind");
+  const cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "name");
+  const cJSON *state = cJSON_GetObjectItemCaseSensitive(root, "state");
+  const cJSON *level = cJSON_GetObjectItemCaseSensitive(root, "level");
+  const cJSON *on = cJSON_GetObjectItemCaseSensitive(root, "on");
+  bool ok = cJSON_IsObject(root) &&
+    (!entity || (cJSON_IsString(entity) && chat_card_text(entity->valuestring, sizeof(out->entity)-1, true))) &&
+    cJSON_IsString(kind) && chat_card_text(kind->valuestring, sizeof(out->kind) - 1, false) &&
+    cJSON_IsString(name) && chat_card_text(name->valuestring, sizeof(out->name) - 1, false) &&
+    cJSON_IsString(state) && chat_card_text(state->valuestring, sizeof(out->state) - 1, true) &&
+    cJSON_IsNumber(level) && level->valuedouble >= -1 && level->valuedouble <= 100 &&
+    level->valuedouble == (int)level->valuedouble && cJSON_IsBool(on);
+  if (ok) for (const char *p = kind->valuestring; *p; p++)
+    if (!((*p >= 'a' && *p <= 'z') || (*p >= '0' && *p <= '9') || *p == '_')) { ok = false; break; }
+  if (ok) {
+    snprintf(out->entity, sizeof(out->entity), "%s", entity ? entity->valuestring : "");
+    strcpy(out->kind, kind->valuestring); strcpy(out->name, name->valuestring);
+    strcpy(out->state, state->valuestring);
+    out->level = (int)level->valuedouble; out->on = cJSON_IsTrue(on);
+  }
+  cJSON_Delete(root);
+  return ok;
+}
 
 void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
 {
@@ -103,6 +164,23 @@ void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
     snprintf(t->tools[t->tool_count++],sizeof(t->tools[0]),"%s",name);t->tool_total++;
     snprintf(t->progress, sizeof(t->progress), "%s", !strcmp(name, "qpk_write_draft") ? "正在编写应用草稿" :
       !strcmp(name, "qpk_read_example") ? "正在读取验证过的示例" : !strcmp(name, "qpk_read_draft") ? "正在检查当前草稿" : !strncmp(name,"skill_",6)?"正在使用技能":!strncmp(name,"mcp_",4)?"正在调用 MCP 工具":"正在查看示例目录");
+  } else if (e->kind == CLAW_STREAM_CARD && e->text) {
+    /* One card per device per turn; newest cards of a long turn survive. */
+    struct chat_card card;
+    if (chat_card_parse(e->text, &card)) {
+      unsigned slot = t->card_count;
+      for (unsigned i = 0; i < t->card_count; i++)
+        if (card.entity[0] ? !strcmp(t->cards[i].entity, card.entity) :
+            (!t->cards[i].entity[0] && !strcmp(t->cards[i].kind, card.kind) && !strcmp(t->cards[i].name, card.name))) { slot = i; break; }
+      if (slot == t->card_count) {
+        if (t->card_count == CHAT_CARD_COUNT) {
+          memmove(t->cards, t->cards + 1, (CHAT_CARD_COUNT - 1) * sizeof(t->cards[0]));
+          slot = --t->card_count;
+        }
+        t->card_count++;
+      }
+      t->cards[slot] = card;
+    }
   } else if (e->kind == CLAW_STREAM_USAGE) {
     if (e->has_output_tokens) { t->has_output_tokens = true; t->output_tokens = e->output_tokens; }
     if (e->has_reasoning_tokens) { t->has_reasoning_tokens = true; t->reasoning_tokens = e->reasoning_tokens; }
@@ -311,6 +389,7 @@ static int queue_turn(const char *prompt, bool retry, enum glass_agent_mode mode
   t->archive[0] = 0; t->archive_bytes = 0;
   t->reasoning[0] = 0; strcpy(t->progress, "等待服务响应"); t->began_ms = t->activity_ms = now_ms();
   t->tool_count=t->tool_total=0;memset(t->tools,0,sizeof(t->tools));
+  t->card_count=0;memset(t->cards,0,sizeof(t->cards));
   atomic_store(&cancelled, false); send_pending = true; chat.phase = CHAT_QUEUED;
   current_activity = CHAT_ACTIVITY_CONNECT;
   changed(); pthread_cond_signal(&chat_wake); ret = 0;

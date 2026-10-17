@@ -153,19 +153,44 @@ int music_pcm_open(struct music_pcm *pcm, unsigned rate, unsigned volume)
 int music_pcm_try_open(struct music_pcm *pcm, unsigned rate, unsigned volume)
 { return pcm_open(pcm, rate, volume, true); }
 
+static int pcm_submit(struct music_pcm *pcm, unsigned index, unsigned frames)
+{
+  struct ap_buffer_s *buffer = pcm->buffers[index];
+  /* P4's current I2S lower half carries an unaligned cache-line tail into
+   * a four-byte field. Submit complete 64-byte cache lines to avoid that
+   * path. Only drain pads the final line, with silence. */
+  unsigned padded = (frames + 15u) & ~15u;
+  memset(buffer->samp + frames * 4, 0, (padded - frames) * 4);
+  buffer->nbytes = padded * 4; buffer->curbyte = 0; buffer->flags = 0;
+  struct audio_buf_desc_s desc = {.numbytes = buffer->nbytes, .u.buffer = buffer};
+  pcm->submitted_samples[index] = frames;
+  if (ioctl(pcm->fd, AUDIOIOC_ENQUEUEBUFFER, (unsigned long)&desc) < 0) return -errno;
+  pcm->queued[index] = true; pcm->pending++;
+  pcm->staged_frames = 0;
+  if (!pcm->started && pcm->pending >= 2) {
+    if (ioctl(pcm->fd, AUDIOIOC_START, 0) < 0) return -errno;
+    pcm->started = true;
+    board_music_amplifier(true);
+  }
+  return 0;
+}
+
 int music_pcm_write(struct music_pcm *pcm, const int16_t *samples, unsigned frames, unsigned channels)
 {
   if (!frames || (channels != 1 && channels != 2)) return -EINVAL;
   while (frames) {
-    unsigned index, chunk = frames > MUSIC_PCM_FRAMES ? MUSIC_PCM_FRAMES : frames;
-    for (;;) {
+    unsigned index = pcm->staged_index;
+    while (!pcm->staged_frames) {
       for (index = 0; index < MUSIC_PCM_BUFFERS; index++) if (!pcm->queued[index]) break;
       if (index < MUSIC_PCM_BUFFERS) break;
       int ret = pcm_message(pcm);
       if (ret) return ret;
     }
+    unsigned available = MUSIC_PCM_FRAMES - pcm->staged_frames;
+    unsigned chunk = frames > available ? available : frames;
+    pcm->staged_index = index;
     struct ap_buffer_s *buffer = pcm->buffers[index];
-    int16_t *out = (int16_t *)buffer->samp;
+    int16_t *out = (int16_t *)buffer->samp + pcm->staged_frames * 2;
     /* The I2S peripheral transfers two 16-bit slots per frame. Writing one
      * mono sample per frame let the DAC consume two samples per clock, which
      * played everything at double speed with aliasing. Duplicate the sample
@@ -175,15 +200,10 @@ int music_pcm_write(struct music_pcm *pcm, const int16_t *samples, unsigned fram
         (int16_t)(((int32_t)samples[i*2] + samples[i*2+1]) / 2);
       out[i*2] = value; out[i*2+1] = value;
     }
-    buffer->nbytes = chunk * 4; buffer->curbyte = 0; buffer->flags = 0;
-    struct audio_buf_desc_s desc = {.numbytes = buffer->nbytes, .u.buffer = buffer};
-    pcm->submitted_samples[index] = chunk;
-    if (ioctl(pcm->fd, AUDIOIOC_ENQUEUEBUFFER, (unsigned long)&desc) < 0) return -errno;
-    pcm->queued[index] = true; pcm->pending++;
-    if (!pcm->started && pcm->pending >= 2) {
-      if (ioctl(pcm->fd, AUDIOIOC_START, 0) < 0) return -errno;
-      pcm->started = true;
-      board_music_amplifier(true);
+    pcm->staged_frames += chunk;
+    if (pcm->staged_frames == MUSIC_PCM_FRAMES) {
+      int ret = pcm_submit(pcm, index, pcm->staged_frames);
+      if (ret) return ret;
     }
     samples += chunk * channels; frames -= chunk;
   }
@@ -198,6 +218,10 @@ int music_pcm_pause(struct music_pcm *pcm, bool paused)
 
 int music_pcm_drain(struct music_pcm *pcm)
 {
+  if (pcm->staged_frames) {
+    int ret = pcm_submit(pcm, pcm->staged_index, pcm->staged_frames);
+    if (ret) return ret;
+  }
   if (pcm->pending && !pcm->started) {
     if (ioctl(pcm->fd, AUDIOIOC_START, 0) < 0) return -errno;
     pcm->started = true;

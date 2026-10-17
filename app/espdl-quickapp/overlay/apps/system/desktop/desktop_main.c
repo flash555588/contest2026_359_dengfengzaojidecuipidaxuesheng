@@ -48,9 +48,11 @@
 #include "qpk_limits.h"
 #include "glass_qpk_builder.h"
 #include "glass_portal.h"
+#include "glass_board_music.h"
 #ifdef CONFIG_SYSTEM_HASS
 #include "hass_portal.h"
 #include "hass_service.h"
+#include "glass_board_home.h"
 #endif
 #include "glass_dashboard.h"
 #include "glass_icons.h"
@@ -206,6 +208,9 @@ enum desktop_camera_command_e
   DESKTOP_CAMERA_NONE = 0,
   DESKTOP_CAMERA_LAUNCH,
   DESKTOP_CAMERA_STOP,
+  DESKTOP_CAMERA_VIDEO_MODE,
+  DESKTOP_CAMERA_VIDEO_START,
+  DESKTOP_CAMERA_VIDEO_STOP,
 };
 
 static pthread_mutex_t g_camera_command_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -505,8 +510,47 @@ static void dialog_cancel(void)
     }
 }
 
+static struct {
+  lv_obj_t *page;
+  int x,y,w,h;
+  int screen_x,screen_y,screen_w,screen_h;
+  bool status_hidden;
+} g_camera_page;
+
+static void camera_page_restore(void)
+{
+  if(!g_camera_page.page)return;
+  g_camera_page.page=NULL;
+  lv_obj_set_pos(g_desktop.screen,g_camera_page.screen_x,g_camera_page.screen_y);
+  lv_obj_set_size(g_desktop.screen,g_camera_page.screen_w,g_camera_page.screen_h);
+  lv_obj_set_pos(g_desktop.panel,g_camera_page.x,g_camera_page.y);
+  lv_obj_set_size(g_desktop.panel,g_camera_page.w,g_camera_page.h);
+  if(g_desktop.statusbar&&!g_camera_page.status_hidden)
+    lv_obj_remove_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN);
+}
+
+static void camera_page_deleted(lv_event_t *event)
+{if(g_camera_page.page==lv_event_get_target(event))g_camera_page.page=NULL;}
+
+/* Only inner lists may scroll. LVGL's active screen is scrollable by default,
+ * so a drag propagated past a fixed app can otherwise pull the entire shell. */
+static void desktop_fixed_shell(void)
+{
+  lv_obj_t *surfaces[]={lv_screen_active(),lv_layer_top(),g_desktop.screen,g_desktop.panel};
+  for(unsigned i=0;i<sizeof(surfaces)/sizeof(surfaces[0]);i++){
+    lv_obj_t *obj=surfaces[i];if(!obj)continue;
+    lv_obj_remove_flag(obj,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_ELASTIC|
+      LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    lv_obj_set_scroll_dir(obj,LV_DIR_NONE);
+    lv_obj_set_scrollbar_mode(obj,LV_SCROLLBAR_MODE_OFF);
+    lv_obj_scroll_to(obj,0,0,LV_ANIM_OFF);
+  }
+}
+
 static void desktop_transients_reset(void)
 {
+  camera_page_restore();
+  desktop_fixed_shell();
   toast_cancel();
   dialog_cancel();
 
@@ -613,7 +657,7 @@ static lv_obj_t *panel_card(const char *title)
   lv_obj_set_style_text_font(label, glass_icon_font(24), 0);
   lv_obj_set_style_text_color(label, lv_color_hex(theme_primary()), 0);
   lv_obj_center(label);
-  glass_motion_panel(card);
+  /* Cards open at their final position; no deferred upward entrance. */
   return card;
 }
 
@@ -1165,6 +1209,34 @@ static lv_obj_t *qapp_page_prepare(const char *title)
   return content;
 }
 
+/* HA supplies its own toolbar. Keep native back navigation in the sidebar
+ * instead of reserving a second header above the entire quick app. */
+static bool qapp_homeassistant_sidebar_header(lv_obj_t *content)
+{
+  lv_obj_t *page = lv_obj_get_parent(content);
+  lv_obj_t *back = lv_obj_get_child(page, 0);
+  lv_obj_t *title = lv_obj_get_child(page, 1);
+  lv_obj_t *footer = lv_obj_create(page);
+  if (!footer) return false;
+  lv_obj_remove_style_all(footer);
+  lv_obj_set_size(footer, 164, 64);
+  lv_obj_align(footer, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+  lv_obj_set_style_bg_color(footer, lv_color_hex(g_desktop.light_theme ? 0xffffff : 0x22252f), 0);
+  lv_obj_set_style_bg_opa(footer, LV_OPA_COVER, 0);
+  lv_obj_remove_flag(footer, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_add_flag(title, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_size(content, lv_pct(100), lv_pct(100));
+  lv_obj_align(content, LV_ALIGN_BOTTOM_MID, 0, 0);
+  lv_obj_set_parent(back, footer);
+  lv_obj_set_pos(back, 12, 8);
+  lv_obj_set_size(back, 140, 44);
+  lv_obj_t *caption = lv_obj_get_child(back, 0);
+  lv_label_set_text(caption, "返回");
+  lv_obj_set_style_text_font(caption, zh_font(16), 0);
+  lv_obj_center(caption);
+  return true;
+}
+
 static void qapp_page_commit(lv_obj_t *content)
 {
   lv_obj_t *page = lv_obj_get_parent(content);
@@ -1303,6 +1375,24 @@ static void launch_builtin_camera_qapp(lv_event_t *e)
       return;
     }
 
+  /* Camera alone owns the full display; normal pages keep their safe area. */
+  lv_obj_t *page=lv_obj_get_parent(card);
+  g_camera_page.page=page;
+  g_camera_page.x=lv_obj_get_x(g_desktop.panel);g_camera_page.y=lv_obj_get_y(g_desktop.panel);
+  g_camera_page.w=lv_obj_get_width(g_desktop.panel);g_camera_page.h=lv_obj_get_height(g_desktop.panel);
+  g_camera_page.screen_x=lv_obj_get_x(g_desktop.screen);g_camera_page.screen_y=lv_obj_get_y(g_desktop.screen);
+  g_camera_page.screen_w=lv_obj_get_width(g_desktop.screen);g_camera_page.screen_h=lv_obj_get_height(g_desktop.screen);
+  g_camera_page.status_hidden=!g_desktop.statusbar||lv_obj_has_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_pos(g_desktop.screen,0,0);lv_obj_set_size(g_desktop.screen,lv_display_get_horizontal_resolution(NULL),lv_display_get_vertical_resolution(NULL));
+  lv_obj_set_pos(g_desktop.panel,0,0);lv_obj_set_size(g_desktop.panel,lv_display_get_horizontal_resolution(NULL),lv_display_get_vertical_resolution(NULL));
+  if(g_desktop.statusbar)lv_obj_add_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN);
+  for(unsigned i=0;i<lv_obj_get_child_count(page);i++){
+    lv_obj_t *child=lv_obj_get_child(page,i);if(child!=card)lv_obj_add_flag(child,LV_OBJ_FLAG_HIDDEN);
+  }
+  lv_obj_set_size(card,lv_pct(100),lv_pct(100));lv_obj_set_pos(card,0,0);
+  lv_obj_add_event_cb(page,camera_page_deleted,LV_EVENT_DELETE,NULL);
+  lv_obj_update_layout(page);
+
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
                            source, source_size, zh_font,
@@ -1310,9 +1400,20 @@ static void launch_builtin_camera_qapp(lv_event_t *e)
   if (ret == 0)
     {
       qapp_page_commit(card);
+      lv_obj_t *close=lv_button_create(page);
+      if(close){
+      lv_obj_set_pos(close,lv_obj_get_width(page)-96,lv_obj_get_height(page)-92);
+      lv_obj_set_size(close,64,64);style_button(close,0x202022);
+      lv_obj_set_style_radius(close,32,0);lv_obj_set_style_border_width(close,0,0);
+      lv_obj_add_event_cb(close,qapp_back,LV_EVENT_CLICKED,NULL);
+      lv_obj_t *icon=lv_label_create(close);if(icon){lv_label_set_text(icon,LV_SYMBOL_CLOSE);
+      lv_obj_set_style_text_font(icon,glass_icon_font(24),0);
+      lv_obj_set_style_text_color(icon,lv_color_hex(0xffffff),0);lv_obj_center(icon);
+      }}
     }
   else
     {
+      camera_page_restore();
       lv_obj_delete(lv_obj_get_parent(card));
     }
 }
@@ -1373,6 +1474,13 @@ static void launch_builtin_homeassistant_qapp(lv_event_t *e)
       return;
     }
 
+  if (!qapp_homeassistant_sidebar_header(card))
+    {
+      lv_obj_delete(lv_obj_get_parent(card));
+      show_toast("页面内存不足");
+      return;
+    }
+
   ret = qpk_runtime_launch(card, manifest->name, manifest->package,
                            manifest->version, manifest->entry,
                            source, source_size, hass_qpk_font,
@@ -1387,11 +1495,10 @@ static void launch_builtin_homeassistant_qapp(lv_event_t *e)
     }
 }
 
-static void external_qapp_clicked(lv_event_t *e)
+static void launch_external_qapp(intptr_t index)
 {
   struct qpk_draft_info operation; glass_qpk_get(&operation);
   if (operation.removing) { show_toast("正在删除应用，请稍候"); return; }
-  intptr_t index = (intptr_t)lv_event_get_user_data(e);
   struct qpk_entry_s *qpk;
   lv_obj_t *card;
   lv_obj_t *label;
@@ -1440,6 +1547,11 @@ static void external_qapp_clicked(lv_event_t *e)
   lv_obj_set_width(label, 690);
   lv_obj_align(label, LV_ALIGN_TOP_LEFT, 24, 76);
   qapp_page_commit(card);
+}
+
+static void external_qapp_clicked(lv_event_t *e)
+{
+  launch_external_qapp((intptr_t)lv_event_get_user_data(e));
 }
 
 static lv_obj_t *list_button(lv_obj_t *parent, const char *title,
@@ -1535,6 +1647,7 @@ static void launch_bilibili(lv_event_t *e)
 #endif
 #include "glass_ui.inc"
 #include "glass_ui_probe.inc"
+#include "glass_board_ui.inc"
 
 static void desktop_camera_request(enum desktop_camera_command_e command)
 {
@@ -1550,6 +1663,7 @@ static uint32_t desktop_loop_once(void)
   uint32_t idle = 10;
 
   desktop_ui_probe_service();
+  glass_board_ui_service();
 
 #ifdef CONFIG_SYSTEM_C6_DESKTOP
   /* Network results arrive from a worker thread; the desktop shows them. */
@@ -1585,6 +1699,11 @@ static uint32_t desktop_loop_once(void)
     {
       launch_builtin_camera_qapp(NULL);
     }
+  else if(command>=DESKTOP_CAMERA_VIDEO_MODE&&command<=DESKTOP_CAMERA_VIDEO_STOP)
+    {
+      int ret=qpk_runtime_camera_video_action(command-DESKTOP_CAMERA_VIDEO_MODE);
+      printf("desktop: camera video action=%u result=%d\n",command-DESKTOP_CAMERA_VIDEO_MODE,ret);
+    }
 
   if (g_camera_launch_pending && !qpk_runtime_camera_busy())
     {
@@ -1606,6 +1725,7 @@ static uint32_t desktop_loop_once(void)
 
 int main(int argc, FAR char *argv[])
 {
+  glass_board_music_register();
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
   if(argc==2&&!strcmp(argv[1],"cpu-status")){bili_cpu_report();return 0;}
   if(argc==3&&!strcmp(argv[1],"media-fps")){
@@ -1632,7 +1752,30 @@ int main(int argc, FAR char *argv[])
     return qpk_hw_probe(argc > 2 && !strcmp(argv[2], "audio"));
   }
 #ifdef GLASS_LOCAL_SPEECH
-  if(argc>1&&!strcmp(argv[1],"speech"))return glass_speech_cli(argc,argv);
+  if(argc>1&&!strcmp(argv[1],"speech")){
+    /* A temporary NSH task must not own the recognition worker. */
+    if(argc==3&&!strcmp(argv[2],"listen"))return desktop_ui_probe_request("speech-listen");
+    if(argc==3&&!strcmp(argv[2],"probe"))return desktop_ui_probe_request("speech-probe");
+    if(argc==3&&!strcmp(argv[2],"nano-scalar"))return desktop_ui_probe_request("speech-nano-scalar");
+    if(argc==3&&!strcmp(argv[2],"nano-pie"))return desktop_ui_probe_request("speech-nano-pie");
+    if(argc==3&&!strcmp(argv[2],"nano-play"))return desktop_ui_probe_request("speech-nano-play");
+    if(argc==3&&!strcmp(argv[2],"esp-tts"))return desktop_ui_probe_request("speech-esp-tts");
+    if(argc==3&&!strcmp(argv[2],"esp-tts-play"))return desktop_ui_probe_request("speech-esp-tts-play");
+    if(argc==3&&!strcmp(argv[2],"esp-tts-export"))return desktop_ui_probe_request("speech-esp-tts-export");
+    if(argc==3&&!strcmp(argv[2],"p4tts-scalar"))return desktop_ui_probe_request("speech-p4tts-scalar");
+    if(argc==3&&!strcmp(argv[2],"p4tts-pie"))return desktop_ui_probe_request("speech-p4tts-pie");
+    if(argc==3&&!strcmp(argv[2],"p4tts-dual"))return desktop_ui_probe_request("speech-p4tts-dual");
+    if(argc==3&&!strcmp(argv[2],"zh-q8"))return desktop_ui_probe_request("speech-zh-q8");
+    if(argc==3&&!strcmp(argv[2],"zh-q8-play"))return desktop_ui_probe_request("speech-zh-q8-play");
+    if(argc==3&&!strcmp(argv[2],"zh-q8-pie"))return desktop_ui_probe_request("speech-zh-q8-pie");
+    if(argc==3&&!strcmp(argv[2],"zh-q8-dual"))return desktop_ui_probe_request("speech-zh-q8-dual");
+    if(argc==4&&!strcmp(argv[2],"say")){
+      char request[80];int n=snprintf(request,sizeof(request),"speech-say:%s",argv[3]);
+      if(n<0||n>=(int)sizeof(request))return -ENAMETOOLONG;
+      return desktop_ui_probe_request(request);
+    }
+    return glass_speech_cli(argc,argv);
+  }
 #endif
   if (argc>1 && !strcmp(argv[1],"espdl")) {
     extern int qpk_dl_probe(int,char **);
@@ -1652,6 +1795,10 @@ int main(int argc, FAR char *argv[])
 #endif
 #ifdef CONFIG_ESP32P4_FUNCTION_EV_BOARD_TOUCHSCREEN
   extern int board_touch_initialize(void);
+#endif
+#ifdef CONFIG_SYSTEM_HASS
+  /* Register the in-process smart home MCP tools before any AI tool call. */
+  glass_board_home_register();
 #endif
 
   if (argc > 1 && strcmp(argv[1], "storage-test") == 0)
@@ -1699,6 +1846,12 @@ int main(int argc, FAR char *argv[])
   stop_camera = argc > 1 && strcmp(argv[1], "camera-stop") == 0;
   if (lv_is_initialized())
     {
+      if(argc==2&&(!strcmp(argv[1],"camera-video-mode")||!strcmp(argv[1],"camera-video-start")||!strcmp(argv[1],"camera-video-stop")))
+        {
+          desktop_camera_request(!strcmp(argv[1],"camera-video-mode")?DESKTOP_CAMERA_VIDEO_MODE:
+            !strcmp(argv[1],"camera-video-start")?DESKTOP_CAMERA_VIDEO_START:DESKTOP_CAMERA_VIDEO_STOP);
+          return 0;
+        }
       if (launch_camera)
         {
           desktop_camera_request(DESKTOP_CAMERA_LAUNCH);

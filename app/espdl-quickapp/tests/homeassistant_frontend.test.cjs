@@ -623,7 +623,7 @@ test('switching from More to overview does not leave mixed brightness input bloc
   const state=r.context.ESPHomeHA.snapshot(),row=state.layoutPages[0].find(v=>v.entity_id==='light.desk');
   const more=r.buttons.find(b=>{const v=r.geometry.get(b.id);return !r.hidden.get(b.id)&&v.x===row.x&&v.w===row.w&&v.h<80;});
   assert(more);more.callback();for(let i=0;i<30;i++)r.tick();assert(r.context.ESPHomeHA.snapshot().detailAdvanced);
-  const overview=r.buttons.find(b=>{const v=r.geometry.get(b.id);return !r.hidden.get(b.id)&&v.x===8&&v.y===70;});
+  const overview=r.buttons.find(b=>{const v=r.geometry.get(b.id);return !r.hidden.get(b.id)&&v.x===12&&v.y===104;});
   assert(overview);overview.callback();for(let i=0;i<30;i++)r.tick();
   const rail=largeBrightnessRail(r,'light.desk'),nx=(rail.rect.x+rail.rect.w*.6)/1024,ny=(rail.rect.y+rail.rect.h/2)/536;
   r.touch('down',nx,ny);r.touch('up',nx,ny);
@@ -935,7 +935,7 @@ test('usage is recorded per device, batched in storage and applied only on a hom
   deviceBody(r,'sensor.b').callback();for(let i=0;i<35;i++)r.tick();
   assert(!r.saves.has('eh_card_usage'),'opening a card must not immediately write flash');
   assert.deepEqual(r.context.ESPHomeHA.snapshot().layoutPages,before,'recording use must not move the current cards');
-  const overview=r.buttons.find(b=>{const box=r.geometry.get(b.id);return !r.hidden.get(b.id)&&box.x===8&&box.y===70&&box.h===38;});
+  const overview=r.buttons.find(b=>{const box=r.geometry.get(b.id);return !r.hidden.get(b.id)&&box.x===12&&box.y===104&&box.h===44;});
   overview.callback();for(let i=0;i<30;i++)r.tick();
   assert.equal(r.context.ESPHomeHA.snapshot().layoutPages[0][0].entity_id,'sensor.b');
   now=12000;for(let i=0;i<25;i++)r.tick();
@@ -1247,7 +1247,7 @@ test('scene and log navigation replace environment/system and retain sensors und
     {entity_id:'script.sleep',state:'off',attributes:{friendly_name:'睡眠脚本'}},
     {entity_id:'sensor.room',state:'24.5',attributes:{friendly_name:'室温',device_class:'temperature',unit_of_measurement:'°C'}}];
   const r=boot(1024,536,{states});r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
-  const select=y=>{const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===8&&box.y===y;});assert(button);button.callback();for(let i=0;i<25;i++)r.tick();};
+  const select=y=>{const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===12&&box.y===104+(y-70)/46*52;});assert(button);button.callback();for(let i=0;i<25;i++)r.tick();};
   assert([...r.textValues.values()].includes('场景'));assert([...r.textValues.values()].includes('日志'));
   assert(![...r.textValues.values()].includes('环境'));assert(![...r.textValues.values()].includes('系统'));
   select(162);let snapshot=r.context.ESPHomeHA.snapshot();assert.equal(snapshot.nav,'scenes');
@@ -1269,7 +1269,7 @@ test('session logs stay bounded and do not repeat unchanged periodic synchroniza
 });
 
 function chooseSection(r,y){
-  const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===8&&box.y===y;});
+  const button=r.buttons.find(button=>{const box=r.geometry.get(button.id);return !r.hidden.get(button.id)&&box.x===12&&box.y===104+(y-70)/46*52;});
   assert(button);button.callback();for(let i=0;i<45;i++)r.tick();
 }
 function clickIndicator(r,page,kind="pageIndicator"){
@@ -1414,6 +1414,32 @@ function lampClickLabel(r,text){
 function lampClickAt(r,x,y){
   const b=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&x>=g.x&&x<=g.x+g.w&&y>=g.y&&y<=g.y+g.h;});assert(b,'native lamp hit target');b.callback();for(let i=0;i<10;i++)r.tick();
 }
+
+test('bedside controls fit the real 504px content height with auxiliary functions',()=>{
+  const main={entity_id:'light.bedside',state:'on',attributes:{friendly_name:'床头灯',brightness:200,
+    supported_color_modes:['color_temp','rgb'],color_mode:'rgb',rgb_color:[255,150,46],
+    color_temp_kelvin:2700,min_color_temp_kelvin:2700,max_color_temp_kelvin:6500,
+    supported_features:4,effect_list:['none','Day','Night','Relax'],effect:'Day'}};
+  const aux={entity_id:'switch.ambient',state:'on',attributes:{friendly_name:'辅助功能'}};
+  const r=boot(1024,504,{states:[main,aux],devices:[['bedside','床头灯','卧室',[main.entity_id,aux.entity_id]]],nativeActions:true,acceptControls:true});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();deviceBody(r,main.entity_id).callback();for(let i=0;i<30;i++)r.tick();
+  const visibleButtons=()=>r.buttons.filter(b=>!r.hidden.get(b.id)).map(b=>({b,g:r.geometry.get(b.id)}));
+  function assertNoOverlap(){
+    const choices=visibleButtons().filter(({g})=>g.x>650&&g.y>150);
+    for(let i=0;i<choices.length;i++)for(let j=i+1;j<choices.length;j++){
+      const a=choices[i].g,b=choices[j].g;
+      assert(!(a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h),'bedside button overlap '+JSON.stringify([a,b]));
+    }
+    for(const {g} of choices)assert(g.y+g.h<=486,'button below detail panel');
+  }
+  assertNoOverlap();assert(r.context.ESPHomeHA.snapshot().colorWheel);
+  const wheel=r.context.ESPHomeHA.snapshot().colorWheel;
+  assert(wheel.y+wheel.h<420,'wheel leaves space for effects and auxiliary entry');
+  assert([...r.textValues].some(([id,t])=>!r.hidden.get(id)&&t==='常用色温 · 颜色'));
+  assert(![...r.textValues].some(([id,t])=>!r.hidden.get(id)&&t==='自选颜色'));
+  lampClickLabel(r,'夜间');assert.equal(r.controls.at(-1).body.effect,'Night');
+  lampClickLabel(r,'其他设备功能');assert(visibleButtons().length>0);assertNoOverlap();
+});
 test('lamp detail has real color presets, an effect selector, and bounded native controls',()=>{
   const r=lampFixture();const visible=()=>[...r.textValues].filter(([id])=>!r.hidden.get(id)).map(([,v])=>v);
   for(const t of ['亮度','色温','常用色温 · 颜色','颜色选择','灯光效果'])assert(visible().includes(t),t);
@@ -1896,14 +1922,14 @@ test('desktop navigation accepts the exact endpoint already approved by the nati
 });
 
 
-test('motion presents detail and return content in opposite directions without sending commands',()=>{
+test('opening and returning from a card never adds an upward presentation or sends commands',()=>{
   const r=boot(1024,600),motions=[];
   r.context.ui.present=(ids,offset)=>{assert(ids.length>0&&ids.length<=128);ids.forEach(id=>assert(r.geometry.has(id)));motions.push(offset);};
   r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();motions.length=0;
   deviceBody(r,'light.desk').callback();for(let i=0;i<40;i++)r.tick();
-  assert(motions.includes(12));assert.equal(r.controls.length,0);
+  assert.equal(motions.length,0);assert.equal(r.controls.length,0);
   const back=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x>=164&&g.x<200&&g.y<45;});assert(back);back.callback();
-  for(let i=0;i<40;i++)r.tick();assert(motions.includes(-12));assert.equal(r.controls.length,0);
+  for(let i=0;i<40;i++)r.tick();assert.equal(motions.length,0);assert.equal(r.controls.length,0);
 });
 test('lamp motion smooths presets but keeps both wheel and slider drags direct',()=>{
   const r=lampFixture(),wheel=r.context.ESPHomeHA.snapshot().colorWheel;
@@ -1921,22 +1947,57 @@ test('lamp motion smooths presets but keeps both wheel and slider drags direct',
 });
 
 
-test('sidebar moves one retained selection face beneath fixed native navigation targets',()=>{
-  const r=boot(1024,600);r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
-  const face=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.x===8&&g.w===148&&g.h===38&&!r.buttons.some(b=>b.id===id));assert(face);
-  const clickRow=y=>{const b=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x===8&&g.y===y&&g.w===148;});assert(b);b.callback();for(let i=0;i<40;i++)r.tick();};
-  r.nativeWrites.length=0;clickRow(208);
-  assert(r.nativeWrites.some(w=>w.method==='position'&&w.id===face[0]&&w.y===208&&w.smooth));
-  clickRow(70);assert.equal(r.geometry.get(face[0]).y,70);assert.equal(r.controls.length,0);
+test('sidebar cursor follows a drag, snaps once on release and rejects stale, canceled or outside releases',()=>{
+  const r=boot(1024,600,{waterfall:true});r.context.ESPHomeHA.refresh();for(let i=0;i<50;i++)r.tick();
+  const original=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x===12&&g.y===104;});assert(original);
+  const writes=r.nativeWrites.length;
+  r.touch('down',80/1024,126/600);r.touch('move',80/1024,230/600);
+  let state=r.context.ESPHomeHA.snapshot();assert.equal(state.nav,'overview');assert.equal(state.sidebarCursor.y,208);assert(state.sidebarCursor.dragging);
+  assert.equal(r.nativeWrites.slice(writes).filter(w=>w.method==='position'&&w.smooth).length,0);
+  r.touch('up',80/1024,230/600);for(let i=0;i<40;i++)r.tick();
+  state=r.context.ESPHomeHA.snapshot();assert.equal(state.nav,'scenes');assert.equal(state.sidebarCursor.y,208);assert(!state.sidebarCursor.dragging);
+  original.callback();for(let i=0;i<10;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().nav,'scenes','native original click is suppressed');
+  r.touch('down',80/1024,230/600);r.touch('move',80/1024,280/600);r.touch('cancel',0,0);for(let i=0;i<20;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().nav,'scenes');assert.equal(r.context.ESPHomeHA.snapshot().sidebarCursor.y,208);
+  r.touch('down',80/1024,230/600);r.touch('move',80/1024,126/600);r.touch('up',250/1024,126/600);for(let i=0;i<20;i++)r.tick();assert.equal(r.context.ESPHomeHA.snapshot().nav,'scenes');
+  r.touch('down',80/1024,230/600);r.touch('move',80/1024,126/600);r.context.ESPHomeHA.settings();r.touch('up',80/1024,126/600);for(let i=0;i<20;i++)r.tick();assert(r.context.ESPHomeHA.snapshot().settingsOpen);
+  assert.equal(r.controls.length,0);
 });
-test('HA pagination animates card content horizontally in both directions while leaving its pager fixed',()=>{
+
+test('sidebar geometry matches native navigation across supported display sizes',()=>{
+  const header=fs.readFileSync(path.join(__dirname,'../overlay/apps/system/desktop/glass_sidebar.h'),'utf8');
+  const token=name=>Number(header.match(new RegExp('#define '+name+' (\\d+)'))[1]);
+  assert.equal(token('GLASS_SIDEBAR_WIDTH'),164);
+  for(const [width,height] of [[640,400],[800,450],[1024,504],[1024,600]]){
+    const r=boot(width,height);r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    const rows=r.buttons.filter(b=>!r.hidden.get(b.id)).map(b=>r.geometry.get(b.id)).filter(g=>g.x===12&&g.w===140&&g.h===44);
+    assert.equal(rows.length,4);
+    for(let i=0;i<rows.length;i++){
+      assert.equal(rows[i].x,token('GLASS_SIDEBAR_PAD'));
+      assert.equal(rows[i].w,token('GLASS_SIDEBAR_ITEM_WIDTH'));
+      assert.equal(rows[i].h,token('GLASS_SIDEBAR_ITEM_HEIGHT'));
+      assert(rows[i].x+rows[i].w<164&&rows[i].y+rows[i].h<height-36);
+      if(i)assert.equal(rows[i].y-rows[i-1].y,44+token('GLASS_SIDEBAR_GAP'));
+    }
+  }
+});
+
+test('sidebar uses shared dimensions and updates its retained selection without floating',()=>{
+  const r=boot(1024,600);r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  const face=[...r.geometry].find(([id,g])=>!r.hidden.get(id)&&g.x===12&&g.w===140&&g.h===44&&!r.buttons.some(b=>b.id===id));assert(face);
+  const clickRow=y=>{const b=r.buttons.find(b=>{const g=r.geometry.get(b.id);return !r.hidden.get(b.id)&&g.x===12&&g.y===104+(y-70)/46*52&&g.w===140;});assert(b);b.callback();for(let i=0;i<40;i++)r.tick();};
+  r.nativeWrites.length=0;clickRow(208);
+  assert(r.nativeWrites.some(w=>w.method==='position'&&w.id===face[0]&&w.y===260&&!w.smooth));
+  clickRow(70);assert.equal(r.geometry.get(face[0]).y,104);assert.equal(r.controls.length,0);
+});
+test('HA pagination changes pages without floating the content',()=>{
   const states=Array.from({length:18},(_,i)=>({entity_id:'light.motion_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:120,supported_color_modes:['brightness']}}));
   const r=boot(1024,600,{states}),motions=[];r.context.ui.present=(ids,offset,horizontal)=>motions.push({ids,offset,horizontal});
   r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();motions.length=0;
   clickIndicator(r,1);for(let i=0;i<30;i++)r.tick();
-  assert(motions.some(m=>m.horizontal===true&&m.offset>0));
+  assert.equal(motions.length,0);
   clickIndicator(r,0);for(let i=0;i<30;i++)r.tick();
-  assert(motions.some(m=>m.horizontal===true&&m.offset<0));
+  assert.equal(motions.length,0);
   for(const m of motions.filter(m=>m.horizontal))for(const id of m.ids)assert(r.geometry.get(id).y<546,'footer remains still');
   assert.equal(r.controls.length,0);
 });
@@ -2233,4 +2294,85 @@ test('waterfall preserves the scrolled reading position across device details an
   const scenes=boot(1024,600,{waterfall:true,sceneSync:true,sceneStates,nativeActions:true,acceptControls:true,services:sceneServices});scenes.context.ESPHomeHA.refresh();for(let i=0;i<80;i++)scenes.tick();chooseSection(scenes,162);
   assert.equal(scenes.context.ESPHomeHA.snapshot().layoutPages.length,1);assert.equal(scenes.context.ESPHomeHA.snapshot().layoutPages[0].length,30);assert.equal(scenes.controls.length,0);
   const button=sceneExecuteButton(scenes,'scene.fall_0');assert(button);button.callback();assert.equal(scenes.controls.length,1);
+});
+
+test('bounded text metrics cache avoids repeated native measurements without changing camera metric layout',()=>{
+  const uncached=source.replace(/function measureTextCached\(text,font\) \{[\s\S]*?\n  \}/,
+    'function measureTextCached(text,font) { return ui.measureText(text,font); }');
+  assert.notEqual(uncached,source);
+  const run=script=>{
+    let calls=0;
+    const states=[{entity_id:'camera.entry',state:'idle',attributes:{friendly_name:'监控摄像机',device_type:'camera',device_id:'entry',miot_properties:{'battery.battery-level':86}}}];
+    const r=boot(1024,536,{source:script,states,measureMetrics:(text,font)=>{calls++;return {width:String(text).length*12,height:font===43?32:18,baseline:font===43?5:3};}});
+    r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+    deviceBody(r,'camera.entry').callback();for(let i=0;i<25;i++)r.tick();
+    const initial=calls;
+    for(let n=0;n<15;n++){states[0].attributes.miot_properties['battery.battery-level']=n%2?86:87;r.context.ESPHomeHA.refresh();for(let i=0;i<30;i++)r.tick();}
+    const metrics=[...r.textValues].filter(([id,text])=>!r.hidden.get(id)&&['86','%'].includes(text)).map(([id,text])=>({text,...r.geometry.get(id)}));
+    return {calls,initial,metrics};
+  };
+  const before=run(uncached),after=run(source);
+  assert(before.calls>before.initial,'fixture exercises repeated native measurements');
+  assert(after.calls<before.calls*.2,'unchanged readings should reuse measured metrics');
+  assert.deepEqual(after.metrics,before.metrics,'pixel geometry and baseline stay unchanged');
+  console.log('TEXT_METRICS_CALLS',JSON.stringify({before:before.calls,after:after.calls}));
+});
+
+test('large device function ordering computes descriptors once per member and preserves permissions and order',()=>{
+  const begin=source.indexOf('  function deviceFunctions(){'),end=source.indexOf('  function functionControls(item){',begin);
+  assert(begin>=0&&end>begin);
+  const oldBody=`  function deviceFunctions(){
+    const card=currentDeviceCard(),ids=card&&card.device_entities||[selectedId];
+    if(nav==='scenes'&&current())return [current()];
+    return ids.map(id=>indexedEntity(id)).filter(Boolean).sort((a,b)=>
+      Number(functionControls(b).length>0)-Number(functionControls(a).length>0));
+  }
+`;
+  const oldSource=source.slice(0,begin)+oldBody+source.slice(end);
+  const run=(script,canControl)=>{
+    script=script.replace('function functionControls(item){','function functionControls(item){globalThis.__specCalls=(globalThis.__specCalls||0)+1;');
+    const states=Array.from({length:100},(_,i)=>i%3===0?
+      {entity_id:'switch.perf_'+i,state:'on',attributes:{friendly_name:'插座 '+i}}:
+      {entity_id:'sensor.perf_'+i,state:String(i),attributes:{friendly_name:'温度 '+i,device_class:'temperature',unit_of_measurement:'C'}});
+    const r=boot(1024,600,{source:script,states,devices:[['perf','组合设备','客厅',states.map(s=>s.entity_id)]],waterfall:true,canControl});
+    r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+    deviceBody(r,'switch.perf_0').callback();for(let i=0;i<60;i++)r.tick();
+    r.context.__specCalls=0;
+    const snapshot=r.context.ESPHomeHA.snapshot();
+    return {calls:r.context.__specCalls,functions:JSON.stringify(snapshot.functionControls),members:JSON.stringify(snapshot.deviceCards.map(c=>c.members)),controls:r.controls.length};
+  };
+  for(const canControl of [true,false]){
+    const before=run(oldSource,canControl),after=run(source,canControl);
+    assert.equal(after.functions,before.functions);assert.equal(after.members,before.members);
+    assert.equal(after.controls,0);assert(after.calls<before.calls);
+    console.log('DEVICE_DESCRIPTOR_CALLS',JSON.stringify({canControl,before:before.calls,after:after.calls}));
+  }
+});
+
+test('waterfall indexed window matches full-scan selection at every scroll depth and after layout replacement',()=>{
+  const begin=source.indexOf('    // A layout\'s rows are immutable'),end=source.indexOf('    candidates.sort((a,b)=>{',begin);
+  assert(begin>=0&&end>begin);
+  const oldSource=source.slice(0,begin)+'    const candidates=rows.filter(row=>row.y+row.h>top-110&&row.y<bottom+110);\n'+source.slice(end);
+  const run=script=>{
+    script=script.replace('  function snapshot() {',`  function snapshot() {
+      globalThis.__windowRows=()=>dashboardPages()[0].items;
+      globalThis.__windowSample=y=>{boardScroll=y;return boardWindow(dashboardPages()[0].items).map(row=>row?row.item.entity_id:null);};`);
+    const states=Array.from({length:512},(_,i)=>i%3===0?
+      {entity_id:'light.index_'+i,state:'on',attributes:{friendly_name:'灯 '+i,brightness:128,supported_color_modes:['brightness']}}:
+      {entity_id:'sensor.index_'+i,state:String(i),attributes:{friendly_name:'温度 '+i,device_class:'temperature'}});
+    const r=boot(1024,600,{source:script,states,waterfall:true});
+    r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();
+    const snapshots=[];let yReads=0;
+    for(let pass=0;pass<2;pass++){
+      const snap=r.context.ESPHomeHA.snapshot(),rows=r.context.__windowRows();
+      for(const row of rows){const y=row.y;Object.defineProperty(row,'y',{get(){yReads++;return y;}});}
+      for(let i=0;i<=100;i++)snapshots.push(JSON.stringify(r.context.__windowSample((snap.waterfall.contentHeight-500)*i/100)));
+      if(!pass){states.splice(0,47);r.context.ESPHomeHA.refresh();for(let i=0;i<90;i++)r.tick();}
+    }
+    return {snapshots,yReads,controls:r.controls.length};
+  };
+  const before=run(oldSource),after=run(source);
+  assert.deepEqual(after.snapshots,before.snapshots,'same pooled slots for all 202 scroll positions');
+  assert.equal(after.controls,0);assert(after.yReads<before.yReads*.4);
+  console.log('WATERFALL_Y_READS',JSON.stringify({before:before.yReads,after:after.yReads}));
 });

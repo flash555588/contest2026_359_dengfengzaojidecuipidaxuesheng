@@ -1211,13 +1211,7 @@ static void hass_ui_render_devices(void)
   for (unsigned i = 0; i < 3; i++)
     {
       bool selected = (unsigned)g_hass_ui.mode == i;
-      lv_obj_set_style_bg_color(g_hass_ui.nav[i],
-                                lv_color_hex(g_hass_ui.accent), 0);
-      lv_obj_set_style_bg_opa(g_hass_ui.nav[i],
-                              selected ? 38 : LV_OPA_TRANSP, 0);
-      lv_obj_set_style_text_color(lv_obj_get_child(g_hass_ui.nav[i], 0),
-                                  lv_color_hex(selected ? g_hass_ui.accent :
-                                               g_hass_ui.secondary), 0);
+      glass_sidebar_item(g_hass_ui.nav[i],selected);
     }
   const char *headings[] = {"全屋设备", "常用控制", "环境感知"};
   const char *subtitles[] = {"设备状态，一眼看清", "灯光、开关与风扇", "温度、湿度与传感器"};
@@ -1886,8 +1880,9 @@ static void glass_hass_app(lv_obj_t *card)
   lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
   lv_obj_add_event_cb(card, hass_ui_deleted, LV_EVENT_DELETE, NULL);
 
-  lv_obj_t *sidebar = glass_box(card, 0, 0, 178, 468,
-                                g_hass_ui.sidebar, 0);
+  lv_obj_t *sidebar = glass_box(card, 0, 0, GLASS_SIDEBAR_WIDTH, 468,
+                                detail_paper(), 0);
+  glass_sidebar_surface(sidebar);
   lv_obj_t *logo = glass_box(sidebar, 22, 24, 48, 48, g_hass_ui.warm, 14);
   lv_obj_t *home = glass_symbol(logo, LV_SYMBOL_HOME, 0, 0, 0xffffff);
   lv_obj_center(home);
@@ -1896,13 +1891,13 @@ static void glass_hass_app(lv_obj_t *card)
   const char *nav_names[] = {"全屋", "常用", "环境"};
   for (unsigned i = 0; i < 3; i++)
     g_hass_ui.nav[i] = hass_ui_button(sidebar, nav_names[i], 12,
-                                      116 + i * 60, 154, 48,
+                                      104 + i * 52, 140, 44,
                                       g_hass_ui.sidebar,
                                       hass_ui_nav, (void *)(uintptr_t)i);
   g_hass_ui.count = hass_ui_text(sidebar, "0 台设备 · 0 在线", 24, 310,
                                  136, 16, g_hass_ui.secondary);
-  hass_ui_button(sidebar, "返回桌面", 16, 402, 146, 44,
-                 g_hass_ui.variant, panel_hide, NULL);
+  glass_sidebar_item(hass_ui_button(sidebar, "返回桌面", 12, 412, 140, 44,
+                 g_hass_ui.variant, panel_hide, NULL),false);
 
   g_hass_ui.heading = hass_ui_text(card, "全屋设备", 202, 24, 250, 28,
                                    g_hass_ui.primary);

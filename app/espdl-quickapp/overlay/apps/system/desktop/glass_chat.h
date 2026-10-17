@@ -10,6 +10,8 @@
 #define CHAT_REPLY_BYTES 8192
 #define CHAT_CONTEXT_BYTES 12288
 #define CHAT_TOOL_TRACE 4
+#define CHAT_CARD_COUNT 4
+#define CHAT_CARD_TEXT 256
 
 enum chat_turn_state { CHAT_WAITING, CHAT_DONE, CHAT_FAILED, CHAT_CANCELLED };
 enum chat_phase { CHAT_LOADING, CHAT_IDLE, CHAT_QUEUED, CHAT_REQUESTING,
@@ -19,6 +21,16 @@ enum chat_error {
   CHAT_ERROR_AUTH, CHAT_ERROR_MODEL, CHAT_ERROR_LIMIT, CHAT_ERROR_TLS,
   CHAT_ERROR_RESPONSE, CHAT_ERROR_MEMORY, CHAT_ERROR_INTERRUPTED,
   CHAT_ERROR_CLEANUP, CHAT_ERROR_OUTPUT_LIMIT, CHAT_ERROR_STREAM
+};
+
+/* One device result card rendered inside the dialog; already validated. */
+struct chat_card {
+  char entity[96];
+  char kind[12];
+  char name[64];
+  char state[64];
+  int level;
+  bool on;
 };
 
 struct chat_turn {
@@ -34,6 +46,8 @@ struct chat_turn {
   char progress[96], reasoning[1025];
   unsigned tool_count,tool_total;
   char tools[CHAT_TOOL_TRACE][40];
+  unsigned card_count;
+  struct chat_card cards[CHAT_CARD_COUNT];
   char archive[48];
   uint32_t archive_bytes;
   char prompt[CHAT_PROMPT_BYTES + 1];

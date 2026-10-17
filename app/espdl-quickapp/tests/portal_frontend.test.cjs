@@ -257,12 +257,13 @@ test('compiled portal assets match the current installer files byte for byte',()
 
 test('Agent save keeps blank MCP secrets, converts switches and sends explicit token clear', async () => {
   const r=boot();await r.connected();
-  r.node('agent').testData={skills_enabled:'1',mcp1_enabled:'1',mcp1_url:'https://mcp.example/mcp',mcp1_token:'',mcp2_token:'',mcp3_token:'',mcp2_clear_token:'on'};
+  r.node('agent').testData={skills_enabled:'1',home_control_enabled:'1',mcp1_enabled:'1',mcp1_url:'https://mcp.example/mcp',mcp1_token:'',mcp2_token:'',mcp3_token:'',mcp2_clear_token:'on'};
   let posted;
   r.handle((url,options)=>{if(options.method==='POST'){assert.equal(url,'/api/config?section=agent');posted=JSON.parse(options.body);}return new Response('{}');});
   await r.node('agent').onsubmit({preventDefault(){},target:r.node('agent')});
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(posted.skills_enabled,1);assert.equal(posted.mcp1_enabled,1);
+  assert.equal(posted.home_control_enabled,1);
   assert.equal('mcp1_token' in posted,false);assert.equal(posted.mcp2_token,'');assert.equal('mcp3_token' in posted,false);
   assert.equal('mcp2_clear_token' in posted,false);
 });

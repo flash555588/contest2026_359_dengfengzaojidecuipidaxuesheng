@@ -9,4 +9,8 @@
 struct glass_status_network
 {
   bool wifi, wired, joining;
+  bool rssi_valid;
+  int rssi_dbm;
 };
+/* Unknown capacity is -1. Never estimates a battery percentage from uptime. */
+void glass_status_power_read(int *percent, bool *charging);

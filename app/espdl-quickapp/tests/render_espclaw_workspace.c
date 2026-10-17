@@ -8,6 +8,8 @@ extern void review_chat_phase_fixture(enum chat_phase);
 extern void review_chat_error_fixture(void);
 extern void review_face_available_fixture(bool);
 extern void review_chat_tool_fixture(const char *,const char *);
+extern void review_chat_card_fixture(unsigned);
+extern void review_chat_music_card_fixture(bool);
 
 static void workspace_frames(unsigned n)
 {for(unsigned i=0;i<n;i++){lv_tick_inc(100);lv_timer_handler();usleep(1000);}}
@@ -29,7 +31,7 @@ static void workspace_bounds(lv_obj_t *object)
   if(!object||!lv_obj_is_visible(object))return;
   if(lv_obj_has_flag(object,LV_OBJ_FLAG_CLICKABLE)&&!lv_obj_check_type(object,&lv_label_class)){
     lv_area_t area;lv_obj_get_coords(object,&area);
-    assert(area.x1>=0&&area.x2<1024&&area.y1>=GLASS_STATUS_HEIGHT&&area.y2<600);
+    assert(area.x1>=0&&area.x2<1024&&area.y1>=0&&area.y2<600);
   }
   for(unsigned i=0;i<lv_obj_get_child_count(object);i++)workspace_bounds(lv_obj_get_child(object,i));
 }
@@ -40,6 +42,10 @@ static void workspace_cases(lv_display_t *display)
     g_desktop.light_theme=theme==0;glass_rebuild();review_chat_dialog_fixture(true);review_qpk_fixture(NULL);
     chat_interface_modes[0]=AGENT_MODE_CREATE;glass_chat_show(false);workspace_frames(4);
     assert(g_chat_ui.ball&&g_chat_ui.ball_mount&&g_chat_ui.task_title);
+    lv_obj_update_layout(g_desktop.screen);
+    assert(lv_obj_get_y(g_desktop.screen)==0&&lv_obj_get_height(g_desktop.screen)==600);
+    assert(lv_obj_get_height(g_chat_ui.root)==600);
+    assert(lv_obj_has_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN));
     assert(glass_grok_current(g_chat_ui.ball)==2&&!g_chat_ui.workspace_ball_compact);
     struct glass_grok *original_ball=g_chat_ui.ball;
     workspace_bounds(g_chat_ui.root);check_visible_icons(g_chat_ui.root,0xe005);
@@ -75,7 +81,7 @@ static void workspace_cases(lv_display_t *display)
     review_capture(display,"workspace-working","ESPClaw · 处理任务");
     g_glass.reduced_motion=false;
     chat_ui_trace_update(&g_chat_ui.snapshot->turns[0]);lv_opa_t first=lv_obj_get_style_text_opa(g_chat_ui.waiting,0);
-    lv_tick_inc(250);chat_ui_trace_update(&g_chat_ui.snapshot->turns[0]);
+    lv_tick_inc(500);chat_ui_trace_update(&g_chat_ui.snapshot->turns[0]);
     assert(first!=lv_obj_get_style_text_opa(g_chat_ui.waiting,0));
     g_glass.reduced_motion=true;chat_ui_trace_update(&g_chat_ui.snapshot->turns[0]);
     assert(lv_obj_get_style_text_opa(g_chat_ui.waiting,0)==LV_OPA_COVER);
@@ -161,10 +167,47 @@ static void workspace_cases(lv_display_t *display)
     panel_hide(NULL);review_qpk_fixture(NULL);
     chat_interface_modes[0]=AGENT_MODE_ASSISTANT;glass_chat_show(false);workspace_frames(3);
     assert(lv_obj_has_flag(g_chat_ui.preview_button,LV_OBJ_FLAG_HIDDEN));
-    review_capture(display,"workspace-assistant","ESPClaw · 助手模式");panel_hide(NULL);
+    review_capture(display,"workspace-assistant","ESPClaw · 助手模式");
+    /* Smart home results render as device cards inside the dialog only. */
+    workspace_send("把客厅的灯打开。");review_chat_tool_fixture("mcp_call_tool","正在调用 MCP 工具");
+    review_chat_card_fixture(4);chat_ui_refresh(NULL);
+    assert(g_chat_ui.cards_root&&g_chat_ui.cards_h==CHAT_CARD_H*2+CHAT_CARD_GAP);
+    assert(lv_obj_get_child_count(g_chat_ui.cards_root)==4&&g_chat_ui.live_bubble);
+    lv_obj_update_layout(g_chat_ui.messages);
+    assert(lv_obj_get_y(g_chat_ui.cards_root)>=lv_obj_get_y(g_chat_ui.trace_root));
+    assert(lv_obj_get_y(g_chat_ui.live_bubble)>=lv_obj_get_y(g_chat_ui.cards_root)+g_chat_ui.cards_h);
+    review_capture(display,"workspace-home-cards","ESPClaw · 智能家居结果卡片");
+    review_chat_reply_fixture("已打开客厅主灯，亮度 80%。",true);chat_ui_refresh(NULL);
+    assert(g_chat_ui.cards_root&&lv_obj_get_child_count(g_chat_ui.cards_root)==4);
+    unsigned card_blocks=0;
+    for(unsigned c=0;c<lv_obj_get_child_count(g_chat_ui.messages);c++){
+      lv_obj_t *object=lv_obj_get_child(g_chat_ui.messages,c);
+      if(lv_obj_get_width(object)==700&&lv_obj_get_height(object)==g_chat_ui.cards_h)card_blocks++;
+    }
+    assert(card_blocks==1);
+    lv_font_glyph_dsc_t glyph={0};
+    assert(lv_font_get_glyph_dsc(glass_icon_font(24),&glyph,0xe015,0)&&!glyph.is_placeholder);
+    assert(lv_font_get_glyph_dsc(glass_icon_font(24),&glyph,0xe027,0)&&!glyph.is_placeholder);
+    review_capture(display,"workspace-home-cards-done","ESPClaw · 卡片随回复保留");
+    review_chat_card_fixture(0);
+    workspace_send("播放 Beyond 的海阔天空。");
+    review_chat_tool_fixture("mcp_call_tool","正在调用音乐工具");
+    review_chat_music_card_fixture(false);chat_ui_refresh(NULL);
+    assert(g_chat_ui.cards_root&&lv_obj_get_child_count(g_chat_ui.cards_root)==1);
+    assert(g_desktop.chat_page&&!qpk_runtime_running());
+    review_capture(display,"workspace-music-request","ESPClaw · 音乐请求卡片");
+    review_chat_music_card_fixture(true);review_chat_reply_fixture("",true);chat_ui_refresh(NULL);
+    assert(g_chat_ui.cards_root&&lv_obj_get_child_count(g_chat_ui.cards_root)==1);
+    assert(g_desktop.chat_page&&!qpk_runtime_running());
+    review_capture(display,"workspace-music-playing","ESPClaw · 音乐播放卡片");
+    panel_hide(NULL);
     chat_interface_modes[0]=AGENT_MODE_CHAT;glass_chat_show(false);workspace_frames(3);
     assert(lv_obj_has_flag(g_chat_ui.save_button,LV_OBJ_FLAG_HIDDEN));
     review_capture(display,"workspace-chat","ESPClaw · 聊天模式");panel_hide(NULL);
+    lv_obj_update_layout(g_desktop.screen);
+    assert(!chat_display.active&&lv_obj_get_y(g_desktop.screen)==GLASS_STATUS_HEIGHT);
+    assert(lv_obj_get_height(g_desktop.screen)==GLASS_CONTENT_HEIGHT);
+    assert(!lv_obj_has_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN));
   }
 }
 

@@ -50,7 +50,8 @@ static JSValue js_ui_viewport(JSContext *context,JSValueConst this_value,int arg
   lv_obj_remove_style_all(obj);lv_obj_set_pos(obj,v[0],v[1]);lv_obj_set_size(obj,v[2],v[3]);
   lv_obj_set_user_data(obj,(void *)&qpk_viewport_tag);
   lv_obj_set_style_pad_all(obj,0,0);lv_obj_set_style_border_width(obj,0,0);
-  lv_obj_remove_flag(obj,LV_OBJ_FLAG_OVERFLOW_VISIBLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_SCROLL_ELASTIC);
+  lv_obj_remove_flag(obj,LV_OBJ_FLAG_OVERFLOW_VISIBLE|LV_OBJ_FLAG_GESTURE_BUBBLE|LV_OBJ_FLAG_SCROLL_ELASTIC|
+    LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER);
   lv_obj_add_flag(obj,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_EVENT_BUBBLE);
   lv_obj_set_scroll_dir(obj,LV_DIR_VER);lv_obj_set_scrollbar_mode(obj,LV_SCROLLBAR_MODE_AUTO);
   lv_obj_set_style_bg_color(obj,lv_color_hex(g_qpk.secondary_color),LV_PART_SCROLLBAR);

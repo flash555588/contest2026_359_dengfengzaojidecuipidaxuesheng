@@ -84,6 +84,36 @@ int main(void)
   for(unsigned i=0;i<state.count;i++)assert(state.turns[i].mode!=AGENT_MODE_CHAT);
   assert(glass_chat_send_mode("invalid",AGENT_MODE_COUNT)==-EINVAL);
   assert(glass_chat_clear_mode(AGENT_MODE_COUNT)==-EINVAL);
-  puts("AGENT_MODES_OK: migration, durable mode tags, context isolation, same-mode UI history, scoped clear, retry identity, immutable queued/request mode, cancellation");
+  /* Result cards persist per turn and survive a reload; invalid card fields
+   * reject the stored file instead of rendering damaged history. */
+  struct chat_snapshot *withcards=calloc(1,sizeof(*withcards));assert(withcards);
+  assert(!glass_chat_store_load(withcards)&&withcards->count==state.count);
+  struct chat_turn *last=&withcards->turns[withcards->count-1];
+  last->card_count=2;
+  strcpy(last->cards[0].entity,"light.living_room");
+  snprintf(last->cards[0].kind,sizeof(last->cards[0].kind),"light");
+  snprintf(last->cards[0].name,sizeof(last->cards[0].name),"客厅主灯");
+  snprintf(last->cards[0].state,sizeof(last->cards[0].state),"已开启");
+  last->cards[0].level=80;last->cards[0].on=true;
+  snprintf(last->cards[1].kind,sizeof(last->cards[1].kind),"sensor");
+  snprintf(last->cards[1].name,sizeof(last->cards[1].name),"客厅温度");
+  snprintf(last->cards[1].state,sizeof(last->cards[1].state),"23.5 °C");
+  last->cards[1].level=-1;last->cards[1].on=false;
+  assert(!glass_chat_store_save(withcards));
+  struct chat_snapshot *reloaded=calloc(1,sizeof(*reloaded));assert(reloaded);
+  assert(!glass_chat_store_load(reloaded)&&reloaded->count==withcards->count);
+  const struct chat_turn *saved=&reloaded->turns[reloaded->count-1];
+  assert(!strcmp(saved->cards[0].entity,"light.living_room"));
+  assert(saved->card_count==2&&!strcmp(saved->cards[0].name,"客厅主灯")&&saved->cards[0].level==80&&saved->cards[0].on&&
+         !strcmp(saved->cards[1].kind,"sensor")&&!strcmp(saved->cards[1].state,"23.5 °C")&&!saved->cards[1].on);
+  free(withcards);free(reloaded);
+  /* Both slots invalid: the load reports failure instead of guessing. */
+  for(unsigned i=0;i<2;i++){
+    f=fopen(i?CHAT_DATA_ROOT "/chat/history.tmp":CHAT_DATA_ROOT "/chat/history.json","w");assert(f);
+    fputs("{\"version\":1,\"sequence\":9,\"turns\":[{\"id\":1,\"state\":1,\"error\":0,\"prompt\":\"p\",\"reply\":\"r\",\"cards\":[{\"kind\":\"light\",\"name\":\"x\",\"state\":\"y\",\"level\":-2,\"on\":true}]}]}",f);fclose(f);
+  }
+  struct chat_snapshot *broken=calloc(1,sizeof(*broken));assert(broken);
+  assert(glass_chat_store_load(broken)!=0&&broken->count==0);free(broken);
+  puts("AGENT_MODES_OK: migration, durable mode tags, context isolation, same-mode UI history, scoped clear, retry identity, immutable queued/request mode, cancellation, card persistence");
   return 0;
 }

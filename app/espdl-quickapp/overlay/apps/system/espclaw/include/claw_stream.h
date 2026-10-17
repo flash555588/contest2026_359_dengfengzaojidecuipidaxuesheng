@@ -5,7 +5,9 @@
 #include <stdint.h>
 
 enum claw_stream_kind { CLAW_STREAM_CONNECT, CLAW_STREAM_ACTIVITY, CLAW_STREAM_TEXT,
-  CLAW_STREAM_REASONING, CLAW_STREAM_TOOL, CLAW_STREAM_USAGE, CLAW_STREAM_LIMIT };
+  CLAW_STREAM_REASONING, CLAW_STREAM_TOOL, CLAW_STREAM_USAGE, CLAW_STREAM_LIMIT,
+  /* Display card produced by an in-process board tool; never model text. */
+  CLAW_STREAM_CARD };
 struct claw_stream_event {
   enum claw_stream_kind kind;
   const char *text;

@@ -19,7 +19,7 @@ cJSON *glass_agent_json(const char *text)
 bool glass_agent_field(const char *key,unsigned *limit,bool *secret,bool *number)
 {
   *limit=0;*secret=*number=false;
-  if(!strcmp(key,"skills_enabled")){*number=true;return true;}
+  if(!strcmp(key,"skills_enabled")||!strcmp(key,"home_control_enabled")){*number=true;return true;}
   if(strncmp(key,"mcp",3)||key[3]<'1'||key[3]>'3'||key[4]!='_')return false;
   const char *field=key+5;
   if(!strcmp(field,"enabled"))*number=true;

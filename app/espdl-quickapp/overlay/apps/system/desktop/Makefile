@@ -28,6 +28,7 @@ CSRCS += qpk_hardware.c qpk_hw_platform.c qpk_hw_audio.c qpk_audio_store.c qpk_h
 CFLAGS += -I$(TOPDIR)/arch/risc-v/src/common
 
 CSRCS += glass_system_monitor.c
+CSRCS += glass_status_power.c
 CSRCS += glass_system_platform.c
 
 CSRCS += glass_settings_service.c glass_icons.c
@@ -49,6 +50,7 @@ CSRCS += glass_lock_photo.c
 CSRCS += glass_pinyin_resource.c
 CSRCS += glass_portal_config.c glass_portal_files.c glass_portal_http.c glass_portal_resource.c
 CSRCS += glass_chat_service.c glass_chat_store.c glass_agent.c glass_agent_config.c glass_mcp_http.c
+CSRCS += glass_board_music.c
 CSRCS += glass_grok.c glass_grok_state.c
 CSRCS += glass_code_font.c
 CSRCS += pet_engine.c pet_sprites.c qpk_pet.c pet_lvgl.c dafeiyu_resource.c
@@ -59,7 +61,7 @@ glass_music_service.c_CFLAGS += -O2
 
 CSRCS += homeassistant_resource.c
 ifeq ($(CONFIG_SYSTEM_HASS),y)
-CSRCS += hass_qjs.c hass_portal.c
+CSRCS += hass_qjs.c hass_portal.c glass_board_home.c
 CFLAGS += -I$(APPDIR)/system/hass
 endif
 

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <time.h>
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Service fixtures only. None of these functions opens a device/network. */
 int netlib_get_ipv4addr(const char *name,struct in_addr *out)
@@ -106,10 +107,33 @@ int glass_speech_say(const char *text)
 {
   assert(!review_dialogue_voice.active);assert(strlen(text)<=240);for(const unsigned char *p=(const unsigned char *)text;*p;){unsigned n=*p<128?1:*p<224?2:*p<240?3:4;assert(*p<128||*p>=194);for(unsigned j=1;j<n;j++)assert(p[j]&&(p[j]&192)==128);p+=n;}
   if(review_speech_failure)return review_speech_failure;
-  assert(!review_speech.active);review_speech_calls++;review_speech.active=true;review_speech.phase=SPEECH_SPEAKING;review_speech.error=0;
+  assert(!review_speech.active);review_speech_calls++;review_speech.request++;review_speech.active=true;review_speech.phase=SPEECH_SPEAKING;review_speech.error=0;
   assert(strlen(review_spoken)+strlen(text)<sizeof(review_spoken));strcat(review_spoken,text);return 0;
 }
-void glass_speech_stop(void){if(review_speech.active)review_speech.phase=SPEECH_STOPPING;}
+void glass_speech_stop(void){review_speech.wake_ready=false;if(review_speech.active)review_speech.phase=SPEECH_STOPPING;}
+void glass_speech_stop_request(uint32_t request){if(request&&request==review_speech.request)glass_speech_stop();}
+void glass_speech_clear_cache(void){}
+const char *glass_speech_backend(void){return "mock";}
+int glass_speech_wait_wake(uint32_t *request)
+{
+  if(review_speech.active)return -EBUSY;
+  if(review_speech_failure)return review_speech_failure;
+  review_speech.request++;*request=review_speech.request;review_speech.active=true;
+  review_speech.phase=SPEECH_WAKE;review_speech.error=0;review_speech.wake_events=0;review_speech.wake_ready=false;return 0;
+}
+void review_wake_fixture(bool release)
+{review_speech.wake_events=1;if(release){review_speech.active=false;review_speech.phase=SPEECH_IDLE;review_speech.wake_ready=true;}}
+void review_speech_replace_fixture(void)
+{review_speech.request++;review_speech.active=true;review_speech.phase=SPEECH_WAKE;}
+int glass_speech_listen(void)
+{if(review_speech.active)return -EBUSY;review_speech.request++;review_speech.active=true;review_speech.phase=SPEECH_WAKE;review_speech.error=0;review_speech.command_event=0;return 0;}
+void review_local_command_fixture(int command,bool stale)
+{
+  struct timespec now;clock_gettime(CLOCK_MONOTONIC,&now);
+  review_speech.last_command=command;review_speech.command_event++;review_speech.revision++;
+  review_speech.command_ms=(uint32_t)((uint64_t)now.tv_sec*1000+now.tv_nsec/1000000)-(stale?3000:0);
+  if(command==8){review_speech.active=false;review_speech.phase=SPEECH_IDLE;}
+}
 void review_speech_done_fixture(int error){review_speech.active=false;review_speech.error=error;review_speech.phase=error?SPEECH_ERROR:SPEECH_IDLE;}
 unsigned review_speech_count(void){return review_speech_calls;}
 const char *review_speech_text(void){return review_spoken;}
@@ -124,9 +148,33 @@ void review_chat_tool_fixture(const char *name,const char *progress)
   snprintf(turn->tools[turn->tool_count++],sizeof(turn->tools[0]),"%s",name);turn->tool_total++;
   snprintf(turn->progress,sizeof(turn->progress),"%s",progress);review_chat_activity_fixture(CHAT_ACTIVITY_TOOL);
 }
+void review_chat_card_fixture(unsigned count)
+{
+  assert(review_dialogue_state.count);struct chat_turn *turn=&review_dialogue_state.turns[review_dialogue_state.count-1];
+  unsigned n=count>CHAT_CARD_COUNT?CHAT_CARD_COUNT:count;turn->card_count=n;
+  static const struct chat_card samples[CHAT_CARD_COUNT]={
+    {.entity="light.living",.kind="light",.name="客厅主灯",.state="已开启",.level=80,.on=true},
+    {.entity="switch.study",.kind="switch",.name="书房插座",.state="已关闭",.level=-1,.on=false},
+    {.entity="sensor.temperature",.kind="sensor",.name="客厅温度",.state="23.5 °C",.level=-1,.on=false},
+    {.entity="cover.balcony",.kind="cover",.name="阳台窗帘",.state="已打开",.level=60,.on=true}};
+  for(unsigned i=0;i<n;i++)turn->cards[i]=samples[i];
+  review_dialogue_state.revision++;
+}
 void review_speech_level_fixture(unsigned level){review_speech.level=level;}
+void review_chat_music_card_fixture(bool playing)
+{
+  assert(review_dialogue_state.count);
+  struct chat_turn *turn=&review_dialogue_state.turns[review_dialogue_state.count-1];
+  turn->card_count=1;memset(turn->cards,0,sizeof(turn->cards));
+  struct chat_card *c=&turn->cards[0];
+  strcpy(c->entity,"music.player");strcpy(c->kind,"music");strcpy(c->name,"海阔天空");
+  snprintf(c->state,sizeof(c->state),"%s",playing?"播放中 · Beyond":"已请求播放");
+  c->level=playing?39:-1;c->on=playing;review_dialogue_state.revision++;
+}
 void review_voice_level_fixture(unsigned level){review_dialogue_voice.level=level;}
+void review_voice_phase_fixture(enum glass_voice_phase phase){review_dialogue_voice.phase=phase;review_dialogue_voice.revision++;}
 void review_voice_error_fixture(void){review_dialogue_voice.active=false;review_dialogue_voice.phase=GLASS_VOICE_ERROR;review_dialogue_voice.error=GLASS_VOICE_ERROR_EMPTY;}
+void review_voice_network_error_fixture(void){review_dialogue_voice.active=false;review_dialogue_voice.phase=GLASS_VOICE_ERROR;review_dialogue_voice.error=GLASS_VOICE_ERROR_NETWORK;}
 void glass_chat_activity_get(struct chat_activity_snapshot *out){if(review_dialogue){memset(out,0,sizeof(*out));out->loaded=out->configured=true;out->phase=review_dialogue_state.phase;if(review_dialogue_state.count){const struct chat_turn *t=&review_dialogue_state.turns[review_dialogue_state.count-1];out->turn_id=t->id;out->state=t->state;out->activity=review_dialogue_activity;}return;}memset(out,0,sizeof(*out));out->loaded=true;out->configured=true;out->phase=CHAT_IDLE;out->state=CHAT_DONE;if(review_chat_mode)out->turn_id=1;if(review_grok_mode>0&&review_grok_mode<4){out->phase=CHAT_REQUESTING;out->state=CHAT_WAITING;out->activity=review_grok_mode==1?CHAT_ACTIVITY_THINK:review_grok_mode==2?CHAT_ACTIVITY_REPLY:CHAT_ACTIVITY_TOOL;}else if(review_grok_mode==5)out->state=CHAT_FAILED;else if(review_grok_mode==6)out->state=CHAT_CANCELLED;else if(review_grok_mode==7)out->turn_id=0;}
 void review_weather_fixture(int mode){review_weather_mode=mode;}
 void review_ble_fixture(int mode){review_ble_mode=mode;}
@@ -140,7 +188,13 @@ bool glass_chat_page_get(struct chat_page *out){memset(out,0,sizeof(*out));out->
 size_t glass_chat_copy_utf8(char *out,size_t cap,const char *text){size_t n=strlen(text);if(n>=cap)n=cap-1;while(n&&(text[n]&0xc0)==0x80)n--;memcpy(out,text,n);out[n]=0;return n;}
 void glass_weather_get(struct glass_weather_snapshot *out){memset(out,0,sizeof(*out));out->state=WEATHER_WAIT_NET;if(review_weather_mode){out->valid=true;out->state=WEATHER_READY;out->revision=2;out->data.temperature=24;out->data.humidity=48;out->data.aqi=32;out->data.level=1;out->data.pm25=12;strcpy(out->data.condition,"多云");strcpy(out->data.category,"良好");strcpy(out->data.location,"当地天气");strcpy(out->data.report_time,"2026-10-13 14:00 · 审核示例");}}
 void glass_ble_read(struct glass_ble_state *out){memset(out,0,sizeof(*out));out->started=true;out->ready=true;if(review_ble_mode){out->count=2;strcpy(out->devices[0].name,"蓝牙键盘 · 审核示例");strcpy(out->devices[1].name,"温湿度传感器 · 审核示例");for(unsigned i=0;i<2;i++){out->devices[i].rssi=-38-i*10;out->devices[i].address[0]=2;out->devices[i].address[5]=i+1;}}}
-void glass_ble_hid_read(struct glass_ble_hid_state *out){memset(out,0,sizeof(*out));}
+static int review_battery_percent=-1;
+static bool review_battery_charging,review_bluetooth_connected;
+void review_status_fixture(int percent,bool charging,bool bluetooth)
+{review_battery_percent=percent;review_battery_charging=charging;review_bluetooth_connected=bluetooth;}
+void glass_status_power_read(int *percent,bool *charging)
+{*percent=review_battery_percent;*charging=review_battery_charging;}
+void glass_ble_hid_read(struct glass_ble_hid_state *out){memset(out,0,sizeof(*out));out->connected=review_bluetooth_connected;}
 int c6_desktop_worker_start(struct c6_desktop_worker *w,const struct c6_desktop_backend *b){memset(w,0,sizeof(*w));return 0;}
 int c6_desktop_worker_read(struct c6_desktop_worker *w,struct c6_desktop_result *out){memset(out,0,sizeof(*out));out->sequence=1;out->operation=C6_DESKTOP_STATUS;return 0;}
 /* The keyboard/IME UI is production code; dictionary/voice backends stay offline. */
@@ -151,7 +205,49 @@ bool glass_pinyin_candidate(unsigned index,char *out,size_t capacity){if(index>=
 void glass_voice_get(struct glass_voice_snapshot *out){if(review_dialogue){*out=review_dialogue_voice;return;}memset(out,0,sizeof(*out));if(review_grok_mode==7){out->active=true;out->phase=GLASS_VOICE_LISTENING;}}
 const char *glass_voice_error_text(enum glass_voice_error error){(void)error;return "离线审核服务";}
 bool glass_qpk_removable(const char *path,const char *package){return path&&package&&!strcmp(package,"review.fixture");}
-void hass_status(bool *configured,bool *busy,unsigned *clients){if(configured)*configured=false;if(busy)*busy=false;if(clients)*clients=0;}
+static bool review_local_ha,review_local_on[3],review_local_no_update,review_local_lost_response,review_local_unavailable;
+static unsigned review_local_calls,review_local_config=1,review_local_request,review_local_pending,review_local_kind;
+static uint32_t review_local_client;
+static char review_local_entity[96];
+void review_local_ha_fixture(bool enabled)
+{review_local_ha=enabled;memset(review_local_on,0,sizeof(review_local_on));review_local_calls=review_local_client=review_local_pending=0;review_local_no_update=review_local_lost_response=review_local_unavailable=false;review_local_config++;}
+unsigned review_local_call_count(void){return review_local_calls;}
+void review_local_config_change(void){review_local_config++;}
+void review_local_ha_failure(bool no_update,bool lost,bool unavailable)
+{review_local_no_update=no_update;review_local_lost_response=lost;review_local_unavailable=unavailable;}
+void hass_status(bool *configured,bool *busy,unsigned *clients){if(configured)*configured=review_local_ha;if(busy)*busy=false;if(clients)*clients=review_local_client?1:0;}
+uint32_t hass_configuration_revision(void){return review_local_ha?review_local_config:0;}
+int hass_open(unsigned grants){if(!review_local_ha)return 0;if(grants!=(HASS_READ|HASS_CONTROL))return 88;assert(!review_local_client);review_local_client=77;return 77;}
+int hass_close(uint32_t client){if(client==88)return 0;assert(client==review_local_client);review_local_client=review_local_pending=0;return 0;}
+int hass_get(uint32_t client,const char *resource)
+{assert(client==review_local_client&&!strcmp(resource,"states"));review_local_kind=1;return review_local_pending=++review_local_request;}
+int hass_get_state(uint32_t client,const char *entity)
+{assert(client==review_local_client);strcpy(review_local_entity,entity);review_local_kind=2;return review_local_pending=++review_local_request;}
+int hass_control(uint32_t client,const char *entity,bool on,int brightness)
+{
+  assert(client==review_local_client&&brightness==-1);int role=!strcmp(entity,"light.voice_test")?0:!strcmp(entity,"fan.voice_test")?2:-1;assert(role>=0);
+  review_local_calls++;if(!review_local_no_update)review_local_on[role]=on;
+  review_local_kind=3;return review_local_pending=++review_local_request;
+}
+int hass_call_service(uint32_t client,const char *entity,const char *service,const char *body)
+{
+  assert(client==review_local_client&&!strcmp(entity,"cover.voice_test")&&strstr(body,"cover.voice_test"));
+  assert(!strcmp(service,"open_cover")||!strcmp(service,"close_cover"));
+  review_local_calls++;if(!review_local_no_update)review_local_on[1]=!strcmp(service,"open_cover");
+  review_local_kind=3;return review_local_pending=++review_local_request;
+}
+int hass_poll(uint32_t client,struct hass_result_s *result)
+{
+  assert(client==review_local_client);memset(result,0,sizeof(*result));if(!review_local_pending)return 0;
+  result->request_id=review_local_pending;review_local_pending=0;result->done=true;result->status=200;
+  if(review_local_kind==1)result->body=strdup("[{\"entity_id\":\"light.voice_test\",\"state\":\"off\",\"attributes\":{\"friendly_name\":\"测试台灯\"}},{\"entity_id\":\"cover.voice_test\",\"state\":\"closed\",\"attributes\":{\"friendly_name\":\"测试窗帘\",\"device_class\":\"curtain\"}},{\"entity_id\":\"cover.garage\",\"state\":\"closed\",\"attributes\":{\"device_class\":\"garage\"}},{\"entity_id\":\"fan.voice_test\",\"state\":\"off\",\"attributes\":{\"friendly_name\":\"测试风扇\"}}]");
+  else if(review_local_kind==2){
+    int role=!strncmp(review_local_entity,"light.",6)?0:!strncmp(review_local_entity,"cover.",6)?1:2;
+    char body[384];snprintf(body,sizeof(body),"{\"entity_id\":\"%s\",\"state\":\"%s\",\"attributes\":{\"device_class\":\"curtain\",\"current_position\":%d}}",review_local_entity,review_local_unavailable?"unavailable":role==1?(review_local_on[role]?"open":"closed"):(review_local_on[role]?"on":"off"),review_local_on[role]?100:0);result->body=strdup(body);
+  }else if(review_local_lost_response){result->status=0;result->error=-EIO;}
+  return 0;
+}
+void hass_result_free(struct hass_result_s *result){free(result->body);memset(result,0,sizeof(*result));}
 int portal_session_open(char *code,size_t cap){snprintf(code,cap,"246810");return 0;}
 unsigned portal_session_seconds(void){return 240;}
 void glass_qpk_get(struct qpk_draft_info *out){memset(out,0,sizeof(*out));out->loaded=true;if(review_draft_source){out->revision=1;out->previewed_revision=review_previewed_revision;strcpy(out->name,"你好快应用（审核示例草稿）");strcpy(out->slug,"hello");}}
@@ -331,3 +427,8 @@ unsigned review_face_cancel_count(void){return review_face_cancelled;}
 int qpk_dl_face_start_default(void){if(!review_face_available)return -ENODEV;review_face.request++;review_face.busy=true;review_face.mode=QPK_DL_FACE;review_face.frame=0;return review_face.request;}
 void qpk_dl_status(struct qpk_dl_result *out){*out=review_face;}
 void qpk_dl_cancel_request(uint32_t id){if(id&&id==review_face.request){review_face_cancelled++;review_face.busy=false;}}
+
+int hass_control_checked(uint32_t c,const char *e,bool on,int b,uint32_t revision)
+{return revision&&revision==hass_configuration_revision()?hass_control(c,e,on,b):-ESTALE;}
+int hass_call_service_checked(uint32_t c,const char *e,const char *service,const char *body,uint32_t revision)
+{return revision&&revision==hass_configuration_revision()?hass_call_service(c,e,service,body):-ESTALE;}

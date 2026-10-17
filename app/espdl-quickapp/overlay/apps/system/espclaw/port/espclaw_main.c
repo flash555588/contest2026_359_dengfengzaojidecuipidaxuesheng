@@ -52,10 +52,11 @@ static bool chat_config(claw_core_config_t *config)
 
 int espclaw_main(int argc, char **argv)
 {
-    bool ask = argc == 3 && !strcmp(argv[1], "ask");
+    bool assistant = argc == 3 && !strcmp(argv[1], "assist");
+    bool ask = argc == 3 && (!strcmp(argv[1], "ask") || assistant);
     if (!ask && (argc != 2 || (strcmp(argv[1], "selftest") &&
                       strcmp(argv[1], "status") && strcmp(argv[1], "cleanup")))) {
-        puts("Usage: espclaw selftest|status|cleanup OR espclaw ask \"question\"");
+        puts("Usage: espclaw selftest|status|cleanup OR espclaw ask|assist \"question\"");
         return 1;
     }
     if (pthread_mutex_trylock(&command_lock)) {
@@ -106,7 +107,7 @@ int espclaw_main(int argc, char **argv)
     if (ask) {
         cli_streamed = false;
         /* The developer CLI retains its explicit app-authoring role. */
-        qpk_session.mode = AGENT_MODE_CREATE;
+        qpk_session.mode = assistant ? AGENT_MODE_ASSISTANT : AGENT_MODE_CREATE;
         claw_qpk_configure(&config, &qpk_session);
         config.on_request_start = cli_stream_start;
         if (config.timeout_ms < 300000) config.timeout_ms = 300000;

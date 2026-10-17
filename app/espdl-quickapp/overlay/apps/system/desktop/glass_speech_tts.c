@@ -1,11 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_speech_tts.h"
 #include "glass_speech_assets.h"
+#include "glass_speech_compute.h"
 #include "snt_front_f32.h"
 #include "snt_piperlite.h"
 #include <quickjs.h>
 #include <errno.h>
 #include <math.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +19,24 @@
 #define SPEECH_CHUNK_IDS 40
 #define SPEECH_FRAMES 256
 #define SPEECH_ARENA_FLOATS (24 * 1024 * 1024 / sizeof(float))
+
+/* The speech service serializes jobs. The mutex also protects host callers
+ * and makes eviction nonblocking for the UI while inference owns the data. */
+static pthread_mutex_t sano_cache_lock=PTHREAD_MUTEX_INITIALIZER;
+static atomic_uint sano_cache_epoch;
+static struct {char *root,*front,*decoder;} sano_cache;
+static void sano_cache_free(void)
+{
+  free(sano_cache.front);free(sano_cache.decoder);free(sano_cache.root);
+  memset(&sano_cache,0,sizeof(sano_cache));
+}
+void glass_sano_cache_clear(void)
+{
+  atomic_fetch_add(&sano_cache_epoch,1);
+  if(!pthread_mutex_trylock(&sano_cache_lock)){
+    sano_cache_free();pthread_mutex_unlock(&sano_cache_lock);
+  }
+}
 
 struct sano_job { speech_cancel_fn cancel; void *user; uint64_t deadline; unsigned char *lexicon; uint32_t chars,phrases; const unsigned char *records; const char *strings; };
 static uint64_t sano_now(void)
@@ -28,11 +49,11 @@ static bool sano_cancelled(struct sano_job *job)
 static int sano_interrupt(JSRuntime *rt,void *opaque)
 { (void)rt;struct sano_job *job=opaque;return sano_cancelled(job)||sano_now()>job->deadline; }
 
-static void *sano_file(const char *root,const char *name,size_t limit,size_t *size)
+static void *sano_file(const char *root,const char *name,size_t limit,size_t *size,struct sano_job *job)
 {
   (void)limit;
   char relative[64];snprintf(relative,sizeof(relative),"sanotts-zh/%s",name);
-  return glass_speech_asset(root,relative,size);
+  return glass_speech_asset_cancelable(root,relative,size,job->cancel,job->user);
 }
 
 static uint32_t sano_u32(const void *p)
@@ -61,7 +82,7 @@ static int sano_ids(const char *root,const char *text,int32_t ids[SPEECH_IDS],st
   JSContext *ctx=JS_NewContext(rt);if(!ctx){JS_FreeRuntime(rt);return -ENOMEM;}
   JSValue global=JS_GetGlobalObject(ctx),tables=JS_NewObject(ctx);
   JS_SetContextOpaque(ctx,job);
-  size_t lex_bytes;job->lexicon=sano_file(root,"lexicon.bin",3*1024*1024,&lex_bytes);
+  size_t lex_bytes;job->lexicon=sano_file(root,"lexicon.bin",3*1024*1024,&lex_bytes,job);
   if(!job->lexicon){count=-ENOENT;goto done;}
   if(lex_bytes<16||memcmp(job->lexicon,"SNLX",4)){count=-EBADMSG;goto done;}
   job->chars=sano_u32(job->lexicon+4);job->phrases=sano_u32(job->lexicon+8);
@@ -72,12 +93,12 @@ static int sano_ids(const char *root,const char *text,int32_t ids[SPEECH_IDS],st
   const char *names[]={"chars","phrases","phrase_keys"};
   for(unsigned i=0;i<3;i++)JS_SetPropertyStr(ctx,tables,names[i],JS_NewString(ctx,"native"));
   JS_SetPropertyStr(ctx,global,"__sanoTables",JS_DupValue(ctx,tables));
-  size_t bytes;char *data=sano_file(root,"phonemes.json",8192,&bytes);
+  size_t bytes;char *data=sano_file(root,"phonemes.json",8192,&bytes,job);
   if(!data){count=-ENOENT;goto done;}
   JSValue map=JS_ParseJSON(ctx,data,bytes,"phonemes.json");free(data);
   if(JS_IsException(map)){JS_FreeValue(ctx,map);goto done;}
   JS_SetPropertyStr(ctx,global,"__sanoIdMap",map);
-  data=sano_file(root,"g2p.js",128*1024,&bytes);
+  data=sano_file(root,"g2p.js",128*1024,&bytes,job);
   if(!data){count=-ENOENT;goto done;}
   JSValue result=JS_Eval(ctx,data,bytes,"sanotts-zh-g2p.js",JS_EVAL_TYPE_GLOBAL);free(data);
   if(JS_IsException(result)){JS_FreeValue(ctx,result);goto done;}
@@ -109,26 +130,63 @@ done:
   return sano_cancelled(job)?-ECANCELED:count;
 }
 
+struct sano_compute_call {
+  snt_front_model *front;snt_piperlite_model *decoder;
+  int32_t *ids,*dur;int n,stage;long frames;
+  float *latent,*audio,*arena;size_t floats;
+};
+struct sano_profile {uint64_t last;unsigned count;struct {const char *name;unsigned long ms;} stage[16];};
+static void sano_stage(const char *name,const float *data,int ch,int len,void *opaque)
+{
+  (void)data;(void)ch;(void)len;struct sano_profile *p=opaque;uint64_t now=sano_now();
+  if(p->count<16){p->stage[p->count].name=name;p->stage[p->count++].ms=(unsigned long)(now-p->last);}
+  p->last=now;
+}
+static int sano_compute_body(void *opaque)
+{
+  struct sano_compute_call *call=opaque;
+  if(call->stage==0)return (int)snt_front_durations(call->front,call->ids,call->n,1.0f,call->dur,call->arena,call->floats);
+  if(call->stage==1)return snt_front_latent(call->front,call->ids,call->dur,call->n,call->frames,call->latent,call->arena,call->floats);
+  return snt_piperlite_synthesize(call->decoder,call->latent,call->frames,call->audio,call->arena,call->floats);
+}
 int glass_sano_synthesize(const char *root,const char *text,
                           speech_pcm_fn write_pcm,speech_cancel_fn cancel,void *user)
 {
   if(!root||!text||!text[0]||strlen(text)>1024||!write_pcm)return -EINVAL;
+  pthread_mutex_lock(&sano_cache_lock);
+  unsigned epoch=atomic_load(&sano_cache_epoch);
+  uint64_t model_started=sano_now();
   struct sano_job job={cancel,user,sano_now()+30000};int32_t ids[SPEECH_IDS];
-  int count=sano_ids(root,text,ids,&job);if(count<0)return count;
+  int count=sano_ids(root,text,ids,&job);
+  uint64_t g2p_ms=sano_now()-model_started;
+  if(count<0){sano_cache_free();pthread_mutex_unlock(&sano_cache_lock);return count;}
   size_t front_bytes=0,decoder_bytes=0;
-  char *front=sano_file(root,"front.bin",4*1024*1024,&front_bytes);
-  char *decoder=sano_file(root,"dec.bin",4*1024*1024,&decoder_bytes);
+  bool hit=sano_cache.root&&!strcmp(sano_cache.root,root);
+  if(!hit)sano_cache_free();
+  char *front=hit?sano_cache.front:sano_file(root,"front.bin",4*1024*1024,&front_bytes,&job);
+  char *decoder=hit?sano_cache.decoder:NULL;
   int ret=-EBADMSG;
   snt_front_model fm={0};snt_piperlite_model dm={0};
+  if(!front){ret=-ENOENT;goto done;}
+  if(!hit)decoder=sano_file(root,"dec.bin",4*1024*1024,&decoder_bytes,&job);
   if(!front||!decoder){ret=-ENOENT;goto done;}
-  if(front_bytes!=3294820||decoder_bytes!=2923300||
+  if((!hit&&(front_bytes!=3294820||decoder_bytes!=2923300))||
       snt_front_init(&fm,front,568,(float *)(front+568),823563)||
       snt_piperlite_init(&dm,decoder,416,(float *)(decoder+416),730721))goto done;
   if(fm.d_vocab!=73||fm.a_out!=192||dm.in_ch!=192)goto done;
+  if(!hit){
+    sano_cache.root=strdup(root);
+    if(!sano_cache.root){ret=-ENOMEM;goto done;}
+    sano_cache.front=front;sano_cache.decoder=decoder;
+  }
+  printf("[speech] tts model_ms=%lu phonemes=%d\n",(unsigned long)(sano_now()-model_started),count);
+  printf("[speech] tts prepare g2p_ms=%lu weights_ms=%lu cache_hit=%u cached_bytes=%u\n",
+    (unsigned long)g2p_ms,(unsigned long)(sano_now()-model_started-g2p_ms),hit,3294820u+2923300u);
   ret=0;
   for(int cursor=1;cursor<count-1&&!ret;)
     {
       if(sano_cancelled(&job)){ret=-ECANCELED;break;}
+      uint64_t chunk_started=sano_now();
       int end=cursor+SPEECH_CHUNK_IDS-2;if(end>count-1)end=count-1;
       if(end<count-1)while(end>cursor&&ids[end-1]!=0)end--;
       if(end==cursor){ret=-E2BIG;break;}
@@ -136,7 +194,11 @@ int glass_sano_synthesize(const char *root,const char *text,
       chunk[0]=1;memcpy(chunk+1,ids+cursor,(n-2)*sizeof(int32_t));chunk[n-1]=2;cursor=end;
       size_t floats=snt_front_duration_arena_floats(&fm,n);
       float *arena=calloc(floats,sizeof(float));if(!arena){ret=-ENOMEM;break;}
-      long frames=snt_front_durations(&fm,chunk,n,1.0f,dur,arena,floats);free(arena);
+      struct sano_compute_call call={.front=&fm,.decoder=&dm,.ids=chunk,.dur=dur,.n=n,.arena=arena,.floats=floats};
+      uint64_t stage_started=sano_now();
+      long frames=glass_speech_compute_run(sano_compute_body,&call,cancel,user);free(arena);
+      unsigned long duration_ms=(unsigned long)(sano_now()-stage_started);
+      if(frames<0){ret=(int)frames;break;}
       if(frames<=0||frames>SPEECH_FRAMES){ret=-E2BIG;break;}
       size_t af=snt_front_latent_arena_floats(&fm,n,frames),df=snt_piperlite_arena_floats(&dm,frames);
       floats=af>df?af:df;
@@ -145,8 +207,18 @@ int glass_sano_synthesize(const char *root,const char *text,
       arena=calloc(floats+latent_floats+audio_floats,sizeof(float));
       if(!arena){ret=-ENOMEM;break;}
       float *latent=arena+floats,*audio=latent+latent_floats;
-      ret=snt_front_latent(&fm,chunk,dur,n,frames,latent,arena,floats);
-      if(!ret&&!sano_cancelled(&job))ret=snt_piperlite_synthesize(&dm,latent,frames,audio,arena,floats);
+      call.frames=frames;call.latent=latent;call.audio=audio;call.arena=arena;call.floats=floats;call.stage=1;
+      stage_started=sano_now();
+      ret=glass_speech_compute_run(sano_compute_body,&call,cancel,user);
+      unsigned long latent_ms=(unsigned long)(sano_now()-stage_started);stage_started=sano_now();
+      struct sano_profile profile={.last=stage_started};
+      dm.stage_cb=sano_stage;dm.stage_user=&profile;
+      if(!ret&&!sano_cancelled(&job)){call.stage=2;ret=glass_speech_compute_run(sano_compute_body,&call,cancel,user);}
+      unsigned long decoder_ms=(unsigned long)(sano_now()-stage_started);
+      for(unsigned i=0;i<profile.count;i++)printf("[speech] tts hotspot=%s elapsed_ms=%lu\n",profile.stage[i].name,profile.stage[i].ms);
+      printf("[speech] tts stages duration_ms=%lu latent_ms=%lu decoder_ms=%lu\n",
+        duration_ms,latent_ms,decoder_ms);
+      printf("[speech] tts chunk frames=%ld compute_ms=%lu result=%d\n",frames,(unsigned long)(sano_now()-chunk_started),ret);
       if(!ret)
         for(size_t offset=0;offset<audio_floats;)
           {
@@ -164,5 +236,11 @@ int glass_sano_synthesize(const char *root,const char *text,
       free(arena);
     }
 done:
-  free(front);free(decoder);return ret;
+  if(front!=sano_cache.front)free(front);
+  if(decoder!=sano_cache.decoder)free(decoder);
+  if(ret||sano_cancelled(&job)||epoch!=atomic_load(&sano_cache_epoch))sano_cache_free();
+  pthread_mutex_unlock(&sano_cache_lock);
+  /* Cover an eviction racing the final epoch check and mutex release. */
+  if(epoch!=atomic_load(&sano_cache_epoch))glass_sano_cache_clear();
+  return sano_cancelled(&job)?-ECANCELED:ret;
 }

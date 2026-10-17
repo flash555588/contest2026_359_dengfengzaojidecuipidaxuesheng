@@ -88,9 +88,10 @@ static int finish_file(int fd, const char *temporary, const char *path, uint32_t
   return ret;
 }
 
-static int record_clip(const char *path, const cJSON *a, cJSON *out, struct qpk_hw_progress *progress)
+static int record_clip_stream(const char *path, const cJSON *a, cJSON *out, struct qpk_hw_progress *progress,
+                              qpk_pcm_sink_t sink,void *cookie)
 {
-  int duration = audio_number(a, "durationMs", 10000, 0, INT32_MAX);
+  int duration = sink?0:audio_number(a, "durationMs", 10000, 0, INT32_MAX);
   if (duration < 0 || audio_number(a, "sampleRate", RECORD_RATE, RECORD_RATE, RECORD_RATE) < 0) return -EINVAL;
   uint64_t target = duration ? (uint64_t)duration * RECORD_RATE / 1000 * 2 : UINT32_MAX - 44;
   int fd = -1, file = -1, ret = 0;
@@ -101,6 +102,11 @@ static int record_clip(const char *path, const cJSON *a, cJSON *out, struct qpk_
   char temporary[QPK_STORAGE_PATH_MAX + 4] = {0}, mqname[48] = {0};
   uint32_t used = 0;
   unsigned record_buffers = 0, settle = RECORD_SETTLE_SAMPLES;
+  /* I2S allocates one internal DMA copy per in-flight buffer. CSI is already
+   * holding its descriptors during video; four 4032-byte copies exceed the
+   * remaining kernel heap. Keep four buffers but halve their aligned payload.
+   * The ordinary WAV recorder retains its established buffer size. */
+  const unsigned buffer_bytes = sink ? 1984 : RECORD_BYTES;
   ret = audio_take_over();
   if (ret) goto done;
   ret = music_pcm_session_lock();
@@ -130,11 +136,13 @@ static int record_clip(const char *path, const cJSON *a, cJSON *out, struct qpk_
   if (info.nbuffers < record_buffers) record_buffers = info.nbuffers;
   if (record_buffers < 2) { ret = -ENOBUFS; goto done; }
   for (unsigned i = 0; i < record_buffers; i++) {
-    struct audio_buf_desc_s b = {.numbytes = RECORD_BYTES, .u.pbuffer = &buffers[i]};
+    struct audio_buf_desc_s b = {.numbytes = buffer_bytes, .u.pbuffer = &buffers[i]};
     if (ioctl(fd, AUDIOIOC_ALLOCBUFFER, (uintptr_t)&b) != sizeof(b) || !buffers[i]) { ret = -ENOMEM; goto done; }
   }
-  ret = start_file(path, temporary, &file); if (ret) goto done;
-  wav_header(header, 0, RECORD_RATE, 1); ret = write_all(file, header, sizeof(header)); if (ret) goto done;
+  if(!sink){
+    ret = start_file(path, temporary, &file); if (ret) goto done;
+    wav_header(header, 0, RECORD_RATE, 1); ret = write_all(file, header, sizeof(header)); if (ret) goto done;
+  }
   if (ioctl(fd, AUDIOIOC_START, 0) < 0) { ret = -errno; goto done; }
   started = true;
   for (unsigned i = 0; i < record_buffers; i++) {
@@ -176,7 +184,7 @@ static int record_clip(const char *path, const cJSON *a, cJSON *out, struct qpk_
     struct audio_buf_desc_s next = {.numbytes = b->nbytes, .u.buffer = b};
     if (ioctl(fd, AUDIOIOC_ENQUEUEBUFFER, (uintptr_t)&next) < 0) { ret = -errno; break; }
     if (used > UINT32_MAX - 44 - count) { ret = -EFBIG; break; }
-    ret = write_all(file, mono, count); if (ret) break;
+    ret = count?(sink?sink(cookie,mono,count):write_all(file,mono,count)):0; if (ret) break;
     used += count;
     atomic_store(&progress->bytes, used); atomic_store(&progress->elapsed_ms, (uint64_t)used * 1000 / (RECORD_RATE * 2)); atomic_store(&progress->peak, peak);
     if (used >= target || atomic_load(&progress->finish) || atomic_load(&progress->cancel)) break;
@@ -194,8 +202,17 @@ done:
   if (atomic_load(&progress->cancel)) ret = -ECANCELED;
   if (!ret && !used) ret = -ENODATA;
   if (file >= 0) ret = finish_file(file, temporary, path, used, RECORD_RATE, 1, ret);
-  if (!ret) { cJSON_AddNumberToObject(out, "bytes", used); cJSON_AddNumberToObject(out, "sampleRate", RECORD_RATE); cJSON_AddNumberToObject(out, "channels", 1); }
+  if (!ret&&out) { cJSON_AddNumberToObject(out, "bytes", used); cJSON_AddNumberToObject(out, "sampleRate", RECORD_RATE); cJSON_AddNumberToObject(out, "channels", 1); }
   return ret;
+}
+
+static int record_clip(const char *path,const cJSON *a,cJSON *out,struct qpk_hw_progress *progress)
+{return record_clip_stream(path,a,out,progress,NULL,NULL);}
+
+int qpk_audio_capture_pcm(qpk_pcm_sink_t sink,void *cookie,struct qpk_hw_progress *progress)
+{
+  if(!sink||!progress)return -EINVAL;
+  return record_clip_stream(NULL,NULL,NULL,progress,sink,cookie);
 }
 
 static int play_clip(const char *path, const cJSON *a, cJSON *out, struct qpk_hw_progress *progress, bool tone)

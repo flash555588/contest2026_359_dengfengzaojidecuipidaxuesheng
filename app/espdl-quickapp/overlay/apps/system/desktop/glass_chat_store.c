@@ -165,6 +165,7 @@ size_t glass_chat_copy_utf8(char *out, size_t capacity, const char *text)
   return size;
 }
 
+/* Deepest writer output: {turns:[{cards:[{...}]}]}. */
 static bool json_depth_ok(const char *text)
 {
   unsigned depth = 0; bool quoted = false, escape = false;
@@ -173,10 +174,19 @@ static bool json_depth_ok(const char *text)
     if (quoted && *text == '\\') { escape = true; continue; }
     if (*text == '"') { quoted = !quoted; continue; }
     if (quoted) continue;
-    if (*text == '{' || *text == '[') { if (++depth > 4) return false; }
+    if (*text == '{' || *text == '[') { if (++depth > 5) return false; }
     if (*text == '}' || *text == ']') { if (!depth) return false; depth--; }
   }
   return !quoted && !depth;
+}
+
+static bool card_kind_ok(const char *text)
+{
+  size_t size = strlen(text);
+  if (!size || size > 11) return false;
+  for (const char *p = text; *p; p++)
+    if (!((*p >= 'a' && *p <= 'z') || (*p >= '0' && *p <= '9') || *p == '_')) return false;
+  return true;
 }
 
 static cJSON *turns_json(const struct chat_snapshot *state)
@@ -185,6 +195,7 @@ static cJSON *turns_json(const struct chat_snapshot *state)
   if (!array) return NULL;
   for (unsigned i = 0; i < state->count; i++) {
     const struct chat_turn *t = &state->turns[i];
+    if(t->card_count>CHAT_CARD_COUNT){cJSON_Delete(array);return NULL;}
     cJSON *item = cJSON_CreateObject();
     if (!item || !cJSON_AddNumberToObject(item, "id", t->id) ||
         !cJSON_AddNumberToObject(item, "mode", t->mode) ||
@@ -196,6 +207,24 @@ static cJSON *turns_json(const struct chat_snapshot *state)
         !cJSON_AddStringToObject(item, "prompt", t->prompt) ||
         !cJSON_AddStringToObject(item, "reply", t->reply)) {
       cJSON_Delete(item); cJSON_Delete(array); return NULL;
+    }
+    if (t->card_count) {
+      cJSON *cards = cJSON_CreateArray();
+      bool ok = cards != NULL;
+      for (unsigned c = 0; ok && c < t->card_count; c++) {
+        const struct chat_card *card = &t->cards[c];
+        cJSON *entry = cJSON_CreateObject();
+        ok = entry && cJSON_AddStringToObject(entry, "entity", card->entity) &&
+             cJSON_AddStringToObject(entry, "kind", card->kind) &&
+             cJSON_AddStringToObject(entry, "name", card->name) &&
+             cJSON_AddStringToObject(entry, "state", card->state) &&
+             cJSON_AddNumberToObject(entry, "level", card->level) &&
+             cJSON_AddBoolToObject(entry, "on", card->on);
+        if (ok) cJSON_AddItemToArray(cards, entry);
+        else cJSON_Delete(entry);
+      }
+      if (!ok) { cJSON_Delete(cards); cJSON_Delete(item); cJSON_Delete(array); return NULL; }
+      cJSON_AddItemToObject(item, "cards", cards);
     }
     cJSON_AddItemToArray(array, item);
   }
@@ -307,6 +336,33 @@ static int load_file(const char *path, struct chat_snapshot *out, uint32_t *sequ
     cJSON *archive_bytes = cJSON_GetObjectItemCaseSensitive(item, "archive_bytes");
     if (cJSON_IsNumber(archive_bytes) && archive_bytes->valuedouble >= 0 && archive_bytes->valuedouble <= 2 * 1024 * 1024)
       turn->archive_bytes = archive_bytes->valuedouble;
+    /* Optional device cards; older files simply lack the field. */
+    cJSON *cards = cJSON_GetObjectItemCaseSensitive(item, "cards");
+    if (cards) {
+      if (!cJSON_IsArray(cards) || cJSON_GetArraySize(cards) > CHAT_CARD_COUNT) goto done;
+      cJSON *entry;
+      cJSON_ArrayForEach(entry, cards) {
+        cJSON *entity = cJSON_GetObjectItemCaseSensitive(entry, "entity");
+        if (entity && (!cJSON_IsString(entity) || !glass_chat_utf8(entity->valuestring, sizeof(turn->cards[0].entity)-1, false))) goto done;
+        cJSON *kind = cJSON_GetObjectItemCaseSensitive(entry, "kind");
+        cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, "name");
+        cJSON *state = cJSON_GetObjectItemCaseSensitive(entry, "state");
+        cJSON *level = cJSON_GetObjectItemCaseSensitive(entry, "level");
+        cJSON *on = cJSON_GetObjectItemCaseSensitive(entry, "on");
+        if (!cJSON_IsObject(entry) || !cJSON_IsString(kind) || !card_kind_ok(kind->valuestring) ||
+            !cJSON_IsString(name) || !name->valuestring[0] ||
+            !glass_chat_utf8(name->valuestring, sizeof(turn->cards[0].name) - 1, false) ||
+            !cJSON_IsString(state) ||
+            !glass_chat_utf8(state->valuestring, sizeof(turn->cards[0].state) - 1, false) ||
+            !cJSON_IsNumber(level) || level->valuedouble < -1 || level->valuedouble > 100 ||
+            level->valuedouble != (int)level->valuedouble || !cJSON_IsBool(on)) goto done;
+        struct chat_card *card = &turn->cards[turn->card_count++];
+        snprintf(card->entity, sizeof(card->entity), "%s", entity ? entity->valuestring : "");
+        strcpy(card->kind, kind->valuestring); strcpy(card->name, name->valuestring);
+        strcpy(card->state, state->valuestring);
+        card->level = (int)level->valuedouble; card->on = cJSON_IsTrue(on);
+      }
+    }
     strcpy(turn->prompt, prompt->valuestring); strcpy(turn->reply, reply->valuestring);
     if (turn->state == CHAT_DONE && !turn->reply[0]) goto done;
     if (turn->state == CHAT_WAITING) {

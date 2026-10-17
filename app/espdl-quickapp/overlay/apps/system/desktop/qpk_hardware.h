@@ -2,6 +2,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdatomic.h>
 #include <cJSON.h>
 
@@ -10,6 +11,9 @@ struct qpk_hw_progress {
   atomic_bool cancel, finish;
   atomic_uint bytes, elapsed_ms, peak;
 };
+typedef int (*qpk_pcm_sink_t)(void *cookie,const uint8_t *pcm,size_t bytes);
+/* Dedicated caller-owned worker; same codec reservation and cleanup as WAV. */
+int qpk_audio_capture_pcm(qpk_pcm_sink_t sink,void *cookie,struct qpk_hw_progress *progress);
 struct qpk_hw_session *qpk_hw_create(const char *package);
 struct qpk_hw_session *qpk_hw_create_at(const char *package,const char *data_root);
 void qpk_hw_release(struct qpk_hw_session *session);

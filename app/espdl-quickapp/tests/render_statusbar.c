@@ -4,6 +4,7 @@
 extern void review_music_now_fixture(const struct music_now_playing *);
 extern void review_lock_photo_fixture(int);
 extern void review_cover_fixture(const char *);
+extern void review_status_fixture(int,bool,bool);
 static lv_point_t touch_point;
 static lv_indev_state_t touch_state;
 static unsigned leaked_touches;
@@ -50,6 +51,18 @@ int main(int argc,char **argv)
     review_net.wifi=true;glass_status_tick();assert(g_status_ui.network_state==2);
     review_net.wired=true;glass_status_tick();assert(g_status_ui.network_state==3);
     review_net=(struct glass_status_network){.wifi=true};glass_status_tick();
+    review_status_fixture(76,false,true);
+    review_net.rssi_valid=true;review_net.rssi_dbm=-48;glass_status_tick();
+    assert(g_status_ui.signal_level==4&&g_status_ui.bluetooth_count==1&&g_status_ui.battery_percent==76);
+    review_capture(display,"island-strong","首页 · 合并状态岛");
+    review_status_fixture(76,true,true);glass_status_tick();
+    assert(!lv_obj_has_flag(g_status_ui.charging,LV_OBJ_FLAG_HIDDEN));
+    assert(strcmp(lv_label_get_text(g_status_ui.battery),LV_SYMBOL_CHARGE));
+    review_capture(display,"island-charging","状态岛 · 电池与充电闪电同时显示");
+    review_status_fixture(76,false,true);glass_status_tick();
+    assert(lv_obj_has_flag(g_status_ui.charging,LV_OBJ_FLAG_HIDDEN));
+    review_net.rssi_dbm=-87;glass_status_tick();assert(g_status_ui.signal_level==1);
+    review_capture(display,"island-weak","首页 · 弱信号");
     struct music_now_playing now={.revision=41,.position_ms=42000,.duration_ms=204000,.volume=40,
       .state=MUSIC_PLAYING,.lyrics_state=MUSIC_LYRICS_READY,.can_skip=true,.lyrics_started=true};
     strcpy(now.name,"城市与晚风");strcpy(now.artist,"声动 · 原创演示");strcpy(now.lyrics[1],"把今天交给温柔的晚风");
@@ -60,18 +73,22 @@ int main(int argc,char **argv)
     lv_obj_update_layout(g_desktop.screen);lv_area_t a;lv_obj_get_coords(original,&a);
     assert(a.y1==32&&a.y2==599);
     glass_status_tick();review_capture(display,"music","音乐 · 播放器完整可见");
-    touch(input,980,16,true);touch(input,980,16,false);
-    assert(g_status_ui.sheet&&original==g_desktop.current_card);
-    glass_status_tick();review_capture(display,"controls","快捷控制 · 保留当前应用");
-    glass_status_toggle(NULL);assert(g_status_ui.play_state==0);
-    glass_status_toggle(NULL);assert(g_status_ui.play_state==1);
-    lv_obj_t *next=lv_obj_get_child(lv_obj_get_child(g_status_ui.sheet,0),6);
-    lv_obj_send_event(next,LV_EVENT_CLICKED,NULL);
-    assert(g_status_ui.play_state==1);
-    touch(input,500,400,true);touch(input,500,400,false);assert(!g_status_ui.sheet);
-    assert(original==g_desktop.current_card);
-    glass_status_expand(NULL);glass_lock_open(NULL);
-    assert(g_lock_ui.root&&!g_status_ui.sheet&&lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_HIDDEN));
+    unsigned top_children=lv_obj_get_child_count(lv_layer_top());
+    assert(!lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_CLICKABLE));
+    assert(lv_obj_get_style_border_width(g_status_ui.island,0)==0);
+    touch(input,980,16,true);
+    assert(lv_obj_has_state(g_status_ui.island,LV_STATE_PRESSED));
+    assert(lv_obj_get_style_border_width(g_status_ui.island,0)==1);
+    review_capture(display,"island-pressed","状态岛 · 仅按下显示按钮圈");
+    touch(input,980,16,false);
+    lv_timer_handler(); /* Settings opens asynchronously after the input callback. */
+    assert(!g_desktop.settings_rebuild_pending);
+    assert(review_label_find(g_desktop.current_card,"控制面板"));
+    assert(lv_obj_get_child_count(lv_layer_top())==top_children);
+    original=g_desktop.current_card;
+    review_capture(display,"island-settings","状态岛 · 点击进入设置");
+    glass_lock_open(NULL);
+    assert(g_lock_ui.root&&lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_HIDDEN));
     glass_status_tick();review_capture(display,"lock","锁屏 · 保留完整 600 像素");lock_unlock(NULL);
     assert(!lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_HIDDEN)&&original==g_desktop.current_card);
     panel_hide(NULL);struct music_now_playing after;glass_music_now_playing(&after);assert(after.state==MUSIC_PLAYING);
@@ -87,9 +104,9 @@ int main(int argc,char **argv)
     lv_area_t root;qpk_review_root_area(&root);assert(root.y1>=32&&root.y2<=599);
     glass_status_tick();review_capture(display,"homeassistant","米家 HA · 按实际内容高度排版");
     panel_hide(NULL);
-    for(unsigned i=0;i<20;i++){glass_status_expand(NULL);glass_status_close(NULL);glass_lock_open(NULL);lock_unlock(NULL);}
-    assert(!g_status_ui.sheet&&!g_lock_ui.root);
+    for(unsigned i=0;i<20;i++){touch(input,980,16,true);touch(input,980,16,false);glass_lock_open(NULL);lock_unlock(NULL);}
+    assert(!g_lock_ui.root);
   }
   fputs("\n]\n",review_manifest);fclose(review_manifest);
-  puts("STATUS_NATIVE_OK: both themes; safe area; unchanged-label caching; offline/DHCP/WiFi/wired; real touch panel and outside dismissal; pause/resume/skip; background playback; lock visibility and page preservation; 40 reopen cycles");return 0;
+  puts("STATUS_NATIVE_OK: both themes; real RSSI levels; Bluetooth count; battery capacity; pressed-only island outline; click settings; background playback; lock visibility; 40 reopen cycles");return 0;
 }

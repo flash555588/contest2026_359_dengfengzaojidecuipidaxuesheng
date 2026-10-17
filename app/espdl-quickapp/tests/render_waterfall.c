@@ -75,6 +75,19 @@ int main(int argc,char **argv)
     lv_indev_t *pointer=lv_indev_create();lv_indev_set_type(pointer,LV_INDEV_TYPE_POINTER);
     lv_indev_set_display(pointer,display);lv_indev_set_read_cb(pointer,motion_pointer_read);
     lv_area_t root_area;qpk_review_root_area(&root_area);
+    /* Real LVGL input must keep capture across navigation rows, then switch
+     * exactly once on release without delivering the original row's click. */
+    motion_pointer(pointer,root_area.x1+80,root_area.y1+126,true);
+    motion_pointer(pointer,root_area.x1+80,root_area.y1+178,true);
+    assert(qpk_review_number("ESPHomeHA.snapshot().nav==='overview'&&ESPHomeHA.snapshot().sidebarCursor.dragging&&ESPHomeHA.snapshot().sidebarCursor.y===156")>0);
+    motion_pointer(pointer,root_area.x1+80,root_area.y1+178,false);
+    assert(qpk_review_number("ESPHomeHA.snapshot().nav==='devices'&&!ESPHomeHA.snapshot().sidebarCursor.dragging")>0);
+    lv_tick_inc(350);lv_timer_handler();
+    motion_pointer(pointer,root_area.x1+80,root_area.y1+178,true);
+    motion_pointer(pointer,root_area.x1+80,root_area.y1+126,true);
+    motion_pointer(pointer,root_area.x1+80,root_area.y1+126,false);
+    assert(qpk_review_number("ESPHomeHA.snapshot().nav==='overview'&&!ESPHomeHA.snapshot().sidebarCursor.dragging")>0);
+    printf("SIDEBAR_POINTER_OK theme=%u: captured drag, nearest release, no original click\n",theme);
     motion_pointer(pointer,310,root_area.y1+226,true);
     for(unsigned step=1;step<=8;step++){lv_tick_inc(20);motion_pointer(pointer,310,root_area.y1+226-step*12,true);assert(qpk_review_eval("__reviewTick()")==0);}
     motion_pointer(pointer,310,root_area.y1+130,false);

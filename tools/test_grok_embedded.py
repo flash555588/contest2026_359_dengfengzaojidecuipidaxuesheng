@@ -17,6 +17,7 @@ def main():
     command=['gcc',*flags,'-ffunction-sections','-fdata-sections',
       '-I'+str(desktop.parent/'espclaw/include'),'-I'+str(a.apps/'netutils/cjson/cJSON'),
       str(repo/'app/espdl-quickapp/tests/chat_activity_host.c'),str(desktop/'glass_grok_state.c'),
+      str(a.apps/'netutils/cjson/cJSON'/'cJSON.c'),
       '-Wl,--gc-sections','-o',str(a.output/'test-chat-activity')]
     with (a.output/'chat-activity-compile.log').open('w') as f:r=subprocess.run(command,stdout=f,stderr=subprocess.STDOUT)
     if r.returncode:print((a.output/'chat-activity-compile.log').read_text());raise SystemExit(r.returncode)

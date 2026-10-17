@@ -106,6 +106,20 @@ int main(void)
     assert(hass_call_service(c,"select.mode","select_option",text_body)>0);
     assert(hass_close(c)==0);
   }
+  {
+    uint32_t old=hass_configuration_revision();
+    int c=hass_open(HASS_READ|HASS_CONTROL);
+    int admin=hass_open(HASS_READ|HASS_CONFIGURE);
+    assert(hass_configure(admin,"http://fenced.local:8123","fenced-token",true)==0);
+    last_action[0]=0;
+    assert(hass_control_checked(c,"light.desk",true,-1,old)==-ESTALE);
+    assert(hass_call_service_checked(c,"cover.blind","open_cover","{\"entity_id\":\"cover.blind\"}",old)==-ESTALE);
+    assert(!transport_busy && !last_action[0]);
+    assert(hass_control_checked(c,"light.desk",true,-1,0)==-EINVAL);
+    assert(hass_control_checked(c,"light.desk",true,-1,hass_configuration_revision())>0);
+    assert(hass_close(c)==0);assert(hass_close(admin)==0);
+    puts("HA_CONFIG_FENCE_OK: stale bindings rejected before transport");
+  }
   stops=0;
   int portal = hass_open(HASS_READ | HASS_CONTROL | HASS_CONFIGURE);
   int ui = hass_open(HASS_READ | HASS_CONTROL);

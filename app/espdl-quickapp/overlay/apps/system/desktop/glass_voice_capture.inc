@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Shared 16 kHz stereo capture and mono downmix. Worker thread only. */
+#ifndef VOICE_CAPTURE_CANCELLED
+#define VOICE_CAPTURE_CANCELLED() false
+#endif
 struct voice_capture {
   int fd;
   mqd_t mq;
@@ -19,8 +22,10 @@ static int capture_open(struct voice_capture *capture)
   capture->fd=-1;
   capture->mq=(mqd_t)-1;
   capture->settle=VOICE_SETTLE_FRAMES;
+  if(VOICE_CAPTURE_CANCELLED())return -ECANCELED;
   int ret=glass_music_stop_wait(5000);
   if(ret) return ret;
+  if(VOICE_CAPTURE_CANCELLED())return -ECANCELED;
   #ifdef SPEECH_CAPTURE_TRY
   ret=music_pcm_session_trylock();
 #else
@@ -28,6 +33,7 @@ static int capture_open(struct voice_capture *capture)
 #endif
   if(ret) return ret;
   capture->session_locked=true;
+  if(VOICE_CAPTURE_CANCELLED()){ret=-ECANCELED;goto fail;}
   capture->fd=open("/dev/audio/pcm_in0",O_RDWR);
   if(capture->fd<0) { ret=-errno; goto fail; }
   if(ioctl(capture->fd,AUDIOIOC_RESERVE,0)<0) { ret=-errno; goto fail; }
@@ -66,6 +72,7 @@ static int capture_open(struct voice_capture *capture)
       ret=size<0?-errno:-ENOMEM; goto fail;
     }
   }
+  if(VOICE_CAPTURE_CANCELLED()){ret=-ECANCELED;goto fail;}
   if(ioctl(capture->fd,AUDIOIOC_START,0)<0) { ret=-errno; goto fail; }
   capture->started=true;
   for(unsigned i=0;i<capture->count;i++) {
