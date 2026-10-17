@@ -90,3 +90,9 @@
 - [自定义唤醒](../../output/speech-wake-v3-20261016/verification.json)、[语音会话](../../output/voice-wake-chat-v2-20261016/verification.json)、[本地语音停止](../../output/local-voice-stop-20261016/verification.json)。
 - [历史 TTS 双核](../../output/speech-tts-dual-20261017/verification.json)、[ESP-TTS 板上播报](../app/espdl-quickapp/evidence/2026-10-17-esp-tts-playback/verification.json)、[官方英语 PIE](evidence/official-nano-pie-20261017.json)。
 - [中文蒸馏的当前限制](../app/espdl-quickapp/speech/zh-distill/README.md)。
+
+## 提交结果（2026-10-18 追加）
+
+本报告记录的 224 个文件中，180 个已提交为 `031253f`（分支 `codex/integration-20261018`，已推送至 `flash`），本报告本身也随该提交进入仓库。以下条目按“排除语音合成”的要求保留为未提交：ESP-TTS 与音频回调整组（含 `es8311.c`、`tools/test_es8311_return.py`、`tools/tests/test_music_pcm_framing.py`）、中文蒸馏与量化实验整组、Nano 英文推理实验整组、三份 ESP-TTS 证据与官方 Nano PIE 证据，以及 `tools/train_zh_front_frozen_decoder.py`。
+
+语音会话共享代码（`glass_speech.c`、`glass_speech_tts.c/h`、`glass_speech_compute.*`、`glass_speech_conv.h` 以及唤醒与本地语音相关文件）随该提交进入：`glass_speech.c` 在默认构建下无条件调用 `glass_sano_cache_clear()`，单独拆出既有中文 TTS 引擎会使该提交无法链接。ESP-TTS、Q8 蒸馏与 Nano 的调用点都包在 `#ifdef GLASS_ESP_TTS`、`#ifdef GLASS_*_PROBE` 中，这些宏只由 `tools/build_speech_runtime.py` 在对应预备目录存在时定义，因此缺少上述文件时默认固件与语音运行时仍可构建，相关诊断入口返回 `-ENOSYS`。
