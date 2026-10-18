@@ -561,6 +561,7 @@ static void desktop_transients_reset(void)
     }
 }
 
+static void glass_weather_home_resume(void);
 static void panel_hide(lv_event_t *e)
 {
   LV_UNUSED(e);
@@ -579,6 +580,7 @@ static void panel_hide(lv_event_t *e)
   g_desktop.chat_return_apps = false;
   g_desktop.qapp_page = false;
   g_desktop.qapp_return_apps = false;
+  glass_weather_home_resume();
 }
 
 static lv_obj_t *panel_card(const char *title)
@@ -1662,6 +1664,21 @@ static uint32_t desktop_loop_once(void)
   enum desktop_camera_command_e command;
   uint32_t idle = 10;
 
+  int font_change=glass_sd_font_poll();
+  if(font_change) {
+    lv_font_t *primary[]={g_desktop.font16,g_desktop.font20,g_desktop.font28,
+                          g_glass.font48,g_glass.music_font72};
+    const unsigned pixels[]={16,20,28,48,72};
+    for(unsigned i=0;i<5;i++)if(primary[i]) {
+      lv_font_t *fallback=glass_sd_font_get(pixels[i]);
+      const lv_font_t *icons=i<3?glass_icon_font(i==2?24:pixels[i]):NULL;
+      if(fallback)fallback->fallback=icons;
+      primary[i]->fallback=fallback?fallback:icons;
+    }
+    lv_obj_report_style_change(NULL);
+    if(g_music_ui.full)g_music_ui.full->pv.valid=false;
+    lv_obj_invalidate(lv_screen_active());
+  }
   desktop_ui_probe_service();
   glass_board_ui_service();
 
@@ -1816,6 +1833,20 @@ int main(int argc, FAR char *argv[])
       if(!ret)ret=portal_session_open(code,sizeof(code));
       if(!ret)printf("PORTAL_PAIR=%s\n",code);memset(code,0,sizeof(code));return ret;
     }
+#ifdef MUSIC_PV_SD_BANKS
+  if (argc == 4 && strcmp(argv[1], "jizura-get") == 0)
+    return jpv_import_file(argv[2],argv[3]);
+  if (argc == 3 && strcmp(argv[1], "jizura-verify") == 0)
+    {
+      char *tail;unsigned style=strtoul(argv[2],&tail,10);if(*tail||style>=27)return 1;
+      char path[128],digest[65];extern int qpk_dl_sha256_file(const char *,char[65]);
+      struct stat st;const char *root=stat(MUSIC_PV_FAST_ROOT,&st)==0?MUSIC_PV_FAST_ROOT:MUSIC_PV_BANK_ROOT;
+      snprintf(path,sizeof(path),"%s/%08lx-%02u.jpv",root,(unsigned long)jpv_key("慢下来的光","原创演示"),style);
+      int ret=qpk_dl_sha256_file(path,digest);
+      if(ret)printf("JIZURA_VERIFY style=%u error=%d\n",style,ret);
+      else printf("JIZURA_VERIFY style=%u sha256=%s\n",style,digest);return ret;
+    }
+#endif
   if (argc == 3 && strcmp(argv[1], "grok-verify") == 0)
     {
       extern int qpk_dl_sha256_file(const char *,char[65]);

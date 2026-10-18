@@ -1,0 +1,486 @@
+{
+  "assets": [
+    {
+      "file": "clear-detail.jpg",
+      "bytes": 9448,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "7fac08fb3e0b70b129880fee926d85be5b52413a441a5aba37bed3d2c205e9cd"
+    },
+    {
+      "file": "cloudy-detail.jpg",
+      "bytes": 39302,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "d355f707c79e0d6fa8381444b3d7c7ca9e3d0ae32becbb6ae1a0e0f940adef05"
+    },
+    {
+      "file": "overcast-detail.jpg",
+      "bytes": 16663,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "4c67e3eff4c4c4cd5c56eaba96caa5c2d0c8d29762d68cfdbe99baca07124776"
+    },
+    {
+      "file": "clear-night-detail.jpg",
+      "bytes": 6049,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "7d1818aa6a1b5498c8aa9d956addbf12aed63203e5141737bc8ab906e9c55baa"
+    },
+    {
+      "file": "cloudy-night-detail.jpg",
+      "bytes": 25117,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "cd2da2faa4a40589407e9c2dbfa6b2386923226d081b97ab3be52fe1d67713db"
+    },
+    {
+      "file": "rain-detail.jpg",
+      "bytes": 21377,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "5f820ca6f3fb19c0af1767e723b83fc939974611525683e58c5c1cc88aabc747"
+    },
+    {
+      "file": "rain-heavy-detail.jpg",
+      "bytes": 25402,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "0e61b7fe4fea0965e0a23408c904f430065b3407f0058055d34d5e74edc01b3e"
+    },
+    {
+      "file": "thunder-detail.jpg",
+      "bytes": 26871,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "7399484d8192d3f5ba75bd5804f3298f26621b56edcbaec7d8111f4c27f39d41"
+    },
+    {
+      "file": "snow-detail.jpg",
+      "bytes": 28574,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "ece1e119c170a38e03c0db93bcf2822acef100ba95739e2fecb7585e9e34bdc7"
+    },
+    {
+      "file": "snow-heavy-detail.jpg",
+      "bytes": 39163,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "d75525e71003fcd48c669d360306c4779f7b1dbdeab52855a281504a7c9ac42c"
+    },
+    {
+      "file": "sleet-detail.jpg",
+      "bytes": 31727,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "47e94b784901986120f02e33f46d0bf5f5ea6b3adfdaf6d27857f02c42482af8"
+    },
+    {
+      "file": "fog-detail.jpg",
+      "bytes": 12652,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "c1fea040ac9217223214e6d3091b9ca027120bc067f2f8ffa83413aff52b332e"
+    },
+    {
+      "file": "haze-detail.jpg",
+      "bytes": 11596,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "7e6a8893bd82df8ede75b8a8cb8022098e9c2d1317ac70dfc70f7754d525f778"
+    },
+    {
+      "file": "dust-detail.jpg",
+      "bytes": 25763,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "1af407b1be2ee9d9dd7816b98b90a4dfba5c0504c19aa56e7941b94a0ee61c85"
+    },
+    {
+      "file": "drizzle-detail.jpg",
+      "bytes": 16815,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "4d5490e84c4b49328a0f20ccd64153fdb30aca2ac6f62d9fb479ac5e8026af72"
+    },
+    {
+      "file": "rain-moderate-detail.jpg",
+      "bytes": 23211,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "36b66abe0a2de04c68f35da080f2ca24a3d4a6b98836da604f3bc9214ff9859c"
+    },
+    {
+      "file": "rain-large-detail.jpg",
+      "bytes": 28697,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "2dbc0aeefee0be90356bc75e1ec639423dbed846c2b0af98bd53f0c4e8687b73"
+    },
+    {
+      "file": "rain-extreme-detail.jpg",
+      "bytes": 34298,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "d5d00605badf249f182d293fa41716d7d68306293255ff47cd3a3beb43e0bacd"
+    },
+    {
+      "file": "showers-detail.jpg",
+      "bytes": 28285,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "42e6f7c72b67caeb9da12ca74bbeb18f4f693bdcc803be246834acf10436174c"
+    },
+    {
+      "file": "hail-detail.jpg",
+      "bytes": 35605,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "062e3b57c103c100afde2f1a226f03cd0ca4a1d1e78c78f24f51257f3631506d"
+    },
+    {
+      "file": "freezing-rain-detail.jpg",
+      "bytes": 29954,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "61173a094b68a5df1aa09e4f8a90ed2650ea342aca91443eba89f5685db3a469"
+    },
+    {
+      "file": "snow-moderate-detail.jpg",
+      "bytes": 32794,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "1342bc8f3fe4cd1ce2f001a423e553ff2c96e82ee744e0e16a819955abb12b5e"
+    },
+    {
+      "file": "snow-large-detail.jpg",
+      "bytes": 37761,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "9de07dd5c01c5dec8df225bb8f0990d83544235ebbc3e9755797126143d93280"
+    },
+    {
+      "file": "snow-showers-detail.jpg",
+      "bytes": 33477,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "f4af51ae23bedbcadea3a05a9ee7381493ee03740ce1730a155e690b15ddd95e"
+    },
+    {
+      "file": "dust-floating-detail.jpg",
+      "bytes": 16018,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "de51ceb9196afde345979ec785851059e64be48192228f3158207acde4c75dda"
+    },
+    {
+      "file": "dust-blowing-detail.jpg",
+      "bytes": 25574,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "a34e10cc8f290a6608b4840746e81b73fec1b0bf29205aafa54ed98cb4542b30"
+    },
+    {
+      "file": "wind-detail.jpg",
+      "bytes": 33995,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "6e8b69a200790809ab96dfb59664a271470fef7a03e3f9e66a96761686c68a70"
+    },
+    {
+      "file": "thunder-hail-detail.jpg",
+      "bytes": 30951,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "dd0227ede24a42a752585701813b0e7fbf748cb251bfe427b798d2a1890a2d1d"
+    },
+    {
+      "file": "tornado-detail.jpg",
+      "bytes": 23264,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "1e157897b5b3bf34ef85e5df987f0c249772e7fd32b3b8a6d6dd92bccc8e4805"
+    },
+    {
+      "file": "tropical-storm-detail.jpg",
+      "bytes": 33057,
+      "width": 588,
+      "height": 326,
+      "raw_rgb565_bytes": 383376,
+      "sha256": "589aa2bdc7cda0f745b5d4c942b4eb8d24732e1c4ee17ba740036826169b8acf"
+    },
+    {
+      "file": "clear-card.jpg",
+      "bytes": 5437,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "f05b20fc30968dfb551e64b851302b298dd9f5b73480e5fd3fbe2724aaefd8d3"
+    },
+    {
+      "file": "cloudy-card.jpg",
+      "bytes": 20703,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "db94bd25de9746ab0a8f7137b875c131a19f547db6721b2b9e62643435a288d8"
+    },
+    {
+      "file": "overcast-card.jpg",
+      "bytes": 8633,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "117c3db8c25c31f2ea4471d25ed8faaaa75ac8f69ebdf15e252c7a454f7f51ea"
+    },
+    {
+      "file": "clear-night-card.jpg",
+      "bytes": 3352,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "b8a07dc4f1729eace9482c3ada942ece581bd5ca74346b8a06c5859695aea240"
+    },
+    {
+      "file": "cloudy-night-card.jpg",
+      "bytes": 13623,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "83cacd1fd783cd35f6dbeeb45d5dc054a2b69b471cfb8c17eb57992bbcb13c9a"
+    },
+    {
+      "file": "rain-card.jpg",
+      "bytes": 11213,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "60572e65b584cdfe5aa32981922e303204222908ebef5907b8f6c12e2807012a"
+    },
+    {
+      "file": "rain-heavy-card.jpg",
+      "bytes": 12599,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "ff9ad06dbc2152a20bfa2b44bfe31b398f2711a24a46c760a4d21f68b4124b3a"
+    },
+    {
+      "file": "thunder-card.jpg",
+      "bytes": 13789,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "d45dd9ec4df55cef7e55e52651b7ffc0286fd12e5b537c1f56f2f9a594316c26"
+    },
+    {
+      "file": "snow-card.jpg",
+      "bytes": 15036,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "dc4261cf07d69b1f8f32e56d7db6c76093ef780d1e0d80477d414e34b65c4c49"
+    },
+    {
+      "file": "snow-heavy-card.jpg",
+      "bytes": 19089,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "4e6ad725028e9195a6b92cb59d2d7676f71a6d8d21b8f4700094704f98db09b5"
+    },
+    {
+      "file": "sleet-card.jpg",
+      "bytes": 15464,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "523bb4357c6e386d130b16769339897ca7c3ea27f9415446e1a7489cb5ec8a21"
+    },
+    {
+      "file": "fog-card.jpg",
+      "bytes": 6884,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "c4e4db5b2a13b9bddb5df6d1f48af2210acb129cfb5b7599e5cf37a9abab6f34"
+    },
+    {
+      "file": "haze-card.jpg",
+      "bytes": 6446,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "6b6e85e435e9e555e002d5efacdfc85f5712baa9fbee6db0fca1000d2298bb81"
+    },
+    {
+      "file": "dust-card.jpg",
+      "bytes": 13817,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "e6eff8f520141b3d7d0f8c5a23d6cb29e15f8e8d8af2cafa3fa9cb77dd1b9b31"
+    },
+    {
+      "file": "drizzle-card.jpg",
+      "bytes": 9055,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "48709292f4579df0e8d416713548570aeacd8f6171045e182711acf9aad83595"
+    },
+    {
+      "file": "rain-moderate-card.jpg",
+      "bytes": 12015,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "7849be6b11d7266ebd84a59753c23ffc6ddb5bf46febf521eae7bd0fbc355ea7"
+    },
+    {
+      "file": "rain-large-card.jpg",
+      "bytes": 14421,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "99a4f5a2f11ee4cdb69983f58c7153cb171999ca7ce00be9aef47885fc5a0273"
+    },
+    {
+      "file": "rain-extreme-card.jpg",
+      "bytes": 16424,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "50f17d99d3d2e5f4516a013628ec33d8b2254929cb9a2065bcfbe1ff2ef15d7a"
+    },
+    {
+      "file": "showers-card.jpg",
+      "bytes": 14354,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "a09ff980dbc87431849350c00cbedf9c2529a9c686b3307f7f285e2dc3de3ba2"
+    },
+    {
+      "file": "hail-card.jpg",
+      "bytes": 18358,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "1addfeda7ba66d94ee332c1641571177112d4757d87c2f6a08de09c5aaa329fc"
+    },
+    {
+      "file": "freezing-rain-card.jpg",
+      "bytes": 14727,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "1a7a46d352fb8acd3c6603005b3afdfef0fff11f5ec5f06a0f87860143c036cd"
+    },
+    {
+      "file": "snow-moderate-card.jpg",
+      "bytes": 17249,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "7d34c65f79d8797c501ef4a7c419b725c30eec9a938d77508436ce3ab3c80262"
+    },
+    {
+      "file": "snow-large-card.jpg",
+      "bytes": 17439,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "906bcde213df3a5d98a1dd3e44e338e6fe253f3590f9d0e3e0f62d3ea3726392"
+    },
+    {
+      "file": "snow-showers-card.jpg",
+      "bytes": 15992,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "5472a2cb2bfee00aae2149f6bb22a59d1a55d49d670fc015c3648da37f711551"
+    },
+    {
+      "file": "dust-floating-card.jpg",
+      "bytes": 8731,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "4900217e77cf0b997c1ddf247abd0b99374292faf334ab9ecbcb5942a3e29fbb"
+    },
+    {
+      "file": "dust-blowing-card.jpg",
+      "bytes": 13772,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "974c7f5c1b999b81c90371be0da8edfe7e722cf7d61986bca31040c0aa39a6a7"
+    },
+    {
+      "file": "wind-card.jpg",
+      "bytes": 17954,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "f1454c802a915cdb5ec3fb80b167b6727f6109455709617f468583e73495e2a6"
+    },
+    {
+      "file": "thunder-hail-card.jpg",
+      "bytes": 16295,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "fd0ae443e0d377e1e2b12e100fe49d083dbbdcf0baf816e0efc78110449fd4b8"
+    },
+    {
+      "file": "tornado-card.jpg",
+      "bytes": 12111,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "73f61d6f0447c94a242ccc44b5e051ef8e1052e5cdb96f73a8dd5c3f6ac42ce2"
+    },
+    {
+      "file": "tropical-storm-card.jpg",
+      "bytes": 16850,
+      "width": 307,
+      "height": 272,
+      "raw_rgb565_bytes": 167008,
+      "sha256": "40cd001f91bcfcfc6a8988d4898d463106a74f98df52211e9edae0b39f965b74"
+    }
+  ],
+  "total_flash_bytes": 1185292,
+  "source_bytes": 58990977
+}

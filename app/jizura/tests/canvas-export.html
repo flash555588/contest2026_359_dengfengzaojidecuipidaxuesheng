@@ -1,0 +1,54 @@
+<!doctype html><html lang="zh-Hans"><meta charset="utf-8"><title>JIZURA 第三轮输出验收</title>
+<style>body{background:#14151a;color:#ede9e0;font:15px/1.7 system-ui;padding:28px}button{padding:12px}pre{white-space:pre-wrap}iframe{display:none}</style>
+<h1>输出与临时画布验收</h1><button id="run">检查 PNG、MP4 和临时画布</button><pre id="out">Ready</pre>
+<iframe id="r" src="optimization-frame.html?engine=reference"></iframe><iframe id="o" src="optimization-frame.html?engine=optimized"></iframe>
+<script>
+const $=id=>document.getElementById(id);
+function check(ok,message){if(!ok)throw Error(message);}
+async function entries(blob){
+ const bytes=new Uint8Array(await blob.arrayBuffer()),view=new DataView(bytes.buffer),out=[];let offset=0;
+ while(view.getUint32(offset,true)===0x04034b50){
+  check(view.getUint16(offset+8,true)===0,'ZIP compression changed');
+  const size=view.getUint32(offset+18,true),n=view.getUint16(offset+26,true),extra=view.getUint16(offset+28,true);
+  const name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+n)),start=offset+30+n+extra;
+  out.push({name,data:bytes.slice(start,start+size)});offset=start+size;
+ }
+ return out;
+}
+async function pixels(png){const bitmap=await createImageBitmap(new Blob([png],{type:'image/png'}));const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;const x=c.getContext('2d');x.drawImage(bitmap,0,0);bitmap.close();return x.getImageData(0,0,c.width,c.height).data;}
+function equal(a,b){check(a.length===b.length,'pixel size');for(let i=0;i<a.length;i++)if(a[i]!==b[i])throw Error('PNG pixel '+i);}
+$('run').onclick=async()=>{
+ $('run').disabled=true;const result={hostOnly:true,png:[],errors:[]};
+ try{
+  const rw=$('r').contentWindow,ow=$('o').contentWindow,R=rw.J,O=ow.J;
+  await Promise.all([R.ensureFonts('把喧嚣留在身后',Object.keys(R.FONTS)),O.ensureFonts('把喧嚣留在身后',Object.keys(O.FONTS))]);
+  R.setLang('zh-Hans');O.setLang('zh-Hans');
+  const p=R.defaultProject();Object.assign(p,{lang:'zh-Hans',style:'paper',res:360,fps:24,seed:852,lyrics:'[00:00.00]把喧嚣留在身后\n[00:02.00]每一笔都有回响',title:'',artist:''});
+  const a=R.plan(p,null),b=ow.JSON.parse(JSON.stringify(a));O.metrics.m=new ow.Map(R.metrics.m);
+  for(const mode of ['opaque','transparent','layers']){
+   $('out').textContent='检查 '+mode;
+   rw.resetRandom();ow.resetRandom();
+   const opt={project:p,transparent:mode==='transparent',layers:mode==='layers',range:{t0:.6,t1:1.0},every:2};
+   const ar=await R.exportPNGZip({...opt,plan:a}),br=await O.exportPNGZip({...opt,plan:b});
+   const ae=await entries(ar),be=await entries(br);check(ae.length===be.length&&ae.length>0,'ZIP entries');
+   let n=0;for(let i=0;i<ae.length;i++){check(ae[i].name===be[i].name,'entry name');if(ae[i].name.endsWith('.png')){equal(await pixels(ae[i].data),await pixels(be[i].data));n++;}}
+   result.png.push({mode,pixelIdenticalFrames:n,referenceBytes:ar.size,optimizedBytes:br.size});
+  }
+  $('out').textContent='检查 MP4';
+  ow.resetRandom();const movie=await O.exportMP4({plan:b,project:p,audio:null,range:{t0:.6,t1:1.0},quality:'high',signal:new AbortController().signal});
+  const head=new Uint8Array(await movie.blob.slice(0,16).arrayBuffer());check(new TextDecoder().decode(head.slice(4,8))==='ftyp','MP4 header');
+  result.mp4={bytes:movie.blob.size,width:movie.width,height:movie.height,codec:movie.codec,audio:movie.audio};
+  const link=document.createElement('a');link.href=URL.createObjectURL(movie.blob);link.download='stage3-export-smoke.mp4';link.textContent='下载短片';document.body.append(link);
+  // Bloom uses the quarter-size small surface, not the full-size scratch.
+  for(const plan of [a,b]){plan.cuts=[];plan.events=[];plan.hud=false;plan.style.glow=1.4;}
+  rw.resetRandom();ow.resetRandom();const rr=new R.Renderer(),or=new O.Renderer();
+  const cs=[document.createElement('canvas'),document.createElement('canvas')];for(const c of cs){c.width=1024;c.height=576;}
+  rr.frame(cs[0].getContext('2d'),a,.7,{scale:1024/a.W});or.frame(cs[1].getContext('2d'),b,.7,{scale:1024/b.W});
+  equal(cs[0].getContext('2d').getImageData(0,0,1024,576).data,cs[1].getContext('2d').getImageData(0,0,1024,576).data);
+  result.bloomScratch={width:1024,height:576,referenceBytes:rr.scratch.width*rr.scratch.height*4,optimizedBytes:or.scratch.width*or.scratch.height*4,pixelIdentical:true};
+  check(or.scratch.width===2&&or.scratch.height===2,'unused scratch allocated');
+  result.pass=true;document.title='JIZURA_OUTPUT_PASS';
+ }catch(e){result.errors.push(e.stack);result.pass=false;document.title='JIZURA_OUTPUT_REVIEW';}
+ $('out').textContent=JSON.stringify(result,null,2);$('run').disabled=false;
+};
+</script></html>

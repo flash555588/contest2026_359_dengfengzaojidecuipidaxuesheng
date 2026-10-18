@@ -70,7 +70,8 @@ static int encode(const char *text, char *out, size_t cap)
 
 int music_search_url(const char *query, const char *key, char *url, size_t cap)
 {
-  if (!query || !query[0] || strlen(query) >= 128 || !key || !key[0]) return -EINVAL;
+  if (!query || !query[0] || strlen(query) >= 128) return -EINVAL;
+  if (!key || !key[0]) return MUSIC_ERROR_KEY_REQUIRED;
   int n = snprintf(url, cap, "https://jkapi.com/api/music?plat=qq&type=json&apiKey=");
   if (n < 0 || (size_t)n >= cap) return -E2BIG;
   int k = encode(key, url + n, cap - n);

@@ -1,0 +1,791 @@
+{
+  "date": "2026-10-18",
+  "upstream_commit": "fc16bfe43ea4a6c25a21f1caf04d17326de14f00",
+  "host_probe": {
+    "host_only": true,
+    "quickjs_version": "2024-02-14",
+    "bignum": false,
+    "source_files": 40,
+    "source_bytes": 2268835,
+    "bytecode_bytes": 2031484
+  },
+  "runs": [
+    {
+      "mode": "source",
+      "limit_mib": 8,
+      "stack_kib": 1024,
+      "returncode": 1,
+      "error": "PROBE_ERROR load null",
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        }
+      ]
+    },
+    {
+      "mode": "source",
+      "limit_mib": 12,
+      "stack_kib": 1024,
+      "returncode": 1,
+      "error": "PROBE_ERROR load null",
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        }
+      ]
+    },
+    {
+      "mode": "source",
+      "limit_mib": 16,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 8605988,
+          "used_bytes": 8431341
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 7245697,
+          "used_bytes": 6761262
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 7254537,
+          "used_bytes": 6768230
+        }
+      ]
+    },
+    {
+      "mode": "source",
+      "limit_mib": 24,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 8605988,
+          "used_bytes": 8431341
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 7245697,
+          "used_bytes": 6761262
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 7254537,
+          "used_bytes": 6768230
+        }
+      ]
+    },
+    {
+      "mode": "source",
+      "limit_mib": 32,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 8605988,
+          "used_bytes": 8431341
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 7245697,
+          "used_bytes": 6761262
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 7254537,
+          "used_bytes": 6768230
+        }
+      ]
+    },
+    {
+      "mode": "source",
+      "limit_mib": 48,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 8605988,
+          "used_bytes": 8431341
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 7245697,
+          "used_bytes": 6761262
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 7254537,
+          "used_bytes": 6768230
+        }
+      ]
+    },
+    {
+      "mode": "source",
+      "limit_mib": 64,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 8605988,
+          "used_bytes": 8431341
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 7245697,
+          "used_bytes": 6761262
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 7254537,
+          "used_bytes": 6768230
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 8,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 4733409,
+          "used_bytes": 4285254
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 12,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 4733409,
+          "used_bytes": 4285254
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 16,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 4733409,
+          "used_bytes": 4285254
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 24,
+      "stack_kib": 1024,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 4733409,
+          "used_bytes": 4285254
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 16,
+      "stack_kib": 16,
+      "returncode": 1,
+      "error": "PROBE_ERROR inspect InternalError: stack overflow",
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 16,
+      "stack_kib": 32,
+      "returncode": 1,
+      "error": "PROBE_ERROR inspect InternalError: stack overflow",
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 16,
+      "stack_kib": 64,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 4733409,
+          "used_bytes": 4285254
+        }
+      ]
+    },
+    {
+      "mode": "bytecode",
+      "limit_mib": 16,
+      "stack_kib": 128,
+      "returncode": 0,
+      "result": {
+        "counts": {
+          "layout": 184,
+          "enter": 125,
+          "hold": 52,
+          "exit": 109,
+          "decor": 130,
+          "treat": 62,
+          "bg": 66,
+          "cam": 36,
+          "fx": 69,
+          "trans": 27
+        },
+        "styles": 27,
+        "parse": 2,
+        "plan": {
+          "cuts": 12
+        }
+      },
+      "memory": [
+        {
+          "phase": "shim",
+          "malloc_bytes": 70406,
+          "used_bytes": 62055
+        },
+        {
+          "phase": "loaded",
+          "malloc_bytes": 3753366,
+          "used_bytes": 3619447
+        },
+        {
+          "phase": "registered",
+          "malloc_bytes": 4724569,
+          "used_bytes": 4278286
+        },
+        {
+          "phase": "inspected",
+          "malloc_bytes": 4733409,
+          "used_bytes": 4285254
+        }
+      ]
+    }
+  ],
+  "board_readonly_snapshot": {
+    "user_heap_total_bytes": 33554432,
+    "user_heap_free_bytes": 27011648,
+    "user_heap_max_free_block_bytes": 25387192,
+    "kernel_heap_free_bytes": 9952,
+    "data_mounted": true,
+    "sdcard_mounted": true
+  },
+  "frozen_firmware": {
+    "path": "output/jizura-p4-feasibility/firmware-snapshot/nuttx.bin",
+    "bytes": 8875412,
+    "sha256": "238b815d0dd83fab76626d68f40b526b049d016e8394cbad560dd0be11eb0ed2",
+    "not_asserted_to_be_currently_flashed": true,
+    "application_spare_bytes": 3699308,
+    "files": {
+      "nuttx.bin": {
+        "bytes": 8875412,
+        "sha256": "238b815d0dd83fab76626d68f40b526b049d016e8394cbad560dd0be11eb0ed2"
+      },
+      "nuttx.elf": {
+        "bytes": 46871336,
+        "sha256": "36ed15bbaa1d55024a389b03746d15af75cdd42ea7e9e5781034d249969a1c29"
+      },
+      "resolved.config": {
+        "bytes": 88433,
+        "sha256": "918b1baf123753d2e6b825071ab7d678eb7af3201970b49ab07666a34f754b73"
+      }
+    },
+    "elf_sections_bytes": {
+      ".rtc.text": 104,
+      ".rtc.force_fast": 0,
+      ".rtc_noinit": 0,
+      ".rtc.force_slow": 0,
+      ".rtc_reserved": 24,
+      ".tcm.text": 74,
+      ".tcm.data": 60,
+      ".iram0.text": 68258,
+      ".iram0.text_end": 94,
+      ".iram0.data": 0,
+      ".iram0.bss": 0,
+      ".dram0.data": 93332,
+      ".noinit": 0,
+      ".dram0.bss": 292540,
+      ".flash.text": 3378578,
+      ".flash.appdesc": 0,
+      ".flash.rodata": 5283240,
+      ".flash.init_array": 76,
+      ".flash.tdata": 0,
+      ".comment": 141,
+      ".riscv.attributes": 133
+    },
+    "ebss_address": "0x4ffaee7c",
+    "link_guard_address": "0x4ffaefc0",
+    "link_guard_spare_bytes": 324
+  },
+  "static_inventory": {
+    "method_names": 35,
+    "blend_literals": [
+      "color",
+      "color-burn",
+      "copy",
+      "darken",
+      "destination-in",
+      "destination-out",
+      "destination-over",
+      "difference",
+      "lighten",
+      "lighter",
+      "multiply",
+      "overlay",
+      "saturation",
+      "screen",
+      "source-in",
+      "source-over"
+    ],
+    "filter_literals": [
+      "blur",
+      "contrast",
+      "grayscale",
+      "hue-rotate",
+      "invert",
+      "saturate"
+    ],
+    "buffer_scenarios": [
+      {
+        "width": 512,
+        "height": 288,
+        "rgba_bytes": 589824,
+        "rgb565_bytes": 294912,
+        "rgba_surfaces_2": 1179648,
+        "rgba_surfaces_4": 2359296,
+        "rgba_surfaces_6": 3538944,
+        "one_rgba_read_write_mib_per_s_30fps": 33.75
+      },
+      {
+        "width": 640,
+        "height": 360,
+        "rgba_bytes": 921600,
+        "rgb565_bytes": 460800,
+        "rgba_surfaces_2": 1843200,
+        "rgba_surfaces_4": 3686400,
+        "rgba_surfaces_6": 5529600,
+        "one_rgba_read_write_mib_per_s_30fps": 52.734375
+      },
+      {
+        "width": 800,
+        "height": 450,
+        "rgba_bytes": 1440000,
+        "rgb565_bytes": 720000,
+        "rgba_surfaces_2": 2880000,
+        "rgba_surfaces_4": 5760000,
+        "rgba_surfaces_6": 8640000,
+        "one_rgba_read_write_mib_per_s_30fps": 82.3974609375
+      },
+      {
+        "width": 1024,
+        "height": 576,
+        "rgba_bytes": 2359296,
+        "rgb565_bytes": 1179648,
+        "rgba_surfaces_2": 4718592,
+        "rgba_surfaces_4": 9437184,
+        "rgba_surfaces_6": 14155776,
+        "one_rgba_read_write_mib_per_s_30fps": 135.0
+      },
+      {
+        "width": 1024,
+        "height": 600,
+        "rgba_bytes": 2457600,
+        "rgb565_bytes": 1228800,
+        "rgba_surfaces_2": 4915200,
+        "rgba_surfaces_4": 9830400,
+        "rgba_surfaces_6": 14745600,
+        "one_rgba_read_write_mib_per_s_30fps": 140.625
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "rgba_bytes": 8294400,
+        "rgb565_bytes": 4147200,
+        "rgba_surfaces_2": 16588800,
+        "rgba_surfaces_4": 33177600,
+        "rgba_surfaces_6": 49766400,
+        "one_rgba_read_write_mib_per_s_30fps": 474.609375
+      }
+    ],
+    "glyph_working_set": [
+      {
+        "resolution": 128,
+        "side": 186,
+        "js_arrays_bytes": 588132,
+        "with_one_rgba_canvas_bytes": 726516,
+        "note": "RGBA readback + alpha + labels + flood stack + one label copy; excludes sprite cache, VM and object overhead"
+      },
+      {
+        "resolution": 256,
+        "side": 372,
+        "js_arrays_bytes": 2352528,
+        "with_one_rgba_canvas_bytes": 2906064,
+        "note": "RGBA readback + alpha + labels + flood stack + one label copy; excludes sprite cache, VM and object overhead"
+      },
+      {
+        "resolution": 512,
+        "side": 743,
+        "js_arrays_bytes": 9384833,
+        "with_one_rgba_canvas_bytes": 11593029,
+        "note": "RGBA readback + alpha + labels + flood stack + one label copy; excludes sprite cache, VM and object overhead"
+      },
+      {
+        "resolution": 768,
+        "side": 1114,
+        "js_arrays_bytes": 21096932,
+        "with_one_rgba_canvas_bytes": 26060916,
+        "note": "RGBA readback + alpha + labels + flood stack + one label copy; excludes sprite cache, VM and object overhead"
+      }
+    ],
+    "renderer_grain_rgba_bytes": 1048576,
+    "estimates_only": true
+  },
+  "limitations": [
+    "Host QuickJS measurements are not 32-bit ESP performance or exact heap requirements.",
+    "No Canvas renderer or full effect execution was tested on ESP.",
+    "Buffer scenarios are arithmetic, not measured simultaneously allocated surfaces.",
+    "No firmware or player state was changed in this feasibility round."
+  ]
+}

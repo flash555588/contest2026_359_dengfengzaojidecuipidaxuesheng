@@ -44,6 +44,7 @@ def main():
         ('static void glass_update(lv_timer_t *timer)', 'static void glass_theme_toggle('),
         ('static void glass_fade(', '#include "glass_home_ui.inc"')]:
         first=source.index(start);last=source.index(end,first);helpers.append(source[first:last])
+    helpers.insert(2, '#include "glass_weather_scene.inc"')
     (out/'production_home_helpers.inc').write_text('\n'.join(helpers))
     # Full LV_SYMBOL coverage plus semantically named additions.
     generator=repo/'tools/generate_glass_icons.py'
@@ -75,7 +76,7 @@ def main():
         run('gcc',*flags,'-c',s,'-o',obj);return obj
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         objects=list(pool.map(compile,enumerate(sorted((lvgl/'src').rglob('*.c')))))
-    run('gcc',*flags,repo/'app/espdl-quickapp/tests/render_refined_home.c',desktop/'glass_icons.c',desktop/'glass_grok.c',desktop/'glass_grok_state.c',apps/'netutils/cjson/cJSON/cJSON.c',
+    run('gcc',*flags,repo/'app/espdl-quickapp/tests/render_refined_home.c',desktop/'glass_icons.c',desktop/'glass_grok.c',desktop/'glass_grok_state.c',desktop/'qpk_mjpeg.c',desktop/'qpk_tjpgd.c',apps/'netutils/cjson/cJSON/cJSON.c',
         *objects,'-lm','-o',out/'render-refined-home')
     run(out/'render-refined-home',apps/'system/desktop/AlibabaPuHuiTi-3-55-Regular.otf',out)
     for path in out.glob('*.rgb565'):png565(path)

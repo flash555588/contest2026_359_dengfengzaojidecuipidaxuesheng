@@ -7,7 +7,8 @@ static struct {
   lv_timer_t *timer;struct glass_system_monitor *monitor;
   struct glass_system_sample latest;
   char displayed[10][96];int32_t history[2][GLASS_RESOURCE_HISTORY];
-  unsigned count[2],selected;uint32_t sample_tick;bool sampled;
+  unsigned count[2],selected;uint32_t sample_tick;
+  bool sampled,presented,plot_dirty[2];uint8_t presented_metric;
 } g_resources;
 static uint32_t resources_color(unsigned metric)
 {return metric?(g_desktop.light_theme?0x7b68a5:0xb8a0df):(g_desktop.light_theme?0x4b84c9:0x80b0ed);}
@@ -46,25 +47,32 @@ static void resources_plot(lv_obj_t *chart,lv_chart_series_t *series,unsigned me
 static void resources_present(void)
 {
   unsigned chosen=g_resources.selected;const struct glass_system_sample *s=&g_resources.latest;char text[96];
-  lv_label_set_text(g_resources.heading,chosen?"内存":"CPU");
+  bool selection_changed=!g_resources.presented||chosen!=g_resources.presented_metric;
+  if(selection_changed)lv_label_set_text(g_resources.heading,chosen?"内存":"CPU");
   if(chosen&&(s->heap_error||!s->heap_total||s->heap_free>s->heap_total))strcpy(text,"暂不可用");
   else if(!chosen&&s->cpu_error)strcpy(text,s->cpu_error==ENOTSUP?"未启用":"暂不可用");
   else if(!g_resources.sampled)strcpy(text,"--");
   else {unsigned pct=chosen?resources_memory_pct(s):s->cpu_tenths;snprintf(text,sizeof(text),"%u.%u%%",pct/10,pct%10);}
-  glass_resources_text(6,text);lv_chart_set_series_color(g_resources.chart,g_resources.series,lv_color_hex(resources_color(chosen)));
+  glass_resources_text(6,text);
+  if(selection_changed)lv_chart_set_series_color(g_resources.chart,g_resources.series,lv_color_hex(resources_color(chosen)));
   if(!chosen)snprintf(text,sizeof(text),"整体负载 · 最近 %u 次有效采样",g_resources.count[0]);
   else if(!s->heap_error&&s->heap_total&&s->heap_free<=s->heap_total){char total[48];resources_mib(total,sizeof(total),s->heap_total);snprintf(text,sizeof(text),"系统堆总量 %s",total);}
   else strcpy(text,"系统堆数据暂不可用");
   glass_resources_text(4,text);
-  resources_plot(g_resources.chart,g_resources.series,chosen);
+  if(selection_changed||g_resources.plot_dirty[chosen])resources_plot(g_resources.chart,g_resources.series,chosen);
   for(unsigned i=0;i<2;i++){
-    lv_obj_set_style_border_color(g_resources.tiles[i],lv_color_hex(i==chosen?resources_color(i):detail_line()),0);
-    lv_obj_set_style_border_width(g_resources.tiles[i],i==chosen?2:1,0);
-    resources_plot(g_resources.mini[i],g_resources.mini_series[i],i);
+    if(selection_changed){
+      lv_obj_set_style_border_color(g_resources.tiles[i],lv_color_hex(i==chosen?resources_color(i):detail_line()),0);
+      lv_obj_set_style_border_width(g_resources.tiles[i],i==chosen?2:1,0);
+    }
+    if(g_resources.plot_dirty[i])resources_plot(g_resources.mini[i],g_resources.mini_series[i],i);
   }
   if(!g_resources.count[chosen])lv_obj_remove_flag(g_resources.empty,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(g_resources.empty,LV_OBJ_FLAG_HIDDEN);
   unsigned n=g_resources.count[chosen];
-  if(n>1)snprintf(text,sizeof(text),"%u 秒前",n-1);else strcpy(text,"开始采样");lv_label_set_text(g_resources.axis,text);
+  if(n>1)snprintf(text,sizeof(text),"%u 秒前",n-1);else strcpy(text,"开始采样");
+  if(strcmp(lv_label_get_text(g_resources.axis),text))lv_label_set_text(g_resources.axis,text);
+  g_resources.plot_dirty[0]=g_resources.plot_dirty[1]=false;
+  g_resources.presented=true;g_resources.presented_metric=chosen;
 }
 static void resources_select(lv_event_t *e)
 {g_resources.selected=(unsigned)(uintptr_t)lv_event_get_user_data(e);resources_present();}
@@ -73,8 +81,11 @@ static void glass_resources_closed(lv_event_t *e)
 static void resources_append(unsigned metric,int32_t value)
 {
   unsigned n=g_resources.count[metric];
+  bool changed=n<GLASS_RESOURCE_HISTORY||g_resources.history[metric][n-1]!=value;
+  for(unsigned i=1;!changed&&i<n;i++)changed=g_resources.history[metric][i]!=g_resources.history[metric][i-1];
   if(n==GLASS_RESOURCE_HISTORY){memmove(g_resources.history[metric],g_resources.history[metric]+1,(n-1)*sizeof(int32_t));n--;}
   g_resources.history[metric][n]=value;g_resources.count[metric]=n+1;
+  g_resources.plot_dirty[metric]|=changed;
 }
 static void glass_resources_show(const struct glass_system_sample *s)
 {

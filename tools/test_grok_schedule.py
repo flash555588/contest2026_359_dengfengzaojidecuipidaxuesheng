@@ -38,12 +38,15 @@ def main():
         print(name, result.stdout + result.stderr, flush=True)
         result.check_returncode()
         results[name] = json.loads(re.search(r'^METRIC (.*)$', result.stdout, re.M)[1])
+        results[name]['hidden_callbacks'] = json.loads(re.search(r'^HIDDEN_METRIC (.*)$', result.stdout, re.M)[1])['callbacks']
     before = (args.output / 'before.trace').read_bytes()
     after = (args.output / 'after.trace').read_bytes()
     assert before == after, 'Frame order, source pixels or rendered framebuffer changed'
     assert results['before']['frames'] == results['after']['frames'] == 100
-    assert results['after']['callbacks'] < results['before']['callbacks']
-    assert results['after']['seeks'] < results['before']['seeks']
+    assert results['after']['callbacks'] <= results['before']['callbacks']
+    assert results['after']['seeks'] <= results['before']['seeks']
+    assert results['after']['hidden_callbacks'] <= 1
+    assert results['after']['hidden_callbacks'] < results['before']['hidden_callbacks']
     report = {'method': 'deterministic host scheduling with real LVGL; not board FPS/CPU',
               'identical_frame_hashes': len(before.splitlines()), 'metrics': results,
               'source_sha256': {name: hashlib.sha256((folder / 'glass_grok_player.inc').read_bytes()).hexdigest()

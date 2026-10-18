@@ -24,6 +24,10 @@
 /                     Some performance improvement.
 /----------------------------------------------------------------------------*/
 
+#if defined(__GNUC__) && !defined(__clang__)
+/* This bounded integer codec is a playback hot path on ESP32-P4. */
+#pragma GCC optimize ("O3")
+#endif
 #include "qpk_tjpgd.h"
 
 #if LV_USE_TJPGD

@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-18",
+  "target": "ESP32-P4 Function-EV-Board",
+  "firmware_bytes": 10062212,
+  "firmware_sha256": "36ba8521866f443637d2d1bdcec6c573d1644f154165601760c40655666ba45d",
+  "flash_offset": "0x2000",
+  "erase_end": "0x99b000",
+  "data_offset": "0xc00000",
+  "flash_write_verified": true,
+  "boot_verified": true,
+  "storage_mounted": true,
+  "data_region_written": false,
+  "sdcard_written": false,
+  "vision_models_sd_only": true,
+  "ebss": "0x4ffaef3c",
+  "bss_limit": "0x4ffaefc0",
+  "snapshot_cache": "runtime heap; detail snapshot freed on close; null-cache fallback tested",
+  "source_sha256": {
+    "desktop_main.c": "bb8356f9a10176a1073ad0462b1651b1601f952374d45ae937b6467cb69f52b9",
+    "glass_home_ui.inc": "3f8c4ef738cfe02c8ac26318bbd08fd83a99ea4d9d57c8b6030cd52a7433d3e3",
+    "glass_ui.inc": "4bacb828a422aea111efe159ed9bad017498e9cb61cfe9cf623cb9ab503bb92c",
+    "glass_weather_ui.inc": "f1574295572f516eeabb5cfe220048180e33adcfbf3b05f4ef40c78f7787bae0",
+    "glass_weather_modern.inc": "5d6fabbc4b9f38bc3118bd9ece4a7dee7ae98206550120f229b912dd9e5a5574",
+    "glass_weather_scene.inc": "d10aa74bf44e514d720330f17bc1156503df9455c863f94bac8e03412c21fc9f",
+    "glass_weather_art.inc": "6fb9b992d23ecd08310cd768df03e2032eb8ba1af34df0e7340cc34fd8206876",
+    "qpk_mjpeg.c": "f976b00c3e79749c035d095772d854d37d59951c0d3b08cd6177c5ae9a135af5",
+    "qpk_mjpeg.h": "ecdd001b589904cab2488a07eb1ae4399bb8f4c007a7e28fa8a495bf1e4579fd"
+  },
+  "host": {
+    "asan_ubsan_passed": true,
+    "pixel_identical_captures": 254,
+    "conditions": 29,
+    "classification_aliases": 49,
+    "artwork_assets": 30,
+    "both_themes": true,
+    "day_night": true,
+    "cache_allocation_failure_fallback": true
+  },
+  "board": {
+    "live_network_weather": true,
+    "full_page_layout": true,
+    "refresh_callback": true,
+    "back_callback": true,
+    "reopen_cycles": 30,
+    "warm_heap_delta_bytes": 6232,
+    "page_replacement": true,
+    "screenshot_sha256": "82301534e9947b8027cf97d471c938bbc3119935ea8083cacf3e83827fa1487f"
+  },
+  "limitations": [
+    "Real board exercised current network weather; the complete asset matrix was tested on native LVGL host.",
+    "Thirty cycles are a short regression, not a long-duration endurance test.",
+    "Button checks use real LVGL event callbacks over the existing diagnostic console; no physical touch automation.",
+    "Initial harness assumptions and USB transport retries are preserved in local deployment logs."
+  ],
+  "local_artifacts": "output/weather-flash-20261018; full flash backup and raw logs are private and must not be published"
+}

@@ -19,6 +19,7 @@ static void glass_status_visibility(bool locked);
 #include "glass_settings_service.h"
 #include "glass_weather.h"
 #include "glass_ime.h"
+#include "glass_sd_font.h"
 #define GLASS_SIMPLE_SETTINGS 1
 #if defined(CONFIG_ESPRESSIF_LEDC_TIMER0) && \
     CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN == 26 && CONFIG_PWM_NCHANNELS == 1
@@ -101,6 +102,7 @@ static struct
   lv_obj_t *brightness_slider;
   lv_font_t *font72;
   lv_font_t *font48;
+  lv_font_t *music_font72;
   lv_timer_t *timer;
   int temperature_c;
   int humidity_pct;
@@ -112,6 +114,7 @@ static struct
   uint32_t received;
   bool has_sample;
   bool reduced_motion;
+  bool music_original_only;
   unsigned int palette;
   unsigned int widget;
 } g_glass;
@@ -128,6 +131,8 @@ static struct glass_display_s
   int aqi;
   unsigned weather_revision;
   bool weather_stale;
+  enum glass_weather_state weather_state;
+  bool weather_valid;
   int available;
   int total;
   uint8_t hour;
@@ -453,9 +458,18 @@ static void glass_update(lv_timer_t *timer)
     {
       return;
     }
-  glass_home_devices_paint();
   clock_gettime(CLOCK_MONOTONIC, &uptime);
   uint64_t weather_now = (uint64_t)uptime.tv_sec * 1000 + uptime.tv_nsec / 1000000;
+  bool weather_stale=weather.valid&&weather_now>=weather.received_ms&&
+    weather_now-weather.received_ms>=7200000;
+  /* Keep service polling and status alive, but do not repaint or decode a
+   * fully covered home. Its cached image stays ready for the back gesture. */
+  if(glass_page_covers_home()){
+    g_weather_home.deferred=true;
+    glass_weather_detail_update(&weather,weather_stale);
+    return;
+  }
+  glass_home_devices_paint();
   uint32_t sync_seconds = lv_tick_elaps(g_glass.received) / 1000;
   struct glass_display_s display =
     {
@@ -469,7 +483,9 @@ static void glass_update(lv_timer_t *timer)
       .humidity = weather.valid ? weather.data.humidity : -1,
       .aqi = weather.valid ? weather.data.aqi : -1,
       .weather_revision = weather.revision,
-      .weather_stale = weather.valid && weather_now - weather.received_ms >= 7200000,
+      .weather_stale = weather_stale,
+      .weather_state = weather.state,
+      .weather_valid = weather.valid,
       .available = g_glass.available,
       .total = g_glass.total,
       .widget = g_glass.widget < 2 ? g_glass.widget : 2,
@@ -562,7 +578,9 @@ static void glass_update(lv_timer_t *timer)
     }
   bool widget_changed = initial || display.widget != g_glass_display.widget;
   bool weather_changed = widget_changed ||
-    display.weather_revision != g_glass_display.weather_revision ||
+    weather_home_data_changed(&weather) ||
+    display.weather_state != g_glass_display.weather_state ||
+    display.weather_valid != g_glass_display.weather_valid ||
     display.weather_stale != g_glass_display.weather_stale;
   if (initial || display.humidity != g_glass_display.humidity)
     lv_label_set_text(g_glass.humidity_status,
@@ -653,8 +671,17 @@ static void glass_update(lv_timer_t *timer)
           weather.state == WEATHER_WAIT_TIME ? "等待校时" :
           weather.state == WEATHER_FAILED ? "天气暂不可用 · 稍后重试" : "正在更新天气");
     }
+  weather_home_update(&weather, display.weather_stale, weather_is_night());
   glass_weather_detail_update(&weather, display.weather_stale);
   g_glass_display = display;
+  g_weather_home.deferred=false;
+}
+
+static void glass_weather_home_resume(void)
+{
+  if(!g_weather_home.deferred)return;
+  g_weather_home.deferred=false;
+  glass_update(NULL);
 }
 
 static void glass_theme_toggle(lv_event_t *e)
@@ -1204,6 +1231,7 @@ static void glass_edge_back_async(void *data)
   g_edge_back_pending = false;
   /* Ignore a gesture if another action changed the page before dispatch. */
   if (g_lock_ui.root || g_edge_page != g_desktop.current_card) return;
+  if(g_music_ui.full){music_full_close(NULL);return;}
   if (g_desktop.dialog != NULL)
     dialog_cancel();
   else if (g_control_card != NULL && g_control_card == g_desktop.current_card &&
@@ -1351,10 +1379,15 @@ static void desktop_ui_create(void)
     128, LV_FONT_KERNING_NORMAL, 24);
   g_glass.font48 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
     48, LV_FONT_KERNING_NORMAL, 24);
+  /* The home temperature face above is 128 px despite its historical name.
+   * Lyrics need their own actual 72 px face for measurement and clipping. */
+  g_glass.music_font72 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+    72, LV_FONT_KERNING_NORMAL, 24);
   glass_home_fonts_init(g_desktop_font_start, size);
   if (g_desktop.font16) g_desktop.font16->fallback = glass_icon_font(16);
   if (g_desktop.font20) g_desktop.font20->fallback = glass_icon_font(20);
   if (g_desktop.font28) g_desktop.font28->fallback = glass_icon_font(24);
+  glass_sd_font_start();
   g_desktop.screen = glass_box(lv_screen_active(), 0, GLASS_STATUS_HEIGHT,
                                 1024, GLASS_CONTENT_HEIGHT, theme_card(), 0);
   lv_obj_set_style_text_font(g_desktop.screen, zh_font(20), 0);

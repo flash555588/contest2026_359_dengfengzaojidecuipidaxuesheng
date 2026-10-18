@@ -14,8 +14,8 @@
 /* Only metadata crosses the MCP boundary. URLs and credentials stay in music. */
 static const char catalog[] =
 "{\"name\":\"music_status\",\"description\":\"Read native playback state, title, artist, progress and volume. Renders a music card in chat; never opens a page.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
-"{\"name\":\"music_search\",\"description\":\"Search for one song by title and artist. Does not start playback. No stream URL is returned.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
-"{\"name\":\"music_play\",\"description\":\"Request playback by title and artist. Returns accepted, not proof of audible playback. Use music_status to observe playing. Playback continues after the chat request ends. Never opens the music app.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
+"{\"name\":\"music_search\",\"description\":\"Search for one song by title only; check the returned artist. Do not append the artist to the title. Does not start playback. No stream URL is returned.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
+"{\"name\":\"music_play\",\"description\":\"Request playback by song title only; do not append the artist. Returns accepted, not proof of audible playback. Use music_status to observe playing. Playback continues after the chat request ends. Never opens the music app.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
 "{\"name\":\"music_pause\",\"description\":\"Request pause, idempotently. Does not toggle or start another song.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
 "{\"name\":\"music_resume\",\"description\":\"Request resume of the current active track, idempotently. Does not restart a stopped song.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
 "{\"name\":\"music_stop\",\"description\":\"Request stop of native music playback.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
@@ -26,7 +26,12 @@ static pthread_mutex_t bridge_lock=PTHREAD_MUTEX_INITIALIZER;
 static char *finish(cJSON *root)
 {char *text=root?cJSON_PrintUnformatted(root):NULL;cJSON_Delete(root);return text;}
 static char *error(const char *code)
-{cJSON *r=cJSON_CreateObject();if(!r)return NULL;cJSON_AddBoolToObject(r,"ok",false);cJSON_AddStringToObject(r,"error",code);return finish(r);}
+{cJSON *r=cJSON_CreateObject();if(!r)return NULL;cJSON_AddBoolToObject(r,"ok",false);cJSON_AddStringToObject(r,"error",code);
+ if(!strcmp(code,"music_search_key_required")){
+   cJSON_AddBoolToObject(r,"configuration_required",true);
+   cJSON_AddStringToObject(r,"message","请在设备扫码配置的音乐服务中保存 JKAPI Key，再重新搜索。不要在聊天中提交密钥。");
+ }
+ return finish(r);}
 static bool only(const cJSON *args,const char *key)
 {
   if(!cJSON_IsObject(args))return false;
@@ -100,6 +105,7 @@ static char *search(const char *query,atomic_bool *cancel)
     if(now_ms()>=deadline){free(s);return error("search_timeout_do_not_replay");}
     usleep(50000);
   }
+  if(s->search_error==MUSIC_ERROR_KEY_REQUIRED){free(s);return error("music_search_key_required");}
   if(!s->has_result||s->search_error){free(s);return error("music_not_found_or_search_failed");}
   if(strcmp(s->result.query,query)){free(s);return error("music_search_replaced");}
   cJSON *r=cJSON_CreateObject();if(!r){free(s);return NULL;}

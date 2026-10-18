@@ -1,0 +1,340 @@
+{
+  "stage": 3,
+  "host_only": true,
+  "board_rendering_tested": false,
+  "build": {
+    "stage": 3,
+    "upstream_unchanged": true,
+    "reference_engine_sha256": "c0ff11068c4e84d1733123dd4593bed0a91d70f962e5b4618c224ab2ea791d14",
+    "optimized_engine_sha256": "476de5fdaaab5abb1d67d99ba01f0692d33634e5a832fc353ecbe69789e858a0",
+    "stage1_engine_sha256": "a9ff4973f5113c1f9accd178f3570b44113c3578b56fd4e005b345e48ae82562",
+    "stage2_engine_sha256": "4bbf0664fed91b2ec8f8d8cbddafda448735db697bcc45132e4bbbe10eed2cab",
+    "text_cache_max_entries": 128,
+    "text_cache_max_chars": 4096,
+    "additional_frame_surfaces": 0,
+    "sprite_raster_budget_bytes": 4194304,
+    "preserved": [
+      "all effect registrations",
+      "original piece IDs/order",
+      "thresholds and dilation priority",
+      "font rasterization and resolution"
+    ]
+  },
+  "conformance": {
+    "pass": true,
+    "counts": {
+      "layout": 184,
+      "enter": 125,
+      "hold": 52,
+      "exit": 109,
+      "decor": 130,
+      "treat": 62,
+      "bg": 66,
+      "cam": 36,
+      "fx": 69,
+      "trans": 27
+    },
+    "styles": 27,
+    "glyphs": 54,
+    "frames": 4408,
+    "differentFrames": 0,
+    "differentChannels": 0,
+    "maxDelta": 0,
+    "errors": [],
+    "warnings": [],
+    "inputMode": "Reference-generated scene cloned before rendering; identical numeric font-advance snapshots; independent local metrics functions, glyph rasterization and renderers.",
+    "tests": {
+      "eviction": {
+        "pass": true,
+        "evictions": 252,
+        "budgetBytes": 32768,
+        "retainedBytes": 19096
+      },
+      "nativeResolution": {
+        "width": 1024,
+        "height": 576,
+        "frames": 6
+      },
+      "gradientInvalidation": {
+        "frames": 15,
+        "pass": true
+      },
+      "canvasCaches": {
+        "frames": 24,
+        "textCacheStats": {
+          "hits": 87439,
+          "misses": 2087,
+          "evictions": 1927
+        },
+        "textEntries": 128,
+        "textChars": 1322,
+        "additionalFrameSurfaces": 0
+      }
+    }
+  },
+  "completed_frame_comparison": {
+    "pairs": 576,
+    "timing": [
+      {
+        "variant": "noir",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 11,
+        "stage2MedianMs": 9.799999952316284,
+        "stage3MedianMs": 10.199999988079071,
+        "stage2P95Ms": 37.40000003576279,
+        "stage3P95Ms": 36.700000047683716,
+        "textCacheStats": {
+          "hits": 5446,
+          "misses": 42,
+          "evictions": 0
+        },
+        "textEntries": 42,
+        "textChars": 623,
+        "stage2ScratchBytes": 921600,
+        "stage3ScratchBytes": 921600,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "paper",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 13,
+        "stage2MedianMs": 11.800000011920929,
+        "stage3MedianMs": 11.699999988079071,
+        "stage2P95Ms": 40.60000002384186,
+        "stage3P95Ms": 40.80000001192093,
+        "textCacheStats": {
+          "hits": 11036,
+          "misses": 53,
+          "evictions": 0
+        },
+        "textEntries": 53,
+        "textChars": 746,
+        "stage2ScratchBytes": 921600,
+        "stage3ScratchBytes": 921600,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "crimson",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 15,
+        "stage2MedianMs": 11.199999988079071,
+        "stage3MedianMs": 11.800000011920929,
+        "stage2P95Ms": 34.60000002384186,
+        "stage3P95Ms": 32.30000001192093,
+        "textCacheStats": {
+          "hits": 17629,
+          "misses": 100,
+          "evictions": 0
+        },
+        "textEntries": 100,
+        "textChars": 1112,
+        "stage2ScratchBytes": 921600,
+        "stage3ScratchBytes": 921600,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "long-events",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 20001,
+        "stage2MedianMs": 9.699999988079071,
+        "stage3MedianMs": 10,
+        "stage2P95Ms": 39.60000002384186,
+        "stage3P95Ms": 39.5,
+        "textCacheStats": {
+          "hits": 23094,
+          "misses": 103,
+          "evictions": 0
+        },
+        "textEntries": 103,
+        "textChars": 1235,
+        "stage2ScratchBytes": 16,
+        "stage3ScratchBytes": 16,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "background-noir",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 0,
+        "stage2MedianMs": 6.599999964237213,
+        "stage3MedianMs": 6.400000035762787,
+        "stage2P95Ms": 7.899999976158142,
+        "stage3P95Ms": 7.399999976158142,
+        "textCacheStats": {
+          "hits": 23094,
+          "misses": 103,
+          "evictions": 0
+        },
+        "textEntries": 103,
+        "textChars": 1235,
+        "stage2ScratchBytes": 16,
+        "stage3ScratchBytes": 16,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "background-paper",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 0,
+        "stage2MedianMs": 8.699999988079071,
+        "stage3MedianMs": 8.600000023841858,
+        "stage2P95Ms": 10.5,
+        "stage3P95Ms": 9.800000011920929,
+        "textCacheStats": {
+          "hits": 23094,
+          "misses": 103,
+          "evictions": 0
+        },
+        "textEntries": 103,
+        "textChars": 1235,
+        "stage2ScratchBytes": 16,
+        "stage3ScratchBytes": 16,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      }
+    ]
+  },
+  "unit_checks": {
+    "canvas": {
+      "pass": true,
+      "cases": 232,
+      "patternCreations": 3,
+      "textCacheStats": {
+        "hits": 228,
+        "misses": 229,
+        "evictions": 225
+      },
+      "entries": 3,
+      "chars": 12
+    },
+    "frame": {
+      "pass": true,
+      "cases": 1099,
+      "hostOnly": true,
+      "timings": {
+        "stage1DecodeMs": 0.40330000000000155,
+        "stage2DecodeMs": 0.05010000000001469
+      },
+      "rleBytes": 4458,
+      "cameraEvents": 10000,
+      "gradientCreations": 4
+    },
+    "glyph": {
+      "pass": true,
+      "cases": 265,
+      "oracle": "exact pinned 02_fonts.js segmentation block",
+      "host_only": true,
+      "benchmark": {
+        "kind": "synthetic connected-stroke mask",
+        "side": 743,
+        "reference_median_ms": 7.734800000000007,
+        "optimized_median_ms": 5.843099999999993
+      },
+      "buffers": {
+        "reference_array_bytes": 7176637,
+        "optimized_scratch_bytes": 1109596,
+        "note": "Includes segmentation arrays; excludes existing RGBA input/canvas, JS objects and output sprites."
+      }
+    }
+  },
+  "quickjs_layout": {
+    "pass_checks": true,
+    "host_only": true,
+    "quickjs_version": "2024-02-14",
+    "bignum": false,
+    "limit_mib": 16,
+    "scope": "Synthetic text layout workload, fixed numeric advances, all glyph coordinates hashed. No Canvas or P4 hardware.",
+    "runs": {
+      "stage2": {
+        "medianMs": 0.495,
+        "samplesMs": [
+          0.43,
+          0.495,
+          0.51
+        ],
+        "checksum": 3255702.1717500105,
+        "payloadHash": 3644229272,
+        "cache": null
+      },
+      "stage3": {
+        "medianMs": 0.287,
+        "samplesMs": [
+          0.283,
+          0.287,
+          0.2945
+        ],
+        "checksum": 3255702.1717500105,
+        "payloadHash": 3644229272,
+        "cache": {
+          "hits": 7188,
+          "misses": 12,
+          "evictions": 0,
+          "entries": 12,
+          "chars": 128
+        }
+      }
+    }
+  },
+  "exports": {
+    "hostOnly": true,
+    "png": [
+      {
+        "mode": "opaque",
+        "pixelIdenticalFrames": 5,
+        "referenceBytes": 2363163,
+        "optimizedBytes": 2363163
+      },
+      {
+        "mode": "transparent",
+        "pixelIdenticalFrames": 5,
+        "referenceBytes": 212575,
+        "optimizedBytes": 212575
+      },
+      {
+        "mode": "layers",
+        "pixelIdenticalFrames": 10,
+        "referenceBytes": 243220,
+        "optimizedBytes": 243220
+      }
+    ],
+    "errors": [],
+    "mp4": {
+      "bytes": 141639,
+      "width": 640,
+      "height": 360,
+      "codec": "H.264 High",
+      "audio": null
+    },
+    "bloomScratch": {
+      "width": 1024,
+      "height": 576,
+      "referenceBytes": 2359296,
+      "optimizedBytes": 16,
+      "pixelIdentical": true
+    },
+    "pass": true
+  },
+  "engine_probe": {
+    "bytecode_bytes": 2038212,
+    "js_limit_mib": 8,
+    "host_stack_guard_kib": 64,
+    "inspected_malloc_bytes": 4751623
+  },
+  "limitations": [
+    "QuickJS layout timings use a synthetic host workload with fixed font advances; not Canvas or P4 hardware.",
+    "Completed-frame browser timings include Canvas readback and remain mixed; no consistent whole-frame speedup.",
+    "Scratch savings refer to one surface payload in a bloom-only scenario; not process or board peak memory.",
+    "Text cache is bounded by entries and Unicode code points, not an exact VM-byte budget.",
+    "Background precomposition failed pixel comparison and is absent from the final engine.",
+    "MP4 smoke check has no audio; no flashing or complete board Canvas2D validation in this iteration."
+  ]
+}

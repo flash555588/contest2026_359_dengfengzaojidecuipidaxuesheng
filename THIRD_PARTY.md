@@ -4,6 +4,15 @@ This file records the third-party source material used by the ESP32-P4
 overlay. It does not replace the license files shipped by the corresponding
 upstream projects.
 
+## JIZURA complete reference application
+
+- Source: https://github.com/852wa/JIZURA
+- Version: 0.10.1, commit `fc16bfe43ea4a6c25a21f1caf04d17326de14f00`.
+- Copyright: hakoniwa; license: MIT.
+- Imported unchanged into `app/jizura/upstream`; per-file SHA-256 values are in `app/jizura/upstream.lock.json`.
+- Preserve its `LICENSE` and `THIRD_PARTY_NOTICES.md`, including the bundled mp4-muxer notice. Runtime fonts retain their own font licenses.
+- Purpose: complete browser reference before ESP migration; this import does not indicate that its engine or editor runs on ESP hardware.
+
 ## Apache NuttX and openvela apps
 
 - Components: NuttX kernel, drivers, board framework, and NuttX apps.
@@ -115,6 +124,22 @@ separately from this P1 provenance record.
   `app/bilibili_live/local_vendor/HELIX-UPSTREAM-LICENSE.txt`; revision and local
   adaptations are recorded in the same manifest. No Arduino wrapper is linked.
 - TLS remains the existing desktop glass_https / mbedTLS implementation.
+
+## Native music language assets
+
+- Noto Sans SC/JP/KR and Noto Sans: SIL Open Font License 1.1; fixed Google Fonts
+  commit and source/notice hashes in `app/espdl-quickapp/assets/music-fonts.lock.json`.
+  `tools/prepare_global_font.py` instantiates regular weight, retains all source
+  codepoints and emits the renamed Vela Global derivative plus four OFL notices
+  for SD deployment. Font binaries are SD assets, not linked firmware arrays.
+- OpenCC t2s dictionaries: Apache-2.0, commit
+  `556ed22496d650bd0b13b6c163be9814637970ae` (`ver.1.1.9`). Original TSCharacters,
+  TSPhrases, license and hashes remain in `app/espdl-quickapp/assets/opencc/`.
+  The generated read-only table is used in the lyric worker; it is not the
+  OpenCC runtime library.
+- The private SD TinyTTF instance includes the existing pinned LVGL TinyTTF/STB
+  sources with private entry-point names; their upstream notices stay in those
+  dependencies. Global LVGL font configuration is unchanged.
 
 ## Album PNG decoder
 

@@ -58,9 +58,12 @@ static void mcp_checks(void)
 static const char *mp3_path;
 static atomic_bool hold_lyrics,lyrics_entered;
 static atomic_uint opens,closes;
+static atomic_uint metadata_fetches;
+static atomic_uint search_requests;
+static atomic_bool has_music_key=true;
 
 int portal_music_key(char *out,size_t cap)
-{snprintf(out,cap,"offline-fixture");return 0;}
+{if(!atomic_load(&has_music_key)){out[0]=0;return -ENOENT;}snprintf(out,cap,"offline-fixture");return 0;}
 int qpk_storage_read(const char *root,const char *package,const char *key,char *out,size_t cap,size_t *size)
 {(void)root;(void)package;(void)key;(void)out;(void)cap;*size=0;return -ENOENT;}
 int qpk_storage_write(const char *root,const char *package,const char *key,const char *data,size_t size)
@@ -70,12 +73,14 @@ int music_http_get(const char *url,music_data_cb sink,void *ctx,music_cancel_cb 
 {
   if(status)*status=200;
   if(strstr(url,"jkapi.com")) {
+    atomic_fetch_add(&search_requests,1);
     const char *name=strstr(url,"&name=");assert(name);name+=6;
     if(!strcmp(name,"Missing"))return -EIO;
     char json[1024];snprintf(json,sizeof(json),"{\"code\":1,\"name\":\"%s\",\"artist\":\"Demo\",\"album\":\"Test\",\"music_url\":\"https://fixture/audio\"}",name);
     return sink(ctx,(const unsigned char *)json,strlen(json));
   }
   if(strstr(url,"api.lrc.cx")) {
+    atomic_fetch_add(&metadata_fetches,1);
     const char *name=strstr(url,"title=");assert(name);name+=6;
     char title[128];size_t n=strcspn(name,"&");assert(n<sizeof(title));memcpy(title,name,n);title[n]=0;
     if(!strcmp(title,"NoLyrics"))return -ENOENT;
@@ -140,12 +145,74 @@ static void parser_checks(void)
   char *large=calloc(1,30000);assert(large);
   strcpy(large,"[00:00]");for(unsigned i=0;i<300;i++)strcat(large,"中");
   assert(!music_lrc_parse(large,strlen(large),lrc));assert(music_lrc_utf8(lrc->lines[0].text,strlen(lrc->lines[0].text)));
-  large[0]=0;for(unsigned i=0;i<193;i++)strcat(large,"[00:00]line\n");assert(music_lrc_parse(large,strlen(large),lrc)==-E2BIG);
+  large[0]=0;for(unsigned i=0;i<193;i++){
+    char line[40];snprintf(line,sizeof(line),"[%02u:%02u]line\n",i/60,i%60);strcat(large,line);
+  }assert(music_lrc_parse(large,strlen(large),lrc)==-E2BIG);
   assert(music_lyrics_identity(" Demo ","demo"));assert(!music_lyrics_identity("", " "));assert(!music_lyrics_identity("Singer","Other"));
   struct music_song song={0};strcpy(song.name,"中文 &?");strcpy(song.artist,"A/B");char url[2048];assert(!music_lyrics_url(&song,url,sizeof(url)));
+  assert(music_search_url("B","",url,sizeof(url))==MUSIC_ERROR_KEY_REQUIRED);
+  assert(music_search_url("B",NULL,url,sizeof(url))==MUSIC_ERROR_KEY_REQUIRED);
+  assert(music_search_url("","configured",url,sizeof(url))==-EINVAL);
   assert(strstr(url,"%E4%B8%AD%E6%96%87%20%26%3F") && strstr(url,"A%2FB"));assert(music_lyrics_url(&song,url,8)==-E2BIG);
   unsigned seed=1;for(unsigned i=0;i<1000;i++){size_t n=i%255+1;for(size_t j=0;j<n;j++){seed=seed*1664525+1013904223;large[j]=seed>>24;}music_lrc_parse(large,n,lrc);}
   free(large);free(lrc);puts("LRC_PARSER_OK: timing, offsets, multiple tags, UTF-8, invalid/oversized input, identity, URL encoding and fuzz");
+}
+
+static void bilingual_checks(void)
+{
+  struct music_lrc *lrc=calloc(1,sizeof(*lrc));assert(lrc);
+  const char *sample="[00:00]Good morning\n[00:00]早晨與風\n[00:01]Hello\n[00:01]你好\n";
+  assert(!music_lrc_parse(sample,strlen(sample),lrc)&&lrc->count==2);
+  assert(!strcmp(lrc->lines[0].text,"Good morning")&&!strcmp(lrc->lines[0].translation,"早晨與風"));
+  music_lrc_simplify(lrc);assert(!strcmp(lrc->lines[0].translation,"早晨与风"));
+  sample="[00:00]愛與風\n[00:01]乾隆與乾坤，乾杯\n";
+  assert(!music_lrc_parse(sample,strlen(sample),lrc));music_lrc_simplify(lrc);
+  assert(!strcmp(lrc->lines[0].text,"爱与风"));
+  assert(!strcmp(lrc->lines[1].text,"乾隆与乾坤，干杯"));
+  sample="[00:00]愛の歌\n[00:01]時\n";
+  assert(!music_lrc_parse(sample,strlen(sample),lrc));music_lrc_simplify(lrc);
+  assert(lrc->foreign&&!strcmp(lrc->lines[0].text,"愛の歌")&&!strcmp(lrc->lines[1].text,"時"));
+  sample="[00:00]한글 愛\n";
+  assert(!music_lrc_parse(sample,strlen(sample),lrc));music_lrc_simplify(lrc);
+  assert(lrc->foreign&&!strcmp(lrc->lines[0].text,"한글 愛"));
+  sample="[00:00]Morning\n[00:01]Light\n";
+  assert(!music_lrc_parse(sample,strlen(sample),lrc));
+  sample="[00:00]晨光與你\n[00:01.100]不能錯配\n";
+  assert(!music_lrc_translation(lrc,sample,strlen(sample)));music_lrc_simplify(lrc);
+  assert(!strcmp(lrc->lines[0].translation,"晨光与你")&&!lrc->lines[1].translation[0]);
+  char *many=calloc(1,24000);assert(many);
+  for(unsigned i=0;i<192;i++){
+    char pair[100];snprintf(pair,sizeof(pair),"[%02u:%02u]original %u\n[%02u:%02u]译文 %u\n",i/60,i%60,i,i/60,i%60,i);strcat(many,pair);
+  }
+  assert(!music_lrc_parse(many,strlen(many),lrc)&&lrc->count==192);
+  assert(!strcmp(lrc->lines[191].translation,"译文 191"));
+  assert(!mkdir(MUSIC_LYRICS_ROOT,0700)||errno==EEXIST);
+  FILE *side=fopen(MUSIC_LYRICS_ROOT "/Sidecar - Demo.zh.lrc","wb");assert(side);
+  fputs("[00:00]帶你聽音樂\n",side);fclose(side);
+  sample="[00:00]音楽を聴こう\n";assert(!music_lrc_parse(sample,strlen(sample),lrc));
+  struct music_song song={0};strcpy(song.name,"Sidecar");strcpy(song.artist,"Demo");
+  finish_lyrics(&song,lrc);
+  assert(!strcmp(lrc->lines[0].text,"音楽を聴こう")&&!strcmp(lrc->lines[0].translation,"带你听音乐"));
+  free(many);free(lrc);puts("MUSIC_BILINGUAL_OK: 192 paired timestamps, exact translation alignment, OpenCC phrases, Chinese simplification and Japanese/Korean preservation");
+}
+
+static void cache_checks(void)
+{
+  const unsigned char sample[]={0,1,2,255};size_t size=0;
+  music_cache_write('l',"first",sample,sizeof(sample),100);
+  unsigned char *body=music_cache_read('l',"first",100,512,&size);
+  assert(body&&size==sizeof(sample)&&!memcmp(body,sample,size));free(body);
+  assert(!music_cache_read('l',"first",2,0,&size));
+  char other[32];unsigned slot=music_cache_hash(2166136261u,"first",5)%32;
+  for(unsigned n=0;;n++){snprintf(other,sizeof(other),"other-%u",n);if(music_cache_hash(2166136261u,other,strlen(other))%32==slot)break;}
+  assert(!music_cache_read('l',other,100,0,&size));
+  music_cache_write('l',other,sample,sizeof(sample),100);assert(!music_cache_read('l',"first",100,0,&size));
+  char path[256];assert(!music_cache_path('l',other,path,sizeof(path)));
+  FILE *f=fopen(path,"r+b");assert(f);assert(!fseek(f,-1,SEEK_END));fputc(0,f);fclose(f);
+  assert(!music_cache_read('l',other,100,0,&size));
+  f=fopen(path,"wb");assert(f);fputs("partial",f);fclose(f);assert(!music_cache_read('l',other,100,0,&size));
+  assert(music_cache_path('x',"bad",path,sizeof(path))<0);
+  puts("MUSIC_METADATA_CACHE_OK: binary hit, bounds, full-identity collision check, replacement, checksum and truncated files");
 }
 
 static void stream_checks(void)
@@ -156,6 +223,10 @@ static void stream_checks(void)
   const char *json="[{\"title\":\"Match\",\"artist\":\"Other\",\"lrc\":\"[00:00]wrong\"},{\"extra\":\"quoted \\\" brace } and [\",\"title\":\"Match\",\"artist\":\"Demo\",\"lrc\":\"[00:00.1]right\"}]";
   int ret=0;for(size_t i=0;json[i]&&!ret;i++)ret=collect_lyrics(&t,(const unsigned char *)json+i,1);
   assert(ret==-EALREADY && t.found && lrc->lines[0].ms==100 && !strcmp(lrc->lines[0].text,"right"));
+  t.found=false;t.array=false;t.depth=0;t.total=0;t.candidates=0;t.transfer.used=0;
+  json="[{\"title\":\"Match\",\"artist\":\"Demo\",\"lrc\":\"[00:00.1]Hello\",\"tlyric\":{\"lyric\":\"[00:00.1]與你同在\"}}]";
+  assert(collect_lyrics(&t,(const unsigned char *)json,strlen(json))==-EALREADY);
+  music_lrc_simplify(lrc);assert(!strcmp(lrc->lines[0].translation,"与你同在"));
   cJSON *item=cJSON_Parse("{\"cover_format\":\"https://fixture/{w}x{h}.jpg\"}");assert(item);
   music_metadata_cover(item,cover);assert(!strcmp(cover,"https://fixture/320x320.jpg"));cJSON_Delete(item);
   item=cJSON_Parse("{\"cover\":\"http://fixture/unsafe.jpg\"}");assert(item);music_metadata_cover(item,cover);assert(!cover[0]);cJSON_Delete(item);
@@ -175,15 +246,63 @@ static int live_response(const char *title,const char *artist)
   free(t.transfer.body);free(lrc);return 0;
 }
 
+static void missing_key_checks(void)
+{
+  glass_board_music_register();atomic_store(&has_music_key,false);
+  unsigned requests=atomic_load(&search_requests);
+  cJSON *out=mcp_music("music_search","{\"query\":\"B\"}",true);
+  assert(!strcmp(cJSON_GetObjectItem(out,"error")->valuestring,"music_search_key_required"));
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(out,"configuration_required")));
+  assert(cJSON_IsString(cJSON_GetObjectItem(out,"message")));cJSON_Delete(out);
+  struct music_snapshot *s=malloc(sizeof(*s));assert(s);glass_music_get(s);
+  assert(!s->searching&&!s->has_result&&s->search_error==MUSIC_ERROR_KEY_REQUIRED);free(s);
+  assert(atomic_load(&search_requests)==requests);
+  atomic_store(&has_music_key,true);
+  cJSON_Delete(mcp_music("music_search","{\"query\":\"B\"}",false));
+  assert(atomic_load(&search_requests)==requests+1);
+  puts("MUSIC_SEARCH_KEY_OK: distinct missing-key result, no HTTP request, MCP configuration guidance, recovery after save");
+}
+
 int main(int argc,char **argv)
 {
   if(argc==4 && !strcmp(argv[1],"--lyrics-response"))return live_response(argv[2],argv[3]);
-  assert(argc==2);mp3_path=argv[1];parser_checks();stream_checks();
+  assert(argc==2);mp3_path=argv[1];parser_checks();bilingual_checks();stream_checks();cache_checks();
+  /* Test the public bounded view against the real retained lyric store. */
+  assert(!lyrics);lyrics=calloc(1,sizeof(*lyrics));assert(lyrics);
+  lyrics->count=MUSIC_LRC_LINES;lyrics_state=MUSIC_LYRICS_READY;
+  for(unsigned i=0;i<lyrics->count;i++){
+    lyrics->lines[i].ms=i*1000;snprintf(lyrics->lines[i].text,MUSIC_LYRIC_TEXT_MAX,"line %u",i);
+  }
+  struct music_lyrics_window page;
+  state.position_ms=0;glass_music_lyrics_read(0,&page);
+  assert(page.total==192&&page.count==9&&page.first==0&&page.current==0);
+  state.position_ms=191999;glass_music_lyrics_read(UINT32_MAX,&page);
+  assert(page.first==183&&page.count==9&&page.current==191&&!strcmp(page.lines[8],"line 191"));
+  assert(page.start_ms[8]==191000&&page.end_ms[7]==191000);
+  page.lines[8][0]='X';glass_music_lyrics_read(183,&page);assert(!strcmp(page.lines[8],"line 191"));
+  free(lyrics);lyrics=NULL;lyrics_state=MUSIC_LYRICS_NONE;state.position_ms=0;
+  glass_music_lyrics_read(0,&page);assert(page.total==0&&page.count==0&&page.current==-1);
+  puts("MUSIC_LYRICS_WINDOW_OK: first/last of 192 lines, bounded 9-row copies, independent storage, cleared lyrics");
   glass_music_start();glass_music_start();play("B");
   struct music_now_playing s=wait_for("B",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  unsigned fetched=atomic_load(&metadata_fetches);
+  struct music_song cached_song={0};strcpy(cached_song.name,"B");strcpy(cached_song.artist,"Demo");strcpy(cached_song.album,"Test");
+  struct music_lrc *cached_lrc=calloc(1,sizeof(*cached_lrc));assert(cached_lrc);char cached_cover[1024];
+  assert(!fetch_lyrics(&cached_song,play_generation,cached_lrc,cached_cover));
+  assert(cached_lrc->count==3&&strstr(cached_lrc->lines[0].text,"B intro")&&!strcmp(cached_cover,s.cover_url));
+  assert(atomic_load(&metadata_fetches)==fetched);free(cached_lrc);
+  puts("MUSIC_LYRIC_CACHE_HIT_OK: retained timing and artwork without a second HTTP request");
   while(s.position_ms<600){usleep(5000);glass_music_now_playing(&s);}
   assert(!strcmp(s.lyrics[1],"B current"));
   assert(!strcmp(s.cover_url,"https://fixture/320x320.jpg"));
+  struct music_lyrics_window window;glass_music_lyrics_read(0,&window);
+  assert(window.track_id==s.track_id&&window.state==MUSIC_LYRICS_READY);
+  assert(window.total&&window.count<=MUSIC_LYRICS_WINDOW&&window.current>=0);
+  assert(strstr(window.lines[window.current-window.first],"B "));
+  strcpy(window.lines[0],"not owned by the service");
+  glass_music_lyrics_read(UINT32_MAX,&window);
+  assert(window.first+window.count==window.total);
+  assert(strcmp(window.lines[0],"not owned by the service"));
   glass_music_toggle();usleep(30000);glass_music_now_playing(&s);assert(s.state==MUSIC_PAUSED);
   unsigned position=s.position_ms;usleep(60000);glass_music_now_playing(&s);assert(s.position_ms==position);
   glass_music_toggle();wait_for("B",MUSIC_PLAYING,MUSIC_LYRICS_READY);
@@ -203,6 +322,15 @@ int main(int argc,char **argv)
   assert(!glass_music_stop_wait(3000));glass_music_now_playing(&s);assert(s.state==MUSIC_STOPPED && !s.lyrics[1][0]);
   assert(atomic_load(&opens)>2 && atomic_load(&opens)==atomic_load(&closes));
   printf("MUSIC_BACKGROUND_SERVICE_OK: real MP3 decoder/workers, pause freezes clock, resume, stale lyric cancellation, skip, missing lyrics, network failure and %u/%u PCM teardown\n",atomic_load(&opens),atomic_load(&closes));
-  mcp_checks();
+  missing_key_checks();mcp_checks();
+  struct music_song local={0};strcpy(local.name,"Local");strcpy(local.artist,"Demo");snprintf(local.url,sizeof(local.url),"%s",mp3_path);
+  assert(!glass_music_play(&local));wait_for("Local",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);
+  assert(!glass_music_set_paused(true));usleep(30000);glass_music_now_playing(&s);unsigned frozen=s.position_ms;
+  usleep(50000);glass_music_now_playing(&s);assert(s.state==MUSIC_PAUSED&&s.position_ms==frozen);
+  assert(!glass_music_set_paused(false));usleep(50000);glass_music_now_playing(&s);assert(s.position_ms>frozen);
+  assert(!glass_music_stop_wait(3000));assert(atomic_load(&opens)==atomic_load(&closes));
+  assert(music_sd_stream(MUSIC_SD_ROOT "../escape.mp3",NULL,NULL,NULL)==-EINVAL);
+  assert(music_sd_stream(MUSIC_SD_ROOT "nested/escape.mp3",NULL,NULL,NULL)==-EINVAL);
+  puts("MUSIC_SD_SERVICE_OK: real SD source and MP3 decoder, pause/resume clock, cancellation/PCM teardown and path rejection");
   return 0;
 }

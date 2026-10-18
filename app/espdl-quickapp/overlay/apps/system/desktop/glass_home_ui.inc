@@ -321,29 +321,37 @@ static void glass_rebuild(void)
   home_text(card, "搜索 · 播放 · 收藏", 26, 245, 264, 12, 0xf0e6f5);
 #endif
 
-  /* Weather data is supplied by the existing worker. Unknown values stay --. */
-  card = home_card(root, 3, 693, 52, 307, 272, paper);
-  home_text(card, "天气与环境", 24, 24, 226, 20, ink);
-  home_arrow(card, glass_weather_open);
-  g_glass.temperature = home_text(card, "--°", 24, 60, 180, 64, ink);
-  home_icon(card, GLASS_ICON_CLOUD_SUN, 224, 81, 64, light ? 0xc19b62 : 0xc6a56e);
-  g_glass.weather_condition = home_text(card, "等待联网", 24, 134, 255, 12, muted);
-  home_rule(card, 24, 170, 259, muted);
-  g_glass.widget_title = home_text(card, "空气质量", 24, 188, 138, 12, muted);
-  g_glass.widget_value = home_text(card, "--", 24, 207, 102, 28, ink);
-  /* Retain the existing selectable widget, without repeating humidity. */
-  g_glass.air = home_text(card, "AQI", 132, 215, 35, 12, muted);
-  g_glass.widget_badge = glass_box(card, 24, 242, 137, 19, paper, 0);
+  /* City and current conditions sit on a retained native sky illustration. */
+  card = home_card(root, 3, 693, 52, 307, 272, 0x244765);
+  memset(&g_weather_home,0,sizeof(g_weather_home));
+  g_weather_home.data=calloc(1,sizeof(*g_weather_home.data));
+  lv_obj_add_event_cb(card,weather_home_deleted,LV_EVENT_DELETE,NULL);
+  weather_scene_attach(&g_weather_home.scene,card,307,272,true);
+  g_weather_home.city = home_text(card,"当地天气",22,18,222,20,0xffffff);
+  lv_obj_t *weather_more = home_button(card,NULL,GLASS_ICON_ARROW_NE,
+    252,7,44,0xffffff,0xe8f3ff,glass_weather_open,NULL);
+  lv_obj_set_style_bg_opa(weather_more,LV_OPA_TRANSP,0);
+  g_glass.temperature = home_text(card,"--°",20,51,168,64,0xffffff);
+  g_glass.weather_condition = home_text(card,"等待联网",23,126,255,16,0xffffff);
+  g_weather_home.status = home_text(card,"连接网络后更新",23,155,264,12,0xe1edf7);
+  g_glass.widget_title = home_text(card,"空气质量",22,197,130,12,0xd1e2ef);
+  g_glass.widget_value = home_text(card,"--",22,217,93,28,0xffffff);
+  g_glass.air = home_text(card,"AQI",110,231,40,12,0xd1e2ef);
+  g_glass.widget_badge = glass_box(card,22,250,136,20,0x244765,0);
   lv_obj_set_style_bg_opa(g_glass.widget_badge, LV_OPA_TRANSP, 0);
-  g_glass.widget_category = home_text(g_glass.widget_badge, "暂无数据", 0, 0, 137, 12, muted);
-  lv_obj_t *vertical = glass_box(card, 171, 184, 1, 77, muted, 0);
-  lv_obj_set_style_bg_opa(vertical, 32, 0);
+  /* The AQI category shares the title row so all text fits the 272px card. */
+  lv_obj_set_pos(g_glass.widget_badge,88,197);
+  lv_obj_set_size(g_glass.widget_badge,68,20);
+  g_glass.widget_category = home_text(g_glass.widget_badge,"暂无数据",0,0,68,12,0xc0edce);
+  lv_obj_set_style_text_align(g_glass.widget_category,LV_TEXT_ALIGN_RIGHT,0);
+  lv_obj_t *vertical = glass_box(card,171,201,1,51,0xffffff,0);
+  lv_obj_set_style_bg_opa(vertical,35,0);
   lv_obj_remove_flag(vertical, LV_OBJ_FLAG_CLICKABLE);
-  home_text(card, "环境湿度", 190, 188, 100, 12, muted);
-  g_glass.humidity = home_text(card, "--%", 190, 207, 103, 28, ink);
-  g_glass.humidity_status = home_text(card, "暂无数据", 190, 245, 96, 12, green);
-  /* Service status is available in the detail page; this compact footer is
-   * hidden but still owned by the home for the semantic updater. */
+  home_text(card,"湿度",191,197,42,12,0xd1e2ef);
+  g_glass.humidity = home_text(card,"--%",191,217,100,28,0xffffff);
+  g_glass.humidity_status = home_text(card,"暂无数据",233,197,56,12,0xd1e2ef);
+  lv_obj_set_style_text_align(g_glass.humidity_status,LV_TEXT_ALIGN_RIGHT,0);
+  /* The selectable widget retains its existing semantic updater. */
   g_glass.widget_hint = home_text(card, "等待联网", 0, 0, 260, 12, muted);
   lv_obj_add_flag(g_glass.widget_hint, LV_OBJ_FLAG_HIDDEN);
   glass_clickable(card, glass_widget_open, NULL);

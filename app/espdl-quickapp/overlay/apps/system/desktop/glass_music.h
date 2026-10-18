@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 #define MUSIC_FAVORITES_MAX 20
+/* Configuration failures must not be reported as an empty search result. */
+#define MUSIC_ERROR_KEY_REQUIRED (-1001)
 struct music_song {
   char name[128], artist[96], album[128], query[128];
   char url[2048];
@@ -28,12 +30,24 @@ struct music_now_playing {
   char cover_url[1024];
   unsigned track_id;
   char lyrics[3][MUSIC_LYRIC_TEXT_MAX];
+  char translations[3][MUSIC_LYRIC_TEXT_MAX];
   unsigned revision, position_ms, duration_ms, volume;
   enum music_state state;
   enum music_lyrics_state lyrics_state;
   bool pause_requested, favorite, can_skip, lyrics_started;
 };
 void glass_music_now_playing(struct music_now_playing *out);
+#define MUSIC_LYRICS_WINDOW 9
+/* Bounded, owned copy for a virtual lyric viewport; never exposes parser RAM. */
+struct music_lyrics_window {
+  unsigned track_id, first, count, total;
+  int current;
+  enum music_lyrics_state state;
+  unsigned start_ms[MUSIC_LYRICS_WINDOW], end_ms[MUSIC_LYRICS_WINDOW];
+  char lines[MUSIC_LYRICS_WINDOW][MUSIC_LYRIC_TEXT_MAX];
+  char translations[MUSIC_LYRICS_WINDOW][MUSIC_LYRIC_TEXT_MAX];
+};
+void glass_music_lyrics_read(unsigned first, struct music_lyrics_window *out);
 int glass_music_skip(int direction);
 void glass_music_start(void);
 void glass_music_get(struct music_snapshot *out);

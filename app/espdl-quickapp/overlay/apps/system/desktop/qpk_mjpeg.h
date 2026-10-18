@@ -4,6 +4,12 @@
 #include <stdint.h>
 void *qpk_mjpeg_create(void);
 void qpk_mjpeg_destroy(void *decoder);
+/* Complete baseline JPEG in read-only storage; never inserts MJPEG tables. */
+int qpk_mjpeg_decode_still(void *decoder, const uint8_t *input, size_t size,
+                           uint16_t *output, unsigned width, unsigned height);
+/* Exact size or half-resolution baseline JPEG, expanded 2x in place. */
+int qpk_mjpeg_decode_still_fit(void *decoder, const uint8_t *input, size_t size,
+                               uint16_t *output, unsigned width, unsigned height);
 /* Read the pixel size of a JPEG frame without decoding it. */
 int qpk_mjpeg_probe(const uint8_t *input, size_t size, unsigned *width,
                     unsigned *height);

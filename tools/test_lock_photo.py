@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory(prefix='lock-photo-') as tmp:
  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=size=1024x600:rate=1',
   '-frames:v','1','-q:v','4',str(photo)],check=True)
  subprocess.run(['cc','-D_GNU_SOURCE','-std=gnu11','-O1','-g','-pthread','-fsanitize=address,undefined','-fno-omit-frame-pointer',
-  '-DGLASS_LOCK_PHOTO_PATH="'+str(photo)+'"','-I'+str(desktop),str(repo/'app/espdl-quickapp/tests/lock_photo_host.c'),
+  '-DGLASS_LOCK_PHOTO_PATH="'+str(photo)+'"','-DMUSIC_CACHE_ROOT="'+str(root)+'/cache"','-I'+str(desktop),str(repo/'app/espdl-quickapp/tests/lock_photo_host.c'),
   str(desktop/'qpk_mjpeg.c'),str(desktop/'qpk_tjpgd.c'),'-o',str(root/'test')],check=True)
  subprocess.run([str(root/'test'),str(photo)],check=True,timeout=20)
 
