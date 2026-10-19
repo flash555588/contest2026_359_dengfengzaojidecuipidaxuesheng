@@ -44,6 +44,15 @@ static bool player_active;
 static unsigned play_generation, search_generation;
 static struct music_song pending_song, pending_favorite;
 static char pending_query[128];
+static uint64_t result_deadline, pending_result_deadline;
+static unsigned consumed_result;
+
+static uint64_t music_now_ms(void)
+{
+  struct timespec t;
+  if (clock_gettime(CLOCK_MONOTONIC, &t)) return 0;
+  return (uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000;
+}
 
 struct transfer {
   unsigned generation;
@@ -381,7 +390,9 @@ static void *search_worker(void *unused)
     if (generation == search_generation) {
       state.searching = false; state.search_error = ret; state.has_result = ret == 0;
       if (!ret) state.result = song;
-      state.search_revision++; state.revision++;
+      if (++state.search_revision == 0) state.search_revision++;
+      result_deadline = ret ? 0 : music_now_ms() + 60000;
+      state.revision++;
       printf("[music] search result=%d\n", ret);
     }
     pthread_mutex_unlock(&lock);
@@ -561,11 +572,14 @@ static void *player_worker(void *unused)
     while (!want_play) pthread_cond_wait(&wake, &lock);
     unsigned generation = play_generation;
     struct music_song song = pending_song;
+    uint64_t resolved_until = pending_result_deadline;
     want_play = false;
     player_active = true;
     pthread_mutex_unlock(&lock);
     bool local=!strncmp(song.url,MUSIC_SD_ROOT,sizeof(MUSIC_SD_ROOT)-1);
-    int ret = local?(music_sd_path(song.url)?0:-EINVAL):lookup(song.query[0] ? song.query : song.name, &song, generation, false);
+    int ret = resolved_until ? (music_now_ms() < resolved_until ? 0 : -ESTALE) :
+      local ? (music_sd_path(song.url) ? 0 : -EINVAL) :
+      lookup(song.query[0] ? song.query : song.name, &song, generation, false);
     pthread_mutex_lock(&lock);
     bool current = generation == play_generation;
     if (current && !ret) {
@@ -677,14 +691,40 @@ int glass_music_search(const char *query)
   pthread_cond_broadcast(&wake); pthread_mutex_unlock(&lock); return 0;
 }
 
+/* Caller holds lock. A deadline marks a trusted, freshly resolved result. */
+static void music_queue_locked(const struct music_song *song, uint64_t deadline)
+{
+  clear_lyrics_locked();
+  pending_result_deadline = deadline;
+  pending_song = *song; state.current = *song; play_generation++; want_play = true; want_pause = false;
+  state.state = MUSIC_LOADING; state.position_ms = 0; state.duration_ms = 0; state.error = 0; state.revision++;
+  pthread_cond_broadcast(&wake);
+}
+
 int glass_music_play(const struct music_song *song)
 {
   if (!song || !song->name[0]) return -EINVAL;
   pthread_mutex_lock(&lock);
-  clear_lyrics_locked();
-  pending_song = *song; state.current = *song; play_generation++; want_play = true; want_pause = false;
-  state.state = MUSIC_LOADING; state.position_ms = 0; state.duration_ms = 0; state.error = 0; state.revision++;
-  pthread_cond_broadcast(&wake); pthread_mutex_unlock(&lock); return 0;
+  music_queue_locked(song, 0);
+  pthread_mutex_unlock(&lock); return 0;
+}
+
+int glass_music_play_result(const char *query, unsigned result_id, unsigned *track_id)
+{
+  if (!query || !query[0] || !result_id) return -EINVAL;
+  pthread_mutex_lock(&lock);
+  if (consumed_result == result_id) {
+    pthread_mutex_unlock(&lock); return -EALREADY;
+  }
+  if (state.searching || !state.has_result || state.search_error ||
+      state.search_revision != result_id ||
+      strcmp(state.result.query, query) || music_now_ms() >= result_deadline) {
+    pthread_mutex_unlock(&lock); return -ESTALE;
+  }
+  music_queue_locked(&state.result, result_deadline);
+  consumed_result = result_id;
+  if (track_id) *track_id = play_generation;
+  pthread_mutex_unlock(&lock); return 0;
 }
 
 void glass_music_toggle(void)
@@ -697,6 +737,7 @@ void glass_music_toggle(void)
   } else if (state.current.name[0]) {
     clear_lyrics_locked();
     pending_song = state.current; play_generation++; want_play = true; want_pause = false;
+    pending_result_deadline = 0;
     state.state = MUSIC_LOADING; state.error = 0; state.position_ms = 0; state.duration_ms = 0; state.revision++;
     pthread_cond_broadcast(&wake);
   }

@@ -87,7 +87,7 @@ static void *worker(void *arg)
   uint16_t *pixels=malloc(QPK_DL_PIXELS*sizeof(uint16_t));
   int ret=pixels?0:-ENOMEM;
   /* Load once per session. Release all worker resources before clearing busy. */
-  if (!ret && !qpk_dl_should_cancel() && !request->selftest) ret=qpk_dl_backend_open(request->mode,&backend);
+  if (!ret && !qpk_dl_should_cancel() && !request->selftest && request->mode!=QPK_DL_SNAPSHOT) ret=qpk_dl_backend_open(request->mode,&backend);
   if (!ret && !qpk_dl_should_cancel() && request->selftest) ret=qpk_dl_backend_verify(backend);
   if (!ret && !qpk_dl_should_cancel() && !request->selftest) ret=qpk_dl_capture_open(request,&capture);
   uint64_t measured_start=now_ms(),capture_ms=0,infer_ms=0,publish_ms=0;
@@ -99,7 +99,7 @@ static void *worker(void *arg)
     if (ret || qpk_dl_should_cancel()) break;
     uint64_t captured=now_ms();
     result.count=0;
-    ret=qpk_dl_backend_run(backend,pixels,&result);
+    if(request->mode!=QPK_DL_SNAPSHOT)ret=qpk_dl_backend_run(backend,pixels,&result);
     if (ret) break;
     if (request->mode==QPK_DL_FACE) qpk_dl_track_update(&tracker,&result);
     result.elapsed_ms=(uint32_t)(now_ms()-start);
@@ -119,7 +119,7 @@ static void *worker(void *arg)
         (unsigned)(infer_ms/measured_frames),(unsigned)(publish_ms/measured_frames),result.count);
       measured_start=now_ms();capture_ms=infer_ms=publish_ms=0;measured_frames=0;
     }
-    if (request->mode==QPK_DL_CLASSIFY) break;
+    if (request->mode!=QPK_DL_FACE) break;
     /* Budget a complete frame at 10 fps; slow frames need no extra delay. */
     uint64_t used=now_ms()-start;
     if (used<100) {
@@ -142,7 +142,7 @@ static void *worker(void *arg)
 }
 int qpk_dl_start(const struct qpk_dl_request *request)
 {
-  if (!request || request->mode<QPK_DL_CLASSIFY || request->mode>QPK_DL_FACE ||
+  if (!request || request->mode<QPK_DL_CLASSIFY || request->mode>QPK_DL_SNAPSHOT ||
       (!request->selftest && (request->device>=UVC_CAMERA_MAX_DEVICES || !request->generation))) return -EINVAL;
   struct qpk_dl_request *copy=malloc(sizeof(*copy));
   uint16_t *preview=malloc(QPK_DL_PIXELS*sizeof(uint16_t));

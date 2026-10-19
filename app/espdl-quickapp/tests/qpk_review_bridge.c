@@ -117,8 +117,19 @@ bool qpk_runtime_running(void){return g_qpk.context!=NULL;}
 bool qpk_runtime_camera_active(void){return false;}
 bool qpk_runtime_camera_busy(void){return false;}
 bool qpk_runtime_camera_capture(void){return false;}
+bool qpk_runtime_camera_capture_request(uint32_t *request){(void)request;return false;}
+int qpk_runtime_camera_photo_status(uint32_t request,char *path,size_t cap){(void)request;if(cap)path[0]=0;return -1;}
+bool glass_assistant_take_notice(char *out,size_t cap){(void)out;(void)cap;return false;}
 int qpk_runtime_camera_video_action(unsigned action){(void)action;return -ENOSYS;}
 bool qpk_runtime_camera_poll(void){return false;}
+bool qpk_runtime_camera_take_album(void){
+  if(!g_qpk.context)return false;
+  JSValue global=JS_GetGlobalObject(g_qpk.context);
+  JSValue value=JS_GetPropertyStr(g_qpk.context,global,"__cameraAlbumRequested");
+  bool requested=JS_ToBool(g_qpk.context,value)>0;
+  JS_SetPropertyStr(g_qpk.context,global,"__cameraAlbumRequested",JS_FALSE);
+  JS_FreeValue(g_qpk.context,value);JS_FreeValue(g_qpk.context,global);return requested;
+}
 int qpk_runtime_touch_test(const char *state,double x,double y){(void)state;(void)x;(void)y;return 0;}
 const char *qpk_runtime_last_error(void){return review_error;}
 unsigned qpk_runtime_widget_count(void){return g_qpk.widget_hint;}

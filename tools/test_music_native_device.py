@@ -2,7 +2,7 @@
 """Physical P4 checks for the three live LRC effects (not SD frame playback)."""
 import argparse,json,re,time
 from pathlib import Path
-from test_jizura_device import Console
+from music_device_console import Console
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True)

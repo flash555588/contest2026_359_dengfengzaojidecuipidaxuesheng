@@ -109,7 +109,6 @@ static void music_full_deleted(lv_event_t *event)
   struct music_full_ui *f=lv_event_get_user_data(event);
   if(g_music_ui.full==f)g_music_ui.full=NULL;
   if(f->pv.timer)lv_timer_delete(f->pv.timer);
-  music_pv_sd_release(&f->pv);
   music_cover_reset(&f->cover);
   if(!f->status_hidden)glass_status_visibility(false);
   free(f);
@@ -236,10 +235,6 @@ static void music_full_mode(lv_event_t *event)
     lv_obj_remove_flag(f->pv.root,LV_OBJ_FLAG_HIDDEN);lv_timer_resume(f->pv.timer);
   }else{
     lv_obj_add_flag(f->pv.style_button,LV_OBJ_FLAG_HIDDEN);
-    music_pv_sd_release(&f->pv);
-#ifdef MUSIC_PV_SD_BANKS
-    f->pv.sd_failed=false;
-#endif
     lv_obj_add_flag(f->pv.root,LV_OBJ_FLAG_HIDDEN);lv_timer_pause(f->pv.timer);
     f->follow=true;f->current=-2;
   }

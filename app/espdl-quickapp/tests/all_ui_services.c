@@ -161,6 +161,8 @@ void review_chat_card_fixture(unsigned count)
   review_dialogue_state.revision++;
 }
 void review_speech_level_fixture(unsigned level){review_speech.level=level;}
+void review_chat_verified_fixture(bool verified)
+{review_chat_card_fixture(1);review_dialogue_state.turns[review_dialogue_state.count-1].cards[0].action=true;review_dialogue_state.turns[review_dialogue_state.count-1].cards[0].verified=verified;review_dialogue_state.revision++;}
 void review_chat_music_card_fixture(bool playing)
 {
   assert(review_dialogue_state.count);
@@ -198,14 +200,30 @@ void review_status_fixture(int percent,bool charging,bool bluetooth)
 {review_battery_percent=percent;review_battery_charging=charging;review_bluetooth_connected=bluetooth;}
 void glass_status_power_read(int *percent,bool *charging)
 {*percent=review_battery_percent;*charging=review_battery_charging;}
-void glass_ble_hid_read(struct glass_ble_hid_state *out){memset(out,0,sizeof(*out));out->connected=review_bluetooth_connected;}
+static bool review_hid_custom,review_wifi_custom;
+static struct glass_ble_hid_state review_hid_state;
+static struct c6_desktop_result review_wifi_result;
+static enum c6_desktop_operation review_wifi_operation;
+static char review_wifi_ssid[33],review_wifi_password[65];
+void review_hid_snapshot_fixture(const struct glass_ble_hid_state *state)
+{review_hid_custom=state!=NULL;if(state)review_hid_state=*state;}
+void review_wifi_snapshot_fixture(const struct c6_desktop_result *state)
+{review_wifi_custom=state!=NULL;if(state)review_wifi_result=*state;}
+void glass_ble_hid_read(struct glass_ble_hid_state *out){if(review_hid_custom){*out=review_hid_state;return;}memset(out,0,sizeof(*out));out->connected=review_bluetooth_connected;}
 int c6_desktop_worker_start(struct c6_desktop_worker *w,const struct c6_desktop_backend *b){memset(w,0,sizeof(*w));return 0;}
-int c6_desktop_worker_read(struct c6_desktop_worker *w,struct c6_desktop_result *out){memset(out,0,sizeof(*out));out->sequence=1;out->operation=C6_DESKTOP_STATUS;return 0;}
+int c6_desktop_worker_read(struct c6_desktop_worker *w,struct c6_desktop_result *out){if(review_wifi_custom){*out=review_wifi_result;return 0;}memset(out,0,sizeof(*out));out->sequence=1;out->operation=C6_DESKTOP_STATUS;return 0;}
+int c6_desktop_worker_submit(struct c6_desktop_worker *w,enum c6_desktop_operation operation,const char *ssid,const char *password)
+{review_wifi_operation=operation;snprintf(review_wifi_ssid,sizeof(review_wifi_ssid),"%s",ssid?ssid:"");snprintf(review_wifi_password,sizeof(review_wifi_password),"%s",password?password:"");return review_wifi_custom&&review_wifi_result.busy?-EBUSY:0;}
+bool review_wifi_request_matches(enum c6_desktop_operation operation,const char *ssid,const char *password)
+{return review_wifi_operation==operation&&!strcmp(review_wifi_ssid,ssid?ssid:"")&&!strcmp(review_wifi_password,password?password:"");}
 /* The keyboard/IME UI is production code; dictionary/voice backends stay offline. */
 static unsigned review_pinyin_count;
+static char review_pinyin_input[33];
 void review_pinyin_fixture(unsigned count){review_pinyin_count=count;}
-unsigned glass_pinyin_search(const char *input){return input&&input[0]?review_pinyin_count:0;}
+unsigned glass_pinyin_search(const char *input){snprintf(review_pinyin_input,sizeof(review_pinyin_input),"%s",input?input:"");return input&&input[0]?review_pinyin_count:0;}
 bool glass_pinyin_candidate(unsigned index,char *out,size_t capacity){if(index>=review_pinyin_count){if(capacity)out[0]=0;return false;}snprintf(out,capacity,"候选%u",index+1);return true;}
+bool glass_pinyin_choose(unsigned index,char *out,size_t capacity,unsigned *consumed)
+{if(!review_pinyin_input[0]||!glass_pinyin_candidate(index,out,capacity))return false;*consumed=strlen(review_pinyin_input);return true;}
 void glass_voice_get(struct glass_voice_snapshot *out){if(review_dialogue){*out=review_dialogue_voice;return;}memset(out,0,sizeof(*out));if(review_grok_mode==7){out->active=true;out->phase=GLASS_VOICE_LISTENING;}}
 const char *glass_voice_error_text(enum glass_voice_error error){(void)error;return "离线审核服务";}
 bool glass_qpk_removable(const char *path,const char *package){return path&&package&&!strcmp(package,"review.fixture");}
@@ -465,3 +483,7 @@ int hass_control_checked(uint32_t c,const char *e,bool on,int b,uint32_t revisio
 {return revision&&revision==hass_configuration_revision()?hass_control(c,e,on,b):-ESTALE;}
 int hass_call_service_checked(uint32_t c,const char *e,const char *service,const char *body,uint32_t revision)
 {return revision&&revision==hass_configuration_revision()?hass_call_service(c,e,service,body):-ESTALE;}
+
+int glass_voice_start_request(uint32_t *request){int ret=glass_voice_start();if(!ret){if(!++review_dialogue_voice.request)review_dialogue_voice.request=1;if(request)*request=review_dialogue_voice.request;}return ret;}
+void glass_voice_stop_request(uint32_t request){if(request&&request==review_dialogue_voice.request)glass_voice_stop();}
+void glass_voice_cancel(void){glass_voice_stop();review_dialogue_voice.active=false;review_dialogue_voice.text[0]=0;review_dialogue_voice.phase=GLASS_VOICE_IDLE;review_dialogue_voice.request++;}

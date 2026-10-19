@@ -53,6 +53,9 @@ void glass_music_start(void);
 void glass_music_get(struct music_snapshot *out);
 int glass_music_search(const char *query);
 int glass_music_play(const struct music_song *song);
+/* Play the latest search result once, within 60s, without a second lookup.
+ * Query and revision are checked atomically; URLs never cross the tool API. */
+int glass_music_play_result(const char *query, unsigned result_id, unsigned *track_id);
 void glass_music_toggle(void);
 /* Idempotent transport control: never starts or toggles a different track. */
 int glass_music_set_paused(bool paused);

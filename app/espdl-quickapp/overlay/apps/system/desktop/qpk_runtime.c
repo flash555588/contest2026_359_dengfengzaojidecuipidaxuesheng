@@ -34,6 +34,7 @@
 
 #include "qpk_runtime.h"
 #include "qpk_security.h"
+#include "qpk_cli_origin.h"
 #include "qpk_error_text.h"
 #include "glass_ime.h"
 #include "glass_icons.h"
@@ -213,6 +214,7 @@ struct qpk_runtime_s
   char package[48];
   enum qpk_volume volume;
   bool ha_config_access;
+  bool cli_control_access;
 #ifdef CONFIG_SYSTEM_HASS
   unsigned hass_grants;
 #endif
@@ -248,6 +250,7 @@ static struct qpk_camera_s g_camera =
   .fb_fd = -1,
 };
 static pthread_mutex_t g_camera_lock = PTHREAD_MUTEX_INITIALIZER;
+#include "qpk_wake_overlay.inc"
 static enum qpk_camera_state_e g_camera_state;
 static uint64_t g_camera_retry_at;
 static unsigned int g_camera_cleanup_attempts;
@@ -257,8 +260,12 @@ static int g_camera_last_error;
 static bool g_photo_pending;
 static int g_photo_status;
 static char g_photo_path[128];
+static uint32_t g_photo_request;
 static uint64_t g_photo_status_ms;
 static uint64_t qpk_now_ms(void);
+static unsigned qpk_camera_zoom_percent(void);
+static unsigned qpk_camera_style(void);
+#include "camera_color.h"
 #include "qpk_camera_video.inc"
 
 int qpk_runtime_camera_video_action(unsigned action)
@@ -286,7 +293,7 @@ static unsigned int g_photo_sequence;
 
 /* Only the capture worker writes files, using the dequeued page before UI
  * composition. No snapshot pointer escapes the page's ownership interval. */
-static void qpk_camera_save(const uint16_t *pixels)
+static void qpk_camera_save(const uint16_t *pixels,unsigned source_width)
 {
   uint8_t header[66] = {0};
   uint8_t row[1024];
@@ -300,6 +307,10 @@ static void qpk_camera_save(const uint16_t *pixels)
   g_photo_pending = false;
   pthread_mutex_unlock(&g_camera_lock);
   if (!pending) return;
+  unsigned zoom=qpk_camera_zoom_percent(),style=qpk_camera_style();
+  unsigned height=600*512/source_width;
+  unsigned crop_width=source_width*100/zoom,crop_height=600*100/zoom;
+  unsigned crop_x=(source_width-crop_width)/2,crop_y=(600-crop_height)/2;
 
   if (mkdir(QPK_PHOTO_DIR, 0755) < 0 && errno != EEXIST)
     error = errno;
@@ -317,15 +328,15 @@ static void qpk_camera_save(const uint16_t *pixels)
     }
   if (file)
     {
-      const uint32_t values[] = {307266, 66, 40, 512, (uint32_t)-300,
-                                 3, 307200, 0xf800, 0x07e0, 0x001f};
+      const uint32_t values[] = {66+1024*height, 66, 40, 512, (uint32_t)-height,
+                                 3, 1024*height, 0xf800, 0x07e0, 0x001f};
       const unsigned int offsets[] = {2, 10, 14, 18, 22, 30, 34, 54, 58, 62};
       header[0] = 'B'; header[1] = 'M'; header[26] = 1; header[28] = 16;
       for (x = 0; x < 10; x++)
         for (y = 0; y < 4; y++)
           header[offsets[x] + y] = values[x] >> (8 * y);
       if (fwrite(header, 1, sizeof(header), file) != sizeof(header)) error = EIO;
-      for (y = 0; !error && y < 300; y++)
+      for (y = 0; !error && y < height; y++)
         {
           if (qpk_runtime_camera_busy())
             {
@@ -336,7 +347,7 @@ static void qpk_camera_save(const uint16_t *pixels)
             }
           for (x = 0; x < 512; x++)
             {
-              uint16_t pixel = pixels[y * 2 * 1024 + x * 2];
+              uint16_t pixel = camera_color_pixel(pixels[(crop_y+y*crop_height/height)*1024+crop_x+x*crop_width/512],style);
               row[x * 2] = pixel;
               row[x * 2 + 1] = pixel >> 8;
             }
@@ -352,7 +363,7 @@ static void qpk_camera_save(const uint16_t *pixels)
   pthread_mutex_unlock(&g_camera_lock);
 }
 
-bool qpk_runtime_camera_capture(void)
+bool qpk_runtime_camera_capture_request(uint32_t *request)
 {
   pthread_mutex_lock(&g_camera_lock);
   bool ready = g_camera_state == QPK_CAMERA_ACTIVE &&
@@ -363,40 +374,52 @@ bool qpk_runtime_camera_capture(void)
       g_photo_pending = true;
       qpk_camera_set_photo_status(1);
       g_photo_path[0] = '\0';
+      if(!++g_photo_request)g_photo_request=1;
+      if(request)*request=g_photo_request;
     }
   pthread_mutex_unlock(&g_camera_lock);
   return ready;
 }
 
-/* Live preview paint. Every desktop page is a rounded card, so the preview
- * pads the video with the page colour and draws the same control shapes.
- * These helpers run on the capture worker, never on the LVGL thread. */
-#define QPK_CAMERA_CORNER_RADIUS 0
-#define QPK_CAMERA_SWITCH_X      928
-#define QPK_CAMERA_CLOSE_X       928
-#define QPK_CAMERA_SWITCH_Y      28
-#define QPK_CAMERA_CLOSE_Y       508
-#define QPK_CAMERA_PILL_W        64
-#define QPK_CAMERA_PILL_H        64
-#define QPK_CAMERA_PILL_RADIUS   32
+bool qpk_runtime_camera_capture(void)
+{return qpk_runtime_camera_capture_request(NULL);}
+
+int qpk_runtime_camera_photo_status(uint32_t request,char *path,size_t cap)
+{
+  if(!path||!cap)return -EINVAL;
+  pthread_mutex_lock(&g_camera_lock);path[0]=0;
+  int status=request&&request==g_photo_request?g_photo_status:-ESTALE;
+  if(status==2)snprintf(path,cap,"%s",g_photo_path);
+  pthread_mutex_unlock(&g_camera_lock);return status;
+}
+
+/* Landscape viewfinder and shutter rail. These helpers run on the capture
+ * worker, never on the LVGL thread, and allocate no per-frame UI objects. */
+#include "camera_reference_controls.h"
+#include "camera_reference_layout.h"
+static unsigned g_camera_zoom_percent=100;
+static unsigned g_camera_style;
+static unsigned g_camera_ui_action;
+static unsigned qpk_camera_style(void)
+{pthread_mutex_lock(&g_camera_lock);unsigned value=g_camera_style;pthread_mutex_unlock(&g_camera_lock);return value;}
+static bool qpk_camera_style_set(unsigned value)
+{if(value>2)return false;pthread_mutex_lock(&g_camera_lock);g_camera_style=value;pthread_mutex_unlock(&g_camera_lock);return true;}
+static unsigned qpk_camera_zoom_percent(void)
+{
+  pthread_mutex_lock(&g_camera_lock);unsigned value=g_camera_zoom_percent;
+  pthread_mutex_unlock(&g_camera_lock);return value;
+}
+static bool qpk_camera_zoom_set(unsigned value)
+{
+  if(camera_reference_zoom_index(value)<0)return false;
+  pthread_mutex_lock(&g_camera_lock);g_camera_zoom_percent=value;
+  pthread_mutex_unlock(&g_camera_lock);return true;
+}
 
 static uint16_t qpk_camera_rgb565(uint32_t rgb)
 {
   return (uint16_t)(((rgb >> 19) & 0x1f) << 11 |
                     ((rgb >> 10) & 0x3f) << 5 | ((rgb >> 3) & 0x1f));
-}
-
-/* Blend with a weight of 0..8 for the second colour. */
-static uint16_t qpk_camera_blend(uint16_t first, uint16_t second,
-                                unsigned weight)
-{
-  unsigned fr = (first >> 11) & 0x1f, fg = (first >> 5) & 0x3f;
-  unsigned fb = first & 0x1f;
-  unsigned sr = (second >> 11) & 0x1f, sg = (second >> 5) & 0x3f;
-  unsigned sb = second & 0x1f;
-  return (uint16_t)(((fr * (8 - weight) + sr * weight) / 8) << 11 |
-                    ((fg * (8 - weight) + sg * weight) / 8) << 5 |
-                    (fb * (8 - weight) + sb * weight) / 8);
 }
 
 static void qpk_camera_pixel(uint16_t *pixels, int x, int y, uint16_t color)
@@ -443,28 +466,6 @@ static void qpk_camera_pill(uint16_t *pixels, int x, int y, int width,
       }
 }
 
-/* The video spans the page width, so only its corners need the page colour to
- * read as the same rounded card as the other desktop pages. */
-static void qpk_camera_frame_padding(uint16_t *pixels, uint16_t page,
-                                     int radius)
-{
-  for (int y = 0; y < radius; y++)
-    for (int x = 0; x < radius; x++)
-      {
-        int dx = radius - x, dy = radius - y;
-        if (dx * dx + dy * dy <= radius * radius) continue;
-        qpk_camera_pixel(pixels, x, y, page);
-        qpk_camera_pixel(pixels, QPK_CAMERA_BAR_LEFT - 1 - x, y, page);
-        qpk_camera_pixel(pixels, x, QPK_CAMERA_RAW_HEIGHT - 1 - y, page);
-        qpk_camera_pixel(pixels, QPK_CAMERA_BAR_LEFT - 1 - x, QPK_CAMERA_RAW_HEIGHT - 1 - y, page);
-      }
-}
-
-static uint16_t qpk_camera_page_color(void)
-{
-  return 0; /* Capture controls keep a neutral black surround in both themes. */
-}
-
 /* A finished capture keeps its colour for a short moment and then the shutter
  * returns to the idle accent, so the button cannot stay green forever. */
 static int qpk_camera_bar_status(void)
@@ -505,51 +506,91 @@ static void qpk_camera_digit(uint16_t *pixels,int x,int y,unsigned digit,uint16_
   for(unsigned i=0;i<7;i++)if(masks[digit%10]&(1<<i))qpk_camera_line(pixels,x+lines[i][0],y+lines[i][1],x+lines[i][2],y+lines[i][3],2,color);
 }
 
-/* RGB565 controls are composed only into a dequeued, non-scanout page. */
-static int qpk_camera_bar_blit(uint16_t *pixels)
+/* Contain the entire sensor frame in the new viewfinder without allocating a
+ * second frame. Downsample forward into the origin, then move bottom-up into
+ * place: unread source pixels are never overwritten. Saved photos/video use
+ * the original frame before this display-only operation. */
+static void qpk_camera_reference_prepare_view(uint16_t *pixels,unsigned source_width,unsigned zoom)
 {
-  int status = qpk_camera_bar_status();
-  uint16_t page = qpk_camera_page_color();
-  uint16_t surface = qpk_camera_rgb565(0x202022);
-  uint16_t primary = qpk_camera_rgb565(0xffffff);
-  uint16_t accent = primary;
+  unsigned style=qpk_camera_style();
+  const unsigned width=CAMERA_REFERENCE_VIEW_RIGHT-CAMERA_REFERENCE_VIEW_LEFT;
+  unsigned height=600*width/source_width;
+  unsigned top=22+(556-height)/2;
+  unsigned crop_width=source_width*100/zoom,crop_height=600*100/zoom;
+  unsigned crop_x=(source_width-crop_width)/2,crop_y=(600-crop_height)/2;
+  for(unsigned y=0;y<crop_height;y++)
+    memmove(pixels+y*1024,pixels+(crop_y+y)*1024+crop_x,crop_width*sizeof(uint16_t));
+  /* A bounded 1140-byte map removes division from the per-pixel loop. */
+  uint16_t columns[570];
+  for(unsigned x=0;x<width;x++)columns[x]=x*crop_width/width;
+  if(crop_width>=width&&crop_height>=height){
+    for(unsigned y=0;y<height;y++){
+      const uint16_t *row=pixels+(y*crop_height/height)*1024;
+      uint16_t *out=pixels+y*1024;
+      for(unsigned x=0;x<width;x++)out[x]=camera_color_pixel(row[columns[x]],style);
+    }
+  }else{
+    for(int y=(int)height-1;y>=0;y--){
+      const uint16_t *row=pixels+((unsigned)y*crop_height/height)*1024;
+      uint16_t *out=pixels+y*1024;
+      for(int x=(int)width-1;x>=0;x--)out[x]=camera_color_pixel(row[columns[x]],style);
+    }
+  }
+  for(int y=(int)height-1;y>=0;y--)
+    memmove(pixels+(top+y)*1024+CAMERA_REFERENCE_VIEW_LEFT,
+             pixels+y*1024,width*sizeof(uint16_t));
+  memset(pixels,0,top*1024*sizeof(uint16_t));
+  memset(pixels+(top+height)*1024,0,(600-top-height)*1024*sizeof(uint16_t));
+}
+
+/* The atlas is shared with the LVGL entry screen: no alternate icon family. */
+static int qpk_camera_bar_blit(uint16_t *pixels,unsigned source_width)
+{
+  unsigned zoom=qpk_camera_zoom_percent();
+  unsigned style=qpk_camera_style();
+  bool selected_video=qpk_video_selected();
+  int zoom_index=camera_reference_zoom_index(zoom);
+  qpk_camera_reference_prepare_view(pixels,source_width,zoom);
+  int status=qpk_camera_bar_status();
+  for(int y=0;y<600;y++){
+    if(y<22||y>=578){memset(pixels+y*1024,0,1024*sizeof(uint16_t));continue;}
+    memset(pixels+y*1024,0,CAMERA_REFERENCE_VIEW_LEFT*sizeof(uint16_t));
+    memset(pixels+y*1024+CAMERA_REFERENCE_VIEW_RIGHT,0,(1024-CAMERA_REFERENCE_VIEW_RIGHT)*sizeof(uint16_t));
+  }
+  uint16_t line=qpk_camera_rgb565(0x676268);
+  for(unsigned i=0;i<sizeof(camera_reference_guides)/sizeof(camera_reference_guides[0]);i++){
+    const int *r=camera_reference_guides[i];
+    for(int y=r[1];y<r[1]+r[3];y++)
+      for(int x=r[0];x<r[0]+r[2];x++)pixels[y*1024+x]=line;
+  }
+  for(unsigned i=0;i<CAMERA_REFERENCE_TILE_COUNT;i++){
+    const struct camera_reference_tile *t=&camera_reference_tiles[i];
+    const uint16_t *data=camera_reference_control_pixels(i,style,selected_video);
+    for(int y=0;y<t->h;y++)memcpy(pixels+(t->y+y)*1024+t->x,
+                                  data+y*t->w,t->w*sizeof(uint16_t));
+  }
+  for(int row=0;row<4;row++){
+    const uint16_t *tile=camera_reference_zoom_pixels[3-row==zoom_index][3-row];
+    for(int y=0;y<48;y++)memcpy(pixels+(180+row*64+y)*1024+708,tile+y*48,96);
+  }
+  qpk_camera_disc(pixels,28,26,4,qpk_camera_rgb565(0x35ca70));
+  /* The right edge doubles as the exit gesture, replacing the foreign X pill. */
+  qpk_camera_line(pixels,1008,234,1008,366,3,qpk_camera_rgb565(0x999999));
   bool video=qpk_video_selected();unsigned elapsed=0;int recording=qpk_video_status(&elapsed);
-  uint16_t border = qpk_camera_blend(surface, primary, 2);
-  uint16_t shutter = status == 1 ? qpk_camera_blend(accent, 0xffe0, 6) :
-                     status < 0 ? qpk_camera_rgb565(0xe34f4f) : accent;
-  for (int y = 0; y < QPK_CAMERA_RAW_HEIGHT; y++)
-    for (int x = QPK_CAMERA_BAR_LEFT; x < 1024; x++)
-      pixels[y * 1024 + x] = page;
-  /* A chevron returns to the camera selection controls. */
-  qpk_camera_pill(pixels, QPK_CAMERA_SWITCH_X, QPK_CAMERA_SWITCH_Y,
-                  QPK_CAMERA_PILL_W, QPK_CAMERA_PILL_H, QPK_CAMERA_PILL_RADIUS,
-                  surface, border);
-  qpk_camera_line(pixels, 968, 44, 952, 60, 5, primary);
-  qpk_camera_line(pixels, 952, 60, 968, 76, 5, primary);
-  /* Shutter ring plus the colour the capture status uses. */
-  qpk_camera_disc(pixels, 960, 300, 42, primary);
-  qpk_camera_disc(pixels, 960, 300, 39, page);
   if(video){
-    uint16_t red=qpk_camera_rgb565(0xff453a);
-    if(recording>=1&&recording<=3)qpk_camera_pill(pixels,946,286,28,28,6,red,red);
-    else qpk_camera_disc(pixels,960,300,35,red);
+    uint16_t white=0xffff,red=qpk_camera_rgb565(0xef3829);
+    if(recording>=1&&recording<=3)qpk_camera_pill(pixels,878,286,28,28,5,white,white);
+    else qpk_camera_disc(pixels,892,300,8,red);
     unsigned seconds=elapsed/1000;if(seconds>5999)seconds=5999;
-    uint16_t clock=recording==2?red:primary;
-    qpk_camera_digit(pixels,928,150,seconds/600,clock);qpk_camera_digit(pixels,942,150,seconds/60%10,clock);
-    qpk_camera_disc(pixels,956,155,1,clock);qpk_camera_disc(pixels,956,162,1,clock);
-    qpk_camera_digit(pixels,963,150,seconds/10%6,clock);qpk_camera_digit(pixels,977,150,seconds%10,clock);
-  }else qpk_camera_disc(pixels, 960, 300, 35, shutter);
-  qpk_camera_pill(pixels, QPK_CAMERA_CLOSE_X, QPK_CAMERA_CLOSE_Y,
-                  QPK_CAMERA_PILL_W, QPK_CAMERA_PILL_H, QPK_CAMERA_PILL_RADIUS,
-                  surface, border);
-  qpk_camera_line(pixels, 948, 528, 972, 552, 5, primary);
-  qpk_camera_line(pixels, 972, 528, 948, 552, 5, primary);
-  qpk_camera_disc(pixels, 960, 378, 6,
-                  video?qpk_camera_rgb565(0xff453a):status == 1 ? qpk_camera_blend(page, 0xffe0, 7) :
-                  status < 0 ? qpk_camera_rgb565(0xe34f4f) : status == 2 ? qpk_camera_rgb565(0x2fbf8f) :
-                  qpk_camera_blend(page, primary, 2));
-  if (status == 1) qpk_camera_capture_ring(pixels, qpk_camera_rgb565(0xf6f7ff));
-  qpk_camera_frame_padding(pixels, page, QPK_CAMERA_CORNER_RADIUS);
+    qpk_camera_digit(pixels,864,214,seconds/600,white);
+    qpk_camera_digit(pixels,878,214,seconds/60%10,white);
+    qpk_camera_disc(pixels,891,219,1,white);qpk_camera_disc(pixels,891,226,1,white);
+    qpk_camera_digit(pixels,898,214,seconds/10%6,white);
+    qpk_camera_digit(pixels,912,214,seconds%10,white);
+  }
+  if(status==1)qpk_camera_capture_ring(pixels,0xffff);
+  else if(status)qpk_camera_disc(pixels,892,364,4,
+               qpk_camera_rgb565(status<0?0xe34f4f:0x2fbf8f));
   return status;
 }
 
@@ -1593,6 +1634,53 @@ static JSValue js_ui_set_style(JSContext *context, JSValueConst this_value,
   return JS_UNDEFINED;
 }
 
+#include "camera_reference_ui.h"
+static JSValue js_ui_camera_reference(JSContext *context, JSValueConst self,
+                                      int argc, JSValueConst *argv)
+{
+  (void)self;(void)argc;(void)argv;
+  if(strcmp(g_qpk.package,"com.openvela.camera.preview")||lv_obj_get_child_count(g_qpk.root))
+    return JS_ThrowTypeError(context,"camera reference must be the first camera widget");
+  lv_obj_t *scene=lv_obj_create(g_qpk.root);if(!scene)return JS_ThrowOutOfMemory(context);
+  lv_obj_remove_style_all(scene);lv_obj_set_pos(scene,0,0);
+  lv_obj_set_size(scene,lv_obj_get_width(g_qpk.root),lv_obj_get_height(g_qpk.root));
+  lv_obj_remove_flag(scene,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  int handle=qpk_add_widget(scene,QPK_WIDGET_PANEL);
+  if(!handle){lv_obj_delete(scene);return JS_ThrowOutOfMemory(context);}
+  lv_obj_update_layout(scene);camera_reference_ui_create(scene);
+  return JS_NewInt32(context,handle);
+}
+
+static JSValue js_ui_camera_reference_zoom(JSContext *context,JSValueConst self,
+                                           int argc,JSValueConst *argv)
+{
+  (void)self;
+  int handle=qpk_arg_int(context,argc,argv,0,0);
+  int index=camera_reference_zoom_index(qpk_arg_int(context,argc,argv,1,100));
+  if(strcmp(g_qpk.package,"com.openvela.camera.preview")||index<0||handle<=0||
+     handle>g_qpk.widget_capacity||!g_qpk.widgets[handle-1])
+    return JS_ThrowRangeError(context,"invalid camera scene or zoom");
+  return JS_NewBool(context,camera_reference_ui_zoom(g_qpk.widgets[handle-1],index));
+}
+static JSValue js_camera_zoom(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{(void)self;(void)argc;(void)argv;return JS_NewInt32(context,qpk_camera_zoom_percent());}
+static JSValue js_camera_set_zoom(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{(void)self;return JS_NewBool(context,qpk_camera_zoom_set(qpk_arg_int(context,argc,argv,0,100)));}
+
+static JSValue js_ui_camera_reference_controls(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{
+  (void)self;int handle=qpk_arg_int(context,argc,argv,0,0);
+  int style=qpk_arg_int(context,argc,argv,1,0);bool video=argc>2&&JS_ToBool(context,argv[2]);
+  if(strcmp(g_qpk.package,"com.openvela.camera.preview")||style<0||style>2||
+     handle<=0||handle>g_qpk.widget_capacity||!g_qpk.widgets[handle-1])
+    return JS_ThrowRangeError(context,"invalid camera controls");
+  return JS_NewBool(context,camera_reference_ui_controls(g_qpk.widgets[handle-1],style,video));
+}
+static JSValue js_camera_style(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{(void)self;(void)argc;(void)argv;return JS_NewInt32(context,qpk_camera_style());}
+static JSValue js_camera_set_style(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{(void)self;return JS_NewBool(context,qpk_camera_style_set(qpk_arg_int(context,argc,argv,0,0)));}
+
 static JSValue js_ui_panel(JSContext *context, JSValueConst this_value,
                            int argc, JSValueConst *argv)
 {
@@ -2142,8 +2230,7 @@ static JSValue js_prompt_input(JSContext *context,
   lv_obj_set_style_pad_all(keyboard, 12, 0);
   lv_obj_set_style_pad_row(keyboard, 8, 0);
   lv_obj_set_style_pad_column(keyboard, 6, 0);
-  lv_obj_set_style_bg_color(keyboard, lv_color_hex(g_qpk.surface_color), LV_PART_ITEMS);
-  lv_obj_set_style_bg_color(keyboard, lv_color_hex(g_qpk.primary_color > 0x808080 ? 0xffffff : 0x414d66), LV_PART_ITEMS);
+  lv_obj_set_style_bg_color(keyboard, lv_color_hex(g_qpk.primary_color > 0x808080 ? 0x414d66 : 0xffffff), LV_PART_ITEMS);
   lv_obj_set_style_bg_opa(keyboard, LV_OPA_COVER, LV_PART_ITEMS);
   lv_obj_set_style_text_color(keyboard, lv_color_hex(g_qpk.primary_color), LV_PART_ITEMS);
   lv_obj_set_style_radius(keyboard, 8, LV_PART_ITEMS);
@@ -3153,8 +3240,9 @@ static void *qpk_camera_thread(pthread_addr_t arg)
       record_source=esp_mipi_dsi_noncache_addr((void *)target);
 #endif
       qpk_video_frame(record_source,QPK_CAMERA_RAW_WIDTH,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
-      qpk_camera_save(record_source);
-      qpk_camera_bar_blit((uint16_t *)target);
+      qpk_camera_save(record_source,QPK_CAMERA_RAW_WIDTH);
+      qpk_camera_bar_blit((uint16_t *)target,QPK_CAMERA_RAW_WIDTH);
+      qpk_wake_overlay_blit((uint16_t *)target,QPK_CAMERA_RAW_WIDTH,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
       /* The right-hand rail spans every row. Use the display driver's
        * bounded, unaligned-safe cache writeback before publishing this page;
        * generic per-row cache calls do not provide its PSRAM/L2 contract. */
@@ -3615,6 +3703,35 @@ static JSValue js_camera_active(JSContext *context, JSValueConst self,
   return JS_NewBool(context, qpk_runtime_camera_active());
 }
 
+static JSValue js_camera_open_album(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{
+  (void)self;(void)argc;(void)argv;
+  pthread_mutex_lock(&g_camera_lock);
+  bool accepted=!g_camera_ui_action||g_camera_ui_action==7;
+  if(accepted)g_camera_ui_action=7;
+  pthread_mutex_unlock(&g_camera_lock);
+  if(accepted)qpk_camera_stop();
+  return JS_NewBool(context,accepted);
+}
+static JSValue js_camera_take_action(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{
+  (void)self;(void)argc;(void)argv;
+  pthread_mutex_lock(&g_camera_lock);
+  unsigned action=g_camera_state==QPK_CAMERA_IDLE&&g_camera_ui_action==3?3:0;
+  if(action)g_camera_ui_action=0;
+  pthread_mutex_unlock(&g_camera_lock);
+  return JS_NewInt32(context,action);
+}
+bool qpk_runtime_camera_take_album(void)
+{
+  if(strcmp(g_qpk.package,"com.openvela.camera.preview")||qpk_video_status(NULL)==3)return false;
+  pthread_mutex_lock(&g_camera_lock);
+  bool ready=g_camera_state==QPK_CAMERA_IDLE&&g_camera_ui_action==7;
+  if(ready)g_camera_ui_action=0;
+  pthread_mutex_unlock(&g_camera_lock);
+  return ready;
+}
+
 static JSValue js_camera_photo_status(JSContext *context, JSValueConst self,
                                       int argc, JSValueConst *argv)
 {
@@ -3942,6 +4059,7 @@ static JSValue js_console_log(JSContext *context,
 
 #include "qpk_espdl_ui.inc"
 #include "qpk_hardware_js.inc"
+#include "qpk_claude.inc"
 
 static void qpk_install_api(JSContext *context)
 {
@@ -3974,6 +4092,12 @@ static void qpk_install_api(JSContext *context)
                     JS_NewCFunction(context, js_ui_measure_text, "measureText", 2));
   JS_SetPropertyStr(context, object, "nowMs",
                     JS_NewCFunction(context, js_ui_now_ms, "nowMs", 0));
+  JS_SetPropertyStr(context, object, "cameraReferenceControls",
+                    JS_NewCFunction(context, js_ui_camera_reference_controls, "cameraReferenceControls", 3));
+  JS_SetPropertyStr(context, object, "cameraReferenceZoom",
+                    JS_NewCFunction(context, js_ui_camera_reference_zoom, "cameraReferenceZoom", 2));
+  JS_SetPropertyStr(context, object, "cameraReference",
+                    JS_NewCFunction(context, js_ui_camera_reference, "cameraReference", 0));
   JS_SetPropertyStr(context, object, "panel",
                     JS_NewCFunction(context, js_ui_panel, "panel", 7));
   JS_SetPropertyStr(context, object, "button",
@@ -4069,6 +4193,7 @@ static void qpk_install_api(JSContext *context)
 
     qpk_dl_install(context, system);
     qpk_hw_install(context, system);
+    qpk_claude_install(context, system);
 
     JS_SetPropertyStr(context, desktop, "publish",
                       JS_NewCFunction(context, js_desktop_publish,
@@ -4087,6 +4212,12 @@ static void qpk_install_api(JSContext *context)
       JS_SetPropertyStr(context,camera,"setVideoMode",JS_NewCFunction(context,js_camera_video_mode,"setVideoMode",1));
       JS_SetPropertyStr(context,camera,"recordStatus",JS_NewCFunction(context,js_camera_record_status,"recordStatus",0));
     }
+    JS_SetPropertyStr(context,camera,"style",JS_NewCFunction(context,js_camera_style,"style",0));
+    JS_SetPropertyStr(context,camera,"setStyle",JS_NewCFunction(context,js_camera_set_style,"setStyle",1));
+    JS_SetPropertyStr(context,camera,"openAlbum",JS_NewCFunction(context,js_camera_open_album,"openAlbum",0));
+    JS_SetPropertyStr(context,camera,"takeAction",JS_NewCFunction(context,js_camera_take_action,"takeAction",0));
+    JS_SetPropertyStr(context,camera,"zoom",JS_NewCFunction(context,js_camera_zoom,"zoom",0));
+    JS_SetPropertyStr(context,camera,"setZoom",JS_NewCFunction(context,js_camera_set_zoom,"setZoom",1));
     JS_SetPropertyStr(context, camera, "status", JS_NewCFunction(context, js_camera_status, "status", 0));
     JS_SetPropertyStr(context, camera, "start",
                       JS_NewCFunction(context, js_camera_start,
@@ -4170,6 +4301,7 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
                        qpk_message_cb_t dialog_cb,
                        qpk_unresponsive_cb_t unresponsive_cb)
 {
+  if(package&&!strcmp(package,QPK_CLI_PACKAGE)&&!qpk_builtin_cli_origin(package,filename))return -EACCES;
   JSValue result;
   uint32_t background;
   unsigned int brightness;
@@ -4217,6 +4349,7 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
   g_qpk.volume=qpk_volume_from_filename(filename);
   strlcpy(g_qpk.package, package ? package : "", sizeof(g_qpk.package));
   g_qpk.ha_config_access = qpk_builtin_ha_origin(package, filename);
+  g_qpk.cli_control_access = qpk_builtin_cli_origin(package,filename);
   qpk_video_authorize(package&&filename&&!strcmp(package,"com.openvela.camera.preview")&&!strcmp(filename,"builtin:/camera/app.js"));
 #ifdef CONFIG_SYSTEM_HASS
   g_qpk.hass_grants = hass_ui_grants(package, source, source_len);
@@ -4309,6 +4442,8 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
 
 void qpk_runtime_stop(void)
 {
+  pthread_mutex_lock(&g_camera_lock);g_camera_ui_action=0;pthread_mutex_unlock(&g_camera_lock);
+  if(g_qpk.cli_control_access)glass_claude_abandon();
   qpk_hw_release(g_qpk_hardware); g_qpk_hardware = NULL;
   int i;
 
@@ -4432,7 +4567,7 @@ bool qpk_runtime_camera_busy(void)
 bool qpk_runtime_camera_poll(void)
 {
   static bool armed;
-  static int pressed;
+  static int pressed,zoom_start,zoom_down;
   static lv_point_t point;
   bool failed;
   bool retry;
@@ -4482,32 +4617,44 @@ bool qpk_runtime_camera_poll(void)
               data.point = point;
               read_cb(indev, &data);
               point = data.point;
-              int hit = point.x >= QPK_CAMERA_BAR_LEFT && point.x < 1024 ?
-                (point.y >= 250 && point.y < 350 ? 1 :
-                 point.y >= 490 && point.y < 590 ? 2 :
-                 point.y >= 10 && point.y < 110 ? 3 :
-                 point.y >= 360 && point.y < 430 ? 4 : 0) : 0;
+              int hit = camera_reference_hit(point.x,point.y);
               if (!armed)
                 {
                   if (data.state == LV_INDEV_STATE_RELEASED) armed = true;
                 }
               else if (data.state == LV_INDEV_STATE_PRESSED)
                 {
-                  if (pressed == 0) pressed = hit ? hit : -1;
-                  else if (pressed != hit) pressed = -1;
+                  if (pressed == 0){
+                    pressed=hit?hit:-1;
+                    if(pressed==5){zoom_down=point.y;zoom_start=camera_reference_zoom_index(qpk_camera_zoom_percent());}
+                  }
+                  if(pressed==5){
+                    if(point.x<680||point.x>=784)pressed=-1;
+                    else qpk_camera_zoom_set(camera_reference_zoom_values[
+                           camera_reference_zoom_drag(zoom_start,zoom_down,point.y)]);
+                  }else if(pressed!=hit)pressed=-1;
                 }
               else
                 {
                   int action = pressed == hit ? hit : 0;
+                  if(pressed==5&&point.x>=680&&point.x<784){
+                    int index=abs(point.y-zoom_down)<10?camera_reference_zoom_tap(point.y):
+                              camera_reference_zoom_drag(zoom_start,zoom_down,point.y);
+                    qpk_camera_zoom_set(camera_reference_zoom_values[index]);action=0;
+                  }
                   pressed = 0;
                   if(action==4)qpk_video_mode(!qpk_video_selected());
+                  if(action==6)qpk_camera_style_set((qpk_camera_style()+1)%3);
+                  if(action==3||action==7){
+                    pthread_mutex_lock(&g_camera_lock);if(!g_camera_ui_action)g_camera_ui_action=action;pthread_mutex_unlock(&g_camera_lock);
+                  }
                   if(action==1){
                     if(qpk_video_selected()){
                       int state=qpk_video_status(NULL);
                       if(state>=1&&state<=3)qpk_video_stop();else qpk_video_start();
                     }else qpk_runtime_camera_capture();
                   }
-                  if (action == 2 || action == 3)
+                  if (action == 2 || action == 3 || action == 7)
                     {
                       qpk_camera_stop();
                       armed = false;

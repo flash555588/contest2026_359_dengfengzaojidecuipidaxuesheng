@@ -10,7 +10,7 @@
 #include <string.h>
 
 /* Bound for card JSON passed to the chat UI; it is never model-visible text. */
-#define ESP_QPK_CARD_TEXT 256
+#define ESP_QPK_CARD_TEXT 384
 
 static esp_err_t guide_context(const claw_core_request_t *request, claw_core_context_t *out, void *user)
 {
@@ -21,8 +21,15 @@ static esp_err_t guide_context(const claw_core_request_t *request, claw_core_con
   if(!agent)return ESP_ERR_NO_MEM;
   const char *profile=glass_agent_profile(session?session->agent:NULL);
   const char *guide=session&&session->agent&&session->mode==AGENT_MODE_CREATE?glass_qpk_guide():"";
-  size_t n=strlen(profile)+strlen(guide)+strlen(agent)+64;
-  out->content=malloc(n);if(out->content)snprintf(out->content,n,"%s\n%s\nAgent extensions:\n%s",profile,guide,agent);
+  /* Applies even when an older SD profile is installed. Keep the full current
+   * user message authoritative; no preprocessing or keyword-only rewrite. */
+  const char *intent=session&&session->mode==AGENT_MODE_ASSISTANT?
+    "\n本轮完整原话优先：读完整句再决定工具，保留末尾否定、纠正、例外、设备范围、单位与数字。"
+    "仅执行本轮明确的目标、动作和参数，不从历史、近似名称或未定义的代词补全。"
+    "设备内部功能先用 home_device 读取真实关联的功能实体、服务和范围/选项；只修改本轮指定的功能，不猜枚举或联动修改其他实体。"
+    "必要信息不完整时先澄清，不发送猜测的控制参数；仅查询不控制。\n":"";
+  size_t n=strlen(profile)+strlen(guide)+strlen(agent)+strlen(intent)+64;
+  out->content=malloc(n);if(out->content)snprintf(out->content,n,"%s\n%s\nAgent extensions:\n%s%s",profile,guide,agent,intent);
   free(agent);
   return out->content ? ESP_OK : ESP_ERR_NO_MEM;
 }
@@ -66,19 +73,20 @@ static esp_err_t call_tool(const char *name, const char *input, const claw_core_
   /* Enforce the request's immutable mode even for guessed tool names. */
   if(!session->agent||!glass_agent_mode_valid(session->mode)||session->mode==AGENT_MODE_CHAT||
      (!strncmp(name,"qpk_",4)&&session->mode!=AGENT_MODE_CREATE)||
-     (!strncmp(name,"mcp_",4)&&session->mode!=AGENT_MODE_ASSISTANT))
+     ((!strncmp(name,"mcp_",4)||!strncmp(name,"home_",5)||!strncmp(name,"music_",6)||!strncmp(name,"assistant_",10))&&session->mode!=AGENT_MODE_ASSISTANT))
     return fail(out,"mode_denied","Switch mode explicitly before using this tool.");
-  claw_stream_emit(CLAW_STREAM_TOOL, name);
-  cJSON *args = !strncmp(name,"skill_",6)||!strncmp(name,"mcp_",4)?glass_agent_json(input):
+  cJSON *args = !strncmp(name,"skill_",6)||!strncmp(name,"mcp_",4)||!strncmp(name,"home_",5)||!strncmp(name,"music_",6)||!strncmp(name,"assistant_",10)?glass_agent_json(input):
     strstr(input,"\\u0000")?NULL:cJSON_ParseWithOpts(input,NULL,true);
   if (!cJSON_IsObject(args)) { cJSON_Delete(args); return fail(out, "invalid_arguments", "Arguments must be one complete JSON object."); }
+  const cJSON *called=cJSON_GetObjectItemCaseSensitive(args,"tool");
+  claw_stream_emit(CLAW_STREAM_TOOL,!strcmp(name,"mcp_call_tool")&&cJSON_IsString(called)?called->valuestring:name);
   int handled=glass_agent_call(session->agent,name,args,out);
   if(handled){
     const cJSON *server=cJSON_GetObjectItemCaseSensitive(args,"server");
     const cJSON *tool=cJSON_GetObjectItemCaseSensitive(args,"tool");
-    bool local_card=!strcmp(name,"mcp_call_tool")&&cJSON_IsString(server)&&
+    bool local_card=!strncmp(name,"home_",5)||!strncmp(name,"music_",6)||(!strcmp(name,"mcp_call_tool")&&cJSON_IsString(server)&&
       !strcmp(server->valuestring,"board")&&cJSON_IsString(tool)&&
-      (!strncmp(tool->valuestring,"home_",5)||!strncmp(tool->valuestring,"music_",6));
+      (!strncmp(tool->valuestring,"home_",5)||!strncmp(tool->valuestring,"music_",6)));
     cJSON_Delete(args);if(handled<0)return ESP_ERR_NO_MEM;
     cJSON *extension=cJSON_Parse(*out);
     bool failed=!extension||cJSON_GetObjectItemCaseSensitive(extension,"error")||cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(extension,"isError"));
@@ -87,6 +95,12 @@ static esp_err_t call_tool(const char *name, const char *input, const claw_core_
        * a stream event for the UI and is stripped from the model-visible text. */
       cJSON *card=cJSON_GetObjectItemCaseSensitive(extension,"card");
       if(cJSON_IsObject(card)){
+        const cJSON *verified=cJSON_GetObjectItemCaseSensitive(extension,"verified");
+        /* Native receipt only; model prose cannot mark an action verified. */
+        cJSON_DeleteItemFromObjectCaseSensitive(card,"action");
+        cJSON_DeleteItemFromObjectCaseSensitive(card,"verified");
+        cJSON_AddBoolToObject(card,"action",cJSON_IsBool(verified));
+        cJSON_AddBoolToObject(card,"verified",cJSON_IsTrue(verified));
         char *text=cJSON_PrintUnformatted(card);
         if(text){
           if(strlen(text)<=ESP_QPK_CARD_TEXT)claw_stream_emit(CLAW_STREAM_CARD,text);

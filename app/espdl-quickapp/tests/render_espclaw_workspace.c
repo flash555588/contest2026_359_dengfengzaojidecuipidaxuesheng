@@ -154,6 +154,7 @@ static void workspace_cases(lv_display_t *display)
     review_capture(display,"workspace-install","ESPClaw · 选择安装位置");chat_ui_confirm_close(NULL);
     chat_workspace_close(NULL);
     workspace_send("请把按钮做得更清晰。");review_chat_error_fixture();chat_ui_refresh(NULL);
+    assert(!strcmp(lv_label_get_text(g_chat_ui.task_title),"请把按钮做得更清晰。"));
     assert(review_find(g_chat_ui.messages,"重新发送"));
     review_capture(display,"workspace-error","ESPClaw · 错误与重试");
     /* Voice entry preserves the selected semantic mode without starting ASR. */
@@ -191,6 +192,7 @@ static void workspace_cases(lv_display_t *display)
     review_capture(display,"workspace-home-cards-done","ESPClaw · 卡片随回复保留");
     review_chat_card_fixture(0);
     workspace_send("播放 Beyond 的海阔天空。");
+    assert(!strcmp(lv_label_get_text(g_chat_ui.task_title),"播放 Beyond 的海阔天空。"));
     review_chat_tool_fixture("mcp_call_tool","正在调用音乐工具");
     review_chat_music_card_fixture(false);chat_ui_refresh(NULL);
     assert(g_chat_ui.cards_root&&lv_obj_get_child_count(g_chat_ui.cards_root)==1);

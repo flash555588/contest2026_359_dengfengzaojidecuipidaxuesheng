@@ -6,7 +6,7 @@ Only counts, state and original test text are logged; no private credentials.
 """
 import argparse,json,re,time
 from pathlib import Path
-from test_jizura_device import Console
+from music_device_console import Console
 
 class LanguageConsole(Console):
     def _command_once(self,text,timeout):

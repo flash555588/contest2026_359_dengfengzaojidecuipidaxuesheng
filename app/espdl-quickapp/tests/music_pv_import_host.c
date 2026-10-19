@@ -15,7 +15,7 @@ static int fixture_close(int fd);
 #define open fixture_open
 #define write fixture_write
 #define close fixture_close
-#include "glass_music_pv_import.h"
+#include "../../jizura/device-codec/glass_music_pv_import.h"
 #undef getcwd
 #undef open
 #undef write

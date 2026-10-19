@@ -1,0 +1,7 @@
+{
+  "python": {
+    "name": "Python 终端",
+    "command": ["python.exe", "-u", "-i", "-q"],
+    "input": true
+  }
+}

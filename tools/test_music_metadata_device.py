@@ -2,7 +2,7 @@
 """Short, real P4 music/lyrics/cover test using the existing music credentials."""
 import argparse,json,re,time
 from pathlib import Path
-from test_jizura_device import Console
+from music_device_console import Console
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);a=p.parse_args()

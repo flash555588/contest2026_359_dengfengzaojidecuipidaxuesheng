@@ -32,7 +32,7 @@ int glass_mcp_http_perform(struct glass_mcp_http *request)
 /* Scripted Home Assistant transport: every submission must have exactly one
  * queued response, and poll transfers it once. */
 struct fake_response {int status;int error;char *body;};
-static struct fake_response queue[64];
+static struct fake_response queue[256];
 static unsigned head,tail;
 static bool pending;
 static unsigned get_calls,state_reads,service_calls;
@@ -74,7 +74,9 @@ void hass_transport_stop(void)
 static cJSON *call(struct glass_agent *agent,const char *name,const char *text,bool error)
 {
   cJSON *args=cJSON_Parse(text);char *out=NULL;assert(args);assert(glass_agent_call(agent,name,args,&out)==1);cJSON_Delete(args);
-  assert(out);cJSON *result=cJSON_Parse(out);assert(result);assert((cJSON_GetObjectItem(result,"error")!=NULL)==error);free(out);return result;
+  assert(out);cJSON *result=cJSON_Parse(out);assert(result);
+  if((cJSON_GetObjectItem(result,"error")!=NULL)!=error)fprintf(stderr,"tool=%s args=%s expected_error=%u actual=%s\n",name,text,error,out);
+  assert((cJSON_GetObjectItem(result,"error")!=NULL)==error);free(out);return result;
 }
 static cJSON *board(struct glass_agent *agent,const char *tool,const char *arguments,bool error)
 {
@@ -87,8 +89,11 @@ int main(void)
   glass_board_home_register();
   atomic_bool cancel=false;
   struct glass_agent *agent=glass_agent_create(&cancel,AGENT_MODE_ASSISTANT);assert(agent);
+  char *advertised=glass_agent_tools(agent,"[]");
+  assert(advertised&&strstr(advertised,"home_control")&&strstr(advertised,"home_list"));free(advertised);
+  cJSON_Delete(call(agent,"home_status","{}",false)); /* No discovery round. */
   cJSON *result=call(agent,"mcp_list_tools","{\"server\":\"board\"}",false);
-  assert(cJSON_GetArraySize(cJSON_GetObjectItem(result,"tools"))==16);cJSON_Delete(result);
+  assert(cJSON_GetArraySize(cJSON_GetObjectItem(result,"tools"))==18);cJSON_Delete(result);
   result=board(agent,"home_status","{}",false);
   assert(cJSON_IsTrue(cJSON_GetObjectItem(result,"ok"))&&!cJSON_IsTrue(cJSON_GetObjectItem(result,"configured")));
   cJSON_Delete(result);
@@ -121,6 +126,12 @@ int main(void)
   result=board(agent,"home_list","{\"offset\":16}",false);
   assert(cJSON_GetArraySize(cJSON_GetObjectItem(result,"items"))==4&&!cJSON_GetObjectItem(result,"more"));
   cJSON_Delete(result);
+  assert(get_calls==1&&!fake_depth());
+  result=board(agent,"home_list","{\"query\":\"主灯19\"}",false);
+  assert(cJSON_GetObjectItem(result,"total")->valueint==1&&cJSON_GetArraySize(cJSON_GetObjectItem(result,"items"))==1);
+  assert(!strcmp(cJSON_GetObjectItem(cJSON_GetArrayItem(cJSON_GetObjectItem(result,"items"),0),"name")->valuestring,"客厅主灯19"));cJSON_Delete(result);
+  result=board(agent,"home_list","{\"query\":\"没有这个设备\"}",false);
+  assert(cJSON_GetObjectItem(result,"total")->valueint==0);cJSON_Delete(result);
   assert(get_calls==1&&!fake_depth());
   /* home_state returns the validated card and its level. */
   fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"friendly_name\":\"客厅主灯\",\"brightness\":204}}");
@@ -171,6 +182,7 @@ int main(void)
   assert(cJSON_IsObject(card)&&!strcmp(cJSON_GetObjectItem(card,"name")->valuestring,"观影模式")&&
     !strcmp(cJSON_GetObjectItem(card,"state")->valuestring,"已受理"));
   cJSON_Delete(result);
+  fake_queue(200,0,"{\"entity_id\":\"cover.blind\",\"state\":\"open\",\"attributes\":{\"current_position\":20}}");
   fake_queue(200,0,"[]");
   fake_queue(200,0,"{\"entity_id\":\"cover.blind\",\"state\":\"open\",\"attributes\":{\"friendly_name\":\"阳台窗帘\",\"current_position\":60}}");
   result=board(agent,"home_service","{\"entity\":\"cover.blind\",\"service\":\"set_cover_position\",\"arguments\":{\"position\":60}}",false);
@@ -186,18 +198,75 @@ int main(void)
   cJSON_Delete(board(agent,"home_service","{\"entity\":\"lock.front\",\"service\":\"unlock\"}",true));
   cJSON_Delete(board(agent,"home_service","{\"entity\":\"cover.blind\\\",\\\"x\\\":1\",\"service\":\"open_cover\"}",true));
   assert(service_calls==writes);
-  fake_queue(200,0,"[]");
   fake_queue(200,0,"{\"entity_id\":\"cover.blind\",\"state\":\"open\",\"attributes\":{\"current_position\":20}}");
+  fake_queue(200,0,"[]");
+  for(unsigned i=0;i<4;i++)fake_queue(200,0,"{\"entity_id\":\"cover.blind\",\"state\":\"open\",\"attributes\":{\"current_position\":20}}");
   result=board(agent,"home_service","{\"entity\":\"cover.blind\",\"service\":\"set_cover_position\",\"arguments\":{\"position\":60}}",false);
   assert(!cJSON_IsTrue(cJSON_GetObjectItem(result,"verified")));cJSON_Delete(result);
   permission=cJSON_Parse("{\"home_control_enabled\":0}");
   assert(!portal_config_save("agent",permission));cJSON_Delete(permission);
   cJSON_Delete(board(agent,"home_control","{\"entity\":\"light.desk\",\"on\":true}",true));
   assert(service_calls==writes+1);
+  permission=cJSON_Parse("{\"home_control_enabled\":1}");
+  assert(!portal_config_save("agent",permission));cJSON_Delete(permission);
+  /* The exact screenshot case: RGB readback can confirm pink; an old
+   * color is retried without repeating the side-effecting POST. */
+  fake_queue(200,0,"[]");
+  fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"brightness\":77,\"rgb_color\":[255,0,0]}}");
+  fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"brightness\":77,\"rgb_color\":[255,191,204],\"color_mode\":\"hs\"}}");
+  writes=service_calls;reads=state_reads;
+  result=call(agent,"home_service","{\"entity\":\"light.desk\",\"service\":\"turn_on\",\"arguments\":{\"brightness_pct\":30,\"rgb_color\":[255,192,203]}}",false);
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(result,"verified"))&&service_calls==writes+1&&state_reads==reads+2);
+  assert(cJSON_IsArray(cJSON_GetObjectItem(cJSON_GetObjectItem(result,"attributes"),"rgb_color")));cJSON_Delete(result);
+  fake_queue(200,0,"[]");
+  for(unsigned i=0;i<4;i++)fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"rgb_color\":[0,0,255]}}");
+  result=call(agent,"home_service","{\"entity\":\"light.desk\",\"service\":\"turn_on\",\"arguments\":{\"rgb_color\":[255,192,203]}}",false);
+  assert(!cJSON_IsTrue(cJSON_GetObjectItem(result,"verified"))&&service_calls==writes+2);cJSON_Delete(result);
+  assert(!fake_depth());
+  /* Fused named-light operation: resolve only lights, reject ambiguity,
+   * preserve fresh reads, single POST and verified color/brightness. */
+  admin=(unsigned)hass_open(HASS_READ|HASS_CONFIGURE);assert(admin);
+  assert(!hass_configure(admin,"http://home.local:8123","board-token",true));hass_close(admin);
+  const char *named="[{\"entity_id\":\"button.toggle\",\"state\":\"unknown\",\"attributes\":{\"friendly_name\":\"床头灯按钮\"}},"
+    "{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"friendly_name\":\"床头灯\"}}]";
+  fake_queue(200,0,named);
+  fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"friendly_name\":\"床头灯\",\"brightness\":77,\"rgb_color\":[255,192,203]}}");
+  writes=service_calls;reads=state_reads;
+  result=call(agent,"home_light","{\"query\":\"床头灯\"}",false);
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(result,"ok"))&&state_reads==reads+1&&service_calls==writes);
+  assert(cJSON_IsArray(cJSON_GetObjectItem(cJSON_GetObjectItem(result,"attributes"),"rgb_color")));cJSON_Delete(result);
+  fake_queue(200,0,"[]");
+  fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"on\",\"attributes\":{\"brightness\":77,\"rgb_color\":[255,192,203]}}");
+  result=call(agent,"home_light","{\"query\":\"床头灯\",\"brightness\":30,\"rgb_color\":[255,192,203]}",false);
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(result,"verified"))&&service_calls==writes+1);
+  assert(strstr(last_data,"brightness_pct")&&strstr(last_data,"rgb_color"));cJSON_Delete(result);
+  /* Duplicate exact names must cause no state read or write. */
+  fake_queue(200,0,"[{\"entity_id\":\"light.desk\",\"attributes\":{\"friendly_name\":\"床头灯\"}},"
+    "{\"entity_id\":\"light.other\",\"attributes\":{\"friendly_name\":\"床头灯\"}}]");
+  reads=state_reads;writes=service_calls;
+  result=call(agent,"home_light","{\"query\":\"床头灯\",\"on\":true}",true);
+  assert(!strcmp(cJSON_GetObjectItem(result,"error")->valuestring,"ambiguous_light"));cJSON_Delete(result);
+  assert(state_reads==reads&&service_calls==writes);
+  result=call(agent,"home_light","{\"query\":\"床头\",\"on\":true}",true);
+  assert(!strcmp(cJSON_GetObjectItem(result,"error")->valuestring,"light_not_found"));cJSON_Delete(result);
+  assert(state_reads==reads&&service_calls==writes);
+  cJSON_Delete(call(agent,"home_light","{\"query\":\"light.desk\",\"on\":false,\"brightness\":30}",true));
+  cJSON_Delete(call(agent,"home_light","{\"query\":\"switch.socket\",\"on\":true}",true));
+  cJSON_Delete(call(agent,"home_light","{\"query\":\"light.desk\",\"rgb_color\":[255,0,0.5]}",true));
+  cJSON_Delete(call(agent,"home_light","{\"query\":\"light.desk\",\"rgb_color\":[255,0,256]}",true));
+  cJSON_Delete(call(agent,"home_light","{\"query\":\"\",\"on\":true}",true));
+  permission=cJSON_Parse("{\"home_control_enabled\":0}");
+  assert(!portal_config_save("agent",permission));cJSON_Delete(permission);
+  cJSON_Delete(call(agent,"home_light","{\"query\":\"light.desk\",\"on\":true}",true));
+  fake_queue(200,0,"{\"entity_id\":\"light.desk\",\"state\":\"off\",\"attributes\":{}}");
+  result=call(agent,"home_light","{\"query\":\"light.desk\"}",false);
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(result,"ok")));cJSON_Delete(result);
+  assert(service_calls==writes&&!fake_depth());
+  #include "board_home_functions.inc"
   assert(glass_board_ui_calls==0);
   glass_agent_destroy(agent);
   glass_agent_set_board_home(NULL);
   free(agent_config);
-  puts("BOARD_HOME_OK: 16 board tools; card results with no page opened; states cache; verified/unconfirmed control; whitelist and injection rejection; scene executed card");
+  puts("BOARD_HOME_OK: 18 board tools; fused unique-light read/control; no ambiguous writes; permissions; verified color; states cache; whitelist and injection rejection");
   return 0;
 }

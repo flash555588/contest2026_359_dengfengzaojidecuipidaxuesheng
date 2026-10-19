@@ -1,8 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-/* Optional offline bank study. Production defaults to three live LRC effects. */
-#ifdef MUSIC_PV_SD_BANKS
-#include "glass_music_pv_legacy.inc"
-#else
+/* Three live LRC effects; no SD frame-bank playback. */
 #define MUSIC_PV_PARTS 3
 #define MUSIC_PV_LAYOUTS 3
 struct music_pv_ui {
@@ -115,7 +112,6 @@ static void music_pv_plan(struct music_pv_ui *p,const char *text,const char *tra
 }
 
 /* No bank files, frame buffers or worker threads are allocated by live effects. */
-static void music_pv_sd_release(struct music_pv_ui *p){(void)p;}
 
 static void music_pv_refresh(struct music_pv_ui *p)
 {
@@ -221,4 +217,3 @@ static void music_pv_create(struct music_pv_ui *p,lv_obj_t *parent)
   lv_obj_set_style_bg_opa(p->style_button,LV_OPA_TRANSP,0);lv_obj_add_flag(p->style_button,LV_OBJ_FLAG_HIDDEN);
   p->timer=lv_timer_create(music_pv_tick,50,p);lv_timer_pause(p->timer);lv_obj_add_flag(p->root,LV_OBJ_FLAG_HIDDEN);
 }
-#endif

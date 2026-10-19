@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <assert.h>
-#include "../overlay/apps/system/desktop/glass_music_pv_assets.h"
+#include "../../jizura/device-codec/glass_music_pv_assets.h"
 static void store(const char *path,const char *text)
 {FILE *f=fopen(path,"wb");assert(f);assert(fwrite(text,1,strlen(text),f)==strlen(text));assert(!fclose(f));}
 int main(int argc,char **argv)

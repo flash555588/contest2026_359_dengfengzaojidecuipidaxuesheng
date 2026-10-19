@@ -41,8 +41,7 @@ def main():
     for start,end in [
         ('static lv_obj_t *glass_box(', 'static lv_obj_t *glass_number('),
         ('static struct glass_display_s', 'static bool g_preferences_save_failed;'),
-        ('static void glass_update(lv_timer_t *timer)', 'static void glass_theme_toggle('),
-        ('static void glass_fade(', '#include "glass_home_ui.inc"')]:
+        ('static void glass_update(lv_timer_t *timer)', 'static void glass_palette_select(')]:
         first=source.index(start);last=source.index(end,first);helpers.append(source[first:last])
     helpers.insert(2, '#include "glass_weather_scene.inc"')
     (out/'production_home_helpers.inc').write_text('\n'.join(helpers))

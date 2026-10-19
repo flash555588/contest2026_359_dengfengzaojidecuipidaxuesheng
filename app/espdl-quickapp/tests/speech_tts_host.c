@@ -15,6 +15,42 @@ static int write_audio(void *user,const int16_t *pcm,size_t n)
 }
 static bool stop_now(void *user){(void)user;return true;}
 static bool cancel_on_third_poll(void *user){unsigned *polls=user;return ++*polls==3;}
+struct decoder_reference {const float *audio;size_t offset,limit;};
+static int compare_decoder(void *opaque,const int16_t *pcm,size_t count)
+{
+  struct decoder_reference *ref=opaque;
+  assert(ref->offset+count<=ref->limit);
+  for(size_t i=0;i<count;i++){
+    float sample=ref->audio[ref->offset++];
+    if(sample>1)sample=1;if(sample<-1)sample=-1;
+    assert(pcm[i]==(int16_t)(sample*32767));
+  }
+  return 0;
+}
+static void check_tiled_decoder(const char *root)
+{
+  size_t bytes;char *data=glass_speech_asset(root,"sanotts-zh/dec.bin",&bytes);assert(data);
+  snt_piperlite_model model={0};
+  assert(!snt_piperlite_init(&model,data,416,(float *)(data+416),730721));
+  const int lengths[]={1,97,256};
+  for(unsigned index=0;index<sizeof(lengths)/sizeof(*lengths);index++){
+    int frames=lengths[index];size_t size=snt_piperlite_arena_floats(&model,frames);
+    float *arena=calloc(size,sizeof(float)),*latent=calloc(192*frames,sizeof(float));
+    float *audio=calloc(frames*SNT_PIPERLITE_HOP,sizeof(float));
+    assert(arena&&latent&&audio);
+    for(int i=0;i<192*frames;i++)latent[i]=.05f*sinf(i*.031f);
+    assert(!snt_piperlite_synthesize(&model,latent,frames,audio,arena,size));
+    struct decoder_reference ref={audio,0,frames*SNT_PIPERLITE_HOP};
+    struct sano_profile profile={0};
+    assert(!sano_decode(&model,latent,frames,compare_decoder,NULL,&ref,&profile));
+    assert(ref.offset==ref.limit);
+    unsigned polls=0;
+    assert(sano_decode(&model,latent,frames,compare_decoder,cancel_on_third_poll,&polls,&profile)==-ECANCELED);
+    free(audio);free(latent);free(arena);
+  }
+  free(data);
+  puts("SANO_TILED_DECODER_OK: exact full-decoder PCM at 1/97/256 frames; cancellation releases tile arena");
+}
 static void check_model_cancellation(const char *root,const int32_t *ids,int n)
 {
   size_t bytes;char *data=glass_speech_asset(root,"sanotts-zh/front.bin",&bytes);assert(data);
@@ -43,6 +79,7 @@ int main(int argc,char **argv)
   assert(count==(int)(sizeof(expected)/sizeof(*expected)));
   assert(!memcmp(ids,expected,sizeof(expected)));
   check_model_cancellation(argv[1],ids,count);
+  check_tiled_decoder(argv[1]);
   assert(sano_ids(argv[1],"",ids,&job)<0);
   assert(glass_sano_synthesize(argv[1],"你好",write_audio,stop_now,NULL)==-ECANCELED);
   FILE *vectors=fopen(argv[3],"r");assert(vectors);

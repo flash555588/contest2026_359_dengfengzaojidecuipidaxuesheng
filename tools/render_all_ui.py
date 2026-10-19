@@ -46,7 +46,6 @@ def main():
     p.add_argument('--harness-source',type=Path,help='Optional focused native page harness')
     p.add_argument('--png-prefix',default='',help='Convert only the matching native captures; all pages still run under sanitizers')
     p.add_argument('--grok-assets',type=Path,help='Predecoded SD banks used by the actual native player')
-    p.add_argument('--jizura-assets',type=Path,help='Directory containing the SD style catalog for native PV review')
     p.add_argument('--music-font',type=Path,help='Pinned SD font file used by the native streaming-font review')
     a=p.parse_args();repo=Path(__file__).resolve().parents[1];apps=a.apps.resolve();out=a.output.resolve();cache=a.cache.resolve()
     out.mkdir(parents=True,exist_ok=True);work=out/'source';work.mkdir(exist_ok=True)
@@ -113,13 +112,13 @@ void local_video_play_path(const char *path){(void)path;}
     binding_names=['qpk_arg_int','qpk_arg_color','qpk_arg_string','qpk_widget_deleted','qpk_add_widget','qpk_widget_current',
       'qpk_event_release','qpk_event_deleted','js_ui_text','qpk_number_style','js_ui_number','js_ui_set_text',
       'qpk_touch_call','qpk_event_touched','qpk_event_swiped',
-      'js_ui_set_hidden','js_ui_background','js_ui_get_size','js_ui_set_color','js_ui_set_style','js_ui_measure_text','js_ui_panel',
+      'js_ui_camera_reference','js_ui_camera_reference_zoom','js_ui_camera_reference_controls','js_ui_set_hidden','js_ui_background','js_ui_get_size','js_ui_set_color','js_ui_set_style','js_ui_measure_text','js_ui_panel',
       'js_ui_set_pos','js_ui_set_size','js_ui_present','js_ui_range','js_ui_set_opacity','js_ui_show','js_ui_hide','js_ui_remove','js_ui_rect',
       'js_ui_arc','js_ui_arc_set','js_ui_line','js_ui_line_set','js_ui_button','qpk_input_finish',
       'qpk_input_cancel','qpk_input_submit','qpk_input_button','js_prompt_input','qpk_message_arg','js_prompt_toast','js_prompt_dialog']
-    (work/'production_qpk_bindings.inc').write_text('static bool qpk_viewport_object(lv_obj_t *);\nstatic void qpk_viewport_origin(lv_obj_t *,int *,int *);\nstatic void qpk_viewport_cleanup(lv_obj_t *,void *);\n'+'\n\n'.join(function(runtime,n) for n in binding_names)+'\n#include "qpk_polygon.inc"\n#include "qpk_viewport.inc"\n')
+    (work/'production_qpk_bindings.inc').write_text('#include "camera_reference_ui.h"\nstatic bool qpk_viewport_object(lv_obj_t *);\nstatic void qpk_viewport_origin(lv_obj_t *,int *,int *);\nstatic void qpk_viewport_cleanup(lv_obj_t *,void *);\n'+'\n\n'.join(function(runtime,n) for n in binding_names)+'\n#include "qpk_polygon.inc"\n#include "qpk_viewport.inc"\n')
     registration={'text':('js_ui_text',6),'number':('js_ui_number',6),'setText':('js_ui_set_text',2),
-      'setHidden':('js_ui_set_hidden',2),'background':('js_ui_background',1),'getSize':('js_ui_get_size',0),
+      'cameraReference':('js_ui_camera_reference',0),'cameraReferenceZoom':('js_ui_camera_reference_zoom',2),'cameraReferenceControls':('js_ui_camera_reference_controls',3),'setHidden':('js_ui_set_hidden',2),'background':('js_ui_background',1),'getSize':('js_ui_get_size',0),
       'setColor':('js_ui_set_color',2),'setStyle':('js_ui_set_style',2),'measureText':('js_ui_measure_text',2),'panel':('js_ui_panel',7),
       'present':('js_ui_present',2),'range':('js_ui_range',5),'rangeLinked':('js_ui_range',6),'button':('js_ui_button',7),'setPos':('js_ui_set_pos',3),'setSize':('js_ui_set_size',3),
       'setOpacity':('js_ui_set_opacity',2),'show':('js_ui_show',1),'hide':('js_ui_hide',1),'remove':('js_ui_remove',1),
@@ -139,7 +138,7 @@ void local_video_play_path(const char *path){(void)path;}
       'hass_portal.h','hass_service.h','glass_music.h','glass_lock_photo.h','glass_chat.h','glass_ime.h',
       'glass_weather.h','glass_settings_service.h','glass_file_service.h','glass_system_monitor.h','glass_voice.h','glass_pinyin.h',
       'glass_ble.h','glass_status.h','glass_speech.h','qpk_espdl.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
-    skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice',
+    skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice','glass_ime_set_target',
           'desktop_motion_button','qpk_mjpeg_create','qpk_mjpeg_destroy','qpk_mjpeg_probe',
           'qpk_mjpeg_frame_size','qpk_mjpeg_decode','qpk_mjpeg_decode_region','qpk_mjpeg_decode_still','qpk_mjpeg_decode_still_fit'}
     mocks=['#include <stdlib.h>\n#include <string.h>\n#include <stdio.h>\n#include <errno.h>\n#include <netinet/in.h>\n#include "glass_icons.h"']
@@ -185,7 +184,6 @@ void local_video_play_path(const char *path){(void)path;}
     if a.harness_source:flags+=['-DGROK_HOST_TEST']
     if a.music_font:flags+=['-DGLASS_SD_FONT_PATH="'+str(a.music_font.resolve())+'"']
     if a.grok_assets:flags+=['-DGROK_ASSET_ROOT="'+str(a.grok_assets)+'"']
-    if a.jizura_assets:flags+=['-DMUSIC_PV_STYLE_FILE="'+str(a.jizura_assets/'styles.json')+'"','-DMUSIC_PV_BANK_ROOT="'+str(a.jizura_assets/'pv')+'"','-DMUSIC_PV_FAST_ROOT="'+str(a.jizura_assets/'pv-jpeg')+'"']
     sources=[a.harness_source or repo/'app/espdl-quickapp/tests/render_all_ui.c',repo/'app/espdl-quickapp/tests/qpk_review_bridge.c',work/'service_mocks.c',desktop/'glass_icons.c',desktop/'glass_ime.c',
       apps/'netutils/cjson/cJSON/cJSON.c',work/'qrcodegen.c']
     sources += [desktop/name for name in ['camera_resource.c','recorder_resource.c','espdl_resource.c','ouo_resource.c','dafeiyu_resource.c','homeassistant_resource.c']]

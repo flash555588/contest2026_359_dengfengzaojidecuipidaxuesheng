@@ -84,8 +84,6 @@ static void *qpk_camera_usb_thread(pthread_addr_t arg)
   if (!input || !decoder) { error = -ENOMEM; goto done; }
   uint64_t last_frame = qpk_now_ms();
   unsigned decode_failures = 0;
-  uint64_t bar_status[QPK_CAMERA_FRAMEBUFFER_COUNT];
-  bool bar_valid[QPK_CAMERA_FRAMEBUFFER_COUNT] = { false };
   struct pollfd pfd = { .fd = camera->fd, .events = POLLIN };
   while (!qpk_camera_cancelled())
     {
@@ -110,28 +108,20 @@ static void *qpk_camera_usb_thread(pthread_addr_t arg)
       last_frame = qpk_now_ms();
       camera->captured_frames++;
       if (qpk_camera_cancelled()) break;
-      /* The decoder fills the whole video rectangle, so re-apply the card
-       * corners every frame and flash the capture border; the toolbar below
-       * is cached separately and only repainted when its status changes. */
+      /* The frame is saved before any reference UI is composed into it. */
       int photo_status = qpk_camera_bar_status();
       if (photo_status == 1)
         qpk_camera_capture_ring(target, qpk_camera_rgb565(0xf6f7ff));
-      qpk_camera_frame_padding(target, qpk_camera_page_color(),
-                               QPK_CAMERA_CORNER_RADIUS);
-      qpk_camera_save_jpeg(input, qpk_mjpeg_frame_size(decoder));
+      /* The untouched JPEG is lossless to the incoming stream at 1x. For a
+       * zoomed shot, save the matching RGB565 crop before drawing any UI. */
+      if(qpk_camera_zoom_percent()==100&&qpk_camera_style()==0)qpk_camera_save_jpeg(input,qpk_mjpeg_frame_size(decoder));
+      else qpk_camera_save(target,QPK_CAMERA_BAR_LEFT);
       photo_status = qpk_camera_bar_status();
-      unsigned elapsed=0;int recording=qpk_video_status(&elapsed);
-      uint64_t bar_key=(uint32_t)photo_status|((uint64_t)qpk_video_selected()<<32)|
-        ((uint64_t)(uint8_t)recording<<33)|((uint64_t)(elapsed/1000)<<41);
+      /* The reference's guides and shutter extend into the decoded image.
+       * Re-compose after every frame, not just when the old right rail changes. */
+      qpk_camera_bar_blit(target,QPK_CAMERA_BAR_LEFT);
+      qpk_wake_overlay_blit(target,QPK_CAMERA_RAW_WIDTH,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
       size_t dirty_bytes = QPK_CAMERA_FRAME_SIZE;
-      /* The decoder owns only the image area. Preserve each off-screen
-       * page's controls instead of clearing/rebuilding them for every frame. */
-      if (!bar_valid[next] || bar_status[next] != bar_key)
-        {
-          qpk_camera_bar_blit(target);bar_status[next]=bar_key;
-          bar_valid[next] = true;
-          dirty_bytes = QPK_CAMERA_FRAME_SIZE;
-        }
       ret = qpk_camera_clean_frame(target, dirty_bytes);
       if (ret < 0) { error = ret; break; }
       camera->fb_plane.yoffset = next * QPK_CAMERA_RAW_HEIGHT;

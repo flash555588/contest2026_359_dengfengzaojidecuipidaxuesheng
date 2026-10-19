@@ -26,6 +26,6 @@ static void qpk_capacity_test_start(void)
   int ret = qpk_runtime_launch(card, "Resource test", "diagnostic.resources", "1", "resource-test.js",
     qpk_capacity_test_js, sizeof(qpk_capacity_test_js) - 1, zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (!ret) qapp_page_commit(card);
-  else lv_obj_delete(lv_obj_get_parent(card));
+  else qapp_page_discard(lv_obj_get_parent(card));
   desktop_ui_probe_print("qpk-resource-test launch=%d\n", ret);
 }

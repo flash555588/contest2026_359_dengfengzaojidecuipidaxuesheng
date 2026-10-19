@@ -47,9 +47,6 @@ static uint32_t home_muted(void)
 { return g_desktop.light_theme ? 0x787682 : 0xa6a2b2; }
 static uint32_t home_paper(void)
 { return g_desktop.light_theme ? 0xfcfbfd : 0x272830; }
-static uint32_t home_accent(void)
-{ return g_desktop.light_theme ? 0x78668e : 0xbcadd3; }
-
 static const lv_font_t *home_font(int size)
 {
   if (size == 12 && g_home_font12) return g_home_font12;
@@ -228,7 +225,6 @@ static void glass_rebuild(void)
   const uint32_t background = light ? 0xf1f0f4 : 0x17181e;
   if (g_glass.home)
     {
-      lv_anim_delete(g_glass.home, glass_fade);
       lv_obj_delete(g_glass.home);
     }
   g_glass_display.valid = false;
@@ -236,18 +232,7 @@ static void glass_rebuild(void)
   g_glass.home = root;
   lv_obj_move_to_index(root, 0);
 
-  /* Header. The network entry does not claim service connectivity. */
   lv_obj_t *label;
-  g_glass.date = home_text(root, "时钟待校准", 350, 12, 346, 14, muted);
-  g_glass.wifi_button = home_button(root, "网络", LV_SYMBOL_WIFI,
-    764, 0, 90, background, muted, glass_system_page_open, NULL);
-  g_glass.clock = home_text(root, "--:--", 858, 3, 87, 28, ink);
-  glass_clickable(g_glass.clock, glass_lock_open, NULL);
-  /* The system status bar owns the visible clock and network entry. */
-  lv_obj_add_flag(g_glass.clock, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_glass.wifi_button, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_glass.date,LV_OBJ_FLAG_HIDDEN);
-  g_glass.theme_button = NULL; /* Settings lives in the shared status island. */
 
   /* Persistent rail. All icons come from the same authored outline family. */
   const char *symbols[] = {GLASS_ICON_GRID, GLASS_ICON_CAMERA, LV_SYMBOL_HOME,

@@ -10,8 +10,9 @@ def main():
     shutil.copy2(a.rollback,out/'rollback.bin')
     desktop=work/'apps/system/desktop';overlay=repo/'app/espdl-quickapp/overlay/apps/system/desktop'
     names=['glass_sd_font.c','glass_sd_font.h','glass_sd_font_asset.h','glass_ui.inc','glass_lockscreen.inc','glass_lock_pages.inc','glass_music.h','glass_music_parse.c','glass_board_music.c','glass_agent_profiles.h','glass_portal_ui.inc','glass_music_service.c','glass_music_ui.inc','glass_music_full.inc','glass_music_pv.inc',
-           'glass_music_lyrics.h','glass_music_hans.h','glass_music_hans_table.h','glass_music_cache.h','glass_lock_photo.c','glass_portal_resource.c','glass_music_pv_legacy.inc','glass_music_pv_assets.h','glass_music_pv_bank.h','glass_music_pv_sd.inc','glass_music_pv_import.h','glass_music_sd.h','glass_music_track_key.h','glass_ui_probe.inc','desktop_main.c',
+           'glass_music_lyrics.h','glass_music_hans.h','glass_music_hans_table.h','glass_music_cache.h','glass_lock_photo.c','glass_portal_resource.c','glass_music_sd.h','glass_music_track_key.h','glass_ui_probe.inc','desktop_main.c',
            'qpk_tjpgdcnf.h','qpk_tjpgd.c','qpk_mjpeg.c','qpk_mjpeg.h']
+    names += ['glass_settings_ui.inc', 'glass_about_ui.inc', 'glass_home_ui.inc']
     records={}
     # Preserve the prepared tree's pinned optional build flags. Add only the
     # private streaming backend; do not replace its full integration Makefile.

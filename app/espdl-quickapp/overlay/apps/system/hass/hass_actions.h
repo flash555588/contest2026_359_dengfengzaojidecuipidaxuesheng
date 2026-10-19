@@ -26,6 +26,7 @@ static const struct hass_action_rule_s hass_action_rules[] = {
   {"fan","set_percentage","percentage",'n',0,100},
   {"fan","set_preset_mode","preset_mode",'s',0,128},
   {"fan","oscillate","oscillating",'b',0,0},
+  {"fan","set_direction","direction",'s',0,128},
   {"number","set_value","value",'n',-1e9,1e9},
   {"input_number","set_value","value",'n',-1e9,1e9},
   {"select","select_option","option",'s',0,128},
@@ -36,12 +37,19 @@ static const struct hass_action_rule_s hass_action_rules[] = {
   {"cover","open_cover",NULL,0,0,0},{"cover","close_cover",NULL,0,0,0},
   {"cover","stop_cover",NULL,0,0,0},
   {"cover","set_cover_position","position",'n',0,100},
+  {"cover","open_cover_tilt",NULL,0,0,0},{"cover","close_cover_tilt",NULL,0,0,0},
+  {"cover","stop_cover_tilt",NULL,0,0,0},
+  {"cover","set_cover_tilt_position","tilt_position",'n',0,100},
   {"climate","turn_on",NULL,0,0,0},{"climate","turn_off",NULL,0,0,0},
   {"climate","set_temperature","temperature",'n',-100,200},
+  {"climate","set_temperature","target_temp_low",'n',-100,200},
+  {"climate","set_temperature","target_temp_high",'n',-100,200},
+  {"climate","set_humidity","humidity",'n',0,100},
   {"climate","set_hvac_mode","hvac_mode",'s',0,128},
   {"climate","set_fan_mode","fan_mode",'s',0,128},
   {"climate","set_preset_mode","preset_mode",'s',0,128},
   {"climate","set_swing_mode","swing_mode",'s',0,128},
+  {"climate","set_swing_horizontal_mode","swing_horizontal_mode",'s',0,128},
   {"humidifier","turn_on",NULL,0,0,0},{"humidifier","turn_off",NULL,0,0,0},
   {"humidifier","set_humidity","humidity",'n',0,100},
   {"humidifier","set_mode","mode",'s',0,128},
@@ -57,6 +65,8 @@ static const struct hass_action_rule_s hass_action_rules[] = {
   {"vacuum","set_fan_speed","fan_speed",'s',0,128},
   {"water_heater","set_temperature","temperature",'n',0,200},
   {"water_heater","set_operation_mode","operation_mode",'s',0,128},
+  {"water_heater","turn_on",NULL,0,0,0},{"water_heater","turn_off",NULL,0,0,0},
+  {"water_heater","set_away_mode","away_mode",'b',0,0},
   {"lock","lock",NULL,0,0,0},{"lock","unlock",NULL,0,0,0}
 };
 
@@ -104,6 +114,16 @@ static bool hass_action_valid(const char *domain, const char *service,
       params++; valid &= matched;
     }
   valid &= known && targets==1 && params<=3 && colors<=1;
+  if(!strcmp(domain,"fan")&&!strcmp(service,"set_direction")){
+    const cJSON *direction=cJSON_GetObjectItemCaseSensitive(root,"direction");
+    valid &= cJSON_IsString(direction)&&(!strcmp(direction->valuestring,"forward")||!strcmp(direction->valuestring,"reverse"));
+  }
+  if(!strcmp(domain,"climate")&&!strcmp(service,"set_temperature")){
+    const cJSON *single=cJSON_GetObjectItemCaseSensitive(root,"temperature");
+    const cJSON *low=cJSON_GetObjectItemCaseSensitive(root,"target_temp_low");
+    const cJSON *high=cJSON_GetObjectItemCaseSensitive(root,"target_temp_high");
+    valid &= single?(!low&&!high):(cJSON_IsNumber(low)&&cJSON_IsNumber(high)&&low->valuedouble<=high->valuedouble);
+  }
   /* Parameterized services require their argument; plain turn_on is valid. */
   if (!params && strcmp(service,"turn_on"))
     {

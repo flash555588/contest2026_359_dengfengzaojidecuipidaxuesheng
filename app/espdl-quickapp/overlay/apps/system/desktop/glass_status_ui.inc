@@ -15,7 +15,7 @@ static struct {
   bool valid, light, signal_bars, charge_state;
 } g_status_ui;
 
-/* Align text and authored symbols by font baseline, not their unequal boxes. */
+/* Text shares a baseline; square icon cells share the status row's center. */
 static void status_align_label(lv_obj_t *label)
 {
   const lv_font_t *font=lv_obj_get_style_text_font(label,0);
@@ -24,6 +24,13 @@ static void status_align_label(lv_obj_t *label)
 
 static uint32_t status_ink(void)
 { return g_desktop.light_theme ? 0x55515f : 0xc9c4d2; }
+
+static lv_obj_t *status_icon(lv_obj_t *parent, const char *symbol, int x, int size)
+{
+  /* The authored icon font adds four trailing line pixels outside its square
+   * glyph cell. Centering its line box or using the text baseline raises it. */
+  return home_icon(parent,symbol,x,(GLASS_STATUS_HEIGHT-size)/2,size,status_ink());
+}
 
 static lv_obj_t *status_text(lv_obj_t *parent, const char *text,
                              int x, int y, int w)
@@ -143,7 +150,7 @@ static void glass_status_create(void)
   lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
   g_desktop.clock_label = status_text(bar, "--:--", 24, 8, 48);
   g_status_ui.date=status_text(bar,"",84,8,190);
-  g_status_ui.music = home_icon(bar, LV_SYMBOL_AUDIO, 818, 8, 14, home_muted());
+  g_status_ui.music = status_icon(bar, LV_SYMBOL_AUDIO, 818, 14);
   lv_obj_t *island=glass_box(bar,830,0,178,32,home_muted(),16);
   g_status_ui.island=island;
   glass_clickable(island,settings_clicked,NULL);
@@ -153,19 +160,16 @@ static void glass_status_create(void)
   lv_obj_set_style_bg_opa(island,LV_OPA_20,LV_STATE_PRESSED);
   lv_obj_set_style_border_width(island,1,LV_STATE_PRESSED);
   lv_obj_set_style_border_color(island,lv_color_hex(status_ink()),LV_STATE_PRESSED);
-  g_status_ui.network = home_icon(island, LV_SYMBOL_WIFI, 14, 8, 14, home_muted());
+  g_status_ui.network = status_icon(island, LV_SYMBOL_WIFI, 14, 14);
   for(unsigned i=0;i<4;i++){
     unsigned height=4+i*3;
-    g_status_ui.bars[i]=glass_box(island,14+i*5,20-height,3,height,home_muted(),1);
+    g_status_ui.bars[i]=glass_box(island,14+i*5,(GLASS_STATUS_HEIGHT+13)/2-height,3,height,home_muted(),1);
     lv_obj_remove_flag(g_status_ui.bars[i],LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
   }
-  g_status_ui.bluetooth=home_icon(island,LV_SYMBOL_BLUETOOTH,48,8,14,home_muted());
+  g_status_ui.bluetooth=status_icon(island,LV_SYMBOL_BLUETOOTH,48,14);
   g_status_ui.ble_count=status_text(island,"0",66,8,18);
-  g_status_ui.battery=home_icon(island,LV_SYMBOL_BATTERY_EMPTY,92,8,16,home_muted());
-  g_status_ui.charging=home_icon(island,LV_SYMBOL_CHARGE,110,8,14,home_muted());
+  g_status_ui.battery=status_icon(island,LV_SYMBOL_BATTERY_EMPTY,92,16);
+  g_status_ui.charging=status_icon(island,LV_SYMBOL_CHARGE,110,14);
   g_status_ui.battery_text=status_text(island,"--%",119,8,51);
-  lv_obj_t *aligned[]={g_status_ui.music,g_status_ui.network,g_status_ui.bluetooth,
-    g_status_ui.battery,g_status_ui.charging};
-  for(unsigned i=0;i<sizeof(aligned)/sizeof(aligned[0]);i++)status_align_label(aligned[i]);
   glass_status_tick();
 }

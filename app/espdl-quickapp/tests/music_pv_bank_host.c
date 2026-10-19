@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <assert.h>
 #include <stdlib.h>
-#include "glass_music_pv_bank.h"
+#include "../../jizura/device-codec/glass_music_pv_bank.h"
 int main(int argc,char **argv)
 {
   assert(argc==4);unsigned style=strtoul(argv[2],NULL,10);bool valid=atoi(argv[3]);

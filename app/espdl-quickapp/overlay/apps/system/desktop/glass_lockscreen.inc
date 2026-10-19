@@ -186,6 +186,7 @@ static void lock_refresh(lv_timer_t *timer)
 
 static void lock_deleted(lv_event_t *e)
 {
+  if(g_lock_page_pending){lv_async_call_cancel(lock_page_async,NULL);g_lock_page_pending=false;}
   LV_UNUSED(e);music_cover_reset(&g_lock_ui.cover);glass_lock_photo_cancel();if(g_lock_ui.timer)lv_timer_delete(g_lock_ui.timer);
   free(g_lock_ui.shown);memset(&g_lock_ui,0,sizeof(g_lock_ui));
   if(g_music_ui.timer)lv_timer_resume(g_music_ui.timer);
@@ -302,6 +303,7 @@ static void glass_lock_open(lv_event_t *e)
    * internal static RAM is reserved for DMA and the kernel. */
   g_lock_ui.shown=calloc(1,sizeof(*g_lock_ui.shown));
   if(!g_lock_ui.shown){show_toast("内存不足，稍后再试");return;}
+  desktop_navigation_cancel();
   music_full_close(NULL);
   toast_cancel();dialog_cancel();glass_status_visibility(true);
   glass_lock_cover_cancel(GLASS_COVER_MUSIC);g_music_ui.cover.requested=false;

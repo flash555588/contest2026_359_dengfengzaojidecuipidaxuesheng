@@ -9,16 +9,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EVENT_LIMIT (SIZE_MAX - 1)
+#define EVENT_LIMIT (256u * 1024)
 #define TEXT_LIMIT (2u * 1024 * 1024)
-#define TOOL_LIMIT (SIZE_MAX - 1)
+#define TOOL_LIMIT (256u * 1024)
+/* Shared by ALL blocks, reasoning and framing, rather than per field. */
+#define BUFFER_BUDGET (2u * 1024 * 1024)
 #define BLOCKS 16
-struct buffer { char *data; size_t size, capacity; };
+struct buffer { char *data; size_t size, capacity; size_t *allocated; };
 struct block { struct buffer id, name, args, text, signature; int kind; bool stopped; };
 struct claw_stream {
   bool anthropic, done, finished, limited;
   struct buffer line, event, text, reasoning;
   struct block blocks[BLOCKS];
+  size_t allocated;
   const char *error;
 };
 struct observer_binding { claw_stream_observer fn; void *user; };
@@ -54,8 +57,11 @@ static int append(struct buffer *b, const char *text, size_t count, size_t limit
   if (need > b->capacity) {
     size_t capacity = b->capacity ? b->capacity : 256;
     while (capacity < need) { if (capacity > SIZE_MAX / 2) { capacity = need; break; } capacity *= 2; }
+    if (capacity > limit + 1) capacity = limit + 1;
+    if (capacity - b->capacity > BUFFER_BUDGET - *b->allocated) return -EFBIG;
     char *next = realloc(b->data, capacity);
     if (!next) return -ENOMEM;
+    *b->allocated += capacity - b->capacity;
     b->data = next; b->capacity = capacity;
   }
   memcpy(b->data + b->size, text, count); b->size += count; b->data[b->size] = 0;
@@ -191,7 +197,15 @@ static int event(struct claw_stream *s)
 }
 struct claw_stream *claw_stream_create(bool anthropic)
 {
-  struct claw_stream *s = calloc(1, sizeof(*s)); if (s) s->anthropic = anthropic; return s;
+  struct claw_stream *s = calloc(1, sizeof(*s));
+  if (!s) return NULL;
+  s->anthropic = anthropic;
+  s->line.allocated = s->event.allocated = s->text.allocated = s->reasoning.allocated = &s->allocated;
+  for (unsigned i = 0; i < BLOCKS; i++) {
+    struct block *b = &s->blocks[i];
+    b->id.allocated = b->name.allocated = b->args.allocated = b->text.allocated = b->signature.allocated = &s->allocated;
+  }
+  return s;
 }
 int claw_stream_feed(struct claw_stream *s, const char *data, size_t size)
 {

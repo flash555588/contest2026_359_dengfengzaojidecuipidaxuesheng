@@ -95,14 +95,21 @@ function boot(width = 1024, height = 600, options = {}) {
     if(options.busyAdmissions){options.busyAdmissions--;return -16;}
     if(!options.acceptControls)return -22;
     const state=responses.states.find(row=>row.entity_id===entity)||(options.sceneStates||[]).find(row=>row.entity_id===entity);
-    if((action==='turn_on'||action==='turn_off')&&!/^(scene|script)\./.test(entity))state.state=action==='turn_on'?'on':'off';
+    if((action==='turn_on'||action==='turn_off')&&!/^(scene|script)\./.test(entity))state.state=action==='turn_off'?'off':entity.startsWith('climate.')?'cool':entity.startsWith('water_heater.')?'electric':'on';
     if(body.brightness_pct!==undefined)state.attributes.brightness=Math.round(body.brightness_pct*255/100);
     if(body.color_temp_kelvin!==undefined)state.attributes.color_temp_kelvin=body.color_temp_kelvin;
     if(body.rgb_color!==undefined){state.attributes.rgb_color=body.rgb_color.slice();state.attributes.color_mode='rgb';}
     if(body.value!==undefined||body.option!==undefined)state.state=String(body.value===undefined?body.option:body.value);
     if(body.position!==undefined)state.attributes.current_position=body.position;
+    if(body.tilt_position!==undefined)state.attributes.current_tilt_position=body.tilt_position;
+    if(action==='open_cover'){state.state='open';state.attributes.current_position=100;}
+    if(action==='close_cover'){state.state='closed';state.attributes.current_position=0;}
+    if(action==='stop_cover'&&['opening','closing'].includes(state.state))state.state='open';
+    if(action==='open_cover_tilt')state.attributes.current_tilt_position=100;
+    if(action==='close_cover_tilt')state.attributes.current_tilt_position=0;
+    if(action==='media_play')state.state='playing';if(action==='media_pause')state.state='paused';if(action==='media_stop')state.state='idle';
     if(body.hvac_mode!==undefined)state.state=body.hvac_mode;
-    for(const key of ['percentage','preset_mode','oscillating','temperature','humidity','volume_level','is_volume_muted','effect','fan_mode','swing_mode','source','fan_speed','operation_mode'])
+    for(const key of ['percentage','preset_mode','oscillating','temperature','humidity','volume_level','is_volume_muted','effect','fan_mode','swing_mode','source','fan_speed','operation_mode','direction','swing_horizontal_mode','target_temp_low','target_temp_high','away_mode'])
       if(body[key]!==undefined)state.attributes[key]=body[key];
     const id=requestId++;pending.push({requestId:id,busy:false,done:true,status:options.controlStatus||200,error:0,body:'[]'});return id;
   };
@@ -1055,7 +1062,7 @@ function commonProfileSamples(){
     {entity_id:'cover.curtain',state:'open',attributes:{friendly_name:'窗帘',supported_features:15,current_position:60}},
     {entity_id:'fan.purifier',state:'on',attributes:{friendly_name:'净化器',device_type:'air-purifier',supported_features:57,percentage:40,preset_modes:['auto','quiet'],pm25:12}},
     {entity_id:'humidifier.room',state:'on',attributes:{friendly_name:'加湿器',supported_features:1,humidity:55,min_humidity:30,max_humidity:80,current_humidity:48,available_modes:['auto','sleep']}},
-    {entity_id:'media_player.speaker',state:'playing',attributes:{friendly_name:'音箱',supported_features:4|8|16|32|128|256|512|2048|4096|1,volume_level:.35,source_list:['Bluetooth','TV'],source:'Bluetooth'}},
+    {entity_id:'media_player.speaker',state:'playing',attributes:{friendly_name:'音箱',supported_features:4|8|16|32|128|256|16384|2048|4096|1,volume_level:.35,source_list:['Bluetooth','TV'],source:'Bluetooth'}},
     {entity_id:'vacuum.robot',state:'idle',attributes:{friendly_name:'扫地机',supported_features:8192|4|8|16|32|64,battery_level:86,fan_speed:'standard',fan_speed_list:['quiet','standard','max']}},
     {entity_id:'water_heater.bath',state:'on',attributes:{friendly_name:'热水器',supported_features:3,temperature:50,min_temp:35,max_temp:75,target_temp_step:1,operation_mode:'electric',operation_list:['electric','eco','off']}},
     {entity_id:'sensor.temp',state:'24.5',attributes:{friendly_name:'温度',device_class:'temperature',unit_of_measurement:'°C'}},
@@ -2375,4 +2382,58 @@ test('waterfall indexed window matches full-scan selection at every scroll depth
   assert.deepEqual(after.snapshots,before.snapshots,'same pooled slots for all 202 scroll positions');
   assert.equal(after.controls,0);assert(after.yReads<before.yReads*.4);
   console.log('WATERFALL_Y_READS',JSON.stringify({before:before.yReads,after:after.yReads}));
+});
+
+function internalFunctionsFixture(){
+  const states=[
+    {entity_id:'fan.internal',state:'on',attributes:{friendly_name:'客厅风扇',supported_features:63,direction:'forward',percentage:40,preset_modes:['normal','sleep']}},
+    {entity_id:'cover.internal',state:'open',attributes:{friendly_name:'百叶窗',supported_features:255,current_position:50,current_tilt_position:10}},
+    {entity_id:'climate.internal',state:'cool',attributes:{friendly_name:'空调',supported_features:2|4|128|256|512,target_temp_low:22,target_temp_high:27,min_temp:16,max_temp:30,target_temp_step:.5,humidity:50,min_humidity:40,max_humidity:60,swing_horizontal_modes:['off','on'],swing_horizontal_mode:'off'}},
+    {entity_id:'water_heater.internal',state:'electric',attributes:{friendly_name:'热水器',supported_features:15,temperature:50,min_temp:35,max_temp:75,away_mode:false,operation_mode:'electric',operation_list:['electric','eco']}},
+    {entity_id:'button.internal',state:'unknown',attributes:{friendly_name:'执行按钮'}},
+    {entity_id:'sensor.internal',state:'25',attributes:{friendly_name:'温度',unit_of_measurement:'°C'}}
+  ];
+  const catalog={fan:['turn_on','turn_off','set_direction','set_percentage','set_preset_mode'],cover:['open_cover','close_cover','stop_cover','open_cover_tilt','close_cover_tilt','stop_cover_tilt','set_cover_position','set_cover_tilt_position'],climate:['turn_on','turn_off','set_temperature','set_humidity','set_swing_horizontal_mode'],water_heater:['turn_on','turn_off','set_temperature','set_operation_mode','set_away_mode'],button:['press']};
+  const services=Object.entries(catalog).map(([domain,actions])=>({domain,services:Object.fromEntries(actions.map(a=>[a,{}]))}));
+  const instrumented=source.replace('  globalThis.ESPHomeHA = {','  globalThis.__internal={functionControls,requestFunction,indexedEntity,supports,serviceReached};\n  globalThis.ESPHomeHA = {');
+  const r=boot(1024,536,{nativeActions:true,acceptControls:true,states,services,source:instrumented});
+  r.context.ESPHomeHA.refresh();for(let i=0;i<40;i++)r.tick();
+  r.internal=r.context.__internal;r.states=states;
+  r.specs=id=>r.internal.functionControls(r.internal.indexedEntity(id));
+  r.run=(id,key,value)=>{const item=r.internal.indexedEntity(id),spec=r.specs(id).find(s=>s.key===key);assert(spec,id+' '+key);r.internal.requestFunction(item,spec,value);for(let i=0;i<25;i++)r.tick();};
+  return r;
+}
+test('device internal functions preserve actual capability flags and expose missing controls',()=>{
+  const r=internalFunctionsFixture();
+  assert(r.specs('fan.internal').some(s=>s.service==='set_direction'));
+  assert(r.specs('cover.internal').some(s=>s.key==='tilt_position'));
+  for(const key of ['swing_horizontal_mode','target_temp_low','target_temp_high','humidity'])assert(r.specs('climate.internal').some(s=>s.key===key),key);
+  assert(r.specs('water_heater.internal').some(s=>s.key==='away_mode'));
+  assert.equal(r.specs('sensor.internal').length,0);
+  const fan=r.internal.indexedEntity('fan.internal');fan.supported_features=32;fan.state='off';
+  assert.equal(r.internal.supports(fan,'turn_on'),true);assert.equal(r.internal.supports(fan,'turn_off'),false);
+  assert.equal(r.specs('fan.internal').some(s=>s.key==='direction'),false);
+  const climate=r.internal.indexedEntity('climate.internal');climate.supported_features=128;
+  assert.equal(r.internal.supports(climate,'turn_on'),false);assert.equal(r.internal.supports(climate,'turn_off'),true);
+});
+test('device internal function operations send exact keys and verify corresponding readback',()=>{
+  const r=internalFunctionsFixture();
+  for(const [id,key,value] of [['fan.internal','direction','reverse'],['cover.internal','tilt_position',60],['climate.internal','swing_horizontal_mode','on'],['climate.internal','humidity',55],['water_heater.internal','away_mode',true]]){
+    const count=r.controls.length;r.run(id,key,value);assert.equal(r.controls.length,count+1);
+    assert.equal(r.controls.at(-1).entity,id);assert.equal(r.controls.at(-1).body[key],value);
+    assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready',id+' readback');
+  }
+  r.run('climate.internal','target_temp_low',23);
+  assert.deepEqual(r.controls.at(-1).body,{entity_id:'climate.internal',target_temp_low:23,target_temp_high:27});
+  const count=r.controls.length;r.run('climate.internal','target_temp_high',20);assert.equal(r.controls.length,count,'invalid pair never posted');
+  const climate=r.internal.indexedEntity('climate.internal');climate.state='cool';
+  assert.equal(r.internal.serviceReached(climate,'turn_on'),true,'climate power does not require state=on');
+  const cover=r.internal.indexedEntity('cover.internal');cover.current_tilt_position=20;
+  assert.equal(r.internal.serviceReached(cover,'open_cover_tilt'),false,'POST alone cannot verify tilt open');
+});
+test('device internal stateless buttons report acceptance rather than confirmed completion',()=>{
+  const r=internalFunctionsFixture();const item=r.internal.indexedEntity('button.internal'),spec=r.specs(item.entity_id).find(s=>s.service==='press');assert(spec);
+  r.internal.requestFunction(item,spec);for(let i=0;i<25;i++)r.tick();
+  assert.equal(r.controls.at(-1).action,'press');assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+  assert.equal(r.context.ESPHomeHA.snapshot().controlFeedback.find(f=>f.entity==='button.internal').kind,'accepted');
 });

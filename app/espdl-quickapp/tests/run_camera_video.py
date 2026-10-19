@@ -21,6 +21,9 @@ struct qpk_hw_progress {atomic_bool cancel,finish;atomic_uint bytes,elapsed_ms,p
 typedef int (*qpk_pcm_sink_t)(void*,const uint8_t*,size_t);
 #define QPK_VOLUME_SD 1
 static int volume_error,audio_error;
+static unsigned zoom_percent=100,style;
+static unsigned qpk_camera_style(void){return style;}
+static unsigned qpk_camera_zoom_percent(void){return zoom_percent;}
 static int qpk_volume_mounted(int volume){assert(volume==1);return volume_error;}
 static uint64_t qpk_now_ms(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return (uint64_t)t.tv_sec*1000+t.tv_nsec/1000000;}
 static int qpk_audio_capture_pcm(qpk_pcm_sink_t sink,void *cookie,struct qpk_hw_progress *p){
@@ -38,6 +41,20 @@ static unsigned frame_w=640,frame_h=480;
 static void wait_end(void){for(unsigned n=0;n<5000;n++){pthread_mutex_lock(&g_video_lock);bool busy=g_video_job!=NULL;pthread_mutex_unlock(&g_video_lock);if(!busy)return;usleep(1000);}assert(!"worker leaked");}
 static void capture(unsigned ms){uint64_t end=qpk_now_ms()+ms;while(qpk_now_ms()<end){qpk_video_frame(frame,frame_w,frame_h,frame_w);usleep(15000);}}
 int main(void){
+  /* Exercise the actual frame queue with a coloured margin: zoom must remove
+   * that margin in the recorded frame, not just update the preview label. */
+  struct qpk_video_job *sample=calloc(1,sizeof(*sample));assert(sample);sample->ready=true;
+  g_video_job=sample;
+  for(unsigned y=0;y<480;y++)for(unsigned x=0;x<640;x++)frame[y*640+x]=x<100||x>=540?0xf800:0x001f;
+  for(unsigned zoom=100;zoom<=200;zoom+=100){
+    zoom_percent=zoom;sample->next_frame=0;memset(sample->slot_state,0,sizeof(sample->slot_state));
+    qpk_video_frame(frame,640,480,640);assert(sample->slot_state[0]==2);
+    assert(sample->frames[0][90*320+40]==(zoom==100?0xf800:0x001f));
+  }
+  style=2;sample->next_frame=0;memset(sample->slot_state,0,sizeof(sample->slot_state));
+  qpk_video_frame(frame,640,480,640);assert(sample->slot_state[0]==2);
+  assert(sample->frames[0][90*320+40]==camera_color_pixel(0x001f,2));
+  style=0;g_video_job=NULL;free(sample);zoom_percent=100;
   assert(qpk_video_start()==-EPERM);assert(!qpk_video_mode(true));
   qpk_video_authorize(true);assert(qpk_video_mode(true));
   volume_error=-ENODEV;assert(!qpk_video_start());wait_end();assert(qpk_video_status(NULL)==-ENODEV);
@@ -46,7 +63,7 @@ int main(void){
   assert(!qpk_video_start());qpk_video_stop();wait_end();assert(qpk_video_status(NULL)==-ENODATA);
   for(unsigned i=0;i<1024*600;i++)frame[i]=0xf800;
   for(unsigned cycle=0;cycle<3;cycle++){
-    frame_w=cycle?1024:640;frame_h=cycle?600:480;
+    frame_w=cycle?1024:640;frame_h=cycle?600:480;zoom_percent=cycle==0?100:cycle==1?150:300;
     assert(!qpk_video_start());assert(qpk_video_start()==-EBUSY);assert(!qpk_video_mode(false));
     capture(1200);assert(qpk_video_status(NULL)==2);
     if(cycle==2)qpk_video_authorize(false);else qpk_video_stop();

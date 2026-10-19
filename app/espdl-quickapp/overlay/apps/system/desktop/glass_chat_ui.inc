@@ -43,18 +43,19 @@ static void chat_display_expand(void)
 }
 struct chat_output_part {lv_obj_t *root,*text,*caption,*numbers,*viewport;bool code,rich;uint32_t signature;};
 
-enum chat_ball_phase {BALL_IDLE,BALL_LISTEN,BALL_REPLY,BALL_SPEAK,BALL_DRAIN,BALL_WAKE,BALL_WAKE_DELAY};
+enum chat_ball_phase {BALL_IDLE,BALL_LISTEN,BALL_REPLY,BALL_SPEAK,BALL_DRAIN};
 enum chat_ball_wave {BALL_WAVE_OFF,BALL_WAVE_LISTEN,BALL_WAVE_THINK,BALL_WAVE_SPEAK};
 enum {CHAT_WORKSPACE_LEFT=196,CHAT_WORKSPACE_WIDTH=808,
       CHAT_WORKSPACE_CENTER=CHAT_WORKSPACE_LEFT+CHAT_WORKSPACE_WIDTH/2};
 static struct {
   bool voice_session,voice_owned,speech_owned,voice_heard,voice_wave_reduced;
-  bool voice_wake_mode;
-  uint32_t voice_wake_request,voice_listen_at;
+  bool voice_from_wake;
+  uint32_t voice_listen_at;
   enum chat_ball_phase voice_phase;
-  uint32_t voice_revision,voice_started,voice_last_sound,voice_ready_at,voice_turn;
+  uint32_t voice_request,voice_speech_request,voice_revision,voice_started,voice_last_sound,voice_ready_at,voice_turn;
   size_t speech_cursor;
-  lv_obj_t *voice_hint,*voice_caption,*voice_end,*voice_wake_label;
+  lv_obj_t *voice_hint,*voice_caption,*voice_end;
+  lv_obj_t *voice_result;uint32_t voice_result_signature,external_result_turn;
   lv_obj_t *voice_waveform;
   lv_obj_t *voice_face_label;
   uint32_t voice_face_request,voice_face_frame,voice_face_seen;
@@ -101,6 +102,15 @@ static struct {
   bool workspace_ball_compact;
   uint32_t background, surface, sidebar, primary, secondary, accent, on_accent;
 } g_chat_ui;
+/* A failed staged launch keeps the native chat page usable, including its
+ * original full-screen geometry. Never resume a page already retired. */
+static void chat_display_resume(void)
+{
+  if (!chat_display.active && g_desktop.chat_page &&
+      g_chat_ui.root && g_chat_ui.root == g_desktop.current_card)
+    chat_display_expand();
+}
+
 static char chat_drafts[AGENT_MODE_COUNT][CHAT_PROMPT_BYTES + 1];
 #define chat_draft chat_drafts[g_chat_ui.mode]
 static enum glass_agent_mode chat_interface_modes[2]={AGENT_MODE_CREATE,AGENT_MODE_CHAT};
@@ -166,6 +176,39 @@ static void chat_qpk_preview_back(void)
   glass_chat_show(origin);
 }
 
+#include "glass_cli_resource.inc"
+static void chat_cli_back(void)
+{
+  bool origin = chat_cli_origin;
+  chat_cli_active = false;
+  glass_chat_show(origin);
+}
+static void chat_ui_cli(lv_event_t *e)
+{
+  LV_UNUSED(e);
+  bool origin = g_desktop.chat_return_apps;
+  /* Measure the CLI in its final shell geometry. Retiring the chat page
+   * must not resize a page that has already been laid out for full screen. */
+  lv_obj_t *card = qapp_page_prepare("ESPClaw · 电脑 CLI");
+  if (!card) {
+    show_toast("内存不足，暂时无法打开电脑 CLI"); return;
+  }
+  lv_obj_t *page = lv_obj_get_parent(card);
+  lv_obj_update_layout(card);
+  /* Keep the old page painted while QuickJS constructs the replacement. */
+  lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
+  int ret = qpk_runtime_launch(card, "ESPClaw 电脑 CLI", "ai.claude_control", "builtin", "builtin:/espclaw/cli.js",
+      glass_cli_source, sizeof(glass_cli_source)-1, zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
+  if (ret || qpk_runtime_last_error()[0] || !qpk_runtime_widget_count()) {
+    qapp_page_discard(lv_obj_get_parent(card));
+    glass_chat_show(origin); show_toast("电脑 CLI 打开失败，请重试"); return;
+  }
+  qapp_page_commit(card);
+  lv_obj_remove_flag(page, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_update_layout(page);
+  chat_cli_active = true; chat_cli_origin = origin;
+}
+
 static void chat_ui_preview_app(lv_event_t *e)
 {
   LV_UNUSED(e);
@@ -185,11 +228,10 @@ static void chat_ui_preview_app(lv_event_t *e)
   const char *error = qpk_runtime_last_error();
   if (ret || error[0] || !qpk_runtime_widget_count()) {
     glass_qpk_preview_result(draft.revision, error[0] ? error : ret ? "预览启动失败，请检查脚本或可用内存。" : "脚本未创建任何可见控件。" );
-    qpk_runtime_stop(); lv_obj_delete(lv_obj_get_parent(card));
+    qapp_page_discard(lv_obj_get_parent(card));
     show_toast("预览失败，返回对话让 AI 根据错误修改"); return;
   }
   glass_qpk_preview_result(draft.revision, "");
-  g_desktop.chat_page = false; g_desktop.chat_return_apps = false;
   qapp_page_commit(card);
   chat_qpk_preview_active = true; chat_qpk_preview_origin = origin;
   chat_qpk_preview_revision = draft.revision;
@@ -254,6 +296,7 @@ static lv_obj_t *chat_ui_button(lv_obj_t *parent, const char *text, int x, int y
 
 #include "glass_chat_trace.inc"
 #include "glass_chat_cards.inc"
+#include "glass_chat_result_ui.inc"
 
 static bool chat_ui_busy(void)
 { return g_chat_ui.snapshot->phase != CHAT_IDLE; }

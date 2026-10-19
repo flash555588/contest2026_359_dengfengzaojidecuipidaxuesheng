@@ -87,6 +87,8 @@ int main(void) {
  printf("PCM_FRAMING_PASS cases=%u; sample order, stereo slots, 64-byte DMA alignment, tail silence, guards, queue drain, rejected DMA not counted\n",cases);
 }
 '''
+header=(source.parent/'glass_music_pcm.h').read_text()
+prefix=prefix.replace('#define MUSIC_PCM_FRAMES 1152',re.search(r'^#define MUSIC_PCM_FRAMES \d+$',header,re.M)[0])
 with tempfile.TemporaryDirectory(prefix='pcm-framing-') as directory:
     header=source.with_suffix('.h').read_text()
     frames=int(re.search(r'^#define MUSIC_PCM_FRAMES (\d+)$',header,re.M)[1])

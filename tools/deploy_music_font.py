@@ -4,7 +4,7 @@ import argparse,hashlib,ipaddress,json,re,secrets,socket,threading,time
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from serial.tools import list_ports
-from test_jizura_device import Console
+from music_device_console import Console
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)

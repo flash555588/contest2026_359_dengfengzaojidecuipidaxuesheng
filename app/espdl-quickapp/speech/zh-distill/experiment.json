@@ -1,0 +1,56 @@
+{
+  "name": "xiaoya-zh-tiny-p4",
+  "kind": "custom distilled student, not official quantized weights",
+  "teacher": "zh_CN-xiao_ya-medium",
+  "upstream_revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+  "student": {
+    "duration_hidden": 32,
+    "acoustic_hidden": 48,
+    "acoustic_depth": 3,
+    "decoder_channels": [
+      96,
+      48,
+      24,
+      12
+    ],
+    "target_parameters": 500000
+  },
+  "hardware": {
+    "board": "ESP32-P4 v3.2",
+    "host_gpu": "RTX 5060 Laptop GPU",
+    "host_vram_mib": 8151
+  },
+  "targets": {
+    "p4_warm_rtf_max": 1.0,
+    "p4_warm_first_pcm_ms_max": 1000,
+    "weights_bytes_max": 1048576,
+    "arena_bytes_max": 8388608,
+    "quantized_reference_min_correlation": 0.99
+  },
+  "rules": {
+    "smoke_is_quality_candidate": false,
+    "deploy_only_after_quantization_and_quality_gate": true,
+    "preserve_current_firmware": true,
+    "training_evaluation_texts_disjoint": true,
+    "license": "Teacher MODEL_CARD: BZNSYP, non-commercial use"
+  },
+  "profiles": {
+    "smoke": {
+      "training_rows": 256,
+      "upstream_profile": "smoke"
+    },
+    "full": {
+      "training_rows": 628,
+      "upstream_profile": "shipped"
+    },
+    "probe": {
+      "training_rows": 32,
+      "evaluation_rows": 4,
+      "duration_steps": 200,
+      "acoustic_steps": 200,
+      "decoder_trained": false,
+      "quality_candidate": false
+    }
+  },
+  "data_preprocessing": "strip known Variant suffix, deduplicate normalized bodies, exclude evaluation bodies from training"
+}

@@ -10,6 +10,12 @@ static void camera_read(lv_indev_t *input,lv_indev_data_t *data)
 {LV_UNUSED(input);data->point=camera_point;data->state=camera_pressed;}
 static void camera_tick(lv_display_t *display)
 {for(unsigned i=0;i<12;i++){if(qpk_runtime_running())assert(qpk_review_eval("__reviewTick()")==0);lv_tick_inc(20);lv_timer_handler();}lv_refr_now(display);}
+static void camera_zoom_swipe(lv_indev_t *input,lv_display_t *display,int from,int to)
+{
+  camera_point=(lv_point_t){732,from};camera_pressed=LV_INDEV_STATE_PRESSED;lv_indev_read(input);lv_tick_inc(25);
+  for(int i=1;i<=6;i++){camera_point.y=from+(to-from)*i/6;lv_indev_read(input);lv_tick_inc(25);}
+  camera_pressed=LV_INDEV_STATE_RELEASED;lv_indev_read(input);camera_tick(display);
+}
 static void camera_press(lv_indev_t *input,const char *caption,lv_display_t *display)
 {
   lv_obj_update_layout(g_desktop.screen);lv_obj_t *label=review_label_find(g_desktop.current_card,caption);assert(label);
@@ -41,10 +47,18 @@ int main(int argc,char **argv)
     review_capture(display,"camera-empty","相机 · 未连接设备");
     assert(qpk_review_eval("__devices=Array.from({length:9},(_,i)=>({id:'usb:'+i,generation:1,name:'USB 相机 '+i,transport:'usb',previewSupported:true}));CameraPreview.refresh();system.camera.photoStatus=()=>({status:0,path:''});globalThis.__starts=0;system.camera.startDevice=()=>{__starts++;__cameraState={busy:true,error:0};return true;}")==0);
     camera_tick(display);review_capture(display,"camera-ready","相机 · 照片取景");
-    review_click("照片");camera_tick(display);assert(review_label_find(g_desktop.current_card,"视频"));
+    review_click("切换录制");camera_tick(display);assert(qpk_review_number("CameraPreview.video()"));
     review_capture(display,"camera-video","相机 · 录像含麦克风声音");
-    review_click("视频");camera_tick(display);
-    review_click("设备");camera_tick(display);review_capture(display,"camera-devices","相机 · 设备与取景设置");
+    review_click("切换录制");camera_tick(display);assert(!qpk_review_number("CameraPreview.video()"));
+    review_click("色彩风格");camera_tick(display);assert(qpk_review_number("CameraPreview.style()")==1);
+    review_capture(display,"camera-vivid","相机 · 鲜艳色彩风格");
+    review_click("色彩风格");camera_tick(display);assert(qpk_review_number("CameraPreview.style()")==2);
+    review_capture(display,"camera-mono","相机 · 黑白色彩风格");
+    review_click("色彩风格");camera_tick(display);
+    review_click("切换相机");camera_tick(display);
+    lv_obj_t *done=review_label_find(g_desktop.current_card,"完成");assert(done);
+    assert(lv_obj_get_height(done)<=26); /* Two Chinese characters stay on one line. */
+    review_capture(display,"camera-devices","相机 · 设备与取景设置");
     const char *actions[]={"开始预览","刷新设备","下一页","上一页"};
     for(unsigned i=0;i<4;i++){
       lv_obj_t *label=review_label_find(g_desktop.current_card,actions[i]);assert(label);
@@ -54,14 +68,32 @@ int main(int argc,char **argv)
     lv_indev_t *input=lv_indev_create();lv_indev_set_type(input,LV_INDEV_TYPE_POINTER);lv_indev_set_display(input,display);lv_indev_set_read_cb(input,camera_read);
     camera_press(input,"下一页",display);camera_press(input,"下一页",display);
     review_capture(display,"camera-page3","相机 · 更多设备");assert(qpk_review_number("__starts")==0);
+    camera_press(input,"USB 相机 6",display);
+    assert(!review_label_find(g_desktop.current_card,"摄像头"));
+    assert(qpk_review_number("__starts")==0);
+    review_capture(display,"camera-selected","相机 · 点选设备自动收起");
+    camera_zoom_swipe(input,display,390,330);assert(qpk_review_number("CameraPreview.zoom()")==150);
+    review_capture(display,"camera-zoom-15","相机 · 上滑选择 1.5 倍取景");
+    camera_zoom_swipe(input,display,390,290);assert(qpk_review_number("CameraPreview.zoom()")==300);
+    review_capture(display,"camera-zoom-3","相机 · 3 倍取景");
+    camera_zoom_swipe(input,display,210,430);assert(qpk_review_number("CameraPreview.zoom()")==100);
     camera_press(input,"开始预览",display);assert(qpk_review_number("__starts")==1);
-    camera_press(input,"停止",display);assert(qpk_review_number("!__cameraState.busy"));
-    camera_press(input,LV_SYMBOL_CLOSE,display);assert(!qpk_runtime_running());
+    assert(qpk_review_eval("CameraPreview.stop()")==0);camera_tick(display);assert(qpk_review_number("!__cameraState.busy"));
+    camera_press(input,"预览相册",display);desktop_camera_album_service();camera_tick(display);
+    assert(!qpk_runtime_running());assert(review_label_find(g_desktop.current_card,"相册"));
+    review_capture(display,"camera-album","相机 · 本机拍摄相册");
+    camera_press(input,"camera-00000001.bmp",display);
+    review_capture(display,"camera-album-preview","相机 · 预览拍摄内容");
+    lv_obj_t *back=review_callback_find(g_desktop.current_card,qapp_back);assert(back);
+    lv_obj_send_event(back,LV_EVENT_CLICKED,NULL);camera_tick(display);assert(qpk_runtime_running());
+    camera_point=(lv_point_t){1008,300};camera_pressed=LV_INDEV_STATE_PRESSED;lv_indev_read(input);lv_tick_inc(25);
+    camera_pressed=LV_INDEV_STATE_RELEASED;lv_indev_read(input);camera_tick(display);
+    assert(!qpk_runtime_running());
     lv_indev_delete(input);
     assert(lv_obj_get_y(g_desktop.panel)==0&&lv_obj_get_height(g_desktop.panel)==568);
     assert(lv_obj_get_y(g_desktop.screen)==32&&lv_obj_get_height(g_desktop.screen)==568);
     assert(!g_desktop.statusbar||!lv_obj_has_flag(g_desktop.statusbar,LV_OBJ_FLAG_HIDDEN));
-    puts("CAMERA_NATIVE_OK: fullscreen 600px, no header, safe-area restored; empty/9 devices/paging; actual pointer start-stop; both themes");
+    puts("CAMERA_NATIVE_OK: fullscreen, removed controls, styles and recording state, paged cameras, pointer album preview and return, safe-area restored; both themes");
   }
   fputs("\n]\n",review_manifest);fclose(review_manifest);return 0;
 }

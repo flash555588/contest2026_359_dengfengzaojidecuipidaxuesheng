@@ -233,6 +233,7 @@ bool glass_grok_gaze(struct glass_grok *b,int x,int y)
 }
 void glass_grok_action(struct glass_grok *b,unsigned action){if(b&&b->states==42&&(action==0||(action>=42&&action<=51))&&action!=b->action){b->action=action;b->epoch++;b->next_frame=0;b->due=lv_tick_get();grok_wake(b);}}
 void glass_grok_set_active(struct glass_grok *b,bool active){if(b&&b->active!=active){b->active=active;grok_wake(b);}}
+void glass_grok_refresh(struct glass_grok *b){if(b)grok_tick(b->timer);}
 void glass_grok_follow_chat(struct glass_grok *b,bool follow){if(b){b->manual=!follow;b->polled_at=0;grok_wake(b);}}
 void glass_grok_set_reduced_motion(struct glass_grok *b,bool reduced){if(b&&b->reduced!=reduced){b->reduced=reduced;grok_wake(b);}}
 void glass_grok_set_obscured_by(struct glass_grok *b,lv_obj_t *o){if(b){b->overlay=o;grok_wake(b);}}

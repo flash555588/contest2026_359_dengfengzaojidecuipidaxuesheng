@@ -19,6 +19,9 @@ int qpk_storage_read(const char *root, const char *package, const char *key,
                      char *value, size_t capacity, size_t *length);
 int qpk_storage_write(const char *root, const char *package, const char *key,
                       const char *value, size_t length);
+/* Flush the temporary file before atomic rename; used before scheduled effects. */
+int qpk_storage_write_sync(const char *root, const char *package, const char *key,
+                           const char *value, size_t length);
 int qpk_storage_remove(const char *root, const char *package, const char *key);
 /* Worker-thread uninstall helpers. Never follow symbolic links. */
 int qpk_remove_tree(const char *path);

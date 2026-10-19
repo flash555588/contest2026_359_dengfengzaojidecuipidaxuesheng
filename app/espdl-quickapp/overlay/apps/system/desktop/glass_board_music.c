@@ -4,6 +4,7 @@
 #include "glass_chat.h"
 #include "glass_music.h"
 #include <errno.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +15,8 @@
 /* Only metadata crosses the MCP boundary. URLs and credentials stay in music. */
 static const char catalog[] =
 "{\"name\":\"music_status\",\"description\":\"Read native playback state, title, artist, progress and volume. Renders a music card in chat; never opens a page.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
-"{\"name\":\"music_search\",\"description\":\"Search for one song by title only; check the returned artist. Do not append the artist to the title. Does not start playback. No stream URL is returned.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
-"{\"name\":\"music_play\",\"description\":\"Request playback by song title only; do not append the artist. Returns accepted, not proof of audible playback. Use music_status to observe playing. Playback continues after the chat request ends. Never opens the music app.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
+"{\"name\":\"music_search\",\"description\":\"Search by song title only, never append the artist. Returns one song and a result_id valid once for 60 seconds. Check title and requested artist before playing. Search alone never plays. No stream URL is returned.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127}},\"required\":[\"query\"],\"additionalProperties\":false}},"
+"{\"name\":\"music_play\",\"description\":\"Play a checked search result using its original query and result_id, without another lookup. Expired, replaced or used results are rejected. Query alone remains supported for title lookup. Returns accepted; check music_status and track_id before reporting playback. Continues in background, never opens a page.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"maxLength\":127},\"result_id\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":4294967295}},\"required\":[\"query\"],\"additionalProperties\":false}},"
 "{\"name\":\"music_pause\",\"description\":\"Request pause, idempotently. Does not toggle or start another song.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
 "{\"name\":\"music_resume\",\"description\":\"Request resume of the current active track, idempotently. Does not restart a stopped song.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
 "{\"name\":\"music_stop\",\"description\":\"Request stop of native music playback.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
@@ -68,7 +69,7 @@ static cJSON *card(const char *title,const char *artist,const char *label,unsign
   cJSON_AddStringToObject(r,"name",name);cJSON_AddStringToObject(r,"state",state);
   cJSON_AddNumberToObject(r,"level",level);cJSON_AddBoolToObject(r,"on",on);return r;
 }
-static char *snapshot(const char *request)
+static char *snapshot(const char *request,unsigned requested_track)
 {
   struct music_now_playing *s=calloc(1,sizeof(*s));if(!s)return NULL;
   glass_music_now_playing(s);
@@ -78,14 +79,20 @@ static char *snapshot(const char *request)
   cJSON_AddNumberToObject(r,"position_ms",s->position_ms);cJSON_AddNumberToObject(r,"duration_ms",s->duration_ms);
   cJSON_AddNumberToObject(r,"volume",s->volume);cJSON_AddNumberToObject(r,"track_id",s->track_id);
   cJSON_AddBoolToObject(r,"pause_requested",s->pause_requested);
+  if(requested_track)cJSON_AddNumberToObject(r,"requested_track_id",requested_track);
   if(request){cJSON_AddBoolToObject(r,"accepted",true);cJSON_AddBoolToObject(r,"verified",false);}
   cJSON_AddItemToObject(r,"card",card(s->name,s->artist,request?request:state_label(s->state),s->position_ms,s->duration_ms,s->state==MUSIC_PLAYING));
   free(s);return finish(r);
 }
-static bool query_arg(const cJSON *args,const char **query)
+static bool query_arg(const cJSON *args,const char **query,bool allow_result)
 {
   const cJSON *q=cJSON_GetObjectItemCaseSensitive(args,"query");
-  if(!only(args,"query")||!cJSON_IsString(q)||!q->valuestring[0]||!glass_chat_utf8(q->valuestring,127,false))return false;
+  if(!cJSON_IsObject(args))return false;
+  for(const cJSON *v=args->child;v;v=v->next){
+    if(!v->string||v!=cJSON_GetObjectItemCaseSensitive(args,v->string))return false;
+    if(strcmp(v->string,"query")&&(!allow_result||strcmp(v->string,"result_id")))return false;
+  }
+  if(!cJSON_IsString(q)||!q->valuestring[0]||!glass_chat_utf8(q->valuestring,127,false))return false;
   /* The public tool takes names, never a transport URL or filesystem path. */
   if(strstr(q->valuestring,"://")||q->valuestring[0]=='/')return false;
   if(strspn(q->valuestring," ")==strlen(q->valuestring))return false;
@@ -111,6 +118,7 @@ static char *search(const char *query,atomic_bool *cancel)
   cJSON *r=cJSON_CreateObject();if(!r){free(s);return NULL;}
   cJSON_AddBoolToObject(r,"ok",true);cJSON_AddStringToObject(r,"name",s->result.name);
   cJSON_AddStringToObject(r,"artist",s->result.artist);cJSON_AddStringToObject(r,"query",query);
+  cJSON_AddNumberToObject(r,"result_id",s->search_revision);
   cJSON *found=card(s->result.name,s->result.artist,"找到歌曲",0,0,false);
   if(found)cJSON_ReplaceItemInObjectCaseSensitive(found,"entity",cJSON_CreateString("music.search"));
   cJSON_AddItemToObject(r,"card",found);
@@ -119,36 +127,47 @@ static char *search(const char *query,atomic_bool *cancel)
 static char *call_locked(const char *tool,const cJSON *args,atomic_bool *cancel)
 {
   if(cancel&&atomic_load(cancel))return error("cancelled");
-  if(!strcmp(tool,"music_status"))return only(args,NULL)?snapshot(NULL):error("invalid_arguments");
+  if(!strcmp(tool,"music_status"))return only(args,NULL)?snapshot(NULL,0):error("invalid_arguments");
   if(!strcmp(tool,"music_play")||!strcmp(tool,"music_search")){
-    const char *query;if(!query_arg(args,&query))return error("invalid_arguments");
+    bool play=!strcmp(tool,"music_play");
+    const char *query;if(!query_arg(args,&query,play))return error("invalid_arguments");
+    const cJSON *id=cJSON_GetObjectItemCaseSensitive(args,"result_id");
+    if(id&&(!cJSON_IsNumber(id)||!(id->valuedouble>=1&&id->valuedouble<=UINT_MAX)||
+      id->valuedouble!=(unsigned)id->valuedouble))return error("invalid_arguments");
     glass_music_start();
-    if(!strcmp(tool,"music_search"))return search(query,cancel);
+    if(!play)return search(query,cancel);
+    if(id){
+      unsigned track=0;
+      int ret=glass_music_play_result(query,(unsigned)id->valuedouble,&track);
+      if(ret)return error(ret==-EALREADY?"music_result_used_do_not_replay":
+        ret==-ESTALE?"music_result_expired_or_replaced":"music_play_rejected");
+      return snapshot("已请求播放",track);
+    }
     struct music_song song={0};snprintf(song.name,sizeof(song.name),"%s",query);snprintf(song.query,sizeof(song.query),"%s",query);
     if(glass_music_play(&song))return error("music_play_rejected");
-    return snapshot("已请求播放");
+    return snapshot("已请求播放",0);
   }
   if(!strcmp(tool,"music_pause")||!strcmp(tool,"music_resume")){
     if(!only(args,NULL))return error("invalid_arguments");
     bool paused=!strcmp(tool,"music_pause");
     if(glass_music_set_paused(paused))return error("no_active_track");
-    return snapshot(paused?"已请求暂停":"已请求继续");
+    return snapshot(paused?"已请求暂停":"已请求继续",0);
   }
   if(!strcmp(tool,"music_stop")){
     if(!only(args,NULL))return error("invalid_arguments");
-    glass_music_stop();return snapshot("已请求停止");
+    glass_music_stop();return snapshot("已请求停止",0);
   }
   if(!strcmp(tool,"music_volume")){
     const cJSON *v=cJSON_GetObjectItemCaseSensitive(args,"level");
     if(!only(args,"level")||!cJSON_IsNumber(v)||!(v->valuedouble>=0&&v->valuedouble<=100)||v->valuedouble!=(int)v->valuedouble)return error("invalid_arguments");
-    glass_music_volume((unsigned)v->valueint);return snapshot("音量已设置");
+    glass_music_volume((unsigned)v->valueint);return snapshot("音量已设置",0);
   }
   if(!strcmp(tool,"music_skip")){
     const cJSON *v=cJSON_GetObjectItemCaseSensitive(args,"direction");
     if(!only(args,"direction")||!cJSON_IsString(v)||(strcmp(v->valuestring,"next")&&strcmp(v->valuestring,"previous")))return error("invalid_arguments");
     glass_music_start();
     if(glass_music_skip(!strcmp(v->valuestring,"next")?1:-1))return error("no_favorite_tracks");
-    return snapshot("已请求切歌");
+    return snapshot("已请求切歌",0);
   }
   return error("unknown_music_tool");
 }

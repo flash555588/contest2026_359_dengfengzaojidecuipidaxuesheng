@@ -243,7 +243,7 @@ static void glass_mouse_status_value(unsigned index, bool ready,
   if (!g_mouse_values[index]) return;
   lv_label_set_text(g_mouse_values[index], ready ? yes : no);
   lv_obj_set_style_text_color(g_mouse_values[index],
-                              lv_color_hex(ready ? 0x4f9b77 : theme_secondary()), 0);
+                              lv_color_hex(ready ? 0x4f9b77 : detail_muted()), 0);
 }
 
 static void glass_mouse_refresh(lv_timer_t *timer)
@@ -378,72 +378,81 @@ static void glass_mouse_page(lv_obj_t *card)
   pthread_mutex_unlock(&g_mouse_ui_lock);
   lv_obj_add_event_cb(card, glass_mouse_deleted, LV_EVENT_DELETE, NULL);
 
-  lv_obj_t *status = glass_card(card, 20, 74, 300, 414, theme_surface());
-  glass_symbol(status, LV_SYMBOL_GPS, 22, 20, theme_accent());
-  glass_text(status, "OpenVela Mouse", 62, 20, 210, 20, theme_primary());
-  g_mouse_status = glass_text(status, "未启动", 22, 64, 254, 24, theme_primary());
+  detail_page(card);
+  detail_sidebar(card, "蓝牙", LV_SYMBOL_BLUETOOTH, panel_hide);
+  lv_obj_t *selected = detail_nav(card, "蓝牙设备", LV_SYMBOL_BLUETOOTH,
+                                  104, 140, NULL, NULL);
+  glass_sidebar_item(selected, true);
+  detail_text(card, "蓝牙与鼠标", 216, 26, 500, 28, detail_ink());
+  detail_text(card, "与电脑配对，将屏幕用作无线触摸板", 216, 66, 720, 14, detail_muted());
+
+  lv_obj_t *status = detail_tile(card, 216, 104, 268, 446);
+  home_icon(status, LV_SYMBOL_BLUETOOTH, 20, 22, 24, detail_accent());
+  detail_text(status, "OpenVela Mouse", 52, 24, 200, 18, detail_ink());
+  g_mouse_status = detail_text(status, "未启动", 20, 68, 228, 18, detail_ink());
+  lv_label_set_long_mode(g_mouse_status, LV_LABEL_LONG_WRAP);
   const char *labels[] = {"蓝牙主机", "设备连接", "安全加密", "输入通知"};
   for (unsigned i = 0; i < 4; i++)
     {
-      glass_text(status, labels[i], 22, 112 + i * 42, 132, 18, theme_secondary());
-      g_mouse_values[i] = glass_text(status, "--", 164, 112 + i * 42,
-                                     112, 18, theme_secondary());
+      detail_text(status, labels[i], 20, 124 + i * 40, 104, 14, detail_muted());
+      g_mouse_values[i] = detail_text(status, "--", 128, 124 + i * 40,
+                                      120, 14, detail_muted());
       lv_obj_set_style_text_align(g_mouse_values[i], LV_TEXT_ALIGN_RIGHT, 0);
     }
-  g_mouse_start = glass_button(status, "开始配对", 22, 296, 122,
-                               theme_accent(), glass_mouse_action,
-                               (void *)(intptr_t)GLASS_MOUSE_START);
-  g_mouse_stop = glass_button(status, "停止并断开", 156, 296, 122,
-                              theme_card(), glass_mouse_action,
-                              (void *)(intptr_t)GLASS_MOUSE_STOP);
-  glass_text(status, "配对后会保存设备并保持连接", 22, 358, 256, 18,
-             theme_secondary());
+  g_mouse_start = detail_button(status, "开始配对", 20, 300, 108,
+                                 glass_mouse_action,
+                                 (void *)(intptr_t)GLASS_MOUSE_START);
+  g_mouse_stop = detail_button(status, "停止断开", 140, 300, 108,
+                                glass_mouse_action,
+                                (void *)(intptr_t)GLASS_MOUSE_STOP);
+  lv_obj_t *hint = detail_text(status, "配对后保存设备并保持连接；安全连接就绪后可使用触摸板。",
+                                20, 370, 228, 14, detail_muted());
+  lv_label_set_long_mode(hint, LV_LABEL_LONG_WRAP);
 
-  lv_obj_t *control = glass_card(card, 336, 74, 588, 414, theme_surface());
-  glass_text(control, "鼠标控制", 24, 20, 180, 22, theme_primary());
-  g_mouse_detail = glass_text(control, "点击开始配对后开放 120 秒配对窗口",
-                              24, 54, 536, 18, theme_secondary());
+  lv_obj_t *control = detail_tile(card, 500, 104, 500, 446);
+  detail_text(control, "鼠标控制", 20, 22, 440, 20, detail_ink());
+  g_mouse_detail = detail_text(control, "点击开始配对后开放 120 秒配对窗口",
+                                20, 60, 460, 14, detail_muted());
+  lv_label_set_long_mode(g_mouse_detail, LV_LABEL_LONG_WRAP);
 
-  lv_obj_t *touchpad = glass_box(control, 24, 88, 440, 224,
-                                 theme_card(), 14);
+  lv_obj_t *touchpad = glass_box(control, 20, 114, 372, 234,
+                                  detail_soft(), 14);
   lv_obj_add_flag(touchpad, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(touchpad, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_style_border_width(touchpad, 1, 0);
-  lv_obj_set_style_border_color(touchpad, lv_color_hex(theme_secondary()), 0);
-  lv_obj_set_style_border_opa(touchpad, LV_OPA_30, 0);
+  lv_obj_set_style_border_color(touchpad, lv_color_hex(detail_line()), 0);
   lv_obj_set_style_bg_opa(touchpad, 220, LV_STATE_PRESSED);
-  glass_symbol(touchpad, LV_SYMBOL_GPS, 0, 0, theme_accent());
-  lv_obj_center(lv_obj_get_child(touchpad, 0));
-  glass_text(touchpad, "触摸板", 170, 140, 100, 18, theme_secondary());
+  home_icon(touchpad, LV_SYMBOL_GPS, 174, 78, 24, detail_accent());
+  lv_obj_t *caption = detail_text(touchpad, "触摸移动 · 轻点左键", 20, 132, 332, 14, detail_muted());
+  lv_obj_set_style_text_align(caption, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_add_event_cb(touchpad, glass_mouse_touch, LV_EVENT_PRESSED, NULL);
   lv_obj_add_event_cb(touchpad, glass_mouse_touch, LV_EVENT_PRESSING, NULL);
   lv_obj_add_event_cb(touchpad, glass_mouse_touch, LV_EVENT_RELEASED, NULL);
   lv_obj_add_event_cb(touchpad, glass_mouse_touch, LV_EVENT_PRESS_LOST, NULL);
   g_mouse_controls[0] = touchpad;
 
-  lv_obj_t *scroll = glass_box(control, 478, 88, 84, 224,
-                               theme_card(), 14);
+  lv_obj_t *scroll = glass_box(control, 408, 114, 72, 234,
+                                detail_soft(), 14);
   lv_obj_add_flag(scroll, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_remove_flag(scroll, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_style_border_width(scroll, 1, 0);
-  lv_obj_set_style_border_color(scroll, lv_color_hex(theme_secondary()), 0);
-  lv_obj_set_style_border_opa(scroll, LV_OPA_30, 0);
+  lv_obj_set_style_border_color(scroll, lv_color_hex(detail_line()), 0);
   lv_obj_set_style_bg_opa(scroll, 220, LV_STATE_PRESSED);
-  glass_symbol(scroll, LV_SYMBOL_UP, 30, 28, theme_secondary());
-  glass_text(scroll, "滚轮", 18, 98, 48, 18, theme_secondary());
-  glass_symbol(scroll, LV_SYMBOL_DOWN, 30, 164, theme_secondary());
+  home_icon(scroll, LV_SYMBOL_UP, 27, 30, 18, detail_muted());
+  detail_text(scroll, "滚轮", 20, 108, 48, 14, detail_muted());
+  home_icon(scroll, LV_SYMBOL_DOWN, 27, 186, 18, detail_muted());
   lv_obj_add_event_cb(scroll, glass_mouse_touch, LV_EVENT_PRESSED, (void *)1);
   lv_obj_add_event_cb(scroll, glass_mouse_touch, LV_EVENT_PRESSING, (void *)1);
   lv_obj_add_event_cb(scroll, glass_mouse_touch, LV_EVENT_RELEASED, (void *)1);
   lv_obj_add_event_cb(scroll, glass_mouse_touch, LV_EVENT_PRESS_LOST, (void *)1);
   g_mouse_controls[1] = scroll;
 
-  g_mouse_controls[2] = glass_button(control, "左键", 24, 330, 166,
-      theme_card(), glass_mouse_action, (void *)(intptr_t)GLASS_MOUSE_CLICK_LEFT);
-  g_mouse_controls[3] = glass_button(control, "中键", 210, 330, 166,
-      theme_card(), glass_mouse_action, (void *)(intptr_t)GLASS_MOUSE_CLICK_MIDDLE);
-  g_mouse_controls[4] = glass_button(control, "右键", 396, 330, 166,
-      theme_card(), glass_mouse_action, (void *)(intptr_t)GLASS_MOUSE_CLICK_RIGHT);
+  g_mouse_controls[2] = detail_button(control, "左键", 20, 374, 144,
+      glass_mouse_action, (void *)(intptr_t)GLASS_MOUSE_CLICK_LEFT);
+  g_mouse_controls[3] = detail_button(control, "中键", 178, 374, 144,
+      glass_mouse_action, (void *)(intptr_t)GLASS_MOUSE_CLICK_MIDDLE);
+  g_mouse_controls[4] = detail_button(control, "右键", 336, 374, 144,
+      glass_mouse_action, (void *)(intptr_t)GLASS_MOUSE_CLICK_RIGHT);
 
   g_mouse_timer = lv_timer_create(glass_mouse_refresh, 200, NULL);
   glass_mouse_refresh(NULL);

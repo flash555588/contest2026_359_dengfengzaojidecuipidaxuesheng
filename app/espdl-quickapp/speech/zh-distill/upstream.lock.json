@@ -1,0 +1,476 @@
+{
+  "repo": "Ampixa/sanoTTS",
+  "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+  "sources": [
+    {
+      "path": "LICENSE",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "LICENSE.MIT",
+      "bytes": 4113,
+      "sha256": "2f544ceb6a679cf706652c9df3bf8a6753197ee36456ba61665d97fbed43210e"
+    },
+    {
+      "path": "data/textsets/multilang-distill-v1/zh_CN.eval.jsonl",
+      "bytes": 14868,
+      "sha256": "f9d214956b969f81338eb35346be4f8ac78ce35825882872f42650ee1a1ae130"
+    },
+    {
+      "path": "data/textsets/multilang-distill-v1/zh_CN.train.jsonl",
+      "bytes": 236264,
+      "sha256": "36cb85f84496db5fe6a20b83a5f8a28b0f727abc4fca14f10a6b73ba1cb407ff"
+    },
+    {
+      "path": "docs/distillation-recipe.md",
+      "bytes": 7661,
+      "sha256": "b541ea711d210d3e76937120a94e0701ff28ee806d504bc4d2628ba341fb066d"
+    },
+    {
+      "path": "src/saanotts/__init__.py",
+      "bytes": 61,
+      "sha256": "65387517aa90525748b90fdb0df0ac8808770471773dd29c0a977e9005658919"
+    },
+    {
+      "path": "src/saanotts/models/__init__.py",
+      "bytes": 8145,
+      "sha256": "60a4df7a35ad73b406f316cfd321e9c59efbd20ed43df7b4ef3340ba9f32a318"
+    },
+    {
+      "path": "src/saanotts/models/fsd.py",
+      "bytes": 8072,
+      "sha256": "c2c27774a3aeef81ec5016f02cb71d73a2d8b74e51de429adcc8bea1b51b0fb1"
+    },
+    {
+      "path": "src/saanotts/models/phaseflow_vocoder.py",
+      "bytes": 10475,
+      "sha256": "c37dbbbd89ed5344fbb3e022ebb214b6834d915e8946ef7a1c945af2b2c4d838"
+    },
+    {
+      "path": "src/saanotts/models/pitch_lattice_acoustic.py",
+      "bytes": 6268,
+      "sha256": "964ce0b6533f3971e0f95015dd3de7ca543b623c06454cd8c7661feee042fe17"
+    },
+    {
+      "path": "src/saanotts/models/pitch_lattice_vocoder.py",
+      "bytes": 16176,
+      "sha256": "dc36609c886f80663b7607278e94fba5adec886870417f7257e35d4847d13730"
+    },
+    {
+      "path": "src/saanotts/models/pretrained_fargan.py",
+      "bytes": 19001,
+      "sha256": "a52f7d283a950f39fd84c19b757a43f7a10d5b2d9ce50e1af5633cb63cb47db5"
+    },
+    {
+      "path": "src/saanotts/models/recurrent_transplant.py",
+      "bytes": 3369,
+      "sha256": "1ae558d95ae63486d1f0e14d032930ece741f50439ce11a566ecb23a75368037"
+    },
+    {
+      "path": "src/saanotts/models/rift_tts.py",
+      "bytes": 24672,
+      "sha256": "a8cc164103dcc4151f9eda52ef12048dce31e79061ae1b3efd9a8414d3a5584b"
+    },
+    {
+      "path": "src/saanotts/models/sharedtensor_vocoder.py",
+      "bytes": 7731,
+      "sha256": "8f28cfe056988c17219e5301ddbbc29f5601b7831625568b4d6fae94ee70e0f4"
+    },
+    {
+      "path": "src/saanotts/models/splitband_trellis.py",
+      "bytes": 5660,
+      "sha256": "15706b26816860a368917749ad0c0f6e5e36ef436bf0899689fb9851a9d831d1"
+    },
+    {
+      "path": "src/saanotts/models/trellis_rift.py",
+      "bytes": 19212,
+      "sha256": "bd3470628af046c909a78ec4e16707b131097ffc8cebdbb8d22fbd203b405830"
+    },
+    {
+      "path": "src/saanotts/models/widebasis_vocoder.py",
+      "bytes": 6940,
+      "sha256": "d91dd8e9c332b695dae5bd099a77db46b729543b502b263c4f866be56184af94"
+    },
+    {
+      "path": "src/saanotts/workspace.py",
+      "bytes": 2035,
+      "sha256": "17b9d029c0e2847e71f7724f4548c92c0c3a3a041aecd86fec1601c4442b7cf6"
+    },
+    {
+      "path": "tools/audition_piper_teacher.py",
+      "bytes": 11132,
+      "sha256": "082f173d2e0e7c5ca79a53a5dbd93a3d2c98b44b05049950f6bd6158a4b4c76b"
+    },
+    {
+      "path": "tools/build_piper_vits_roota_probe_pack.py",
+      "bytes": 32179,
+      "sha256": "56b1f1a18f0c8577ce03283092dab499488e3d64e5e5effa270145851c344824"
+    },
+    {
+      "path": "tools/calibrate_sibilant_noise.py",
+      "bytes": 3510,
+      "sha256": "3ad74876e6e32ea9cf48251aa921e8f07802adc092337584ee3ad12af1a6d8b5"
+    },
+    {
+      "path": "tools/calibrate_sibilant_noise_fsd.py",
+      "bytes": 6074,
+      "sha256": "e18baaee6bd83139184d17f5e9fe6acdc37f26b9041149f9affa42adc7d093f6"
+    },
+    {
+      "path": "tools/check_sanotts_ha_voices.py",
+      "bytes": 3259,
+      "sha256": "a3703a832c5365b7140f8c76d9c0bb3a61fe2d48bb3f2c44a51295bf9b061c81"
+    },
+    {
+      "path": "tools/eval_g2p_parity.py",
+      "bytes": 4190,
+      "sha256": "798330a2f084ae85cf02ce9329ac0bf024dbc31aea083c5049576bbcfe141941"
+    },
+    {
+      "path": "tools/eval_mos_all.py",
+      "bytes": 4405,
+      "sha256": "d1e9cdc259cff41191437cdcea4e04f80c7b990fe994b389b2bd911376cd45c6"
+    },
+    {
+      "path": "tools/eval_phoneme_class_fidelity.py",
+      "bytes": 12186,
+      "sha256": "0c47510a11ae5e3c457b11fd93254f9a0093bed4b28bd88bf5c21053a5a260cc"
+    },
+    {
+      "path": "tools/eval_scorecard.py",
+      "bytes": 5289,
+      "sha256": "764da3fc10008a39307465a7bdb3ba07d6f48db6fd374b51079340eb4e6ecc88"
+    },
+    {
+      "path": "tools/export_e12_nano_q8.py",
+      "bytes": 39261,
+      "sha256": "5379819a47bd20df7e5dc7b1fd45ef0fec1511b1c86ad1148580019e5d5f61e9"
+    },
+    {
+      "path": "tools/export_front_golden.py",
+      "bytes": 21535,
+      "sha256": "4f255bf9d4339d79c5f3b844990bc578ce40e6a10279226fe623d12bb0f46830"
+    },
+    {
+      "path": "tools/export_front_q8.py",
+      "bytes": 39793,
+      "sha256": "2f423de3a82ea954242b578275a2764e542422833a22d29c7713a3e68d2f8a7d"
+    },
+    {
+      "path": "tools/export_piperlite_golden.py",
+      "bytes": 12025,
+      "sha256": "9ec25b2f61ab9236c71449adcd20f1635c2afaf8ef69bfdfef203c21047f3837"
+    },
+    {
+      "path": "tools/export_piperlite_q8.py",
+      "bytes": 12636,
+      "sha256": "34e0e12a69c06cb7736a957308c736adeb3a606b8574e3da0d60207431058ca4"
+    },
+    {
+      "path": "tools/extract_piper_vits_decoder_cut.py",
+      "bytes": 14163,
+      "sha256": "1ca8bd662343f47958c396085f48297be2383a1dfdcfc26f1567faf177fd96c1"
+    },
+    {
+      "path": "tools/g2p_parity_probe.py",
+      "bytes": 2522,
+      "sha256": "ca338e75b6cc63ba9572489a05417a40e281a4b6bc72a3c0a15525ccfe36d8dd"
+    },
+    {
+      "path": "tools/make_front_latent_pack.py",
+      "bytes": 7389,
+      "sha256": "71b6bf67e85d30474723c57de2f6b413886b2ad93a05a29395c68a56b9520faf"
+    },
+    {
+      "path": "tools/mcu_quant_sim.py",
+      "bytes": 23582,
+      "sha256": "3df57a7ea4917c9660e7c643459f3b4afc3ea307227f8346cdbd09395d79af4d"
+    },
+    {
+      "path": "tools/mexican_g2p_normalizer.py",
+      "bytes": 1064,
+      "sha256": "89f69a40ca395d9c9af8afba81c9cc250b0724e738af8d0a1369430b8d134cf2"
+    },
+    {
+      "path": "tools/piper_frontend_workers.py",
+      "bytes": 3263,
+      "sha256": "f83166b070da736fd3f3d2a59d6cb93610e7aec8ce1da671738d474d816203a1"
+    },
+    {
+      "path": "tools/qat_ste.py",
+      "bytes": 8730,
+      "sha256": "df4f12a24a90125990d141b8143a242795ee38f2d537055f84180c4fe895098c"
+    },
+    {
+      "path": "tools/render_crude_frontend.py",
+      "bytes": 7059,
+      "sha256": "726c79d64ef71cb714f2c2300b698258d10a40599e5dff15030332fafa09c30d"
+    },
+    {
+      "path": "tools/render_eval_dirs.py",
+      "bytes": 3337,
+      "sha256": "a401bf057d34f25f0b1fcd02e22cdc781f6024ec34daf4e1191f866b5201c530"
+    },
+    {
+      "path": "tools/repack_package_to_checkpoints.py",
+      "bytes": 5282,
+      "sha256": "e51e5240865b42ae44de7dc0f9efce413d2b13df3ef8b784382dc0764d1a9087"
+    },
+    {
+      "path": "tools/roota_fsd_blocks.py",
+      "bytes": 781,
+      "sha256": "6cf4524261d9b5c9226618f51bfe7efde93d356502fbe999be02830198fda439"
+    },
+    {
+      "path": "tools/score_int8_vs_fp32_renders.py",
+      "bytes": 4605,
+      "sha256": "06e37b9354b1b9e3510174873c2259273c3b0de079f3e6bcd3d5b06131e1c5a8"
+    },
+    {
+      "path": "tools/scoreq_loader.py",
+      "bytes": 3242,
+      "sha256": "4166379a8574c4e1f2a625fc65534e9981997c7dfe0615bd58239b8135bc8f70"
+    },
+    {
+      "path": "tools/serve_roota_arbitrary_tts_dashboard.py",
+      "bytes": 57141,
+      "sha256": "0d75f044c72405915899ed9b4d92ef6f21f7cc697fd519a1af2d74eaeb6a7134"
+    },
+    {
+      "path": "tools/train_roota_audio_enhancer.py",
+      "bytes": 25456,
+      "sha256": "3ccac809ad8d0110397da3350c15dc96c3daf560d6c8e2e3b7fd4c107a8a6a38"
+    },
+    {
+      "path": "tools/train_roota_joint_c_finetune.py",
+      "bytes": 40349,
+      "sha256": "70f78fddd49d87a311176bc24c1842c22b1731827ba9d191170a4eadfe4c9fde"
+    },
+    {
+      "path": "tools/train_roota_joint_z_finetune.py",
+      "bytes": 31388,
+      "sha256": "7932bbc740d64dab2f63e9f94cec69626318af538c7e02a8fdb70a3227239662"
+    },
+    {
+      "path": "tools/train_roota_piper_decoder_student.py",
+      "bytes": 427558,
+      "sha256": "f30f2bfedcd5ea152fc0dde7a4698d21c7c6d9ec2903859d141938f928e0662b"
+    },
+    {
+      "path": "tools/train_roota_piper_duration_student.py",
+      "bytes": 32985,
+      "sha256": "f4837da6f8c36a1f5061682e6c9ffb6cc0a233b1273c7bc54f48393686d6646a"
+    },
+    {
+      "path": "tools/train_roota_piper_latent_student.py",
+      "bytes": 147984,
+      "sha256": "076b1ae490931c14449ab36fa9aa75c1985a1efbe196108918b1236850b5d8be"
+    },
+    {
+      "path": "tools/train_voice_from_piper.py",
+      "bytes": 45515,
+      "sha256": "76d5f0c3d25a2b5d0f6528369dabb75cc473fda12884771ae880f423159d81a7"
+    },
+    {
+      "path": "mcu/include/snt_front_q8.h",
+      "bytes": 6935,
+      "sha256": "615a20169b6dedb80edd3c2d5a4cca48b6314c87e49d58fbe4934b95be609a2f"
+    },
+    {
+      "path": "mcu/include/snt_piperlite_q8.h",
+      "bytes": 3657,
+      "sha256": "9f6ba6fd8439c7fd4eba3d94c0795c29065c8f07eebc522d137e14316c93f3ab"
+    },
+    {
+      "path": "mcu/src/snt_front_q8.c",
+      "bytes": 31188,
+      "sha256": "33b13c86ae9b0aae72ff5f1530e55c269762c8c25b4f08a5d10a5841fb87490b"
+    },
+    {
+      "path": "mcu/src/snt_piperlite_q8.c",
+      "bytes": 21259,
+      "sha256": "ed791efc6655cf7039f77a3eaead7fd9ae6c1c1f740fb480ad7487bbecf16ae4"
+    },
+    {
+      "path": "mcu/test/front_q8_golden_test.c",
+      "bytes": 10397,
+      "sha256": "ec3292d51820464375c73117e9fed5f0232d2bd45572bd61bcdec31f5c7f322d"
+    },
+    {
+      "path": "mcu/test/piperlite_q8_golden_test.c",
+      "bytes": 5568,
+      "sha256": "3c4c0101745a84ae769d8e35411868839e064606c78569624cf003bdbff74302"
+    },
+    {
+      "path": "pypkg/sanotts/__init__.py",
+      "bytes": 1037,
+      "sha256": "e2a0b1d795300a4f88efe8eabb54c10b12a57d397eafd67c0e669b8a711244d6"
+    },
+    {
+      "path": "pypkg/sanotts/cli.py",
+      "bytes": 4681,
+      "sha256": "8c2abd0b032c5631b54aa8fcac0a9821c359463d0ba4cb80f3c17057d246883e"
+    },
+    {
+      "path": "pypkg/sanotts/engine.py",
+      "bytes": 12409,
+      "sha256": "737c08be0049cd2f2ff03cd39bbd02a2a43dfb8a2c049595e56e778a023b0cd9"
+    },
+    {
+      "path": "pypkg/sanotts/frontend.py",
+      "bytes": 18387,
+      "sha256": "d1fa1a7874f3fef283a3ca3b646945ddf560c2b679e57023b83784c8b53c103f"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/LICENSE.misaki.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/NOTICE.md",
+      "bytes": 17300,
+      "sha256": "0586c64a2c31c904d55e47a16092bb1e9e4dbf47002e78c644c77cc68a74b4a7"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/indo_g2p/MANIFEST.json",
+      "bytes": 1350,
+      "sha256": "1f22e977cfee71e3bae855608082c81092687dd177da90ce7035622ddf81a663"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/indo_g2p/collocations.xz",
+      "bytes": 248,
+      "sha256": "af5c86dfa4280428789a801113c2aacc97727d3260959cb7cd7daa180da9477b"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/indo_g2p/lexicon.xz",
+      "bytes": 53560,
+      "sha256": "e341ad4174947d70fc3e88cfa3fe31ab619c4604d3cf99fe6742394cb41a7bc0"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/indo_g2p/schwa_dict.xz",
+      "bytes": 50240,
+      "sha256": "661343d36376b73542a43156582436c1fd244e59ed66f3751fe06fdf9607489e"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/indo_g2p/schwa_overrides.xz",
+      "bytes": 140,
+      "sha256": "e011878331fce9dca255bf5b461a5ee7a5a0ba45018a256aa5e88942ff96edf4"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/indo_g2p/syllabifier_state.xz",
+      "bytes": 84824,
+      "sha256": "3af42ea6a2ac77162498ac0437766b6ec79654a01226c7567e1cfb858d682aed"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/oov_bart_en_us.npz",
+      "bytes": 2806853,
+      "sha256": "f14370fca67996500724d2ecfb73c5ef170ff3bbc5814d613943f75730270ff2"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/us_gold.json",
+      "bytes": 3000491,
+      "sha256": "76de90360b1174b14137de0ed4bb2396a3ae5feb15167e737a20a24ee4a0ced2"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/us_silver.json",
+      "bytes": 3099517,
+      "sha256": "de8f67be911bb6c659187b4a65fd966b6a30e56350e0f790d763210b053ac475"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/MANIFEST.json",
+      "bytes": 704,
+      "sha256": "dcca7210c155537c84bc74d3ca0ebbcdb3cbd223adb13e18414503bd70ad81ee"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/chars.xz",
+      "bytes": 134028,
+      "sha256": "3d4a51fcbe2f1fb9a59d26380e94e28d7847ba440e2d1c06103bf76e70d119dd"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/phrase_keys.xz",
+      "bytes": 142268,
+      "sha256": "7b9aee85f15b3da86a81b258ad424b3e8560dff00dc0684331cfbb9d6ec34db9"
+    },
+    {
+      "path": "pypkg/sanotts/g2p_data/zh_pinyin/phrases.xz",
+      "bytes": 82212,
+      "sha256": "125dbb22c9d889a59a5908b5d9a810b3fb43b180ff6582045d652b161115a192"
+    },
+    {
+      "path": "pypkg/sanotts/id_g2p.py",
+      "bytes": 17464,
+      "sha256": "202debcd5ceaea8d1419c1659331a949a6f760c392cac1cb71390c262ff9385a"
+    },
+    {
+      "path": "pypkg/sanotts/id_indo_bridge.py",
+      "bytes": 11667,
+      "sha256": "3aea560444675fd00ca22f606e7618e8f9bf1bf47522254fabb728a26ee9fa73"
+    },
+    {
+      "path": "pypkg/sanotts/id_indo_g2p.py",
+      "bytes": 30497,
+      "sha256": "f79e62bc4c9c6d02f1a32993a00009142d78c279c2de9af6a7288d71b5adb77c"
+    },
+    {
+      "path": "pypkg/sanotts/mexican_g2p.py",
+      "bytes": 4529,
+      "sha256": "52ccd927479ce93e4939a2547bda649f2e3c0001bb26c1c4e509a466a75b3a53"
+    },
+    {
+      "path": "pypkg/sanotts/models.py",
+      "bytes": 19316,
+      "sha256": "1f991069546d9f20de0db25abfc6a9f3634d1598df048d7c8839c06034aaea5e"
+    },
+    {
+      "path": "pypkg/sanotts/nano.py",
+      "bytes": 16787,
+      "sha256": "311e1f8db061e51ecc7a4d39461990ee9ca960c2f42d93dc81fe541d914d762a"
+    },
+    {
+      "path": "pypkg/sanotts/nano_frontend.py",
+      "bytes": 8512,
+      "sha256": "d0de0009e01b5295c45d7bff34f0a25124d49ec323cabbdbb00ad6d853e9f304"
+    },
+    {
+      "path": "pypkg/sanotts/nano_g2p.py",
+      "bytes": 61753,
+      "sha256": "41aa0756e139199ae7c045c3684b6b59c6212aa3b4d6e42a0bf848a672be6757"
+    },
+    {
+      "path": "pypkg/sanotts/nano_g2p_oov.py",
+      "bytes": 10981,
+      "sha256": "2ab770ee36798008c595ea44577906371fa6ad1a4bafe7f153d294f4cdc967be"
+    },
+    {
+      "path": "pypkg/sanotts/nano_rng.py",
+      "bytes": 4153,
+      "sha256": "75ca2ea239b5ad24f01a704cd24374ee690731f5d6ec856040fc7666b0ab2b47"
+    },
+    {
+      "path": "pypkg/sanotts/piper_g2p.py",
+      "bytes": 20272,
+      "sha256": "b2b4b44f63391d1085df40c2fef86565c7cb845173e3f5d4152f2049a0f9bcc7"
+    },
+    {
+      "path": "pypkg/sanotts/tables/voices.json",
+      "bytes": 3680,
+      "sha256": "3bd3644918ecf9d9a4d8240ab95e8eb8f6bf721e23429940a035f531fb13db3f"
+    },
+    {
+      "path": "pypkg/sanotts/vi_g2p.py",
+      "bytes": 21974,
+      "sha256": "b58d32f665b38e000b368caa52db1d1d1662f5c95191b72d7f1625363216b983"
+    },
+    {
+      "path": "pypkg/sanotts/voicepack.py",
+      "bytes": 19777,
+      "sha256": "87f7cc4a31140ad04bd8debd5829c744c9e0e84cb4c963afcf130d613400bd64"
+    },
+    {
+      "path": "pypkg/sanotts/zh_g2p.py",
+      "bytes": 30554,
+      "sha256": "bdb8f91732ac021dbdf660de5afdbcb8354fd41eaf17ebbb1b5a5708c9393716"
+    }
+  ]
+}

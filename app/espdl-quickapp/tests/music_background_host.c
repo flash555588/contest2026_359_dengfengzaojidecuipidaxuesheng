@@ -263,6 +263,65 @@ static void missing_key_checks(void)
   puts("MUSIC_SEARCH_KEY_OK: distinct missing-key result, no HTTP request, MCP configuration guidance, recovery after save");
 }
 
+static unsigned search_result(const char *query)
+{
+  char args[256];snprintf(args,sizeof(args),"{\"query\":\"%s\"}",query);
+  cJSON *out=mcp_music("music_search",args,false);
+  unsigned id=(unsigned)cJSON_GetObjectItem(out,"result_id")->valuedouble;
+  assert(id);cJSON_Delete(out);return id;
+}
+
+static cJSON *play_result(const char *query,unsigned id,bool failed)
+{
+  char args[256];snprintf(args,sizeof(args),"{\"query\":\"%s\",\"result_id\":%u}",query,id);
+  return mcp_music("music_play",args,failed);
+}
+
+static void selected_result_checks(void)
+{
+  unsigned requests=atomic_load(&search_requests),gen=play_generation;
+  unsigned id=search_result("B");
+  assert(atomic_load(&search_requests)==requests+1&&play_generation==gen);
+  cJSON_Delete(play_result("C",id,true)); /* wrong query cannot consume B */
+  const char *invalid[]={"0","-1","0.5","4294967296","null","\"1\""};
+  for(unsigned i=0;i<sizeof(invalid)/sizeof(invalid[0]);i++){
+    char args[256];snprintf(args,sizeof(args),"{\"query\":\"B\",\"result_id\":%s}",invalid[i]);
+    cJSON_Delete(mcp_music("music_play",args,true));
+  }
+  cJSON_Delete(mcp_music("music_play","{\"query\":\"B\",\"result_id\":1,\"result_id\":2}",true));
+  cJSON_Delete(mcp_music("music_search","{\"query\":\"B\",\"result_id\":1}",true));
+  cJSON_Delete(mcp_music("music_play","{\"query\":\"B\",\"query\":\"C\"}",true));
+  assert(play_generation==gen);
+  cJSON *out=play_result("B",id,false);
+  unsigned track=(unsigned)cJSON_GetObjectItem(out,"requested_track_id")->valuedouble;
+  assert(cJSON_IsTrue(cJSON_GetObjectItem(out,"accepted")));cJSON_Delete(out);
+  struct music_now_playing view=wait_for("B",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  assert(view.track_id==track&&!strcmp(view.artist,"Demo"));
+  assert(atomic_load(&search_requests)==requests+1); /* no lookup on play */
+  gen=play_generation;out=play_result("B",id,true);
+  assert(!strcmp(cJSON_GetObjectItem(out,"error")->valuestring,"music_result_used_do_not_replay"));
+  cJSON_Delete(out);assert(play_generation==gen);
+  out=mcp_music("music_status","{}",false);
+  assert((unsigned)cJSON_GetObjectItem(out,"track_id")->valuedouble==track);cJSON_Delete(out);
+  assert(!glass_music_stop_wait(3000));
+
+  id=search_result("B");search_result("C");gen=play_generation;
+  cJSON_Delete(play_result("B",id,true));assert(play_generation==gen);
+  id=search_result("B");
+  pthread_mutex_lock(&lock);result_deadline=music_now_ms()-1;pthread_mutex_unlock(&lock);
+  cJSON_Delete(play_result("B",id,true));assert(play_generation==gen);
+  id=search_result("B");
+  cJSON_Delete(mcp_music("music_search","{\"query\":\"Missing\"}",true));
+  cJSON_Delete(play_result("B",id,true));assert(play_generation==gen);
+  /* A new explicit search recovers; the old URL is never silently replayed. */
+  id=search_result("B");cJSON_Delete(play_result("B",id,false));
+  wait_for("B",MUSIC_PLAYING,MUSIC_LYRICS_READY);assert(!glass_music_stop_wait(3000));
+  /* Query-only/native requests must reset the resolved-result flag. */
+  requests=atomic_load(&search_requests);play("C");wait_for("C",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  assert(atomic_load(&search_requests)==requests+1);assert(!glass_music_stop_wait(3000));
+  puts("MUSIC_SELECTED_RESULT_OK: one lookup, exact song/artist and track, single use, replaced/expired/failed result rejection, strict arguments and query-only recovery");
+}
+
 int main(int argc,char **argv)
 {
   if(argc==4 && !strcmp(argv[1],"--lyrics-response"))return live_response(argv[2],argv[3]);
@@ -322,7 +381,7 @@ int main(int argc,char **argv)
   assert(!glass_music_stop_wait(3000));glass_music_now_playing(&s);assert(s.state==MUSIC_STOPPED && !s.lyrics[1][0]);
   assert(atomic_load(&opens)>2 && atomic_load(&opens)==atomic_load(&closes));
   printf("MUSIC_BACKGROUND_SERVICE_OK: real MP3 decoder/workers, pause freezes clock, resume, stale lyric cancellation, skip, missing lyrics, network failure and %u/%u PCM teardown\n",atomic_load(&opens),atomic_load(&closes));
-  missing_key_checks();mcp_checks();
+  missing_key_checks();mcp_checks();selected_result_checks();
   struct music_song local={0};strcpy(local.name,"Local");strcpy(local.artist,"Demo");snprintf(local.url,sizeof(local.url),"%s",mp3_path);
   assert(!glass_music_play(&local));wait_for("Local",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);
   assert(!glass_music_set_paused(true));usleep(30000);glass_music_now_playing(&s);unsigned frozen=s.position_ms;

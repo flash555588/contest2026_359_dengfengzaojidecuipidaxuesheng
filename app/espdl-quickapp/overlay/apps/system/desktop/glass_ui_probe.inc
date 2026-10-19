@@ -267,24 +267,23 @@ static void desktop_ui_probe_service(void)
       }
       desktop_ui_probe_print("font state=%d error=%d source=sd-stream unicode=%u sample=27 missing=%u language_sample=15 language_missing=%u lyric72=%d\n",
         state,error,SD_FONT_UNICODE,missing,language_missing,g_glass.music_font72!=NULL);
+      static const uint32_t symbols[]={0x2705,0x274c,0x2611,0x2714,0x2715,0x274e,
+        0x26a0,0xfe0f,0x1f4a1,0x1f50a,0x1f509,0x1f507,0x1f3b5,0x1f3b6,
+        0x1f50d,0x1f50e,0x23f0,0x1f514,0x1f4f7,0x1f3a4,0x1f3a7,0x2728,0x1f4ac,0x3000};
+      unsigned symbol_missing=0;
+      const unsigned sizes[]={16,20,28};
+      for(unsigned s=0;s<3;s++)for(unsigned i=0;i<sizeof(symbols)/sizeof(symbols[0]);i++){
+        lv_font_glyph_dsc_t glyph={0};
+        if(!lv_font_get_glyph_dsc(zh_font(sizes[s]),&glyph,symbols[i],0)||glyph.is_placeholder)symbol_missing++;
+      }
+      desktop_ui_probe_print("font ai_symbol_samples=72 ai_symbol_missing=%u\n",symbol_missing);
     }
   else if (!strcmp(command,"music-pv-status"))
     {
       struct music_pv_ui *p=g_music_ui.full?&g_music_ui.full->pv:NULL;
-#ifdef MUSIC_PV_SD_BANKS
-      struct music_pv_sd *s=p?p->sd:NULL;
-      if(s){pthread_mutex_lock(&s->lock);
-        desktop_ui_probe_print("music-pv active=%d style=%u frame=%u fps=%u reads=%u displayed=%u skipped=%u mean_us=%llu max_us=%llu io_us=%llu check_us=%llu buffers=%u error=%d\n",
-          p->sd_present,p->style_index,s->shown,s->fps,s->reads,s->displayed,s->skipped,
-          (unsigned long long)(s->reads?s->total_us/s->reads:0),(unsigned long long)s->max_us,
-          (unsigned long long)(s->reads?s->io_us/s->reads:0),(unsigned long long)(s->reads?s->check_us/s->reads:0),JPV_BYTES*2,s->error);
-        pthread_mutex_unlock(&s->lock);
-      }else desktop_ui_probe_print("music-pv active=0 style=%u failed=%d\n",p?p->style_index:0,p?p->sd_failed:0);
-#else
       desktop_ui_probe_print("music-pv active=%d native=1 style=%u line=%d position_ms=%u plans=%u plan_max_ms=%u updates=%u buffers=0\n",
         p&&p->visible&&p->valid,p?p->style_index:0,p?p->current:-1,p?p->last_position:0,
         p?p->plans:0,p?p->plan_max_ms:0,p?p->updates:0);
-#endif
     }
   else if (!strcmp(command, "music-metadata-status"))
     {
@@ -445,16 +444,10 @@ static void desktop_ui_probe_service(void)
 #ifdef GLASS_LOCAL_SPEECH
       else if(!strcmp(command,"speech"))glass_speech_open(NULL);
       else if(!strcmp(command,"speech-listen"))desktop_ui_probe_print("speech listen result=%d\n",glass_speech_listen());
-      else if(!strcmp(command,"speech-start")){if(g_speech_ui.root){desktop_ui_probe_click(g_speech_ui.root,"开始离线聆听");}}
-      else if(!strcmp(command,"speech-stop")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"停止");}
-      else if(!strcmp(command,"speech-bind-light")||!strcmp(command,"speech-bind-cover")||!strcmp(command,"speech-bind-fan")){
-        unsigned role=!strcmp(command,"speech-bind-light")?0:!strcmp(command,"speech-bind-cover")?1:2;
-        if(g_speech_ui.binding[role])lv_obj_send_event(lv_obj_get_parent(g_speech_ui.binding[role]),LV_EVENT_CLICKED,NULL);
-      }
-      else if(!strcmp(command,"speech-bind-back"))local_voice_picker_close(NULL);
-      else if(!strcmp(command,"speech-status"))desktop_ui_probe_print("LOCAL_VOICE page=%u owner=%lu stage=%u choices=%u list_ok=%u bound=%u\n",
-        g_speech_ui.root!=NULL,(unsigned long)g_speech_ui.owner,g_speech_ui.stage,g_speech_ui.choice_count,g_speech_ui.list_ok,
-        !!g_speech_ui.bound[0].entity[0]+!!g_speech_ui.bound[1].entity[0]+!!g_speech_ui.bound[2].entity[0]);
+      else if(!strcmp(command,"speech-start")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"开始联网语音");}
+      else if(!strcmp(command,"speech-stop")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"结束输入");else glass_voice_stop();}
+      else if(!strcmp(command,"speech-status"))desktop_ui_probe_print("VOICE_SERVICE page=%u owner=%lu recording=%u turn=%lu\n",
+        g_speech_ui.root!=NULL,(unsigned long)g_speech_ui.owner,g_speech_ui.recording,(unsigned long)g_speech_ui.turn);
       else if(!strcmp(command,"speech-probe"))desktop_ui_probe_print("speech probe result=%d\n",glass_speech_probe());
       else if(!strcmp(command,"speech-nano-scalar"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(0));
       else if(!strcmp(command,"speech-nano-pie"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(1));
@@ -490,16 +483,35 @@ static void desktop_ui_probe_service(void)
       else if (!strcmp(command, "portal")) glass_portal_open(NULL);
       else if (!strcmp(command, "portal-status")) portal_debug_status();
       else if (!strcmp(command, "grok-status")) glass_grok_debug_status();
+      else if (!strcmp(command,"wake-mini-status")){
+        desktop_ui_probe_print("WAKE_MINI visible=%u event=%lu age_ms=%lu request=%lu capture=%u\n",
+          g_wake_mini.visible,(unsigned long)g_wake_mini.event,
+          (unsigned long)(g_wake_mini.visible?lv_tick_get()-g_wake_mini.shown_at:0),
+          (unsigned long)g_wake_mini.request,g_wake_mini.voice_owned);
+#ifdef GLASS_LOCAL_SPEECH
+        struct speech_snapshot speech;glass_speech_get(&speech);
+        struct glass_voice_snapshot voice;glass_voice_get(&voice);
+        const char *monitor=speech.active&&speech.background_wake?"background":
+          voice.active?voice.wake_observing?"shared-asr":"asr-start-or-finish":speech.active?
+          speech.phase==SPEECH_WAKE||speech.phase==SPEECH_COMMAND?"local-voice":"foreground-speech":
+          music_pcm_session_active()?"audio-busy":"arming";
+        desktop_ui_probe_print("WAKE_MONITOR source=%s speech_request=%lu error=%d\n",monitor,(unsigned long)speech.request,speech.error);
+        desktop_ui_probe_print("WAKE_EVENT retained=%lu stamp_ms=%lu now_ms=%lu local_page=%u local_accepting=%u\n",
+          (unsigned long)speech.wake_event,(unsigned long)speech.wake_ms,(unsigned long)wake_mini_clock(),g_speech_ui.root!=NULL,g_speech_ui.recording);
+        desktop_ui_probe_print("WAKE_PRESENTATION target=%s\n",chat_ball_is_present()?"large-ball":"mini-float");
+        desktop_ui_probe_print("WAKE_IDLE elapsed_ms=%lu busy=%u timeout_ms=6000\n",
+          (unsigned long)(g_wake_mini.visible?lv_tick_get()-g_wake_mini.idle_at:0),g_wake_mini.visible&&g_wake_mini.busy);
+#endif
+      }
       else if (!strcmp(command, "chat")) glass_chat_open(NULL);
       else if (!strcmp(command,"voice"))glass_chat_ball_open(NULL);
-      else if (!strcmp(command,"voice-wake")){if(g_chat_ui.ball_mode)chat_ball_wake_toggle(NULL);}
       else if (!strcmp(command,"voice-tap")){if(g_chat_ui.ball_mode)chat_ball_tap(NULL);}
       else if (!strcmp(command,"voice-end")){if(g_chat_ui.ball_mode)chat_ball_end(NULL);}
       else if (!strcmp(command,"voice-status")){
-        desktop_ui_probe_print("VOICE_STATUS page=%u session=%u wake=%u phase=%u request=%lu\n",
-          g_chat_ui.ball_mode,g_chat_ui.voice_session,g_chat_ui.voice_wake_mode,g_chat_ui.voice_phase,(unsigned long)g_chat_ui.voice_wake_request);
+        desktop_ui_probe_print("VOICE_STATUS page=%u session=%u phase=%u from_wake=%u\n",
+          g_chat_ui.ball_mode,g_chat_ui.voice_session,g_chat_ui.voice_phase,g_chat_ui.voice_from_wake);
         struct glass_voice_snapshot voice;glass_voice_get(&voice);
-        desktop_ui_probe_print("VOICE_CAPTURE active=%u phase=%u error=%u level=%u\n",voice.active,voice.phase,voice.error,voice.level);
+          desktop_ui_probe_print("VOICE_CAPTURE active=%u phase=%u error=%u level=%u wake_observer=%u request=%lu\n",voice.active,voice.phase,voice.error,voice.level,voice.wake_observing,(unsigned long)voice.request);
 #ifdef GLASS_LOCAL_SPEECH
         struct speech_snapshot speech;glass_speech_get(&speech);
         desktop_ui_probe_print("VOICE_PLAY active=%u phase=%u error=%d backend=%s\n",speech.active,speech.phase,speech.error,glass_speech_backend());
@@ -567,8 +579,8 @@ static int desktop_ui_probe_request(const char *command)
     "music", "music-status", "music-metadata-status", "music-pv-demo", "music-pv-status", "font-status", "music-language-demo", "music-lyrics-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
     "files-new", "light", "dark", "audit", "frame", "frame-free", "wifi-scan", "ble-scan", "dialog",
     "ha-settings", "ha-address", "ha-status", "render-metrics", "render-metrics-reset", "toast", "camera-start", "camera-photo", "camera-mode",
-    "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo", "speech", "speech-listen", "speech-probe", "speech-nano-scalar", "speech-nano-pie", "speech-nano-play", "speech-start", "speech-stop", "speech-status", "speech-bind-light", "speech-bind-cover", "speech-bind-fan", "speech-bind-back",
-    "voice", "voice-wake", "voice-tap", "voice-end", "voice-status",
+    "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo", "speech", "speech-listen", "speech-probe", "speech-nano-scalar", "speech-nano-pie", "speech-nano-play", "speech-start", "speech-stop", "speech-status",
+    "voice", "voice-tap", "voice-end", "voice-status", "wake-mini-status",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",
     "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet", "pet-status"};

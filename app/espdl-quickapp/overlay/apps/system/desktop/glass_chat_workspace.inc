@@ -30,7 +30,7 @@ static void chat_workspace_refresh(void)
   if(!g_chat_ui.task_title||g_chat_ui.ball_mode)return;
   const struct chat_snapshot *s=g_chat_ui.snapshot;
   char title[161];
-  if(s->count){glass_chat_copy_utf8(title,sizeof(title),s->turns[0].prompt);char *nl=strchr(title,'\n');if(nl)*nl=0;}
+  if(s->count){glass_chat_copy_utf8(title,sizeof(title),s->turns[s->count-1].prompt);char *nl=strchr(title,'\n');if(nl)*nl=0;}
   else snprintf(title,sizeof(title),"新任务");
   chat_ui_label(g_chat_ui.task_title,title);
   chat_ui_label(g_chat_ui.sidebar_task,s->count?title:"还没有对话");
@@ -86,12 +86,14 @@ static void chat_workspace_create(lv_obj_t *card,bool from_apps)
     lv_obj_set_width(caption,90);lv_obj_align(caption,LV_ALIGN_LEFT_MID,42,0);
     home_icon(button,icons[i],12,12,20,modes[i]==g_chat_ui.mode?detail_accent():detail_muted());
   }
-  chat_ui_text(sidebar,"当前对话",20,344,128,16,g_chat_ui.secondary,false);
-  lv_obj_t *task=chat_ui_button(sidebar,"还没有对话",12,370,140,44,false,chat_workspace_current_task,NULL);
+  glass_sidebar_item(chat_ui_button(sidebar,"电脑 CLI",12,344,140,44,false,chat_ui_cli,NULL),false);
+  lv_obj_t *task=chat_ui_button(sidebar,"还没有对话",12,402,140,38,false,chat_workspace_current_task,NULL);
   glass_sidebar_item(task,false);
   g_chat_ui.sidebar_task=lv_obj_get_child(task,0);
   g_chat_ui.count=chat_ui_text(sidebar,"当前模式 · 0 轮",20,418,132,16,g_chat_ui.secondary,false);
   g_chat_ui.storage=chat_ui_text(sidebar,"自动保存在设备",20,440,132,16,g_chat_ui.secondary,false);
+  lv_obj_add_flag(g_chat_ui.count,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(g_chat_ui.storage,LV_OBJ_FLAG_HIDDEN);
   glass_sidebar_item(chat_ui_button(sidebar,"能力设置",12,CHAT_CONTENT_HEIGHT-108,140,44,false,chat_ui_config,NULL),false);
   glass_sidebar_item(chat_ui_button(sidebar,from_apps?"返回应用":"返回桌面",12,CHAT_CONTENT_HEIGHT-56,140,44,false,glass_chat_back,NULL),false);
 

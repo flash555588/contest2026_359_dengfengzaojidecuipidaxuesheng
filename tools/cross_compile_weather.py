@@ -32,7 +32,7 @@ def main():
         return shlex.split(next(line[len(prefix):] for line in result.stdout.splitlines() if line.startswith(prefix)))
     cc=flags('WEATHER_CC=');options=flags('WEATHER_CFLAGS=')
     source=desktop/'desktop_main.c'
-    command=[*cc,*options,'-I'+str(desktop),'-I'+str(a.baseline/'apps/system/desktop'),
+    command=[*cc,'-I'+str(repo/'app/bilibili_live'),*options,'-I'+str(desktop),'-I'+str(a.baseline/'apps/system/desktop'),
              '-c',str(source),'-o',str(a.output/'desktop_main.c.o')]
     (a.output/'command.json').write_text(json.dumps(command,indent=2)+'\n')
     with (a.output/'compile.log').open('w') as log:

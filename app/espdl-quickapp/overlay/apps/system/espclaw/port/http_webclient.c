@@ -14,6 +14,7 @@
 #include <time.h>
 
 #define HEADER_LIMIT 16
+#define JSON_BODY_LIMIT (2u * 1024 * 1024)
 static const struct webclient_tls_ops *tls_ops;
 static void *tls_context;
 
@@ -29,6 +30,8 @@ int claw_webclient_set_tls(const struct webclient_tls_ops *ops, void *context)
 struct response_buffer {
     char *data;
     size_t size;
+    size_t wire_bytes;
+    int64_t first_byte_ms;
     atomic_bool *abort_flag;
     int64_t deadline_ms;
     uint32_t idle_timeout_ms;
@@ -68,12 +71,14 @@ static int receive_body(char **data, int offset, int end, int *length, void *arg
     size_t count = (size_t)(end - offset);
     if (count) {
         int64_t now; if (monotonic_ms(&now)) return -EIO;
+        if(!buffer->first_byte_ms)buffer->first_byte_ms=now;
+        buffer->wire_bytes+=count;
         buffer->deadline_ms = now + buffer->idle_timeout_ms;
         claw_stream_emit(CLAW_STREAM_ACTIVITY, NULL);
     }
     if (buffer->sse && buffer->stream && buffer->client->http_status == 200)
         return claw_stream_feed(buffer->stream, *data + offset, count);
-    if (count > SIZE_MAX - 1 - buffer->size) return -EOVERFLOW;
+    if (buffer->size > JSON_BODY_LIMIT || count > JSON_BODY_LIMIT - buffer->size) return -EFBIG;
     char *next = realloc(buffer->data, buffer->size + count + 1);
     if (!next) return -ENOMEM;
     buffer->data = next;
@@ -135,6 +140,10 @@ esp_err_t claw_llm_http_post_json(const claw_llm_http_json_request_t *req,
     if (out) memset(out, 0, sizeof(*out));
     if (error) *error = NULL;
     if (!req || !out || !error || !req->url || !req->body) return result;
+    if (strlen(req->body) > JSON_BODY_LIMIT) {
+        *error = strdup("LLM request exceeds device memory limit");
+        return ESP_ERR_INVALID_SIZE;
+    }
     int64_t started;
     if (monotonic_ms(&started)) return ESP_FAIL;
     body.idle_timeout_ms = req->timeout_ms ? req->timeout_ms : 300000;
@@ -242,7 +251,9 @@ esp_err_t claw_llm_http_post_json(const claw_llm_http_json_request_t *req,
                  diagnostic.stage && !strcmp(diagnostic.stage,"handshake") ? "HTTPS TLS handshake failed" :
                  "HTTPS connection failed", diagnostic.stage ? diagnostic.stage : "request", rc,
                  diagnostic.tls_error, (unsigned long)diagnostic.verify_flags);
-        if (body.sse && body.stream && rc != -ETIMEDOUT && rc != -ECANCELED)
+        if (rc == -EFBIG)
+            snprintf(failure, sizeof(failure), "LLM response exceeds device memory limit");
+        else if (body.sse && body.stream && rc != -ETIMEDOUT && rc != -ECANCELED)
             snprintf(failure, sizeof(failure), "%s (code=%d)", claw_stream_error(body.stream), rc);
         if (rc == -ENOMEM) result = ESP_ERR_NO_MEM;
         goto cleanup;
@@ -283,6 +294,13 @@ esp_err_t claw_llm_http_post_json(const claw_llm_http_json_request_t *req,
     body.data = NULL;
     result = ESP_OK;
 cleanup:
+    if(llm){
+        int64_t finished=started;monotonic_ms(&finished);
+        fprintf(stderr,"[chat-latency] http_ms=%lld first_byte_ms=%lld request_bytes=%lu response_bytes=%lu status=%d result=%d\n",
+          (long long)(finished-started),body.first_byte_ms?(long long)(body.first_byte_ms-started):-1ll,
+          (unsigned long)strlen(request_body?request_body:req->body),(unsigned long)body.wire_bytes,
+          client?(int)client->http_status:0,result);
+    }
     if (client) { free(client->buffer); free(client); }
     for (size_t i = 0; i < count; i++) free(headers[i]);
     free(body.data);

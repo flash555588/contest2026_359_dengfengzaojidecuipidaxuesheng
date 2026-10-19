@@ -28,15 +28,18 @@ if not (out / 'rollback.bin').exists():
 names = ['desktop_main.c', 'glass_agent.c', 'glass_agent_profiles.h', 'glass_board.h',
          'glass_board_agent.inc', 'glass_board_ui.inc', 'glass_board_reference.h',
          'glass_board_home.c', 'glass_board_home.h', 'glass_board_music.c', 'glass_board_music.h',
-           'glass_music.h', 'glass_music_service.c', 'glass_music_ui.inc', 'glass_music_full.inc', 'glass_music_pv.inc', 'glass_music_pv_legacy.inc', 'glass_music_cache.h', 'glass_music_pv_assets.h',
-         'glass_music_lyrics.h', 'glass_lock_photo.c', 'glass_music_pv_bank.h', 'glass_music_pv_sd.inc', 'glass_music_pv_import.h', 'glass_music_sd.h', 'glass_music_track_key.h',
+           'glass_music.h', 'glass_music_service.c', 'glass_music_ui.inc', 'glass_music_full.inc', 'glass_music_pv.inc', 'glass_music_cache.h', 'glass_music_lyrics.h', 'glass_lock_photo.c', 'glass_music_sd.h', 'glass_music_track_key.h',
          'glass_ui.inc', 'glass_lockscreen.inc', 'glass_status.h', 'glass_status_power.c',
          'glass_status_ui.inc', 'glass_home_ui.inc', 'glass_netboot.inc', 'Makefile', 'glass_agent.h',
          'glass_agent_config.c', 'glass_portal_config.c', 'glass_portal_resource.c',
          'glass_chat.h', 'glass_chat_service.c', 'glass_chat_store.c', 'glass_chat_ui.inc',
          'glass_chat_trace.inc', 'glass_chat_cards.inc', 'glass_icons.h', 'glass_icons.c']
 names += ['glass_sd_font.c','glass_sd_font.h','glass_sd_font_asset.h',
-          'glass_music_hans.h','glass_music_hans_table.h','glass_lock_pages.inc']
+          'glass_music_hans.h','glass_music_hans_table.h','glass_lock_pages.inc',
+          'glass_settings_ui.inc','glass_about_ui.inc']
+names += ['glass_assistant.h','glass_board_assistant.c','glass_assistant_platform.c','glass_assistant_tools.h',
+          'qpk_storage.c','qpk_storage.h','qpk_runtime.c','qpk_runtime.h','qpk_espdl.h','qpk_espdl_service.c',
+          'glass_speech.c','glass_speech.h']
 sources = [Path('apps/system/desktop') / name for name in names]
 sources += [Path('apps/system/espclaw/port') / name for name in ['espclaw_main.c', 'espclaw_qpk.c']]
 sources += [Path('apps/system/espclaw/include/claw_stream.h')]

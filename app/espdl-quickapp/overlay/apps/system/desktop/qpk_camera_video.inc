@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qpk_camera_avi.h"
 #include "qpk_camera_scale.h"
+#include "camera_color.h"
 #include "qpk_hardware.h"
 #include "qpk_volume.h"
 #include <sys/statvfs.h>
@@ -74,7 +75,12 @@ static void qpk_video_frame(const uint16_t *source,unsigned w,unsigned h,unsigne
     else g_video.dropped++;
   }
   pthread_mutex_unlock(&g_video_lock);if(slot<0)return;
-  qpk_video_scale(j->frames[slot],source,w,h,stride);
+  unsigned zoom=qpk_camera_zoom_percent();
+  unsigned crop_w=w*100/zoom,crop_h=h*100/zoom;
+  qpk_video_scale(j->frames[slot],source+((h-crop_h)/2)*stride+(w-crop_w)/2,
+                  crop_w,crop_h,stride);
+  unsigned style=qpk_camera_style();
+  if(style)for(unsigned i=0;i<QPK_VIDEO_W*QPK_VIDEO_H;i++)j->frames[slot][i]=camera_color_pixel(j->frames[slot][i],style);
   pthread_mutex_lock(&g_video_lock);j->slot_state[slot]=j->ready?2:0;j->producing=false;pthread_mutex_unlock(&g_video_lock);
 }
 static bool qpk_video_take_frame(struct qpk_video_job *j,unsigned sequence)
