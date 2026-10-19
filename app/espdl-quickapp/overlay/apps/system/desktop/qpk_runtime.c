@@ -1390,17 +1390,20 @@ static JSValue js_ui_set_text(JSContext *context,
 
   (void)this_value;
   handle = qpk_arg_int(context, argc, argv, 0, 0);
+  if (handle <= 0 || handle > g_qpk.widget_capacity ||
+      g_qpk.widgets[handle - 1] == NULL)
+    return JS_ThrowRangeError(context, "invalid widget handle");
+  uint64_t generation = g_qpk.widget_generations[handle - 1];
   text = qpk_arg_string(context, argc, argv, 1);
   if (text == NULL)
     {
       return JS_EXCEPTION;
     }
 
-  if (handle <= 0 || handle > g_qpk.widget_capacity ||
-      g_qpk.widgets[handle - 1] == NULL)
+  if (!qpk_widget_current(handle, generation))
     {
       JS_FreeCString(context, text);
-      return JS_ThrowRangeError(context, "invalid widget handle");
+      return JS_ThrowRangeError(context, "widget changed during text conversion");
     }
 
   if (g_qpk.widget_types[handle - 1] == QPK_WIDGET_BUTTON)
@@ -1413,15 +1416,23 @@ static JSValue js_ui_set_text(JSContext *context,
           return JS_ThrowInternalError(context, "button label is missing");
         }
 
-      lv_label_set_text(label, text);
+      if (strcmp(lv_label_get_text(label), text)) lv_label_set_text(label, text);
     }
   else if (g_qpk.widget_types[handle - 1] == QPK_WIDGET_NUMBER)
     {
-      qpk_number_style(g_qpk.widgets[handle - 1], text);
+      lv_obj_t *label = lv_obj_get_child(g_qpk.widgets[handle - 1], 0);
+      if (label == NULL)
+        {
+          JS_FreeCString(context, text);
+          return JS_ThrowInternalError(context, "number label is missing");
+        }
+      if (strcmp(lv_label_get_text(label), text))
+        qpk_number_style(g_qpk.widgets[handle - 1], text);
     }
   else if (g_qpk.widget_types[handle - 1] == QPK_WIDGET_LABEL)
     {
-      lv_label_set_text(g_qpk.widgets[handle - 1], text);
+      lv_obj_t *label = g_qpk.widgets[handle - 1];
+      if (strcmp(lv_label_get_text(label), text)) lv_label_set_text(label, text);
     }
   else
     {

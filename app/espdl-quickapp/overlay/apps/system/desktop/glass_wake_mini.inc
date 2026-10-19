@@ -119,7 +119,9 @@ static uint32_t wake_mini_clock(void)
 {struct timespec now;clock_gettime(CLOCK_MONOTONIC,&now);return (uint32_t)((uint64_t)now.tv_sec*1000+now.tv_nsec/1000000);}
 static void wake_mini_result_service(const struct speech_snapshot *speech,const struct glass_voice_snapshot *voice,uint32_t now,bool ball_page)
 {
-  if(!g_wake_mini.turn)return;
+  /* A retired, completed result must not scan/copy chat history on every
+   * desktop loop. Pending speech still runs even on the large-ball page. */
+  if(!g_wake_mini.turn||(!g_wake_mini.visible&&!g_wake_mini.result_pending&&!g_wake_mini.speech_owned))return;
   struct chat_result_snapshot result;
   if(!glass_chat_result_get(&result,g_wake_mini.turn,AGENT_MODE_ASSISTANT,0)){
     if(g_wake_mini.speech_owned)glass_speech_stop_request(g_wake_mini.speech_request);
@@ -230,17 +232,14 @@ static void wake_mini_service(void)
     g_wake_mini.voice_owned=false;g_wake_mini.idle_at=now;
     if(g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,"麦克风已交给新的语音请求");
   }
-  if(g_wake_mini.voice_owned&&voice.request!=g_wake_mini.voice_request){
-    g_wake_mini.voice_owned=false;g_wake_mini.idle_at=now;
-    if(g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,"麦克风已交给新的语音请求");
-  }
   if(g_wake_mini.voice_owned){
     if(voice.active&&voice.phase==GLASS_VOICE_LISTENING){
       if(!g_wake_mini.listening_at)g_wake_mini.listening_at=now;
       if(voice.level>650||(voice.text[0]&&voice.revision!=g_wake_mini.voice_revision)){
         g_wake_mini.heard=true;g_wake_mini.heard_at=now;
       }
-      if(g_wake_mini.visible&&voice.text[0])lv_label_set_text(g_wake_mini.text,voice.text);
+      if(g_wake_mini.visible&&voice.text[0]&&strcmp(lv_label_get_text(g_wake_mini.text),voice.text))
+        lv_label_set_text(g_wake_mini.text,voice.text);
       if(g_wake_mini.heard&&now-g_wake_mini.heard_at>=2000){
         glass_voice_stop_request(g_wake_mini.voice_request);
         if(g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,"正在识别…");
@@ -288,10 +287,16 @@ static void wake_mini_service(void)
     }else{
       int offset=g_glass.reduced_motion?0:age<180?(180-age)*48/180:
         idle>5820?(idle-5820)*48/180:0;
-      lv_obj_align(g_wake_mini.root,LV_ALIGN_BOTTOM_LEFT,16-offset,-16+offset);
-      lv_obj_set_style_opa(g_wake_mini.root,g_glass.reduced_motion?255:
-        age<180?age*255/180:idle>5820?(6000-idle)*255/180:255,0);
-      lv_obj_move_foreground(g_wake_mini.root);
+      if(lv_obj_get_style_x(g_wake_mini.root,0)!=16-offset||
+         lv_obj_get_style_y(g_wake_mini.root,0)!=-16+offset||
+         lv_obj_get_style_align(g_wake_mini.root,0)!=LV_ALIGN_BOTTOM_LEFT)
+        lv_obj_align(g_wake_mini.root,LV_ALIGN_BOTTOM_LEFT,16-offset,-16+offset);
+      unsigned opacity=g_glass.reduced_motion?255:
+        age<180?age*255/180:idle>5820?(6000-idle)*255/180:255;
+      if(lv_obj_get_style_opa(g_wake_mini.root,0)!=opacity)
+        lv_obj_set_style_opa(g_wake_mini.root,opacity,0);
+      lv_obj_t *parent=lv_obj_get_parent(g_wake_mini.root);
+      if(lv_obj_get_child(parent,-1)!=g_wake_mini.root)lv_obj_move_foreground(g_wake_mini.root);
     }
   }
   wake_mini_camera();

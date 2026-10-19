@@ -43,7 +43,13 @@ static JSValue qpk_call_args(JSValueConst fn,unsigned budget,int argc,JSValueCon
 }
 static void qpk_event_clicked(lv_event_t *e){struct qpk_event_s *b=lv_event_get_user_data(e);if(b&&b->used){JSValue r=qpk_call_args(b->function,80,0,NULL);JS_FreeValue(g_qpk.context,r);}}
 static int qpk_color_wheel_resize(lv_obj_t *,int,int);
+static unsigned review_text_writes;
+unsigned qpk_review_text_writes(void){return review_text_writes;}
+static void review_label_set_text(lv_obj_t *label,const char *text)
+{review_text_writes++;lv_label_set_text(label,text);}
+#define lv_label_set_text review_label_set_text
 #include "production_qpk_bindings.inc"
+#undef lv_label_set_text
 #include "qpk_grok.inc"
 #include "qpk_color_wheel.inc"
 static JSValue review_noop(JSContext *c,JSValueConst t,int n,JSValueConst *a){(void)c;(void)t;(void)n;(void)a;return JS_UNDEFINED;}
