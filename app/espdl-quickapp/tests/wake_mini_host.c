@@ -25,12 +25,12 @@ static bool fixture_command_pending;
 static struct chat_activity_snapshot fixture_activity={.phase=CHAT_IDLE};
 static bool fixture_result_enabled;
 static struct chat_result_snapshot fixture_result;
-static unsigned tts_calls,toasts;static char spoken[241];
+static unsigned tts_calls,toasts,result_reads;static char spoken[241];
 size_t glass_chat_copy_utf8(char *out,size_t size,const char *text)
 {if(!size)return 0;size_t n=strlen(text);if(n>=size)n=size-1;while(n&&((unsigned char)text[n]&0xc0)==0x80)n--;memcpy(out,text,n);out[n]=0;return n;}
 const char *glass_chat_error_text(enum chat_error error){(void)error;return "服务暂时不可用";}
 bool glass_chat_result_get(struct chat_result_snapshot *out,uint32_t id,enum glass_agent_mode mode,size_t offset)
-{assert(mode==AGENT_MODE_ASSISTANT);if(!fixture_result_enabled||(id&&id!=fixture_result.turn_id))return false;*out=fixture_result;size_t len=strlen(fixture_result.reply);size_t n=glass_chat_copy_utf8(out->reply,sizeof(out->reply),fixture_result.reply+(offset<=len?offset:len));out->next_offset=(uint32_t)(offset+n);out->more=out->next_offset<len;return true;}
+{result_reads++;assert(mode==AGENT_MODE_ASSISTANT);if(!fixture_result_enabled||(id&&id!=fixture_result.turn_id))return false;*out=fixture_result;size_t len=strlen(fixture_result.reply);size_t n=glass_chat_copy_utf8(out->reply,sizeof(out->reply),fixture_result.reply+(offset<=len?offset:len));out->next_offset=(uint32_t)(offset+n);out->more=out->next_offset<len;return true;}
 int glass_speech_say_request(const char *text,uint32_t *request)
 {tts_calls++;snprintf(spoken,sizeof(spoken),"%s",text);fixture_speech.active=true;fixture_speech.background_wake=false;fixture_speech.phase=SPEECH_SPEAKING;*request=++fixture_speech.request;return 0;}
 static void show_toast(const char *text){assert(text&&*text);toasts++;}
@@ -62,7 +62,20 @@ static bool chat_ball_accept_wake(void)
 bool music_pcm_session_active(void){return fixture_pcm_busy;}
 #define GLASS_LOCAL_SPEECH 1
 #include "glass_chat_result_ui.inc"
+static unsigned mini_opacity_writes,mini_align_writes,mini_front_writes;
+static void mini_set_opacity(lv_obj_t *object,lv_opa_t opacity,lv_style_selector_t selector)
+{mini_opacity_writes++;lv_obj_set_style_opa(object,opacity,selector);}
+static void mini_align(lv_obj_t *object,lv_align_t align,int32_t x,int32_t y)
+{mini_align_writes++;lv_obj_align(object,align,x,y);}
+static void mini_front(lv_obj_t *object)
+{mini_front_writes++;lv_obj_move_foreground(object);}
+#define lv_obj_set_style_opa mini_set_opacity
+#define lv_obj_align mini_align
+#define lv_obj_move_foreground mini_front
 #include "glass_wake_mini.inc"
+#undef lv_obj_set_style_opa
+#undef lv_obj_align
+#undef lv_obj_move_foreground
 static unsigned char fb[1024*600*2];
 static void flush(lv_display_t *d,const lv_area_t *area,uint8_t *pixels)
 {for(int y=area->y1;y<=area->y2;y++){memcpy(fb+(y*1024+area->x1)*2,pixels,(area->x2-area->x1+1)*2);pixels+=(area->x2-area->x1+1)*2;}lv_display_flush_ready(d);}
