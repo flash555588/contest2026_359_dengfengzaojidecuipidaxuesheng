@@ -28,7 +28,7 @@ static void portal_page_deleted(lv_event_t *e)
 }
 static void portal_tick(lv_timer_t *timer)
 {
-  LV_UNUSED(timer); if(!portal_state) return;
+  LV_UNUSED(timer); if(!glass_ui_can_paint(portal_state)) return;
   unsigned seconds=portal_session_seconds(); char text[160];
   if(seconds) snprintf(text,sizeof(text),"令牌 %02u:%02u 内有效\n手机、电脑与设备连接同一 Wi-Fi",seconds/60,seconds%60);
   else {

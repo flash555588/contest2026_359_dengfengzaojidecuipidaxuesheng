@@ -442,7 +442,7 @@ static void glass_update(lv_timer_t *timer)
     weather_now-weather.received_ms>=7200000;
   /* Keep service polling and status alive, but do not repaint or decode a
    * fully covered home. Its cached image stays ready for the back gesture. */
-  if(glass_page_covers_home()){
+  if(glass_page_covers_home()||!glass_ui_can_paint(g_glass.home)){
     g_weather_home.deferred=true;
     glass_weather_detail_update(&weather,weather_stale);
     return;

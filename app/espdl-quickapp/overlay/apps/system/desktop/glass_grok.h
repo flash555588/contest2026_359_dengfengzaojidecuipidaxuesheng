@@ -40,6 +40,7 @@ void glass_grok_debug_status(void);
 #ifdef GROK_HOST_TEST
 void glass_grok_test_step(struct glass_grok *ball);
 void glass_grok_test_step_visible(void);
+void glass_grok_test_stats(struct glass_grok *ball,unsigned out[3]);
 /* Exercise the real embedded registry and static renderer without polling. */
 unsigned glass_grok_test_expression(struct glass_grok *ball,const char *id);
 #endif

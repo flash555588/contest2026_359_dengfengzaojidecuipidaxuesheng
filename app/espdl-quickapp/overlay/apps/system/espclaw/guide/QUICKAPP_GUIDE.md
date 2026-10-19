@@ -134,6 +134,7 @@ const contentWidth = W - margin * 2;
 | API | 参数和行为 |
 | --- | --- |
 | `ui.getSize()` | 返回 `{width, height}`，是内容区尺寸 |
+| `ui.isVisible()` | 页面未隐藏且未被完整不透明的顶层页面遮挡时返回 true；可据此延后绘制，网络、录音及请求完成处理仍应继续。兼容旧固件时先检查该方法是否存在 |
 | `ui.background(color)` | 设置内容区背景色 |
 | `ui.text(text, x, y, fontSize, color, iconMode)` | 文本标签；后四项可省略，推荐显式指定前五项；第六项为 1 才启用内置符号字体 |
 | `ui.number(text, x, y, width, height, color)` | 居中的数字容器，适合计分和棋盘；宽高不是字号 |

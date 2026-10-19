@@ -25,6 +25,7 @@
 
 #include <nuttx/sched.h>
 #include <lvgl/lvgl.h>
+#include "glass_ui_visibility.h"
 #ifdef CONFIG_NETUTILS_NETINIT
 #  include <netutils/netinit.h>
 #endif

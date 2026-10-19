@@ -30,6 +30,7 @@
 #include "qpk_mjpeg.h"
 #include "qpk_espdl.h"
 #include <lvgl/lvgl.h>
+#include "glass_ui_visibility.h"
 #include <quickjs.h>
 
 #include "qpk_runtime.h"
@@ -1479,6 +1480,15 @@ static JSValue js_ui_background(JSContext *context,
       lv_color_hex(qpk_arg_color(context, argc, argv, 0, 0xffffff)), 0);
   lv_obj_set_style_bg_opa(g_qpk.root, LV_OPA_COVER, 0);
   return JS_UNDEFINED;
+}
+
+static JSValue js_ui_is_visible(JSContext *context, JSValueConst this_value,
+                               int argc, JSValueConst *argv)
+{
+  (void)this_value;
+  (void)argc;
+  (void)argv;
+  return JS_NewBool(context, glass_ui_can_paint(g_qpk.root));
 }
 
 static JSValue js_ui_get_size(JSContext *context, JSValueConst this_value,
@@ -4094,6 +4104,9 @@ static void qpk_install_api(JSContext *context)
   JS_SetPropertyStr(context, object, "getSize",
                     JS_NewCFunction(context, js_ui_get_size,
                                     "getSize", 0));
+  JS_SetPropertyStr(context, object, "isVisible",
+                    JS_NewCFunction(context, js_ui_is_visible,
+                                    "isVisible", 0));
   JS_SetPropertyStr(context, object, "setColor",
                     JS_NewCFunction(context, js_ui_set_color,
                                     "setColor", 2));

@@ -670,6 +670,7 @@ static void chat_ui_refresh(lv_timer_t *timer)
   LV_UNUSED(timer);
   if (!g_chat_ui.root) return;
   if(g_chat_ui.ball_mode){chat_ball_refresh();return;}
+  if(!glass_ui_can_paint(g_chat_ui.root))return;
   uint32_t refresh_started = lv_tick_get();
   if (g_chat_ui.archive_page && glass_chat_page_get(g_chat_ui.archive_page)) {
     struct chat_page *page = g_chat_ui.archive_page;

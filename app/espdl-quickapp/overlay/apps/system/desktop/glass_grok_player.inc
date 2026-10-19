@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Pre-rendered RGB565+A8 frames. No QuickJS, SVG or image codec. */
 #include "glass_grok.h"
+#include "glass_ui_visibility.h"
 #include "glass_grok_gaze.h"
 #include <errno.h>
 #include <fcntl.h>
@@ -95,7 +96,7 @@ static void grok_wake(struct glass_grok *b)
   }
 }
 static bool grok_visible(const struct glass_grok *b)
-{return b->active&&lv_obj_is_visible(b->root)&&!(b->overlay&&lv_obj_is_visible(b->overlay));}
+{return b->active&&lv_obj_is_visible(b->root)&&glass_ui_can_paint(b->root)&&!(b->overlay&&lv_obj_is_visible(b->overlay));}
 /* Revealing a parent or dismissing an overlay invalidates this retained root.
  * Resume from its draw event, without a second timer polling hidden players. */
 static void grok_revealed(lv_event_t *e)
@@ -242,9 +243,11 @@ bool glass_grok_ready(const struct glass_grok *b){return b&&b->initialized;}
 void glass_grok_debug_status(void)
 {
   for(unsigned i=0;i<8;i++)if(instances[i]){struct glass_grok *b=instances[i];pthread_mutex_lock(&b->lock);
-    printf("grok-sd %s id=%02u frames=%u reads=%u mean_us=%llu max_us=%llu errors=%u error=%d buffer=%u ready=%d visible=%d seeks=%u ticks=%u\n",b->path,b->current,b->displayed,b->reads,(unsigned long long)(b->reads?b->read_us/b->reads:0),(unsigned long long)b->max_read_us,b->errors,b->error,b->bytes*2,b->initialized,lv_obj_is_visible(b->root)&&!(b->overlay&&lv_obj_is_visible(b->overlay)),b->seeks,b->ticks);pthread_mutex_unlock(&b->lock);}
+    printf("grok-sd %s id=%02u frames=%u reads=%u mean_us=%llu max_us=%llu errors=%u error=%d buffer=%u ready=%d visible=%d seeks=%u ticks=%u\n",b->path,b->current,b->displayed,b->reads,(unsigned long long)(b->reads?b->read_us/b->reads:0),(unsigned long long)b->max_read_us,b->errors,b->error,b->bytes*2,b->initialized,grok_visible(b),b->seeks,b->ticks);pthread_mutex_unlock(&b->lock);}
 }
 #ifdef GROK_HOST_TEST
+void glass_grok_test_stats(struct glass_grok *b,unsigned out[3])
+{pthread_mutex_lock(&b->lock);out[0]=b->reads;out[1]=b->displayed;out[2]=b->ticks;pthread_mutex_unlock(&b->lock);}
 void glass_grok_test_step(struct glass_grok *b){if(b)grok_tick(b->timer);}
 void glass_grok_test_step_visible(void){for(unsigned i=0;i<8;i++)if(instances[i])grok_tick(instances[i]->timer);}
 unsigned glass_grok_test_expression(struct glass_grok *b,const char *id)

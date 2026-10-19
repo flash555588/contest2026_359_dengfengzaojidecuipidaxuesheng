@@ -165,8 +165,8 @@ static const uint32_t weather_air_colors[]={
 
 static void glass_weather_detail_update(const struct glass_weather_snapshot *weather,bool stale)
 {
+  if(!glass_ui_can_paint(g_weather_detail.location))return;
   bool night=weather_is_night();
-  if(!g_weather_detail.location)return;
   bool first=!g_weather_detail.valid;
   bool same_data=!weather->valid||(g_weather_detail.data&&
     weather_values_equal(g_weather_detail.data,&weather->data)&&

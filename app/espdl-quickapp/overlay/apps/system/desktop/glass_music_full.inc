@@ -169,7 +169,7 @@ static void music_full_palette(struct music_full_ui *f,const struct music_now_pl
 
 static void music_full_refresh(const struct music_now_playing *now)
 {
-  struct music_full_ui *f=g_music_ui.full;if(!f)return;
+  struct music_full_ui *f=g_music_ui.full;if(!f||!glass_ui_can_paint(f->root))return;
   f->playing=now->state==MUSIC_PLAYING&&!now->pause_requested;
   if(f->track!=now->track_id)for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++){
     lv_anim_delete(f->labels[i],music_full_lyric_opacity);

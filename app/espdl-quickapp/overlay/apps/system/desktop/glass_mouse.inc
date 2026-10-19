@@ -255,6 +255,7 @@ static void glass_mouse_refresh(lv_timer_t *timer)
   char text[112];
   LV_UNUSED(timer);
   if (!g_mouse_status) return;
+  if (!glass_ui_can_paint(g_mouse_status)) return;
   /* A touch stream must not compete with status repaint work on the LVGL
    * thread. The next timer tick refreshes the connection state after release. */
   if (g_mouse_touching) return;
