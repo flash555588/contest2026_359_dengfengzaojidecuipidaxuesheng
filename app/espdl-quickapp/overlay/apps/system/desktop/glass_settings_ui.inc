@@ -1,11 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 static void glass_settings(lv_event_t *e)
 {
-  LV_UNUSED(e);glass_preferences_update();g_control_preferences=true;
+  LV_UNUSED(e);glass_preferences_update();
   lv_obj_t *card=panel_card("控制面板");if(!card)return;
   detail_page(card);g_control_card=card;
   lv_obj_add_event_cb(card,glass_control_deleted,LV_EVENT_DELETE,NULL);
-  lv_obj_remove_event_cb(g_desktop.panel,glass_control_outside);
   detail_sidebar(card,"设置",GLASS_ICON_SLIDERS,glass_settings_back);
   lv_obj_t *selected=glass_box(card,12,104,140,44,detail_soft(),12);
   lv_obj_add_flag(selected,LV_OBJ_FLAG_CLICKABLE);glass_sidebar_track(selected);

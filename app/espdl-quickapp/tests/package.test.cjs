@@ -28,7 +28,10 @@ test('privileged identity is checked before runtime state is changed', () => {
   assert.match(runtime, /g_qpk.ha_config_access = qpk_builtin_ha_origin\(package, filename\)/);
   assert.match(runtime, /if\(g_qpk.ha_config_access &&/);
   assert.match(runtime, /if\(!ret&&g_qpk.ha_config_access &&/);
-  assert.doesNotMatch(runtime, /strcmp\(g_qpk.package,"com.openvela.homeassistant"\)/);
+  // A read-only diagnostic may identify the active page by package name.
+  // Package-name equality must never be the source of configuration authority.
+  assert.doesNotMatch(runtime,
+    /g_qpk\.ha_config_access\s*=[^;]*strcmp\([^;]*com\.openvela\.homeassistant/);
 });
 
 test('runtime releases generations and exposes pet diagnostic commands', () => {

@@ -21,6 +21,22 @@ import serial
 from serial.tools import list_ports
 
 
+def prepare_esp_tts_transfer(prepared,destination):
+    from esp_tts_inputs import verify_prepared,source_path,voice_variants
+    lock=verify_prepared(prepared)
+    selected={target:row for name,target,row in voice_variants(lock)}
+    selected['LICENSE']=next(row for row in lock['sources'] if row['path']=='LICENSE')
+    destination.mkdir(parents=True,exist_ok=True)
+    records={}
+    for name,row in selected.items():
+        target=destination/name
+        if target.exists() and hashlib.sha256(target.read_bytes()).hexdigest()!=row['sha256']:
+            raise ValueError('Existing official voice transfer file differs; choose a fresh output')
+        if not target.exists():shutil.copyfile(source_path(prepared/'upstream',row),target)
+        records[name]={'bytes':row['bytes'],'sha256':row['sha256']}
+    return destination.resolve(),{'files':records},list(selected)
+
+
 def prepare_tts_transfer(prepared, destination):
     """Select only runtime files and notices, checking the compiled asset table.
 
@@ -63,6 +79,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--prepared',type=Path)
     p.add_argument('--tts-prepared',type=Path,help='Prepared Chinese TTS runtime and its verified manifest')
+    p.add_argument('--esp-tts-prepared',type=Path,help='Official ESP-TTS inputs verified against the repository lock')
     p.add_argument('--custom-model',type=Path)
     p.add_argument('--command-grammar',type=Path,help='Pinned bootstrap grammar, commands_cn.txt')
     p.add_argument('--replace-existing',action='store_true',help='Preserve an existing custom model as a rollback directory')
@@ -83,9 +100,12 @@ def main():
     grammar=a.command_grammar is not None
     fixtures=a.fixtures is not None
     tts=a.tts_prepared is not None
-    if sum([custom,grammar,fixtures,tts,a.prepared is not None])!=1:raise ValueError('Choose exactly one asset source')
-    if a.replace_existing and not custom:raise ValueError('Replacement is restricted to the custom wake model')
-    if tts:
+    esp=a.esp_tts_prepared is not None
+    if sum([custom,grammar,fixtures,tts,esp,a.prepared is not None])!=1:raise ValueError('Choose exactly one asset source')
+    if a.replace_existing and not (custom or esp):raise ValueError('Replacement is restricted to custom wake or official ESP-TTS assets')
+    if esp:
+        root,manifest,names=prepare_esp_tts_transfer(a.esp_tts_prepared,a.output/'esp-tts-transfer')
+    elif tts:
         root,manifest,names=prepare_tts_transfer(a.tts_prepared,a.output/'tts-transfer')
     elif grammar:
         canonical=Path(__file__).resolve().parents[1]/'app/espdl-quickapp/speech/commands_cn.txt'
@@ -116,7 +136,7 @@ def main():
             raise ValueError('Invalid asset: '+name)
         records.append({'path':name,**record})
     a.output.mkdir(parents=True,exist_ok=True)
-    target='/sdcard/speech/sanotts-zh' if tts else '/sdcard/speech/esp-sr/fst' if grammar else '/sdcard/speech/test' if fixtures else '/sdcard/speech/custom' if custom else '/sdcard/speech'
+    target='/sdcard/speech/esp-tts' if esp else '/sdcard/speech/sanotts-zh' if tts else '/sdcard/speech/esp-sr/fst' if grammar else '/sdcard/speech/test' if fixtures else '/sdcard/speech/custom' if custom else '/sdcard/speech'
     stage='/sdcard/.speech-'+secrets.token_hex(4)
     backup=None
     served=set()
@@ -149,7 +169,9 @@ def main():
             def command(text,timeout=3):
                 if len(text.encode())>=79:raise ValueError('NSH command exceeds line limit')
                 console.write(b'\x15');time.sleep(.03)
-                for byte in (text+'\r\n').encode():console.write(bytes([byte]));time.sleep(.008)
+                payload=(text+'\r').encode()
+                for offset in range(0,len(payload),32):
+                    console.write(payload[offset:offset+32]);console.flush();time.sleep(.02)
                 data='';until=time.monotonic()+timeout
                 while time.monotonic()<until:
                     data+=collect(.15)
@@ -165,7 +187,7 @@ def main():
                 response=command(text,timeout)
                 if re.search(r'nsh:.*(?:failed|not found|invalid)',response,re.I):raise RuntimeError(response)
                 return response
-            if custom or tts:
+            if custom or tts or esp:
                 checked('desktop speech stop',5)
                 status=checked('desktop speech status',3)
                 if not re.search(r'speech active=0\b',status):raise RuntimeError('Stop microphone recognition before publishing a model')
@@ -198,7 +220,7 @@ def main():
                 raise
     finally:
         console.close();http.shutdown();http.server_close();worker.join(timeout=3)
-        report={'published':published,'kind':'pretrained SanoTTS Chinese runtime' if tts else 'bootstrap command grammar' if grammar else 'synthetic PCM diagnostics' if fixtures else 'custom trained wake model' if custom else 'pretrained ESP-SR; not a newly trained model','target':target,'staging':stage,'backup':backup,'models':records,'runtime_sha256_check_required':True}
+        report={'published':published,'kind':'official ESP-TTS voice' if esp else 'pretrained SanoTTS Chinese runtime' if tts else 'bootstrap command grammar' if grammar else 'synthetic PCM diagnostics' if fixtures else 'custom trained wake model' if custom else 'pretrained ESP-SR; not a newly trained model','target':target,'staging':stage,'backup':backup,'models':records,'runtime_sha256_check_required':True}
         (a.output/'deployment.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print('SPEECH_ASSETS_DEPLOYED',len(records),'files; verify loading on board',flush=True)
 

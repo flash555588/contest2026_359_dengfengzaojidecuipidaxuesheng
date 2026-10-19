@@ -1,0 +1,158 @@
+{
+  "source": "https://github.com/google/fonts",
+  "commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+  "files": {
+    "notosanssc/NotoSansSC[wght].ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+      "family": "Noto Sans SC",
+      "weight": "100 900",
+      "font": true,
+      "bytes": 17772300,
+      "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+    },
+    "notosanssc/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notosanssc/OFL.txt",
+      "family": "Noto Sans SC",
+      "weight": "100 900",
+      "font": false,
+      "bytes": 4388,
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    },
+    "notoserifsc/NotoSerifSC[wght].ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf",
+      "family": "Noto Serif SC",
+      "weight": "200 900",
+      "font": true,
+      "bytes": 25125512,
+      "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9"
+    },
+    "notoserifsc/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notoserifsc/OFL.txt",
+      "family": "Noto Serif SC",
+      "weight": "200 900",
+      "font": false,
+      "bytes": 4350,
+      "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
+    },
+    "notosansjp/NotoSansJP[wght].ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf",
+      "family": "Noto Sans JP",
+      "weight": "100 900",
+      "font": true,
+      "bytes": 9589900,
+      "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f"
+    },
+    "notosansjp/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notosansjp/OFL.txt",
+      "family": "Noto Sans JP",
+      "weight": "100 900",
+      "font": false,
+      "bytes": 4388,
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    },
+    "notoserifjp/NotoSerifJP[wght].ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notoserifjp/NotoSerifJP%5Bwght%5D.ttf",
+      "family": "Noto Serif JP",
+      "weight": "200 900",
+      "font": true,
+      "bytes": 13574352,
+      "sha256": "2fd527ba12b6a44ec30d796d633360da0aeba6c5d4af1304ce12bb4dc15a7dfc"
+    },
+    "notoserifjp/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notoserifjp/OFL.txt",
+      "family": "Noto Serif JP",
+      "weight": "200 900",
+      "font": false,
+      "bytes": 4350,
+      "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
+    },
+    "zcoolqingkehuangyou/ZCOOLQingKeHuangYou-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolqingkehuangyou/ZCOOLQingKeHuangYou-Regular.ttf",
+      "family": "ZCOOL QingKe HuangYou",
+      "weight": "400",
+      "font": true,
+      "bytes": 8328684,
+      "sha256": "54f0c0df4308cd74cd0f2fd3494ae054dbc4a1fd6fa7d71f4807eb4cdd8b4136"
+    },
+    "zcoolqingkehuangyou/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolqingkehuangyou/OFL.txt",
+      "family": "ZCOOL QingKe HuangYou",
+      "weight": "400",
+      "font": false,
+      "bytes": 4419,
+      "sha256": "f1bce31b817dee01c1e4ef8bc45d8ecb95f01f4abbf0a985007cb3cd0fd8123d"
+    },
+    "zcoolkuaile/ZCOOLKuaiLe-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolkuaile/ZCOOLKuaiLe-Regular.ttf",
+      "family": "ZCOOL KuaiLe",
+      "weight": "400",
+      "font": true,
+      "bytes": 1514968,
+      "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d"
+    },
+    "zcoolkuaile/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolkuaile/OFL.txt",
+      "family": "ZCOOL KuaiLe",
+      "weight": "400",
+      "font": false,
+      "bytes": 4398,
+      "sha256": "538078469839b4a2e7ad22bef4ebe41681a4e53749bb2a072144024f1d6d703d"
+    },
+    "zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf",
+      "family": "ZCOOL XiaoWei",
+      "weight": "400",
+      "font": true,
+      "bytes": 6313808,
+      "sha256": "a42b620140f493db42f741351dfbf343c0936d58588ee8004b8b2a218d997ff1"
+    },
+    "zcoolxiaowei/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolxiaowei/OFL.txt",
+      "family": "ZCOOL XiaoWei",
+      "weight": "400",
+      "font": false,
+      "bytes": 4400,
+      "sha256": "a094514ca57cf8f9c5e8d8d1adab5d8cd3a377297ff016f9df2c05b3ecd77f0a"
+    },
+    "mashanzheng/MaShanZheng-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/mashanzheng/MaShanZheng-Regular.ttf",
+      "family": "Ma Shan Zheng",
+      "weight": "400",
+      "font": true,
+      "bytes": 5857936,
+      "sha256": "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb"
+    },
+    "mashanzheng/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/mashanzheng/OFL.txt",
+      "family": "Ma Shan Zheng",
+      "weight": "400",
+      "font": false,
+      "bytes": 4397,
+      "sha256": "d7bdb1cee215b689e23c2f95672a6084c790542170648267a55114103d756a08"
+    },
+    "ibmplexmono/IBMPlexMono-Medium.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/ibmplexmono/IBMPlexMono-Medium.ttf",
+      "family": "IBM Plex Mono",
+      "weight": "500",
+      "font": true,
+      "bytes": 136704,
+      "sha256": "a9b4c49bb299e05b5f6c481e7fb5e78943d2793249a0c8874ab574a2d1ea6755"
+    },
+    "ibmplexmono/OFL.txt": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/ibmplexmono/OFL.txt",
+      "family": "IBM Plex Mono",
+      "weight": "600",
+      "font": false,
+      "bytes": 4456,
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+    },
+    "ibmplexmono/IBMPlexMono-SemiBold.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/ibmplexmono/IBMPlexMono-SemiBold.ttf",
+      "family": "IBM Plex Mono",
+      "weight": "600",
+      "font": true,
+      "bytes": 140216,
+      "sha256": "d3c38e55c78f5b0f28009fddba4834ec503278936a5986032424c9bd2d23aa46"
+    }
+  }
+}

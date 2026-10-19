@@ -1,0 +1,107 @@
+{
+  "selection": "Only benchmark counters and named built-in application compilation timings; no raw sessions, addresses, configuration or media.",
+  "records": [
+    {
+      "original": "media-v3-ppa-irq/paired848.log",
+      "original_sha256": "370df76df7936e11a1f9dc78baea103e16668a9e5effc6c206bddc8693f18019",
+      "selected_lines": [
+        {
+          "line": 13,
+          "text": "[local-video] profile samples=60 read=20 decode=5300 render=1860 wait=160 ms frames=32 drop=28 lag=1054 ms"
+        },
+        {
+          "line": 33,
+          "text": "[local-video] profile samples=60 read=0 decode=5490 render=1320 wait=0 ms frames=31 drop=29 lag=649 ms"
+        },
+        {
+          "line": 54,
+          "text": "[local-video] profile samples=60 read=40 decode=5530 render=1420 wait=0 ms frames=32 drop=28 lag=777 ms"
+        },
+        {
+          "line": 75,
+          "text": "[local-video] profile samples=60 read=30 decode=5410 render=1730 wait=20 ms frames=31 drop=29 lag=1033 ms"
+        },
+        {
+          "line": 89,
+          "text": "[media-cpu] ui_mask=3 workers=0 ret=0"
+        }
+      ]
+    },
+    {
+      "original": "media-v3-decode-affinity-scoped/cpu-status.log",
+      "original_sha256": "89594ec20b47d2b18e61683f3bd32858d3988090536a586cb84e0ec4c29cbfcb",
+      "selected_lines": [
+        {
+          "line": 2,
+          "text": "[media-cpu] ui_mask=3 workers=0 ret=0"
+        },
+        {
+          "line": 14,
+          "text": "[media-cpu] ui_mask=1 workers=1 ret=0"
+        },
+        {
+          "line": 17,
+          "text": "[media-cpu] ui_mask=1 workers=1 ret=0"
+        },
+        {
+          "line": 31,
+          "text": "[media-cpu] ui_mask=3 workers=0 ret=0"
+        },
+        {
+          "line": 36,
+          "text": "[media-cpu] ui_mask=3 workers=0 ret=0"
+        }
+      ]
+    },
+    {
+      "original": "media-v3-decode-affinity-scoped/play848.log",
+      "original_sha256": "a89654bff2029dccdee1d1e08eaf202215917fff42deb8a3a7ada2696a77be2b",
+      "selected_lines": [
+        {
+          "line": 10,
+          "text": "[local-video] profile samples=60 read=10 decode=5350 render=1840 wait=280 ms frames=32 drop=28 lag=990 ms"
+        },
+        {
+          "line": 27,
+          "text": "[local-video] profile samples=60 read=10 decode=5390 render=1810 wait=10 ms frames=31 drop=29 lag=1033 ms"
+        }
+      ]
+    },
+    {
+      "original": "mijia-waterfall/board-verification/script-optimized.log",
+      "original_sha256": "bd9d3f6e9714eb340da5c766222e8cee192243d192b0f2fce65f130cae6554ac",
+      "selected_lines": [
+        {
+          "line": 49,
+          "text": "[qpk] started 米家 HA (com.openvela.homeassistant 0.7.0) with QuickJS compile_ms=890 execute_ms=120 cache=miss"
+        },
+        {
+          "line": 198,
+          "text": "[qpk] started 米家 HA (com.openvela.homeassistant 0.7.0) with QuickJS compile_ms=30 execute_ms=110 cache=hit"
+        },
+        {
+          "line": 209,
+          "text": "[qpk] started 米家 HA (com.openvela.homeassistant 0.7.0) with QuickJS compile_ms=30 execute_ms=110 cache=hit"
+        },
+        {
+          "line": 220,
+          "text": "[qpk] started 米家 HA (com.openvela.homeassistant 0.7.0) with QuickJS compile_ms=30 execute_ms=110 cache=hit"
+        },
+        {
+          "line": 231,
+          "text": "[qpk] started 米家 HA (com.openvela.homeassistant 0.7.0) with QuickJS compile_ms=30 execute_ms=110 cache=hit"
+        }
+      ]
+    },
+    {
+      "original": "official-tts-q8-20261017/board-short-tx.log",
+      "original_sha256": "b59992a5e7f209d8ad4af646eca85e390310ab62ac90278df81ec6f8424617c0",
+      "selected_lines": [
+        {
+          "line": 13,
+          "text": "[nano] kernel_cases=288 result=0"
+        }
+      ]
+    }
+  ]
+}

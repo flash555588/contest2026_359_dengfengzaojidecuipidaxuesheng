@@ -91,17 +91,20 @@ int qpk_mjpeg_probe(const uint8_t *input, size_t size, unsigned *width,
   return result == JDR_OK ? 0 : -EBADMSG;
 }
 
-int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t capacity,
-                           uint16_t *output, unsigned width, unsigned height, unsigned stride,
-                           unsigned expected_width, unsigned expected_height)
+static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
+                              uint16_t *output, unsigned width, unsigned height, unsigned stride,
+                              unsigned expected_width, unsigned expected_height)
 {
   struct mjpeg_decoder *d = decoder;
   if (!d || !input || !output || !width || !height || stride < width ||
-      stride > 4096 || height > 4096 || size > capacity) return -EINVAL;
-  int ret = jpeg_tables(input, &size, capacity);
-  if (ret < 0) return ret;
+      stride > 4096 || height > 4096) return -EINVAL;
   d->input = input; d->size = size; d->position = 0;
   if (qpk_jd_prepare(&d->jpeg, jpeg_input, d->workspace, sizeof(d->workspace), d) != JDR_OK) return -EBADMSG;
+  if (!expected_width && !expected_height) {
+    expected_width = d->jpeg.width; expected_height = d->jpeg.height;
+    if (!((expected_width == width && expected_height == height) ||
+          (expected_width * 2 == width && expected_height * 2 == height))) return -EPROTO;
+  }
   if (d->jpeg.width != expected_width || d->jpeg.height != expected_height ||
       !expected_width || !expected_height || expected_width > 4096 || expected_height > 4096) return -EPROTO;
   unsigned scale = 0;
@@ -112,14 +115,26 @@ int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t c
   /* The AI preview exactly matches the reduced JPEG. Decode into its worker
    * buffer and publish only on success, avoiding a temporary frame and copy. */
   bool direct = d->width == width && d->height == height;
-  d->pixels = direct ? output : malloc(pixels * 2); d->stride = direct ? stride : d->width;
+  bool twice = stride == width && d->width * 2 == width && d->height * 2 == height;
+  d->pixels = direct || twice ? output : malloc(pixels * 2); d->stride = direct ? stride : d->width;
   if (!d->pixels) return -ENOMEM;
   JRESULT result = qpk_jd_decomp(&d->jpeg, jpeg_output, scale);
   if (result != JDR_OK) {
-    if (!direct) free(d->pixels);
+    if (!direct && !twice) free(d->pixels);
     d->pixels = NULL; return -EBADMSG;
   }
   if (direct) { d->pixels = NULL; return 0; }
+  if (twice) {
+    /* Expand backwards in the caller's frame: no temporary allocation or
+     * per-pixel divisions, and unread source rows remain intact. */
+    for (unsigned y = d->height; y-- > 0;) {
+      const uint16_t *src = output + (size_t)y * d->width;
+      uint16_t *dst = output + (size_t)y * 2 * stride;
+      for (unsigned x = d->width; x-- > 0;) { uint16_t v=src[x]; dst[x*2]=v; dst[x*2+1]=v; }
+      memcpy(dst + stride, dst, (size_t)width * 2);
+    }
+    d->pixels = NULL; return 0;
+  }
   unsigned dw = width, dh = (uint64_t)d->height * width / d->width;
   if (dh > height) { dh = height; dw = (uint64_t)d->width * height / d->height; }
   unsigned ox = (width - dw) / 2, oy = (height - dh) / 2;
@@ -132,6 +147,29 @@ int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t c
     }
   free(d->pixels); d->pixels = NULL;
   return 0;
+}
+
+int qpk_mjpeg_decode_still(void *decoder, const uint8_t *input, size_t size,
+                           uint16_t *output, unsigned width, unsigned height)
+{
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,width,height);
+}
+
+int qpk_mjpeg_decode_still_fit(void *decoder, const uint8_t *input, size_t size,
+                               uint16_t *output, unsigned width, unsigned height)
+{
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,0,0);
+}
+
+int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t capacity,
+                           uint16_t *output, unsigned width, unsigned height, unsigned stride,
+                           unsigned expected_width, unsigned expected_height)
+{
+  if (!decoder || !input || !output || !width || !height || stride < width ||
+      stride > 4096 || height > 4096 || size > capacity) return -EINVAL;
+  int ret = jpeg_tables(input,&size,capacity);
+  if (ret < 0) return ret;
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,expected_width,expected_height);
 }
 
 int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity,

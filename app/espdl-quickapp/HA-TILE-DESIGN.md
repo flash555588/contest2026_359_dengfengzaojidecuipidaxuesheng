@@ -1,4 +1,6 @@
-# 米家 HA 原生页：Home Assistant 卡片复刻说明
+# Home Assistant 卡片设计参考
+
+当前入口统一使用 `quickapp/homeassistant/app.js` 与共享 HASS 服务。原 `glass_hass_ui.inc` C 页面已移除；下文保留设计依据与历史映射，当前行为和验证见 [HASS.md](HASS.md)。
 
 本页把 Home Assistant 前端的设备卡片语言搬到 LVGL 原生实现里。所有数值都取自
 HA 前端源码，而不是凭观感猜测；抓取到的原始文件保存在

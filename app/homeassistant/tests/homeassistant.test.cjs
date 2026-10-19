@@ -12,47 +12,31 @@ const read = (...parts) => fs.readFileSync(path.join(system, ...parts), 'utf8');
 test('native service accepts HTTP hosts and replaces active configuration', () => {
   const service = read('hass', 'hass_service.c');
   const transport = read('hass', 'hass_transport.c');
+  const validation = read('hass', 'hass_config_validate.h');
 
-  assert.match(service, /static bool http_url/);
-  assert.doesNotMatch(service, /static bool local_url|inet_pton|\.local/);
+  assert.match(service, /hass_config_url_valid\(url\)/);
+  assert.match(validation, /static inline bool hass_config_url_valid/);
+  assert.doesNotMatch(validation, /static bool local_url|inet_pton/);
   assert.match(service, /HASS_CACHE_TTL_MS 10000/);
   assert.match(service, /"light".*"switch".*"input_boolean".*"fan"/s);
   assert.match(service, /wire\.status == 401 \|\| wire\.status == 403/);
   assert.match(service, /if \(owner\) hass_transport_stop\(\)/);
   assert.match(service, /-ECANCELED/);
-  assert.match(transport, /HA_RESPONSE_MAX 65536/);
+  assert.match(transport, /HA_RESPONSE_MAX \(256 \* 1024 \+ 4096\)/);
   assert.match(transport, /PTHREAD_CREATE_DETACHED/);
 });
 
 test('portal keeps an omitted token and applies Home Assistant saves', () => {
   const portal = read('desktop', 'portal', 'app.js');
   const http = read('desktop', 'glass_portal_http.c');
+  const configuration = read('desktop', 'glass_portal_config.c');
 
   assert.match(portal, /if\(data\[key\]===''\)delete data\[key\]/);
   assert.match(portal, /智能家居配置已保存并应用/);
-  const save = http.indexOf('portal_config_save(arg,o)');
-  const reload = http.indexOf('hass_portal_bootstrap()', save);
-  assert.ok(save >= 0 && reload > save);
-});
-
-test('native page paginates, confirms controls, and has no legacy advanced UI', () => {
-  const nativeUi = read('desktop', 'glass_hass_ui.inc');
-
-  assert.match(nativeUi, /HASS_UI_VISIBLE 6/);
-  assert.match(nativeUi, /HASS_UI_MAX_DEVICES 128/);
-  assert.match(nativeUi, /HASS_UI_REQUEST_VERIFY/);
-  assert.match(nativeUi, /HASS_UI_VERIFY_ATTEMPTS 4/);
-  assert.match(nativeUi, /HASS_UI_VERIFY_WINDOW_MS 8000/);
-  assert.match(nativeUi, /HASS_UI_REFRESH_INTERVAL_MS 10000/);
-  assert.match(nativeUi, /hass_get_state\(g_hass_ui\.client,/);
-  assert.match(nativeUi, /abs\(level - g_hass_ui\.pending_brightness\) <= 1/);
-  assert.match(nativeUi, /g_hass_ui\.page \* HASS_UI_VISIBLE/);
-  assert.match(nativeUi, /"alarm_control_panel"/);
-  assert.match(nativeUi, /"weather"/);
-  assert.match(nativeUi, /状态超过 64 KiB，请在 HA 中减少公开实体/);
-  assert.doesNotMatch(nativeUi, /"高级"/);
-  assert.ok((nativeUi.match(/device->brightness >= 0/g) || []).length >= 2);
-  assert.doesNotMatch(nativeUi, /device->on = g_hass_ui\.pending_on/);
+  assert.ok(http.includes('portal_config_save(arg,o)'));
+  const save = configuration.indexOf('qpk_storage_write(PORTAL_CONFIG_ROOT');
+  const apply = configuration.indexOf('hass_configure(ha_client,url,token,true)', save);
+  assert.ok(save >= 0 && apply > save);
 });
 
 test('desktop opens the reviewed app.js UI on the shared native service', () => {
@@ -74,7 +58,7 @@ test('desktop opens the reviewed app.js UI on the shared native service', () => 
   assert.match(desktop, /static const struct builtin_qpk_s g_builtin_homeassistant_qpk/);
   assert.match(desktop, /qpk_runtime_launch\(card, manifest->name, manifest->package,/);
   assert.match(glass, /static void glass_homeassistant[\s\S]*launch_builtin_homeassistant_qapp\(e\)/);
-  assert.match(glass, /#include "glass_hass_ui\.inc"/);
+  assert.doesNotMatch(glass, /#include "glass_hass_ui\.inc"/);
 
   assert.match(runtime, /hass_qjs_install\(context, system, g_qpk\.hass_grants\)/);
   assert.match(ui, /const nativeService = system\.homeAssistantService/);

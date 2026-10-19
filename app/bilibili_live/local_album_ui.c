@@ -353,6 +353,8 @@ static void album_create(lv_obj_t *parent,const lv_font_t *font,bool browse)
 }
 void local_album_show(lv_obj_t *parent,const lv_font_t *font)
 {album_create(parent,font,true);}
+void local_album_show_camera(lv_obj_t *parent,const lv_font_t *font)
+{snprintf(album_directory,sizeof(album_directory),"%s",ALBUM_LOCAL_ROOT);album_create(parent,font,true);}
 static void album_open_error(const char *message)
 {
   album_clear();album_ui.need_list=false;album_ui.mode=1;album_ui.image_attempted=true;

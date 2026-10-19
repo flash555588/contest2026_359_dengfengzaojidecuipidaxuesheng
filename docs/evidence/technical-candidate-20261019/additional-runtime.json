@@ -1,0 +1,84 @@
+{
+  "candidate_sha256": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+  "started_at_utc": "2026-10-19T07:53:31.744023+00:00",
+  "tests": [
+    {
+      "name": "reset_boot_2",
+      "passed": true
+    },
+    {
+      "name": "reset_boot_3",
+      "passed": true
+    },
+    {
+      "name": "reset_boot_4",
+      "passed": true
+    },
+    {
+      "name": "reset_boot_5",
+      "passed": true
+    }
+  ],
+  "memory_samples": [
+    {
+      "label": "followup_start",
+      "elapsed_seconds": 1.1,
+      "total": 33554432,
+      "used": 6238856,
+      "free": 27315576,
+      "maxused": 6488032,
+      "maxfree": 27063808,
+      "nused": 9186,
+      "nfree": 93
+    },
+    {
+      "label": "idle_30_seconds",
+      "elapsed_seconds": 31.53,
+      "total": 33554432,
+      "used": 6239784,
+      "free": 27314648,
+      "maxused": 6488032,
+      "maxfree": 27063808,
+      "nused": 9203,
+      "nfree": 85
+    },
+    {
+      "label": "after_additional_10_cycles",
+      "elapsed_seconds": 55.96,
+      "total": 33554432,
+      "used": 6240888,
+      "free": 27313544,
+      "maxused": 6488032,
+      "maxfree": 27063808,
+      "nused": 9218,
+      "nfree": 90
+    },
+    {
+      "label": "after_additional_20_cycles",
+      "elapsed_seconds": 80.26,
+      "total": 33554432,
+      "used": 6242544,
+      "free": 27311888,
+      "maxused": 6488032,
+      "maxfree": 27063808,
+      "nused": 9244,
+      "nfree": 78
+    },
+    {
+      "label": "idle_15_seconds_after_cycles",
+      "elapsed_seconds": 95.69,
+      "total": 33554432,
+      "used": 6246600,
+      "free": 27307832,
+      "maxused": 6488032,
+      "maxfree": 27063808,
+      "nused": 9310,
+      "nfree": 64
+    }
+  ],
+  "original_memory_check_overridden": false,
+  "power_off_cold_boots_performed": 0,
+  "navigation_cycles_completed": 20,
+  "reset_boots_passed_including_initial": 5,
+  "completed_at_utc": "2026-10-19T07:56:03.124883+00:00"
+}

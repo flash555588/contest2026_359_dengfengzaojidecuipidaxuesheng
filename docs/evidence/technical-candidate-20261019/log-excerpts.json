@@ -1,0 +1,420 @@
+{
+  "selection": "Allowlisted device/test counters only; raw logs and complete Flash backup remain private outside repository.",
+  "records": [
+    {
+      "raw_file": "chip-id.log",
+      "raw_sha256": "2309b03b380a5aa4a06a9b7b876484e53287dc1b8c72cac0d26b4a8b503fc411",
+      "selected_lines": []
+    },
+    {
+      "raw_file": "backup-read.log",
+      "raw_sha256": "6cc5293e57f913d3a94a70d81afd9448c8e90190d044145378540486d16767ac",
+      "selected_lines": []
+    },
+    {
+      "raw_file": "backup-verify.log",
+      "raw_sha256": "3cd1ee6cf3c9d03b20758e77ba94f65ad9e4f07ded400efa8286bac49edd43af",
+      "selected_lines": [
+        {
+          "line": 18,
+          "text": "Verification successful (digest matched)."
+        }
+      ]
+    },
+    {
+      "raw_file": "candidate-flash.log",
+      "raw_sha256": "38142ee9952ff1847cf4cf65c159294ed8cc491b69486f3297354bc9748d5985",
+      "selected_lines": [
+        {
+          "line": 411,
+          "text": "Hash of data verified."
+        }
+      ]
+    },
+    {
+      "raw_file": "data-readback.log",
+      "raw_sha256": "890cb0f925051235bb98af7bd2ad2406a8aee328c37e75be5702b30186896166",
+      "selected_lines": []
+    },
+    {
+      "raw_file": "board.log",
+      "raw_sha256": "5076d5333d6c74e6948702c92914d34cf9c24551ba9d8526567cd9875a524b00",
+      "selected_lines": [
+        {
+          "line": 12,
+          "text": "NuttX  0.0.0 dd92bcf4-dirty Oct 19 2026 15:17:47 risc-v esp32p4-function-ev-board"
+        },
+        {
+          "line": 17,
+          "text": "/data type smartfs"
+        },
+        {
+          "line": 19,
+          "text": "/sdcard type vfat"
+        },
+        {
+          "line": 44,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 54,
+          "text": "navigation page=panel return=home"
+        },
+        {
+          "line": 64,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 75,
+          "text": "navigation page=panel return=home"
+        },
+        {
+          "line": 85,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 95,
+          "text": "navigation page=panel return=home"
+        },
+        {
+          "line": 109,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 119,
+          "text": "navigation page=panel return=home"
+        },
+        {
+          "line": 129,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 142,
+          "text": "navigation page=panel return=home"
+        },
+        {
+          "line": 157,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 167,
+          "text": "navigation page=panel return=home"
+        },
+        {
+          "line": 179,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 191,
+          "text": "navigation page=chat return=home"
+        },
+        {
+          "line": 201,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 236,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 253,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 268,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 283,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 300,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 315,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 332,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 347,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 364,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 379,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    },
+    {
+      "raw_file": "memory-followup.log",
+      "raw_sha256": "fadb06063750a8c010226207d6cb54ce3c26af0519e872330232a79623e297cc",
+      "selected_lines": [
+        {
+          "line": 59,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 74,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 91,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 106,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 123,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 138,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 155,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 170,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 187,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 202,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 226,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 241,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 258,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 273,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 290,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 305,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 322,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 337,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 354,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 369,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    },
+    {
+      "raw_file": "boot-2.log",
+      "raw_sha256": "51b51266404381e2ddce6798c961c337a83c9803c20764c1aad0677a45711e52",
+      "selected_lines": [
+        {
+          "line": 13,
+          "text": "NuttX  0.0.0 dd92bcf4-dirty Oct 19 2026 15:17:47 risc-v esp32p4-function-ev-board"
+        },
+        {
+          "line": 18,
+          "text": "/data type smartfs"
+        },
+        {
+          "line": 20,
+          "text": "/sdcard type vfat"
+        },
+        {
+          "line": 45,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    },
+    {
+      "raw_file": "boot-3.log",
+      "raw_sha256": "d801d17c43c10a8e8ab73978c9854a0856f880f35ac2f75cafe7d17c5286328c",
+      "selected_lines": [
+        {
+          "line": 13,
+          "text": "NuttX  0.0.0 dd92bcf4-dirty Oct 19 2026 15:17:47 risc-v esp32p4-function-ev-board"
+        },
+        {
+          "line": 18,
+          "text": "/data type smartfs"
+        },
+        {
+          "line": 20,
+          "text": "/sdcard type vfat"
+        },
+        {
+          "line": 45,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    },
+    {
+      "raw_file": "boot-4.log",
+      "raw_sha256": "a6dd22f548faab047530f0fdd0f8a608b4e36c1e8fea9007ae42358a4452fbf8",
+      "selected_lines": [
+        {
+          "line": 13,
+          "text": "NuttX  0.0.0 dd92bcf4-dirty Oct 19 2026 15:17:47 risc-v esp32p4-function-ev-board"
+        },
+        {
+          "line": 18,
+          "text": "/data type smartfs"
+        },
+        {
+          "line": 20,
+          "text": "/sdcard type vfat"
+        },
+        {
+          "line": 45,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    },
+    {
+      "raw_file": "boot-5.log",
+      "raw_sha256": "7d4ad60bff42ba9dce180b637e787d467a4285155987293dc93fa75349a8a4cf",
+      "selected_lines": [
+        {
+          "line": 13,
+          "text": "NuttX  0.0.0 dd92bcf4-dirty Oct 19 2026 15:17:47 risc-v esp32p4-function-ev-board"
+        },
+        {
+          "line": 18,
+          "text": "/data type smartfs"
+        },
+        {
+          "line": 20,
+          "text": "/sdcard type vfat"
+        },
+        {
+          "line": 45,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    },
+    {
+      "raw_file": "fixed-fixture.log",
+      "raw_sha256": "638e3b3c1e8bb8d01f89ad069cd58a6ada0ee1c0f091ce0a6b06c121dc4ed51f",
+      "selected_lines": [
+        {
+          "line": 4,
+          "text": "espdl test request=1"
+        },
+        {
+          "line": 5,
+          "text": "[espdl] starting context selftest"
+        },
+        {
+          "line": 6,
+          "text": "[espdl] context worker 1 started"
+        },
+        {
+          "line": 7,
+          "text": "[espdl] context worker 2 started"
+        },
+        {
+          "line": 8,
+          "text": "[espdl] P4 SIMD + same-CPU context test result=0"
+        },
+        {
+          "line": 9,
+          "text": "[espdl] preprocess raw=8c05 SIMD=20,64,68 scalar=20,64,68 mismatches=34033/57600"
+        },
+        {
+          "line": 10,
+          "text": "[espdl] selected scalar preprocess reference result=0"
+        },
+        {
+          "line": 11,
+          "text": "[espdl] 320x240 fixture mode=1 result=-2 count=0"
+        },
+        {
+          "line": 12,
+          "text": "[espdl] model fixture test result=-2"
+        },
+        {
+          "line": 13,
+          "text": "espdl test completed error=-2"
+        },
+        {
+          "line": 18,
+          "text": "navigation page=home return=home"
+        },
+        {
+          "line": 23,
+          "text": "espdl request=1 mode=0 busy=0 stage=6 error=-2 frame=0 count=0 ms=0 track=0 target=-1"
+        }
+      ]
+    },
+    {
+      "raw_file": "model-availability.log",
+      "raw_sha256": "fb4617031885cf5c6b20af1c77ebb81589bd42346712dd05615413d929f93d0a",
+      "selected_lines": [
+        {
+          "line": 4,
+          "text": "[CPU0] stat: ERROR: stat failed: -36, path /sdcard/espdl/imagenet_cls_mobilenetv2_s8_v1.espdl, buf 0x483df100"
+        },
+        {
+          "line": 5,
+          "text": "nsh: ls: stat failed: File name too long"
+        },
+        {
+          "line": 10,
+          "text": "[CPU0] stat: ERROR: stat failed: -36, path /sdcard/espdl/human_face_detect_msr_s8_v1.espdl, buf 0x483df100"
+        },
+        {
+          "line": 11,
+          "text": "nsh: ls: stat failed: File name too long"
+        },
+        {
+          "line": 18,
+          "text": "[CPU0] stat: ERROR: stat failed: -36, path /sdcard/espdl/human_face_detect_mnp_s8_v1.espdl, buf 0x483df100"
+        },
+        {
+          "line": 19,
+          "text": "nsh: ls: stat failed: File name too long"
+        },
+        {
+          "line": 29,
+          "text": "navigation page=home return=home"
+        }
+      ]
+    }
+  ]
+}

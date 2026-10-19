@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "glass_speech.h"
+#include "glass_voice.h"
 #include "glass_speech_sr.h"
 #include "glass_speech_tts.h"
 #ifdef GLASS_ESP_TTS
 #include "glass_esp_tts.h"
 #endif
 #include "glass_speech_level.h"
+#include "glass_speech_gain.h"
 #include "glass_wake_model.h"
 #include "glass_custom_wake.h"
 #include "glass_music.h"
@@ -25,12 +27,15 @@
 
 #define VOICE_RATE 16000
 #define VOICE_BUFFERS 4
-#define VOICE_BYTES 1984
+#define VOICE_BYTES 960
 #define VOICE_FRAMES (VOICE_BYTES/4)
 #define VOICE_SETTLE_FRAMES 1024
-#define SPEECH_CAPTURE_TRY 1
+static int speech_audio_lock(void);
+#define VOICE_CAPTURE_LOCK() speech_audio_lock()
 static bool speech_cancelled(void *unused);
+static bool speech_background_capture(void);
 #define VOICE_CAPTURE_CANCELLED() speech_cancelled(NULL)
+#define VOICE_CAPTURE_BACKGROUND() speech_background_capture()
 #include "glass_voice_capture.inc"
 
 static pthread_mutex_t speech_lock=PTHREAD_MUTEX_INITIALIZER;
@@ -39,6 +44,24 @@ static uint64_t speech_level_at;
 static uint64_t speech_milliseconds(void)
 {struct timespec now;clock_gettime(CLOCK_MONOTONIC,&now);return (uint64_t)now.tv_sec*1000+now.tv_nsec/1000000;}
 static atomic_bool speech_cancel;
+static int speech_audio_lock(void)
+{
+  uint64_t end=speech_milliseconds()+5000;
+  while(!atomic_load(&speech_cancel)){
+    int ret=music_pcm_session_trylock();if(ret!=-EBUSY)return ret;
+    if(speech_background_capture())return -EBUSY;
+    if(speech_milliseconds()>=end)return -ETIMEDOUT;
+    usleep(10000);
+  }
+  return -ECANCELED;
+}
+struct speech_job;
+static struct speech_job *speech_pending;
+static bool speech_pending_cancelled;
+static bool speech_background_capture(void)
+{pthread_mutex_lock(&speech_lock);bool background=speech.background_wake;pthread_mutex_unlock(&speech_lock);return background;}
+static atomic_uint speech_volume=75;
+unsigned glass_speech_volume(void){return atomic_load(&speech_volume);}
 static const struct speech_command default_commands[]={
   {1,"打开灯光","da kai deng guang"},{2,"关闭灯光","guan bi deng guang"},
   {3,"打开窗帘","da kai chuang lian"},{4,"关闭窗帘","guan bi chuang lian"},
@@ -58,11 +81,21 @@ void glass_speech_get(struct speech_snapshot *out)
 {if(out){pthread_mutex_lock(&speech_lock);*out=speech;
   if(out->phase==SPEECH_SPEAKING&&speech_milliseconds()-speech_level_at>180)out->level=0;
   pthread_mutex_unlock(&speech_lock);}}
+void glass_speech_capture_woke(void)
+{
+  pthread_mutex_lock(&speech_lock);
+  if(!++speech.wake_event)speech.wake_event=1;
+  speech.wake_ms=(uint32_t)speech_milliseconds();speech.revision++;
+  pthread_mutex_unlock(&speech_lock);
+}
 static void speech_stop(uint32_t request)
 {
   pthread_mutex_lock(&speech_lock);
   if(!request||speech.request==request){
+    if(speech_pending)speech_pending_cancelled=true;
+#ifndef GLASS_ESP_TTS
     glass_speech_clear_cache();
+#endif
     if(speech.wake_ready){speech.wake_ready=false;speech.revision++;}
     if(speech.active){atomic_store(&speech_cancel,true);speech.phase=SPEECH_STOPPING;speech.revision++;}
   }
@@ -73,6 +106,35 @@ void glass_speech_clear_cache(void)
 {
 #ifndef GLASS_ESP_TTS
   glass_sano_cache_clear();
+#else
+  glass_esp_tts_cache_clear();
+#endif
+}
+#ifdef GLASS_ESP_TTS
+static atomic_bool speech_prepared;
+static void *speech_prepare_worker(void *unused)
+{
+  (void)unused;const unsigned char *data;void *owned;
+  uint64_t started=speech_milliseconds();
+  int ret=glass_esp_tts_voice_load(&data,&owned,NULL,NULL);
+  if(!ret)glass_esp_tts_voice_release(owned);
+  else atomic_store(&speech_prepared,false);
+  printf("[speech] voice_preload result=%d elapsed_ms=%lu\n",ret,(unsigned long)(speech_milliseconds()-started));
+  return NULL;
+}
+#endif
+void glass_speech_prepare(void)
+{
+#ifdef GLASS_ESP_TTS
+  if(atomic_exchange(&speech_prepared,true))return;
+  pthread_attr_t attr;int ret=pthread_attr_init(&attr);
+  if(!ret){
+    ret=pthread_attr_setstacksize(&attr,16384);
+    if(!ret)ret=pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+    if(!ret){pthread_t tid;ret=pthread_create(&tid,&attr,speech_prepare_worker,NULL);}
+    pthread_attr_destroy(&attr);
+  }
+  if(ret)atomic_store(&speech_prepared,false);
 #endif
 }
 const char *glass_speech_backend(void)
@@ -86,18 +148,17 @@ const char *glass_speech_backend(void)
 void glass_speech_stop_request(uint32_t request){if(request)speech_stop(request);}
 static bool speech_cancelled(void *unused)
 {(void)unused;return atomic_load(&speech_cancel);}
-struct speech_play {struct music_pcm pcm;bool opened;unsigned rate;uint64_t started,first_write;};
+struct speech_play {struct music_pcm pcm;bool opened;unsigned rate,volume;uint64_t started,first_write;};
 static int speech_write(void *opaque,const int16_t *data,size_t frames)
 {
   struct speech_play *play=opaque;if(speech_cancelled(NULL))return -ECANCELED;
-  if(!play->opened){int ret=music_pcm_try_open(&play->pcm,play->rate,55);if(ret)return ret;play->opened=true;play->first_write=speech_milliseconds();
+  if(!play->opened){int ret=music_pcm_try_open(&play->pcm,play->rate,play->volume);if(ret)return ret;play->opened=true;play->first_write=speech_milliseconds();
     printf("[speech] tts first_pcm_ms=%lu\n",(unsigned long)(speech_milliseconds()-play->started));}
   int ret=music_pcm_write(&play->pcm,data,frames,1);
   if(!ret){unsigned level=glass_speech_pcm_level(data,frames);
     pthread_mutex_lock(&speech_lock);speech.level=level;speech_level_at=speech_milliseconds();pthread_mutex_unlock(&speech_lock);}
   return ret;
 }
-#ifdef GLASS_ESP_TTS
 struct speech_buffer {int16_t *data;size_t frames,capacity;};
 static int speech_buffer_write(void *opaque,const int16_t *data,size_t frames)
 {
@@ -117,6 +178,7 @@ static int speech_buffer_write(void *opaque,const int16_t *data,size_t frames)
   memcpy(buffer->data+buffer->frames,data,frames*sizeof(*data));
   buffer->frames=needed;return 0;
 }
+#ifdef GLASS_ESP_TTS
 static int speech_esp_play(const char *text,struct speech_play *play)
 {
   struct speech_buffer buffer={0};
@@ -125,11 +187,31 @@ static int speech_esp_play(const char *text,struct speech_play *play)
    * before opening DMA, so playback never waits for parser/decoder work. */
   printf("[speech] prebuffer frames=%u render_ms=%lu result=%d\n",(unsigned)buffer.frames,
     (unsigned long)(speech_milliseconds()-play->started),ret);
+  if(!ret){unsigned gain=100;ret=glass_speech_normalize(buffer.data,buffer.frames,speech_cancelled,NULL,&gain);
+    printf("[speech] loudness mode=lookahead gain_percent=%u volume=%u result=%d\n",gain,glass_speech_volume(),ret);}
   for(size_t offset=0;!ret&&offset<buffer.frames;){
     size_t count=buffer.frames-offset;
     if(count>MUSIC_PCM_FRAMES)count=MUSIC_PCM_FRAMES;
     ret=speech_write(play,buffer.data+offset,count);
     offset+=count;
+  }
+  free(buffer.data);return ret;
+}
+#else
+static int speech_sano_play(const char *text,struct speech_play *play)
+{
+  /* The current Chinese neural decoder cannot yet sustain real-time audio
+   * on P4. Render before taking DMA ownership, so compute pauses cannot turn
+   * into missing syllables. Keep its raw PCM for a fair quality comparison. */
+  struct speech_buffer buffer={0};
+  int ret=glass_sano_synthesize("/sdcard/speech",text,speech_buffer_write,
+                               speech_cancelled,&buffer);
+  printf("[speech] prebuffer frames=%u render_ms=%lu result=%d\n",
+    (unsigned)buffer.frames,(unsigned long)(speech_milliseconds()-play->started),ret);
+  for(size_t offset=0;!ret&&offset<buffer.frames;){
+    size_t count=buffer.frames-offset;
+    if(count>MUSIC_PCM_FRAMES)count=MUSIC_PCM_FRAMES;
+    ret=speech_write(play,buffer.data+offset,count);offset+=count;
   }
   free(buffer.data);return ret;
 }
@@ -158,7 +240,9 @@ static int speech_wait_wake(void)
     }
   }
   /* The UI may open cloud ASR only after worker completion is published. */
-  capture_close(&capture);glass_custom_wake_destroy(wake);return ret;
+  uint64_t closed=speech_milliseconds();
+  capture_close(&capture);glass_custom_wake_destroy(wake);
+  printf("[speech] wake_release elapsed_ms=%lu result=%d\n",(unsigned long)(speech_milliseconds()-closed),ret);return ret;
 }
 static int speech_recognize(void)
 {
@@ -175,7 +259,10 @@ static int speech_recognize(void)
       int command=0,event=glass_sr_feed(sr,mono,n,&command);if(event<0){ret=event;break;}
       unsigned evaluations=0;float score=0;glass_sr_metrics(sr,&evaluations,&score);
       pthread_mutex_lock(&speech_lock);speech.wake_evaluations=evaluations;speech.wake_score=score;
-      speech.frames+=n;if(event==1)speech.wake_events++;pthread_mutex_unlock(&speech_lock);
+      speech.frames+=n;if(event==1){
+        speech.wake_events++;
+        if(!speech_cancelled(NULL)){if(!++speech.wake_event)speech.wake_event=1;speech.wake_ms=(uint32_t)speech_milliseconds();}
+      }pthread_mutex_unlock(&speech_lock);
       if(event==3)speech_publish(SPEECH_WAKE,0,"等待唤醒：" GLASS_WAKE_PHRASE,0,level);
       if(event==1)speech_publish(SPEECH_COMMAND,0,"请说中文指令",0,level);
       if(event==2){
@@ -221,15 +308,33 @@ static int speech_probe(void)
 #include "glass_esp_tts_probe.h"
 #endif
 struct speech_job {char *text;bool probe,wake_only;int nano;};
-static void speech_complete(int ret,bool wake_only)
+static void speech_complete_locked(int ret,bool wake_only)
 {
-  pthread_mutex_lock(&speech_lock);
   bool cancelled=speech_cancelled(NULL);
   if(ret==-ECANCELED||cancelled)ret=0;
   speech.wake_ready=wake_only&&!ret&&!cancelled&&speech.wake_events>0;
+  if(speech.wake_ready){
+    if(!++speech.wake_event)speech.wake_event=1;
+    speech.wake_ms=(uint32_t)speech_milliseconds();
+  }
   speech.active=false;speech.phase=ret?SPEECH_ERROR:SPEECH_IDLE;
   speech.error=ret;speech.level=0;speech.revision++;
+}
+static void speech_complete(int ret,bool wake_only)
+{pthread_mutex_lock(&speech_lock);speech_complete_locked(ret,wake_only);pthread_mutex_unlock(&speech_lock);}
+static struct speech_job *speech_next_job(int ret,bool wake_only)
+{
+  pthread_mutex_lock(&speech_lock);
+  struct speech_job *job=speech_pending;speech_pending=NULL;
+  bool discard=speech_pending_cancelled;speech_pending_cancelled=false;
+  if(job&&!discard){
+    atomic_store(&speech_cancel,false);speech.background_wake=false;
+    speech.wake_events=speech.wake_evaluations=speech.frames=0;speech.wake_score=0;
+    speech.phase=SPEECH_LOADING;speech.revision++;
+  }else speech_complete_locked(ret,wake_only&&!job);
   pthread_mutex_unlock(&speech_lock);
+  if(job&&discard){free(job->text);free(job);job=NULL;}
+  return job;
 }
 static void *speech_worker(void *argument)
 {
@@ -242,8 +347,11 @@ static void *speech_worker(void *argument)
    * their registers isolated across preemption and CPU migration. */
   __asm__ volatile("csrwi 0x7f2, 1\ncsrwi 0x7f1, 1" ::: "memory");
 #endif
-  struct speech_job *job=argument;char *text=job->text;bool probe=job->probe,wake_only=job->wake_only;int nano=job->nano;free(job);int ret;
+  struct speech_job *job=argument;
+again:
+  ;char *text=job->text;bool probe=job->probe,wake_only=job->wake_only;int nano=job->nano;free(job);int ret;
   (void)nano;
+  printf("[speech] worker mode=%s\n",text?"tts":wake_only?"wake":"recognize");
 #ifdef GLASS_P4TTS_PROBE
   if(nano>=30){
     extern int glass_p4tts_probe(int,bool (*)(void *),void *);
@@ -268,7 +376,7 @@ static void *speech_worker(void *argument)
   else if(wake_only)ret=speech_wait_wake();
   else if(text){
     uint64_t started=speech_milliseconds();
-    struct speech_play play={.started=started,
+    struct speech_play play={.started=started,.volume=glass_speech_volume(),
 #ifdef GLASS_ESP_TTS
       .rate=GLASS_ESP_TTS_RATE
 #else
@@ -279,7 +387,7 @@ static void *speech_worker(void *argument)
 #ifdef GLASS_ESP_TTS
     ret=speech_esp_play(text,&play);
 #else
-    ret=glass_sano_synthesize("/sdcard/speech",text,speech_write,speech_cancelled,&play);
+    ret=speech_sano_play(text,&play);
 #endif
     if(play.opened){
       if(!ret&&!speech_cancelled(NULL))ret=music_pcm_drain(&play.pcm);
@@ -289,23 +397,44 @@ static void *speech_worker(void *argument)
         (unsigned long long)played,(unsigned long long)(played*1000/play.rate),(unsigned long long)elapsed,ret);
       music_pcm_close(&play.pcm);
     }
+#ifdef GLASS_ESP_TTS
+    if(ret==-ENOMEM)glass_speech_clear_cache();
+#else
     if(ret||speech_cancelled(NULL))glass_speech_clear_cache();
+#endif
     printf("[speech] tts done result=%d elapsed_ms=%lu played_frames=%llu\n",ret,(unsigned long)(speech_milliseconds()-started),(unsigned long long)played);
     free(text);
   }else ret=speech_recognize();
-  speech_complete(ret,wake_only);
+  /* Capture/model teardown has finished before handing the same worker to a
+   * foreground request. The UI never waits for microphone release. */
+  job=speech_next_job(ret,wake_only);
+  if(job)goto again;
   return NULL;
 }
-static int speech_start_mode(const char *text,bool probe,bool wake_only,uint32_t *request,int nano)
+static int speech_start_mode(const char *text,bool probe,bool wake_only,uint32_t *request,int nano,bool background)
 {
   char *copy=NULL;if(text){if(!text[0]||strlen(text)>1024)return -EINVAL;copy=strdup(text);if(!copy)return -ENOMEM;}
   struct speech_job *job=calloc(1,sizeof(*job));if(!job){free(copy);return -ENOMEM;}job->text=copy;job->probe=probe;job->wake_only=wake_only;job->nano=nano;
   pthread_mutex_lock(&speech_lock);
-  if(speech.active||music_pcm_session_active()){pthread_mutex_unlock(&speech_lock);free(copy);free(job);return -EBUSY;}
+  bool handoff=!background&&speech.active&&(wake_only||speech.background_wake);
+  if((speech.active&&!handoff)||(music_pcm_session_active()&&!handoff&&!wake_only)){pthread_mutex_unlock(&speech_lock);free(copy);free(job);return -EBUSY;}
+  if(handoff){
+    if(speech_pending){free(speech_pending->text);free(speech_pending);}
+    speech_pending=job;speech_pending_cancelled=false;atomic_store(&speech_cancel,true);
+    speech.background_wake=false;speech.wake_ready=false;
+    speech.error=speech.command=0;speech.text[0]=0;speech.phase=SPEECH_LOADING;
+    speech.command_event=speech.command_ms=0;speech.last_command=0;
+    if(!++speech.request)speech.request=1;speech.revision++;
+    if(request)*request=speech.request;
+    pthread_mutex_unlock(&speech_lock);return 0;
+  }
+#ifndef GLASS_ESP_TTS
   if(!text)glass_speech_clear_cache();
+#endif
   atomic_store(&speech_cancel,false);speech.active=true;speech.phase=SPEECH_LOADING;
   speech.error=speech.command=0;speech.text[0]=0;speech.revision++;
   speech.wake_ready=false;
+  speech.background_wake=background;
   if(!++speech.request)speech.request=1;
   speech.frames=speech.wake_events=speech.wake_evaluations=0;speech.wake_score=0;
   speech.command_event=speech.command_ms=0;speech.last_command=0;
@@ -318,16 +447,22 @@ static int speech_start_mode(const char *text,bool probe,bool wake_only,uint32_t
   pthread_mutex_unlock(&speech_lock);return -ret;
 }
 static int speech_start(const char *text,bool probe,bool wake_only,uint32_t *request)
-{return speech_start_mode(text,probe,wake_only,request,0);}
-int glass_speech_listen(void){return speech_start(NULL,false,false,NULL);}
-int glass_speech_wait_wake(uint32_t *request){if(!request)return -EINVAL;*request=0;return speech_start(NULL,false,true,request);}
-int glass_speech_say(const char *text){if(!text)return -EINVAL;return speech_start(text,false,false,NULL);}
+{return speech_start_mode(text,probe,wake_only,request,0,false);}
+int glass_speech_listen(void){return glass_voice_start();}
+int glass_speech_wait_wake(uint32_t *request){if(!request)return -EINVAL;*request=0;glass_voice_cancel();return speech_start(NULL,false,true,request);}
+int glass_speech_background_wake(uint32_t *request)
+{
+  if(!request)return -EINVAL;*request=0;
+  return speech_start_mode(NULL,false,true,request,0,true);
+}
+int glass_speech_say_request(const char *text,uint32_t *request){if(!text)return -EINVAL;return speech_start(text,false,false,request);}
+int glass_speech_say(const char *text){return glass_speech_say_request(text,NULL);}
 int glass_speech_probe(void){return speech_start(NULL,true,false,NULL);}
 int glass_speech_nano(int mode)
 {
 #ifdef GLASS_NANO_PROBE
   if(mode<0||mode>2)return -EINVAL;
-  return speech_start_mode(NULL,false,false,NULL,mode+1);
+  return speech_start_mode(NULL,false,false,NULL,mode+1,false);
 #else
   (void)mode;return -ENOSYS;
 #endif
@@ -336,7 +471,7 @@ int glass_speech_zh_q8(int mode)
 {
 #ifdef GLASS_ZH_Q8_PROBE
   if(mode<0||mode>5)return -EINVAL;
-  return speech_start_mode(NULL,false,false,NULL,mode+10);
+  return speech_start_mode(NULL,false,false,NULL,mode+10,false);
 #else
   (void)mode;return -ENOSYS;
 #endif
@@ -345,7 +480,7 @@ int glass_speech_esp_tts(int mode)
 {
 #ifdef GLASS_ESP_TTS_PROBE
   if(mode<0||mode>2)return -EINVAL;
-  return speech_start_mode(NULL,false,false,NULL,mode+20);
+  return speech_start_mode(NULL,false,false,NULL,mode+20,false);
 #else
   (void)mode;return -ENOSYS;
 #endif
@@ -354,14 +489,25 @@ int glass_speech_p4tts(int mode)
 {
 #ifdef GLASS_P4TTS_PROBE
   if(mode<0||mode>2)return -EINVAL;
-  return speech_start_mode(NULL,false,false,NULL,mode+30);
+  return speech_start_mode(NULL,false,false,NULL,mode+30,false);
 #else
   (void)mode;return -ENOSYS;
 #endif
 }
 int glass_speech_cli(int argc,char **argv)
 {
+  if((argc==3||argc==4)&&!strcmp(argv[2],"volume")){
+    if(argc==4){char *end;unsigned long value=strtoul(argv[3],&end,10);
+      if(!argv[3][0]||argv[3][0]=='-'||*end||value>100)return -EINVAL;
+      atomic_store(&speech_volume,(unsigned)value);}
+    printf("speech volume=%u range=0..100\n",glass_speech_volume());return 0;
+  }
 #ifdef GLASS_ESP_TTS
+  if(argc==3&&!strcmp(argv[2],"cache-clear")){glass_speech_clear_cache();return 0;}
+  if((argc==3||argc==4)&&!strcmp(argv[2],"voice")){
+    if(argc==4){int ret=glass_esp_tts_voice_select(argv[3]);if(ret)return ret;}
+    printf("speech voice=%s choices=xiaoxin,xiaole,small\n",glass_esp_tts_voice_name());return 0;
+  }
   if((argc==3||argc==4)&&!strcmp(argv[2],"speed")){
     if(argc==4){
       if(argv[3][0]<'0'||argv[3][0]>'5'||argv[3][1])return -EINVAL;
@@ -372,9 +518,13 @@ int glass_speech_cli(int argc,char **argv)
 #endif
   if(argc==3&&!strcmp(argv[2],"listen"))return glass_speech_listen();
   if(argc==4&&!strcmp(argv[2],"say"))return glass_speech_say(argv[3]);
-  if(argc==3&&!strcmp(argv[2],"stop")){glass_speech_stop();return 0;}
+  if(argc==3&&!strcmp(argv[2],"stop")){glass_speech_stop();glass_voice_stop();return 0;}
   if(argc==3&&!strcmp(argv[2],"status")){struct speech_snapshot s;glass_speech_get(&s);
-    printf("speech active=%u phase=%d error=%d command=%d wakes=%u evaluations=%u score=%.4f frames=%u text=%s\n",
-      s.active,s.phase,s.error,s.command,s.wake_events,s.wake_evaluations,(double)s.wake_score,s.frames,s.text);return 0;}
-  puts("desktop speech listen | say <Chinese text> | stop | status");return -EINVAL;
+    printf("speech active=%u phase=%d error=%d command=%d wakes=%u evaluations=%u score=%.4f frames=%u text=%s backend=%s\n",
+      s.active,s.phase,s.error,s.command,s.wake_events,s.wake_evaluations,(double)s.wake_score,s.frames,s.text,glass_speech_backend());return 0;}
+  puts("desktop speech listen | say <Chinese text> | stop | status | volume [0..100]");
+#ifdef GLASS_ESP_TTS
+  puts("desktop speech speed [0..5] | esp-tts | esp-tts-play | esp-tts-export");
+#endif
+  return -EINVAL;
 }

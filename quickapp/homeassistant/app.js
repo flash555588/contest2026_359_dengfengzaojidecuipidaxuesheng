@@ -626,6 +626,10 @@
       has_supported_features:typeof attributes.supported_features==='number'&&Number.isFinite(attributes.supported_features),
       options: strings(attributes.options), effects: strings(attributes.effect_list), effect:clean(attributes.effect,128),
       hvac_modes:strings(attributes.hvac_modes),fan_modes:strings(attributes.fan_modes),fan_mode:clean(attributes.fan_mode,128),
+      direction:clean(attributes.direction,128),
+      swing_horizontal_modes:strings(attributes.swing_horizontal_modes),swing_horizontal_mode:clean(attributes.swing_horizontal_mode,128),
+      target_temp_low:numeric('target_temp_low',-100,200),target_temp_high:numeric('target_temp_high',-100,200),
+      away_mode:attributes.away_mode===true,
       preset_modes:strings(attributes.preset_modes),swing_modes:strings(attributes.swing_modes),swing_mode:clean(attributes.swing_mode,128),
       modes:strings(attributes.available_modes),mode:clean(attributes.mode,128),
       sources:strings(attributes.source_list),source:clean(attributes.source,128),
@@ -634,12 +638,13 @@
       is_volume_muted:attributes.is_volume_muted===true,
       percentage: numeric('percentage', 0, 100),
       percentage_step:numeric('percentage_step',0.000001,100),
-      preset_mode: clean(attributes.preset_mode, 24),
+      preset_mode: clean(attributes.preset_mode, 128),
       quick_modes: (Array.isArray(attributes.preset_modes)?attributes.preset_modes:Array.isArray(attributes.hvac_modes)?attributes.hvac_modes:[]).filter(v=>typeof v==='string').slice(0,3).map(v=>clean(v,24)),
       oscillating: attributes.oscillating === true,
       current_humidity: numeric('current_humidity', 0, 100),
       pm25: numeric('pm25', 0, 5000),
       current_position: numeric('current_position', 0, 100),
+      current_tilt_position:numeric('current_tilt_position',0,100),
       temperature: numeric('temperature', -100, 200),
       current_temperature: numeric('current_temperature', -100, 200),
       hvac_action: clean(attributes.hvac_action, 24),
@@ -774,7 +779,7 @@
       return;
     }
     if (request.kind === 'service') {
-      if(['scene','script'].includes(request.data.domain)){
+      if(['scene','script','button','input_button'].includes(request.data.domain)||['media_next_track','media_previous_track','stop_cover_tilt'].includes(request.data.service)){
         markControlFeedback(request.entityId,'accepted','已受理');
         const item=lookupEntity(request.entityId),intent=controlTargets[request.entityId];
         if(intent&&intent.sequence===request.data.sequence){delete controlTargets[request.entityId];controlRevision++;}
@@ -789,7 +794,8 @@
       phase = 'verifying';
       nextRefresh = Infinity;
       schedule('verify', request.entityId, {
-        state: request.data.service === 'turn_on' ? 'on' : request.data.service === 'turn_off' ? 'off' : undefined,
+        state: undefined,
+        service:request.data.service,
         expected:request.data.expected,
         brightness: request.data.body.brightness_pct,
         sequence: request.data.sequence,
@@ -863,7 +869,7 @@
             entityRevision++;
           }
           const target = request.data;
-          const matched = (target.state===undefined || item.state===target.state) && matchesExpected(item,target.expected) &&
+          const matched = (target.state===undefined || item.state===target.state) && serviceReached(item,target.service) && matchesExpected(item,target.expected) &&
             (target.brightness === undefined || (item.brightness !== null &&
              Math.abs(item.brightness - target.brightness) <= 1));
           if (!matched) {
@@ -873,7 +879,7 @@
             }
             message = '等待设备达到目标状态';
             schedule('verify', request.entityId, {
-              state: target.state, brightness: target.brightness, expected:target.expected,
+              state: target.state, service:target.service, brightness: target.brightness, expected:target.expected,
               sequence: target.sequence,
               attempt: target.attempt + 1, deadline: target.deadline
             });
@@ -971,9 +977,9 @@
     if(!item)return false;
     if(commonCardProfile(item)?.readonly)return false;
     if(['turn_on','turn_off'].includes(service)){
-      if(sharedReady&&typeof nativeService.callService==='function'&&!['light','switch','input_boolean','fan','climate','humidifier','media_player','scene','script'].includes(item.domain))return false;
+      if(sharedReady&&typeof nativeService.callService==='function'&&!['light','switch','input_boolean','fan','climate','humidifier','media_player','water_heater','scene','script'].includes(item.domain))return false;
       if(isSceneCommand(item)&&service!=='turn_on')return false;
-      const flags={fan:[16,32],climate:[128,256],media_player:[128,256]}[item.domain];
+      const flags={fan:[32,16],climate:[256,128],media_player:[128,256],water_heater:[8,8]}[item.domain];
       if(flags&&item.has_supported_features&&!(item.supported_features&flags[service==='turn_on'?0:1]))return false;
     }
     if (sharedReady) {
@@ -1035,6 +1041,19 @@
         if(brightnessIntent&&brightnessIntent.sequence===command.sequence)brightnessIntent=null;
         controlRevision++;continue;
       }
+      const specs=functionControls(item);
+      const valid=Object.entries(command.params||{}).every(([key,value])=>{
+        if(key==='rgb_color')return lampCanColor(item)&&validRgb(value);
+        const spec=specs.find(s=>s.service===command.service&&s.key===key);
+        if(!spec)return false;
+        if(spec.kind==='range')return Number.isFinite(value)&&value>=spec.min&&value<=spec.max;
+        if(spec.kind==='options')return spec.options.includes(value);
+        return spec.kind==='text'&&typeof value==='string'&&value.length>0&&value.length<=128;
+      });
+      if(!valid){
+        if(controlTargets[command.entity]===command)delete controlTargets[command.entity];
+        controlRevision++;markControlFeedback(command.entity,'failed','设备功能或范围已变化，请重新设置');continue;
+      }
       const body=Object.assign({entity_id:command.entity},command.params||{});if(command.brightness>0)body.brightness_pct=command.brightness;
       controlRevision++;message='正在发送：'+item.name;
       schedule('service',command.entity,{domain:item.domain,service:command.service,body,expected:command.expected,key:command.key,sequence:command.sequence});
@@ -1042,6 +1061,23 @@
     }
   }
 
+  function serviceReached(item,service){
+    if(!item||['unknown','unavailable'].includes(item.state))return false;
+    if(service==='turn_on')return ['climate','media_player','water_heater'].includes(item.domain)?item.state!=='off':item.state==='on';
+    if(service==='turn_off')return item.state==='off';
+    if(service==='open_cover')return item.state==='open'&&(item.current_position===null||item.current_position===100);
+    if(service==='close_cover')return item.state==='closed';
+    if(service==='stop_cover')return !['opening','closing'].includes(item.state);
+    if(service==='open_cover_tilt')return item.current_tilt_position===100;
+    if(service==='close_cover_tilt')return item.current_tilt_position===0;
+    if(service==='media_play')return item.state==='playing';
+    if(service==='media_pause'||service==='pause')return item.state==='paused';
+    if(service==='media_stop')return ['idle','off'].includes(item.state);
+    if(service==='start')return item.state==='cleaning';
+    if(service==='stop')return ['idle','docked','paused'].includes(item.state);
+    if(service==='return_to_base')return ['returning','docked'].includes(item.state);
+    return true;
+  }
   function matchesExpected(item,expected){
     if(!expected)return true;
     return Object.keys(expected).every(key=>{const value=expected[key];
@@ -1090,20 +1126,32 @@
     if(item.domain==='fan'){
       if(feature(1)&&(item.percentage!==null||(item.supported_features&1)))range('风速','set_percentage','percentage',item.percentage,0,100,item.percentage_step||1,'percentage');
       if(feature(8))opts('模式','set_preset_mode','preset_mode',item.preset_mode,item.preset_modes,'preset_mode');
+      if(item.supported_features&4)opts('风向','set_direction','direction',item.direction,['forward','reverse'],'direction');
       if(item.supported_features&2)opts('摆风','oscillate','oscillating',item.oscillating,[false,true],'oscillating');
     }
     if(item.domain==='cover'){
       if(item.supported_features&4)range('开合位置','set_cover_position','position',item.current_position,0,100,1,'current_position');
+      if(item.supported_features&128)range('叶片角度','set_cover_tilt_position','tilt_position',item.current_tilt_position,0,100,1,'current_tilt_position');
+      if(item.supported_features&16)action('打开叶片','open_cover_tilt');if(item.supported_features&32)action('关闭叶片','close_cover_tilt');if(item.supported_features&64)action('停止叶片','stop_cover_tilt');
       if(feature(1))action('打开','open_cover');if(feature(2))action('关闭','close_cover');if(feature(8))action('停止','stop_cover');
     }
     if(['climate','water_heater'].includes(item.domain)){
       if(feature(1)&&(item.temperature!==null||(item.supported_features&1)))range('目标温度','set_temperature','temperature',item.temperature,item.min_temp===null?5:item.min_temp,item.max_temp===null?35:item.max_temp,item.target_temp_step||0.5,'temperature');
       if(item.domain==='climate'){
+        if((item.supported_features&2)&&item.target_temp_low!==null&&item.target_temp_high!==null){
+          range('温度下限','set_temperature','target_temp_low',item.target_temp_low,item.min_temp===null?7:item.min_temp,item.max_temp===null?35:item.max_temp,item.target_temp_step||0.5,'target_temp_low');
+          range('温度上限','set_temperature','target_temp_high',item.target_temp_high,item.min_temp===null?7:item.min_temp,item.max_temp===null?35:item.max_temp,item.target_temp_step||0.5,'target_temp_high');
+        }
+        if(item.supported_features&4)range('目标湿度','set_humidity','humidity',item.humidity,item.min_humidity===null?30:item.min_humidity,item.max_humidity===null?99:item.max_humidity,1,'humidity');
+        if(item.supported_features&512)opts('水平摆风','set_swing_horizontal_mode','swing_horizontal_mode',item.swing_horizontal_mode,item.swing_horizontal_modes,'swing_horizontal_mode');
         opts('运行模式','set_hvac_mode','hvac_mode',item.state,item.hvac_modes,'state');
         if(feature(8))opts('风速模式','set_fan_mode','fan_mode',item.fan_mode,item.fan_modes,'fan_mode');
         if(feature(16))opts('预设模式','set_preset_mode','preset_mode',item.preset_mode,item.preset_modes,'preset_mode');
         if(feature(32))opts('摆风模式','set_swing_mode','swing_mode',item.swing_mode,item.swing_modes,'swing_mode');
-      }else if(feature(2))opts('运行模式','set_operation_mode','operation_mode',item.operation_mode,item.operation_modes,'operation_mode');
+      }else{
+        if(feature(2))opts('运行模式','set_operation_mode','operation_mode',item.operation_mode,item.operation_modes,'operation_mode');
+        if(item.supported_features&4)opts('外出模式','set_away_mode','away_mode',item.away_mode,[false,true],'away_mode');
+      }
     }
     if(item.domain==='humidifier'){
       range('目标湿度','set_humidity','humidity',item.humidity,item.min_humidity===null?0:item.min_humidity,item.max_humidity===null?100:item.max_humidity,1,'humidity');
@@ -1113,7 +1161,7 @@
       if(item.supported_features&4)range('音量','volume_set','volume_level',item.volume_level,0,1,0.01,'volume_level');
       if(feature(2048))opts('输入源','select_source','source',item.source,item.sources,'source');
       if(item.supported_features&8)opts('静音','volume_mute','is_volume_muted',item.is_volume_muted,[false,true],'is_volume_muted');
-      if(feature(512))action('播放','media_play');if(feature(1))action('暂停','media_pause');if(feature(32))action('下一首','media_next_track');if(feature(16))action('上一首','media_previous_track');if(feature(4096))action('停止','media_stop');
+      if(feature(16384))action('播放','media_play');if(feature(1))action('暂停','media_pause');if(feature(32))action('下一首','media_next_track');if(feature(16))action('上一首','media_previous_track');if(feature(4096))action('停止','media_stop');
     }
     if(item.domain==='vacuum'){
       if(feature(8192))action('开始清扫','start');if(feature(4))action('暂停','pause');if(feature(8))action('停止','stop');if(feature(16))action('回充','return_to_base');
@@ -1136,8 +1184,13 @@
     }
     if(spec.kind==='options'&&!spec.options.includes(value))return;
     if(spec.kind==='text'&&(typeof value!=='string'||value.length===0||value.length>128))return;
-    const params=spec.key?{[spec.key]:value}:undefined;
-    const expected=spec.field?{[spec.field]:spec.field==='state'?String(value):value}:undefined;
+    let params=spec.key?{[spec.key]:value}:undefined;
+    let expected=spec.field?{[spec.field]:spec.field==='state'?String(value):value}:undefined;
+    if(['target_temp_low','target_temp_high'].includes(spec.key)){
+      params={target_temp_low:item.target_temp_low,target_temp_high:item.target_temp_high,[spec.key]:value};
+      if(params.target_temp_low===null||params.target_temp_high===null||params.target_temp_low>params.target_temp_high){message='温度下限不能高于上限';render();return;}
+      expected=Object.assign({},params);
+    }
     if(spec.key==='brightness_pct')requestControl(item,spec.service,value);
     else requestControl(item,spec.service,undefined,params,expected);
   }
@@ -1149,7 +1202,7 @@
     if(value===null||value===undefined||!Number.isFinite(Number(value)))return '--';
     const v=Number.isInteger(Number(value))?String(Number(value)):numberText(Number(value));
     return spec.key==='color_temp_kelvin'?Math.round(value)+'K':spec.key==='volume_level'?Math.round(value*100)+'%':
-      ['brightness_pct','percentage','position','humidity'].includes(spec.key)?Math.round(value)+'%':spec.key==='temperature'?v+' °C':v;
+      ['brightness_pct','percentage','position','tilt_position','humidity'].includes(spec.key)?Math.round(value)+'%':['temperature','target_temp_low','target_temp_high'].includes(spec.key)?v+' °C':v;
   }
   function temperatureColor(kelvin){
     const t=Math.max(0,Math.min(1,(kelvin-2000)/4500));
@@ -1613,6 +1666,7 @@
     open: '已打开', opening: '正在打开', closing: '正在关闭', closed: '已关闭',
     playing: '播放中', paused: '已暂停', idle: '空闲', standby: '待机',
     home: '在家', not_home: '离家', away: '外出',
+    forward:'正转',reverse:'反转',
     above_horizon: '日间', below_horizon: '夜间',
     heat: '制热', cool: '制冷', heat_cool: '自动', auto: '自动',
     dry: '除湿', fan_only: '送风', heating: '正在制热', cooling: '正在制冷',
@@ -3259,7 +3313,7 @@
       const ids=aux?[row.face,row.name,row.state,row.fill,row.thumb]:[row.title,row.track,row.fill,row.thumb,row.value,row.minusGlyph,row.plusGlyph];ids.forEach(id=>hide(id,true));if(!field)return;
       const entity=field.item,spec=field.spec,value=controlValue(entity,spec),enabled=connected&&available(entity)&&!layoutEditing&&spec.kind!=='read';
       const title=aux?row.name:row.title,track=aux?row.face:row.track,valueLabel=aux?row.state:row.value;
-      const toggle=spec.kind==='options'&&['oscillating','is_volume_muted'].includes(spec.key);
+      const toggle=spec.kind==='options'&&['oscillating','is_volume_muted','away_mode'].includes(spec.key);
       if(toggle){
         detailText(title,spec.title,x,y+11,w-146,28,16,pal.ink);
         detailText(valueLabel,value?'已开启':'已关闭',x+w-134,y+15,80,22,13,pal.muted,true);
@@ -3739,7 +3793,7 @@
   function powerIsOn(item){
     const target=item&&controlTargets[item.entity_id];
     if(target&&['turn_on','turn_off'].includes(target.service))return target.service==='turn_on';
-    return !!item&&(['climate','media_player'].includes(item.domain)?!['off','unavailable','unknown'].includes(item.state):item.state==='on');
+    return !!item&&(['climate','media_player','water_heater'].includes(item.domain)?!['off','unavailable','unknown'].includes(item.state):item.state==='on');
   }
 
   function snapshot() {

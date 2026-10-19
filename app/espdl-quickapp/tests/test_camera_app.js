@@ -5,7 +5,7 @@ let timer, state = {busy:false, error:0};
 let photoStatus = 0, photoPath = '';
 function widget(label = '') { widgets.push(label); properties.push({}); return widgets.length - 1; }
 const ui = {getSize:()=>({width:1022,height:536}), primary:0x252d46, secondary:0x616981,
-  surface:0xe9eafa, card:0xf5f6fd, accent:0x5860bf, background(){},
+  surface:0xe9eafa, card:0xf5f6fd, accent:0x5860bf, background(){},cameraReference(){},cameraReferenceZoom(){},cameraReferenceControls(){},onTouch(){},setOpacity(){},
   setSize:(id,w,h)=>Object.assign(properties[id],{w,h}),
   setStyle:(id,style)=>Object.assign(properties[id],style),
   setHidden:(id,hidden)=>properties[id].hidden=hidden, setColor(){},
@@ -25,20 +25,18 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(process.argv[2], 'utf8'), ctx);
 const app = ctx.CameraPreview;
 assert(widgets.length <= 64, 'The camera page must fit the widget budget');
-const startButton = widgets.indexOf('开始预览'), stopButton = widgets.indexOf('停止');
-assert(startButton > 0 && stopButton > 0);
+const startButton = widgets.indexOf('开始预览');
+assert(startButton > 0 && !widgets.includes('停止'));
 // A detected device is selected automatically and renames the row.
 assert(widgets.some(text => text.includes('HD Web Camera')), widgets.join('|'));
 assert(widgets.some(text => text.includes('MJPEG')), 'The mode button must report the MJPEG mode');
 assert.equal(properties[startButton].enabled, true);
-assert.equal(properties[stopButton].enabled, false);
 // Selecting and starting keeps the existing single-device lifecycle.
 app.start();
 assert(calls.includes('stop'), 'Starting must release a previous session first');
 timer();                    // pending -> startDevice
 assert.equal(calls.filter(item => Array.isArray(item)).length, 1);
 assert.equal(calls.find(item => Array.isArray(item))[3], 1, 'The 640x480 mode index is used');
-assert.equal(properties[stopButton].enabled, true);
 state = {busy:false, error:0};
 timer();
 assert(widgets.some(text => text.includes('预览已停止')), widgets.join('|'));

@@ -75,10 +75,10 @@ struct pet_ui_s
   lv_timer_t *voice_timer;
   struct chat_snapshot *voice_chat;
   enum pet_voice_stage_e voice_stage;
-  uint32_t voice_revision;
+  uint32_t voice_revision,voice_request;
   uint32_t voice_turn_id;
   unsigned voice_queue_ticks;
-  char voice_text[768];
+  char voice_text[GLASS_VOICE_TEXT_BYTES+1];
   int press_x;
   int press_y;
   bool dragging;
@@ -400,6 +400,7 @@ static void pet_voice_poll(lv_timer_t *timer)
       g_ui.voice_stage == PET_VOICE_FINISHING)
     {
       glass_voice_get(&voice);
+      if(voice.request!=g_ui.voice_request){pet_voice_fail("麦克风已交给新的语音请求");return;}
       if (voice.revision != g_ui.voice_revision)
         {
           g_ui.voice_revision = voice.revision;
@@ -553,7 +554,7 @@ static void pet_voice_begin(void)
       return;
     }
 
-  ret = glass_voice_start();
+  ret = glass_voice_start_request(&g_ui.voice_request);
   if (ret < 0)
     {
       pet_voice_fail(ret == -EBUSY ? "语音服务正在使用中" :
@@ -567,7 +568,7 @@ static void pet_voice_begin(void)
   g_ui.voice_timer = lv_timer_create(pet_voice_poll, 120, NULL);
   if (g_ui.voice_timer == NULL)
     {
-      glass_voice_stop();
+      glass_voice_stop_request(g_ui.voice_request);
       pet_voice_fail("可用内存不足");
       return;
     }
@@ -579,7 +580,7 @@ static void pet_voice_release(void)
 {
   if (g_ui.voice_stage == PET_VOICE_RECORDING)
     {
-      glass_voice_stop();
+      glass_voice_stop_request(g_ui.voice_request);
       g_ui.voice_stage = PET_VOICE_FINISHING;
       pet_voice_say("正在识别...", NULL, true);
     }
@@ -940,7 +941,7 @@ void pet_lvgl_destroy(void)
   if (g_ui.voice_stage == PET_VOICE_RECORDING ||
       g_ui.voice_stage == PET_VOICE_FINISHING)
     {
-      glass_voice_stop();
+      glass_voice_stop_request(g_ui.voice_request);
     }
 
   pet_voice_reset();

@@ -1,0 +1,135 @@
+{
+  "board": "ESP32-P4 v3.2",
+  "usb_serial": "E8:F6:0A:E7:6F:F1",
+  "tts_backend": "esp-tts",
+  "firmware_sha256": "6e79329542107e517d52b0b516dfd252592951a72ea450f539e01e234900b26c",
+  "deployed_and_retained": true,
+  "rollback_written_after_success": false,
+  "config_sha256": "918b1baf123753d2e6b825071ab7d678eb7af3201970b49ab07666a34f754b73",
+  "data_offset": "0xc00000",
+  "image_bytes": 11819804,
+  "ebss": "0x4ffaeda0",
+  "bss_safe_limit": "0x4ffaefc0",
+  "production_tts_playback_cases": [
+    {
+      "text": "你好，乐鑫语音已准备好。",
+      "elapsed_ms": 2630,
+      "played_frames": 40544
+    },
+    {
+      "text": "我们可以开始连续对话。",
+      "elapsed_ms": 2350,
+      "played_frames": 36166
+    },
+    {
+      "text": "散步以后，记得早点回家。",
+      "elapsed_ms": 2680,
+      "played_frames": 41289
+    }
+  ],
+  "production_tts_cancel_passed": true,
+  "continuous_state_machine_host_passed": true,
+  "state_machine_note": "Production UI with mocked services; includes both themes, repeated turns, silence retry, interrupt, spoken end, exit cleanup.",
+  "tts_adapter_host_passed": true,
+  "hmac_signature_reference_passed": true,
+  "pcm_framing_host_cases": 90,
+  "cloud_llm_text_rounds_passed": 2,
+  "cloud_asr_ready": true,
+  "cloud_asr_service_code": 0,
+  "human_continuous_dialogue_passed": null,
+  "planned_speaker_input_executed": true,
+  "microphone_active_at_end": true,
+  "external_block": null,
+  "clock_check": {
+    "board_matches_host": true,
+    "tencent_http_date": "Sat, 17 Oct 2026 10:05:27 GMT",
+    "host_utc": "2026-10-17T10:05:25.967413+00:00",
+    "host_minus_server_seconds": -1.032573
+  },
+  "source_sha256": {
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_esp_tts.c": "c41f8787cca91bd39e234b95c52d4ae791c31255d22f0641a6e05a0418d38511",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_esp_tts.h": "7f8a4fa0beb6ae60d4a8d9d6561b6db78ea5babf3fed4b4faacd5799def6e140",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_speech.c": "f4f1e49b9f6d3faa6ad50399ebdbd3e693b913972b36116b4cd0614136320260",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_speech.h": "048fdf010222abab0ba4f76ef0df135a032b3d6d680708f3f29127726a49471d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_chat_ball.inc": "2885a6287d0a332a01537115b1f7f9ce7554829cfe67987f059e79d33fa935d6",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_ui_probe.inc": "5cd47d6133d77f5a7a268a18ed9d470f52e9e80f3d647f8d0d30868b580568bb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_voice.c": "b1e9ba4f83c3270edf0ca027193df088a8bb16eeadd3f8144642f07805163f1a",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_pcm.c": "7a541d7c1b7b40e37f94db806ff0bd8e0710b2a6e83191ec585ca2f40d958b45",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_pcm.h": "9e1a38e3fed15ba7c8a150c7efc914fe42ca5a18e97b7277ea5165a53625aa19",
+    "tools/build_speech_runtime.py": "8739dd9ce4ac4aca09b80f8e6b94087a047087b6509e60b3af8d72ce43880c68",
+    "tools/build_bilibili_v3.py": "b5cb2f459c5224a283c69b351db8907f98e1b5f063940d7909a09be4ce66a4bd",
+    "tools/test_esp_tts_host.py": "1b535fdbbbedcfbd3f1ec35c3e5d0afef63b7d6dd39c7ab7ae290c04da9b0155",
+    "tools/test_voice_auth.py": "2c29c1b5175b497ea85a5ac8ec9faf972e7f641e4f5ef871744bfb0a5d6fe104"
+  },
+  "evidence_files": [
+    "deployment.json",
+    "deployment.log",
+    "conversation.json",
+    "conversation.log",
+    "llm-check.json",
+    "llm-check.log",
+    "host-auth.log",
+    "host-tts.log",
+    "host-handoff.log",
+    "native.log",
+    "credentials-update.json",
+    "credentials-identity.json",
+    "conversation-account.json",
+    "conversation-account.log",
+    "conversation-retest1.json",
+    "conversation-retest1.log",
+    "conversation-live.json",
+    "conversation-live.log"
+  ],
+  "historical_asr_error": 4002,
+  "credentials_updated_from_user_csv": true,
+  "app_id_mismatch_detected_and_corrected": true,
+  "live_microphone_ai_tts_relisten_passed": true,
+  "human_quality_approved": false,
+  "microphone_active_at_last_observation": true,
+  "active_session_retained": true,
+  "live_cycle_evidence": {
+    "mode": "observe existing live session; no start/stop or audio injection",
+    "observed_ai_reply_to_tts_to_microphone": true,
+    "successful_tts_events": [
+      [
+        "6220",
+        "236803"
+      ]
+    ],
+    "last_state": {
+      "ball": [
+        1,
+        1,
+        0,
+        1,
+        0
+      ],
+      "mic": [
+        1,
+        2,
+        0,
+        8016
+      ],
+      "play": [
+        0,
+        0,
+        0,
+        "esp-tts"
+      ],
+      "chat": [
+        1,
+        1,
+        5,
+        190
+      ]
+    },
+    "shared_chat_turns_before_live_test": 2,
+    "shared_chat_turns_at_last_observation": 5
+  },
+  "test_limitations": [
+    "Live microphone recognition, AI reply, ESP-TTS playback completion and return to listening observed. Human voice identity and perceived audio quality not asserted.",
+    "Earlier automated acoustic tests stopped on empty recognition; they are retained as failed attempts.",
+    "Playback sample counters and elapsed times are retained in raw evidence; physical playback rate was not independently measured."
+  ]
+}

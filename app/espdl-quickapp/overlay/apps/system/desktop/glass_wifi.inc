@@ -13,6 +13,7 @@ static lv_obj_t *g_wifi_ssid;
 static lv_obj_t *g_wifi_password;
 static lv_obj_t *g_wifi_keyboard;
 static lv_obj_t *g_wifi_list;
+static lv_obj_t *g_wifi_form;
 static struct c6_desktop_result g_wifi_result;
 static unsigned long g_wifi_shown;
 
@@ -88,10 +89,8 @@ static void glass_wifi_status_set(enum glass_wifi_status_e status, int value)
   g_wifi_display.status = status;
   g_wifi_display.value = value;
 }
-#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
 static lv_obj_t *g_wifi_back;
-static lv_obj_t *g_wifi_selected;
-#endif
+static lv_obj_t *g_wifi_manual;
 
 static size_t glass_wifi_name_length(const struct c6_scan_ap *ap)
 {
@@ -129,20 +128,26 @@ static bool glass_wifi_utf8(const uint8_t *s, size_t length)
   return length > 0;
 }
 
-#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
 static void glass_wifi_list_view(lv_event_t *e)
 {
   LV_UNUSED(e);
   lv_textarea_set_text(g_wifi_password, "");
   lv_obj_remove_flag(g_wifi_list, LV_OBJ_FLAG_HIDDEN);
   lv_obj_remove_flag(g_wifi_scan, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_wifi_selected, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_wifi_back, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_wifi_password, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_wifi_connect, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_wifi_keyboard, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_remove_flag(g_wifi_manual, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(g_wifi_form, LV_OBJ_FLAG_HIDDEN);
 }
-#endif
+
+static void glass_wifi_edit_view(lv_event_t *e)
+{
+  if (e) lv_textarea_set_text(g_wifi_ssid, "");
+  lv_textarea_set_text(g_wifi_password, "");
+  lv_obj_add_flag(g_wifi_list, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(g_wifi_scan, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(g_wifi_manual, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_remove_flag(g_wifi_form, LV_OBJ_FLAG_HIDDEN);
+  glass_ime_set_target(g_wifi_keyboard, e ? g_wifi_ssid : g_wifi_password);
+}
 
 static void glass_wifi_deleted(lv_event_t *e)
 {
@@ -155,14 +160,12 @@ static void glass_wifi_deleted(lv_event_t *e)
   g_wifi_check = NULL;
   g_wifi_disconnect = NULL;
   g_wifi_ssid = g_wifi_password = g_wifi_keyboard = g_wifi_list = NULL;
-#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
-  g_wifi_back = g_wifi_selected = NULL;
-#endif
+  g_wifi_back = g_wifi_manual = g_wifi_form = NULL;
 }
 
 static void glass_wifi_focus(lv_event_t *e)
 {
-  lv_keyboard_set_textarea(g_wifi_keyboard, lv_event_get_target(e));
+  glass_ime_set_target(g_wifi_keyboard, lv_event_get_target(e));
 }
 
 static void glass_wifi_pick(lv_event_t *e)
@@ -179,24 +182,15 @@ static void glass_wifi_pick(lv_event_t *e)
   selected[length] = 0;
   lv_textarea_set_text(g_wifi_ssid, selected);
   lv_textarea_set_text(g_wifi_password, "");
-  lv_keyboard_set_textarea(g_wifi_keyboard, g_wifi_password);
-#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
-  lv_label_set_text(g_wifi_selected, selected);
-  lv_obj_add_flag(g_wifi_list, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(g_wifi_scan, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_remove_flag(g_wifi_selected, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_remove_flag(g_wifi_back, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_remove_flag(g_wifi_password, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_remove_flag(g_wifi_connect, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_remove_flag(g_wifi_keyboard, LV_OBJ_FLAG_HIDDEN);
-#endif
+  glass_ime_set_target(g_wifi_keyboard, g_wifi_password);
+  glass_wifi_edit_view(NULL);
 }
 
 static void glass_wifi_render_list(void)
 {
   lv_obj_clean(g_wifi_list);
   if (g_wifi_result.count == 0)
-    glass_text(g_wifi_list, "点击扫描查找附近网络", 16, 20, 310, 16, theme_secondary());
+    detail_text(g_wifi_list, "点击扫描查找附近网络", 20, 24, 680, 16, detail_muted());
   for (size_t i = 0; i < g_wifi_result.count; i++)
     {
       char name[33];
@@ -206,21 +200,17 @@ static void glass_wifi_render_list(void)
       if (supported) memcpy(name, ap->ssid, length);
       else memset(name, '?', length);
       name[length] = 0;
-      char label[96];
-      snprintf(label, sizeof(label), "%s  %ld dBm",
-               name[0] ? name : "[hidden]", (long)ap->rssi);
-      lv_obj_t *row = glass_button(g_wifi_list, label, 4, i * 52, 330,
-                                   theme_surface(), glass_wifi_pick,
+      lv_obj_t *row = detail_button(g_wifi_list, "", 16, 12 + i * 56, 752,
+                                   glass_wifi_pick,
                                    (void *)(uintptr_t)i);
       if (!supported) lv_obj_add_state(row, LV_STATE_DISABLED);
-      lv_obj_t *text = lv_obj_get_child(row, 0);
-      lv_obj_set_width(text, 306);
-      lv_label_set_long_mode(text, LV_LABEL_LONG_DOT);
-      lv_obj_remove_flag(text, LV_OBJ_FLAG_CLICKABLE);
-#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
-      lv_obj_set_width(row, 820);
-      lv_obj_set_width(text, 790);
-#endif
+      home_icon(row, LV_SYMBOL_WIFI, 16, 12, 20, detail_accent());
+      detail_text(row, name[0] ? name : "隐藏网络", 52, 12, 490, 14, detail_ink());
+      char signal[24];
+      snprintf(signal, sizeof(signal), "%ld dBm", (long)ap->rssi);
+      lv_obj_t *text = detail_text(row, signal, 552, 12, 140, 14, detail_muted());
+      lv_obj_set_style_text_align(text, LV_TEXT_ALIGN_RIGHT, 0);
+      home_icon(row, LV_SYMBOL_RIGHT, 716, 14, 16, detail_muted());
     }
 }
 
@@ -232,7 +222,7 @@ static void glass_wifi_update(lv_timer_t *timer)
   if (c6_desktop_worker_read(&g_wifi_worker, &result) < 0) return;
   if (result.busy != g_wifi_display.busy)
     {
-      lv_obj_t *controls[] = {g_wifi_scan, g_wifi_check, g_wifi_disconnect, g_wifi_connect, g_wifi_ssid,
+      lv_obj_t *controls[] = {g_wifi_scan, g_wifi_manual, g_wifi_check, g_wifi_disconnect, g_wifi_connect, g_wifi_ssid,
                              g_wifi_password, g_wifi_keyboard};
       for (unsigned int i = 0; i < sizeof(controls) / sizeof(controls[0]); i++)
         {
@@ -306,13 +296,20 @@ static void glass_wifi_page(void *unused)
   LV_UNUSED(unused);
   lv_obj_t *card = panel_card("Wi-Fi");
   if (!card) return;
+  detail_page(card);
+  detail_sidebar(card, "网络", LV_SYMBOL_WIFI, panel_hide);
+  lv_obj_t *selected = detail_nav(card, "Wi-Fi 网络", LV_SYMBOL_WIFI,
+                                  104, 140, NULL, NULL);
+  glass_sidebar_item(selected, true);
+  detail_text(card, "Wi-Fi 网络", 216, 26, 500, 28, detail_ink());
+  detail_text(card, "连接附近网络，或手动添加隐藏网络", 216, 66, 720, 14, detail_muted());
 #ifdef CONFIG_SYSTEM_C6_DESKTOP
   if (!g_wifi_started)
     {
       int ret = c6_desktop_worker_start(&g_wifi_worker, &g_c6_desktop_backend);
       if (ret < 0)
         {
-          glass_text(card, "网络任务启动失败", 24, 92, 850, 28, theme_primary());
+          detail_text(card, "网络任务启动失败", 240, 128, 720, 20, detail_ink());
           return;
         }
       g_wifi_started = true;
@@ -320,61 +317,61 @@ static void glass_wifi_page(void *unused)
   lv_obj_add_event_cb(card, glass_wifi_deleted, LV_EVENT_DELETE, NULL);
   g_wifi_shown = 0;
   memset(&g_wifi_display, 0, sizeof(g_wifi_display));
-  g_wifi_status = glass_text(card, "", 24, 68, 650, 20, theme_primary());
+  lv_obj_t *status = detail_tile(card, 216, 104, 784, 84);
+  home_icon(status, LV_SYMBOL_WIFI, 20, 28, 24, detail_accent());
+  g_wifi_status = detail_text(status, "", 58, 30, 420, 16, detail_ink());
+  lv_label_set_long_mode(g_wifi_status, LV_LABEL_LONG_WRAP);
   glass_wifi_status_set(GLASS_WIFI_IDLE, 0);
-  g_wifi_scan = glass_button(card, "扫描", 740, 60, 110, theme_surface(), glass_wifi_request, NULL);
-  lv_obj_set_width(g_wifi_status, 440);
-  g_wifi_disconnect = glass_button(card, "断开", 480, 60, 110, theme_surface(),
-                                   glass_wifi_request, (void *)3);
-  g_wifi_check = glass_button(card, "状态", 610, 60, 110, theme_surface(),
-                              glass_wifi_request, (void *)2);
-  g_wifi_list = glass_box(card, 24, 120, 344, 356, theme_surface(), 12);
+  g_wifi_check = detail_button(status, "查询状态", 492, 20, 124,
+                                glass_wifi_request, (void *)2);
+  g_wifi_disconnect = detail_button(status, "断开连接", 632, 20, 132,
+                                     glass_wifi_request, (void *)3);
+  detail_text(card, "附近网络", 216, 212, 280, 20, detail_ink());
+  g_wifi_manual = detail_button(card, "手动添加", 724, 200, 132,
+                                 glass_wifi_edit_view, NULL);
+  g_wifi_scan = detail_button(card, "扫描网络", 868, 200, 132,
+                               glass_wifi_request, NULL);
+  g_wifi_list = detail_tile(card, 216, 256, 784, 294);
   lv_obj_add_flag(g_wifi_list, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(g_wifi_list, LV_DIR_VER);
-  g_wifi_ssid = lv_textarea_create(card);
+  g_wifi_form = detail_tile(card, 216, 200, 784, 350);
+  detail_text(g_wifi_form, "网络名称", 20, 26, 88, 14, detail_muted());
+  g_wifi_ssid = lv_textarea_create(g_wifi_form);
   glass_input_style(g_wifi_ssid);
-  lv_obj_set_pos(g_wifi_ssid, 390, 120);
-  lv_obj_set_size(g_wifi_ssid, 488, 48);
+  lv_obj_set_pos(g_wifi_ssid, 116, 16);
+  lv_obj_set_size(g_wifi_ssid, 648, 44);
+  lv_obj_set_style_text_font(g_wifi_ssid, zh_font(20), 0);
   lv_textarea_set_one_line(g_wifi_ssid, true);
   lv_textarea_set_max_length(g_wifi_ssid, 32);
   lv_textarea_set_placeholder_text(g_wifi_ssid, "网络名称（SSID）");
-  g_wifi_password = lv_textarea_create(card);
+  g_wifi_password = lv_textarea_create(g_wifi_form);
   glass_input_style(g_wifi_password);
-  lv_obj_set_pos(g_wifi_password, 390, 182);
-  lv_obj_set_size(g_wifi_password, 344, 48);
+  lv_obj_set_pos(g_wifi_password, 20, 74);
+  lv_obj_set_size(g_wifi_password, 444, 44);
   lv_textarea_set_one_line(g_wifi_password, true);
   lv_textarea_set_max_length(g_wifi_password, 64);
   lv_textarea_set_password_mode(g_wifi_password, true);
-  lv_textarea_set_placeholder_text(g_wifi_password, "密码");
-  g_wifi_connect = glass_button(card, "连接", 750, 182, 128, theme_surface(), glass_wifi_request, (void *)1);
-  g_wifi_keyboard = lv_keyboard_create(card);
+  lv_textarea_set_placeholder_text(g_wifi_password, "密码（开放网络可留空）");
+  g_wifi_connect = detail_button(g_wifi_form, "连接网络", 480, 74, 136,
+                                  glass_wifi_request, (void *)1);
+  g_wifi_back = detail_button(g_wifi_form, "返回列表", 632, 74, 132,
+                               glass_wifi_list_view, NULL);
+  g_wifi_keyboard = lv_keyboard_create(g_wifi_form);
   glass_keyboard_style(g_wifi_keyboard);
-  lv_obj_set_size(g_wifi_keyboard, 488, 176);
-  lv_obj_align(g_wifi_keyboard, LV_ALIGN_TOP_LEFT, 390, 300);
-  lv_keyboard_set_textarea(g_wifi_keyboard, g_wifi_ssid);
+  /* The IME owns a 44 px sibling above the keyboard. Reserve its space. */
+  lv_obj_set_size(g_wifi_keyboard, 744, 154);
+  lv_obj_align(g_wifi_keyboard, LV_ALIGN_TOP_LEFT, 20, 180);
   lv_obj_add_event_cb(g_wifi_ssid, glass_wifi_focus, LV_EVENT_FOCUSED, NULL);
   lv_obj_add_event_cb(g_wifi_password, glass_wifi_focus, LV_EVENT_FOCUSED, NULL);
-#ifdef CONFIG_ESP32P4_SELECTS_REV_LESS_V3
-  lv_obj_set_width(g_wifi_list, 850);
-  lv_obj_set_scroll_dir(g_wifi_list, LV_DIR_VER);
-  /* SSID remains an internal value; selection is shown with the Chinese font. */
-  lv_obj_add_flag(g_wifi_ssid, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_set_pos(g_wifi_password, 24, 176);
-  lv_obj_set_size(g_wifi_password, 570, 46);
-  lv_obj_set_pos(g_wifi_connect, 610, 176);
-  g_wifi_back = glass_button(card, "返回", 750, 176, 100,
-                              theme_surface(), glass_wifi_list_view, NULL);
-  g_wifi_selected = glass_text(card, "", 24, 120, 820, 20, theme_primary());
-  lv_obj_set_size(g_wifi_keyboard, 826, 210);
-  lv_obj_align(g_wifi_keyboard, LV_ALIGN_TOP_LEFT, 24, 240);
+  glass_ime_attach(g_wifi_keyboard, zh_font(20), true,
+                   detail_ink(), detail_soft(), detail_accent());
   glass_wifi_list_view(NULL);
-#endif
-  glass_ime_attach(g_wifi_keyboard, zh_font(20), true, theme_primary(), theme_surface(), theme_accent());
   glass_wifi_render_list();
   g_wifi_timer = lv_timer_create(glass_wifi_update, 100, NULL);
   if (!g_wifi_timer)
     {
       lv_obj_add_state(g_wifi_scan, LV_STATE_DISABLED);
+      lv_obj_add_state(g_wifi_manual, LV_STATE_DISABLED);
       lv_obj_add_state(g_wifi_check, LV_STATE_DISABLED);
       lv_obj_add_state(g_wifi_disconnect, LV_STATE_DISABLED);
       lv_obj_add_state(g_wifi_connect, LV_STATE_DISABLED);
@@ -383,7 +380,8 @@ static void glass_wifi_page(void *unused)
     }
   glass_wifi_update(NULL);
 #else
-  glass_text(card, "桌面网络管理未接入", 24, 92, 850, 28, theme_primary());
-  glass_text(card, "连接状态：未知", 24, 150, 850, 20, theme_secondary());
+  lv_obj_t *status = detail_tile(card, 216, 104, 784, 160);
+  detail_text(status, "桌面网络管理未接入", 24, 28, 720, 20, detail_ink());
+  detail_text(status, "连接状态：未知", 24, 80, 720, 16, detail_muted());
 #endif
 }

@@ -1,0 +1,6 @@
+{
+  "name": "Claude Code",
+  "package": "ai.claude_control",
+  "versionName": "1.0.0",
+  "entry": "app.js"
+}

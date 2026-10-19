@@ -1,0 +1,53 @@
+{
+  "technical_difficulty_score": 28,
+  "maximum": 30,
+  "scoring_scope": "Simulated judge reassessment, not an official competition result.",
+  "reason": "Current-image binding and runtime verification strengthened. The existing two-point reservations for contribution ancestry and system exception/recovery scope remain.",
+  "items": [
+    {
+      "item": "Model filename/configuration compatibility",
+      "status": "confirmed_current_candidate_blocker",
+      "needed": "CONFIG_NAME_MAX=32 and CONFIG_FAT_MAXFNAME=32 are below the 36/33/33-character model basenames. Read-only stat returns ENAMETOOLONG for all three. A subsequent candidate needs sufficient name limits (e.g. 64), rebuild and model fixture rerun; this candidate cannot claim model inference acceptance."
+    },
+    {
+      "item": "Navigation heap threshold",
+      "status": "first_check_failed_followup_retained",
+      "needed": "First 10-cycle sample grew 43368 bytes, above the 32768-byte threshold. Compare followup idle/cycle observations; transient allocation owners and peak behavior need further attribution before a full stability claim."
+    },
+    {
+      "item": "Original upstream ancestry",
+      "status": "pending_source_material",
+      "needed": "Original import manifest or public ancestor mapping; root snapshot parents=[] is insufficient."
+    },
+    {
+      "item": "DMA initialization/error recovery",
+      "status": "pending_controlled_hardware_test",
+      "needed": "IRQ allocation failure, timeout/reset/reopen and concurrent boundary conditions; basic UI passes do not resolve audited driver failure paths."
+    },
+    {
+      "item": "Power-off cold starts",
+      "status": "pending_physical_operator",
+      "needed": "Five actual power-off/power-on cycles; five watchdog reset boots were completed here."
+    },
+    {
+      "item": "Human wake word and audio",
+      "status": "pending_human_operator",
+      "needed": "Distances/noise, hits/misses, false activation observation duration and listening; synthetic tests do not replace these."
+    },
+    {
+      "item": "Real household actuation",
+      "status": "pending_named_device_authorization",
+      "needed": "A permitted light/switch action, readback and initial-state restoration."
+    },
+    {
+      "item": "Long media/real SD failure conditions",
+      "status": "pending_controlled_scene_and_storage",
+      "needed": "Long recording/playback, drift/drops, full-card and power interruption recovery."
+    },
+    {
+      "item": "Current image performance A/B",
+      "status": "pending_comparison_runs",
+      "needed": "Rerun matched workloads if claiming old PPA, codec or TTS acceleration numbers for this candidate."
+    }
+  ]
+}

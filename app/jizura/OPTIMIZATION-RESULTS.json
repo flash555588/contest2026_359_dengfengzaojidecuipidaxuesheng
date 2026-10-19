@@ -1,0 +1,322 @@
+{
+  "date": "2026-10-18",
+  "host_only": true,
+  "board_rendering_tested": false,
+  "upstream_commit": "fc16bfe43ea4a6c25a21f1caf04d17326de14f00",
+  "build": {
+    "upstream_unchanged": true,
+    "reference_engine_sha256": "c0ff11068c4e84d1733123dd4593bed0a91d70f962e5b4618c224ab2ea791d14",
+    "optimized_engine_sha256": "a9ff4973f5113c1f9accd178f3570b44113c3578b56fd4e005b345e48ae82562",
+    "sprite_raster_budget_bytes": 4194304,
+    "preserved": [
+      "all effect registrations",
+      "original piece IDs/order",
+      "thresholds and dilation priority",
+      "font rasterization and resolution"
+    ]
+  },
+  "conformance": {
+    "pass": true,
+    "counts": {
+      "layout": 184,
+      "enter": 125,
+      "hold": 52,
+      "exit": 109,
+      "decor": 130,
+      "treat": 62,
+      "bg": 66,
+      "cam": 36,
+      "fx": 69,
+      "trans": 27
+    },
+    "styles": 27,
+    "glyphs": 54,
+    "frames": 4369,
+    "differentFrames": 0,
+    "differentChannels": 0,
+    "maxDelta": 0,
+    "tests": {
+      "eviction": {
+        "pass": true,
+        "evictions": 262,
+        "budgetBytes": 32768,
+        "retainedBytes": 19096
+      },
+      "nativeResolution": {
+        "width": 1024,
+        "height": 576,
+        "frames": 6
+      }
+    },
+    "warnings": [],
+    "errors": []
+  },
+  "fonts": {
+    "reference": [
+      "DotGothic16 / 400",
+      "IBM Plex Mono / 500",
+      "Ma Shan Zheng / 400",
+      "Noto Sans SC / 300",
+      "Noto Sans SC / 500",
+      "Noto Sans SC / 700",
+      "Noto Sans SC / 900",
+      "Noto Serif SC / 300",
+      "Noto Serif SC / 500",
+      "Noto Serif SC / 700",
+      "Noto Serif SC / 800",
+      "Noto Serif SC / 900",
+      "ZCOOL KuaiLe / 400",
+      "ZCOOL QingKe HuangYou / 400",
+      "ZCOOL XiaoWei / 400"
+    ],
+    "optimized": [
+      "DotGothic16 / 400",
+      "IBM Plex Mono / 500",
+      "Ma Shan Zheng / 400",
+      "Noto Sans SC / 300",
+      "Noto Sans SC / 500",
+      "Noto Sans SC / 700",
+      "Noto Sans SC / 900",
+      "Noto Serif SC / 300",
+      "Noto Serif SC / 500",
+      "Noto Serif SC / 700",
+      "Noto Serif SC / 800",
+      "Noto Serif SC / 900",
+      "ZCOOL KuaiLe / 400",
+      "ZCOOL QingKe HuangYou / 400",
+      "ZCOOL XiaoWei / 400"
+    ]
+  },
+  "kernel_oracle": {
+    "pass": true,
+    "cases": 265,
+    "oracle": "exact pinned 02_fonts.js segmentation block",
+    "host_only": true,
+    "benchmark": {
+      "kind": "synthetic connected-stroke mask",
+      "side": 743,
+      "reference_median_ms": 7.553600000000017,
+      "optimized_median_ms": 5.898199999999974
+    },
+    "buffers": {
+      "reference_array_bytes": 7176637,
+      "optimized_scratch_bytes": 1109596,
+      "note": "Includes segmentation arrays; excludes existing RGBA input/canvas, JS objects and output sprites."
+    }
+  },
+  "scratch_accounting": {
+    "referenceSegmentationBytes": 7176637,
+    "optimizedLastMeasuredBytes": 1109584,
+    "reductionPercent": 84.53894212567809,
+    "note": "512 bucket, excludes shared input RGBA and Canvas, output masks and VM objects."
+  },
+  "glyph_payload_accounting": {
+    "reference_bytes": 39197892,
+    "optimized_bytes": 4311707,
+    "reduction_percent": 89.00015592675238,
+    "raw": {
+      "reference": {
+        "pieces": 98,
+        "whiteBytes": 13065964,
+        "maskBytes": 0,
+        "tintBytes": 26131928,
+        "rasterLruBytes": 0,
+        "note": "Payload/backing-size accounting; excludes VM, Canvas implementation overhead and unrelated surfaces."
+      },
+      "optimized": {
+        "pieces": 98,
+        "whiteBytes": 0,
+        "maskBytes": 408431,
+        "tintBytes": 0,
+        "rasterLruBytes": 3903276,
+        "note": "Payload/backing-size accounting; excludes VM, Canvas implementation overhead and unrelated surfaces."
+      }
+    }
+  },
+  "quickjs_kernel": {
+    "quickjs_version": "2024-02-14",
+    "bignum": false,
+    "scope": "Standalone segmentation kernel with synthetic RGBA input; excludes full engine and native canvas.",
+    "runs": [
+      {
+        "mode": "reference",
+        "limitMiB": 4,
+        "returncode": 1,
+        "error": "KERNEL_ERROR InternalError: out of memory"
+      },
+      {
+        "mode": "reference",
+        "limitMiB": 6,
+        "returncode": 1,
+        "error": "KERNEL_ERROR InternalError: out of memory"
+      },
+      {
+        "mode": "reference",
+        "limitMiB": 8,
+        "returncode": 1,
+        "error": "KERNEL_ERROR InternalError: out of memory"
+      },
+      {
+        "mode": "reference",
+        "limitMiB": 12,
+        "returncode": 0,
+        "result": {
+          "medianMs": 926,
+          "samplesMs": [
+            881,
+            926,
+            964
+          ],
+          "components": 3
+        }
+      },
+      {
+        "mode": "reference",
+        "limitMiB": 16,
+        "returncode": 0,
+        "result": {
+          "medianMs": 941,
+          "samplesMs": [
+            923,
+            941,
+            967
+          ],
+          "components": 3
+        }
+      },
+      {
+        "mode": "optimized",
+        "limitMiB": 4,
+        "returncode": 1,
+        "error": "KERNEL_ERROR InternalError: out of memory"
+      },
+      {
+        "mode": "optimized",
+        "limitMiB": 6,
+        "returncode": 0,
+        "result": {
+          "medianMs": 696,
+          "samplesMs": [
+            696,
+            696,
+            708
+          ],
+          "components": 3
+        }
+      },
+      {
+        "mode": "optimized",
+        "limitMiB": 8,
+        "returncode": 0,
+        "result": {
+          "medianMs": 677,
+          "samplesMs": [
+            670,
+            677,
+            685
+          ],
+          "components": 3
+        }
+      },
+      {
+        "mode": "optimized",
+        "limitMiB": 12,
+        "returncode": 0,
+        "result": {
+          "medianMs": 685,
+          "samplesMs": [
+            681,
+            685,
+            687
+          ],
+          "components": 3
+        }
+      },
+      {
+        "mode": "optimized",
+        "limitMiB": 16,
+        "returncode": 0,
+        "result": {
+          "medianMs": 683,
+          "samplesMs": [
+            663,
+            683,
+            685
+          ],
+          "components": 3
+        }
+      }
+    ],
+    "same_limit_16_mib_time_reduction_percent": 27.417640807651434
+  },
+  "optimized_engine_probe": {
+    "bytecode_bytes": 2035470,
+    "bytecode_limit_mib": 8,
+    "host_stack_guard_kib": 64,
+    "inspected_malloc_bytes": 4743672
+  },
+  "browser_frame_timing": {
+    "scope": "Browser JS/Canvas command submission; GPU presentation and ESP frame rate are not measured.",
+    "samples": [
+      {
+        "style": "noir",
+        "width": 640,
+        "height": 360,
+        "samples": 144,
+        "referenceMedianMs": 5.599999964237213,
+        "optimizedMedianMs": 4.900000035762787,
+        "referenceP95Ms": 27,
+        "optimizedP95Ms": 30.5
+      },
+      {
+        "style": "paper",
+        "width": 640,
+        "height": 360,
+        "samples": 144,
+        "referenceMedianMs": 6.399999976158142,
+        "optimizedMedianMs": 6.600000023841858,
+        "referenceP95Ms": 33.39999997615814,
+        "optimizedP95Ms": 33.19999998807907
+      },
+      {
+        "style": "crimson",
+        "width": 640,
+        "height": 360,
+        "samples": 144,
+        "referenceMedianMs": 5,
+        "optimizedMedianMs": 5.5,
+        "referenceP95Ms": 26.700000047683716,
+        "optimizedP95Ms": 30.19999998807907
+      }
+    ],
+    "consistent_speedup": false
+  },
+  "limitations": [
+    "Limited test projects and parameters, not every combination.",
+    "Array and canvas payload arithmetic is not process RSS or whole-system peak heap.",
+    "P4 Canvas2D/font backend and on-device performance remain unverified.",
+    "Sprite raster budget excludes masks/geometry and transient oversized sprites."
+  ],
+  "demo_export": {
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 640,
+          "height": 360,
+          "avg_frame_rate": "24/1",
+          "duration": "8.000000"
+        }
+      ],
+      "format": {
+        "duration": "8.000000",
+        "size": "1679550"
+      }
+    },
+    "mp4_sha256": "a35dcd76608760c7b336d65bd6332460541bb5e418f761058baa99d7006f98e4",
+    "browser_export_not_board_capture": true
+  }
+}

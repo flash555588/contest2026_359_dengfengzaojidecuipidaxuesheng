@@ -89,13 +89,16 @@ static bool chat_card_parse(const char *text, struct chat_card *out)
   const cJSON *state = cJSON_GetObjectItemCaseSensitive(root, "state");
   const cJSON *level = cJSON_GetObjectItemCaseSensitive(root, "level");
   const cJSON *on = cJSON_GetObjectItemCaseSensitive(root, "on");
+  const cJSON *action=cJSON_GetObjectItemCaseSensitive(root,"action");
+  const cJSON *verified=cJSON_GetObjectItemCaseSensitive(root,"verified");
   bool ok = cJSON_IsObject(root) &&
     (!entity || (cJSON_IsString(entity) && chat_card_text(entity->valuestring, sizeof(out->entity)-1, true))) &&
     cJSON_IsString(kind) && chat_card_text(kind->valuestring, sizeof(out->kind) - 1, false) &&
     cJSON_IsString(name) && chat_card_text(name->valuestring, sizeof(out->name) - 1, false) &&
     cJSON_IsString(state) && chat_card_text(state->valuestring, sizeof(out->state) - 1, true) &&
     cJSON_IsNumber(level) && level->valuedouble >= -1 && level->valuedouble <= 100 &&
-    level->valuedouble == (int)level->valuedouble && cJSON_IsBool(on);
+    level->valuedouble == (int)level->valuedouble && cJSON_IsBool(on)&&
+    (!action||cJSON_IsBool(action))&&(!verified||cJSON_IsBool(verified));
   if (ok) for (const char *p = kind->valuestring; *p; p++)
     if (!((*p >= 'a' && *p <= 'z') || (*p >= '0' && *p <= '9') || *p == '_')) { ok = false; break; }
   if (ok) {
@@ -103,6 +106,7 @@ static bool chat_card_parse(const char *text, struct chat_card *out)
     strcpy(out->kind, kind->valuestring); strcpy(out->name, name->valuestring);
     strcpy(out->state, state->valuestring);
     out->level = (int)level->valuedouble; out->on = cJSON_IsTrue(on);
+    out->action=cJSON_IsTrue(action);out->verified=out->action&&cJSON_IsTrue(verified);
   }
   cJSON_Delete(root);
   return ok;
@@ -129,6 +133,7 @@ void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
       if (need > stream_capacity) {
         size_t capacity = stream_capacity ? stream_capacity : 8192;
         while (capacity < need) capacity *= 2;
+        if (capacity > 2 * 1024 * 1024 + 1) capacity = 2 * 1024 * 1024 + 1;
         char *grown = realloc(stream_text, capacity);
         if (grown) { stream_text = grown; stream_capacity = capacity; }
       }
@@ -163,7 +168,7 @@ void glass_chat_stream(uint32_t id, const struct claw_stream_event *e)
     if(t->tool_count==CHAT_TOOL_TRACE){memmove(t->tools,t->tools+1,(CHAT_TOOL_TRACE-1)*sizeof(t->tools[0]));t->tool_count--;}
     snprintf(t->tools[t->tool_count++],sizeof(t->tools[0]),"%s",name);t->tool_total++;
     snprintf(t->progress, sizeof(t->progress), "%s", !strcmp(name, "qpk_write_draft") ? "正在编写应用草稿" :
-      !strcmp(name, "qpk_read_example") ? "正在读取验证过的示例" : !strcmp(name, "qpk_read_draft") ? "正在检查当前草稿" : !strncmp(name,"skill_",6)?"正在使用技能":!strncmp(name,"mcp_",4)?"正在调用 MCP 工具":"正在查看示例目录");
+      !strcmp(name, "qpk_read_example") ? "正在读取验证过的示例" : !strcmp(name, "qpk_read_draft") ? "正在检查当前草稿" : !strcmp(name,"home_control")||!strcmp(name,"home_service")?"正在控制设备":!strncmp(name,"home_",5)?"正在读取家居设备":!strncmp(name,"music_",6)?"正在处理音乐":!strncmp(name,"skill_",6)?"正在使用技能":!strncmp(name,"mcp_",4)?"正在调用 MCP 工具":"正在查看示例目录");
   } else if (e->kind == CLAW_STREAM_CARD && e->text) {
     /* One card per device per turn; newest cards of a long turn survive. */
     struct chat_card card;
@@ -463,4 +468,28 @@ void glass_chat_activity_get(struct chat_activity_snapshot *out)
     }
   }
   pthread_mutex_unlock(&chat_lock);
+}
+
+bool glass_chat_result_get(struct chat_result_snapshot *out,uint32_t id,
+                          enum glass_agent_mode mode,size_t offset)
+{
+  if(!out||!glass_agent_mode_valid(mode))return false;
+  memset(out,0,sizeof(*out));bool found=false;
+  pthread_mutex_lock(&chat_lock);
+  if(chat_state)for(unsigned n=chat.count;n>0;n--){
+    const struct chat_turn *t=&chat.turns[n-1];
+    if(t->mode!=mode||(id&&t->id!=id))continue;
+    out->revision=chat.revision;out->turn_id=t->id;out->phase=chat.phase;
+    out->state=t->state;out->error=t->error;
+    snprintf(out->progress,sizeof(out->progress),"%s",t->progress);
+    out->card_count=t->card_count>CHAT_CARD_COUNT?CHAT_CARD_COUNT:t->card_count;
+    memcpy(out->cards,t->cards,out->card_count*sizeof(out->cards[0]));
+    size_t len=strlen(t->reply);
+    if(offset<=len&&(!offset||((unsigned char)t->reply[offset]&0xc0)!=0x80)){
+      size_t copied=glass_chat_copy_utf8(out->reply,sizeof(out->reply),t->reply+offset);
+      out->next_offset=(uint32_t)(offset+copied);out->more=out->next_offset<len;
+    }
+    found=true;break;
+  }
+  pthread_mutex_unlock(&chat_lock);return found;
 }

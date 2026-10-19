@@ -4,7 +4,7 @@ static void lock_music_transport_draw(lv_event_t *e)
   lv_area_t a;lv_obj_get_coords(lv_event_get_target(e),&a);
   int cx=(a.x1+a.x2)/2,cy=(a.y1+a.y2)/2,kind=(intptr_t)lv_event_get_user_data(e);
   lv_layer_t *layer=lv_event_get_layer(e);
-  bool playing=(g_lock_ui.shown.state==MUSIC_PLAYING || g_lock_ui.shown.state==MUSIC_LOADING) && !g_lock_ui.shown.pause_requested;
+  bool playing=g_lock_ui.shown && (g_lock_ui.shown->state==MUSIC_PLAYING || g_lock_ui.shown->state==MUSIC_LOADING) && !g_lock_ui.shown->pause_requested;
   if(!kind && playing) {
     lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.bg_color=lv_color_hex(0xfff8f4);d.radius=4;
     lv_area_t left={cx-23,cy-29,cx-9,cy+29},right={cx+9,cy-29,cx+23,cy+29};

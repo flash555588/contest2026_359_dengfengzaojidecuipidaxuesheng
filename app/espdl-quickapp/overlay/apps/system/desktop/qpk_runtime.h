@@ -41,15 +41,22 @@ const char *qpk_runtime_last_error(void);
 unsigned qpk_runtime_widget_count(void);
 /* True while direct capture or its cleanup still owns the display pages. */
 bool qpk_runtime_camera_active(void);
+/* UI-thread ARGB8888 snapshot (little-endian BGRA), copied for direct video.
+ * NULL removes it. Never becomes part of a saved photo or recording. */
+int qpk_runtime_wake_overlay(const uint8_t *bgra,unsigned width,unsigned height,unsigned stride,int x,int y);
 /* A hardware session cannot be replaced until cleanup has finished. */
 bool qpk_runtime_camera_busy(void);
 bool qpk_runtime_camera_capture(void);
+bool qpk_runtime_camera_capture_request(uint32_t *request);
+int qpk_runtime_camera_photo_status(uint32_t request,char *path,size_t capacity);
 /* Local board diagnostics, dispatched by the persistent desktop task. */
 int qpk_runtime_camera_video_action(unsigned action);
 /* Call from the UI loop even while LVGL is suspended. Handles worker failure
  * and bounded cleanup retries; returns a one-shot full-redraw request.
  */
 bool qpk_runtime_camera_poll(void);
+/* UI thread: consume an album request only after display and writer release. */
+bool qpk_runtime_camera_take_album(void);
 /* Board diagnostics: forward one pointer update to an app that registered
  * ui.onTouch(), using fractions of the app content. Returns 1 when delivered.
  */

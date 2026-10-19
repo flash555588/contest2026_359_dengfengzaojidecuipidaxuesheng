@@ -4,12 +4,15 @@
 客户端，也不登录小米账号：需要先把米家等设备接入用户自己的 Home Assistant，再由
 本固件通过用户配置的 HTTP 地址直连。
 
+ESPClaw 助手直接查找、控制并回读设备状态；灯光开关／亮度、粉色灯光、窗帘、场景及异常处理的参数参考见
+[音乐与米家控制实例](AGENT-CAPABILITIES.md#音乐与米家控制实例)。示例实体须替换为实际发现结果。
+
 ## 入口与界面
 
 - 桌面“智能家居”卡片、Dock 家居按钮、全部应用列表和 `desktop ui ha` 都启动内置
   QuickJS `homeassistant/app.js`（与 ZIP 提供的 `app.js` 同源），通过共享的
-  `system.homeAssistantService` 访问现有 Home Assistant 连接；旧的
-  `glass_hass_ui.inc` 保留为原生回归/参考实现。
+  `system.homeAssistantService` 访问现有 Home Assistant 连接。重复的旧 C 页面
+  已移除，所有入口统一使用当前 QuickJS 页面。
 - `desktop ui ha-settings` / `desktop ui ha-address` 直接打开 Portal 的智能家居配置页。
 - 未启用 `CONFIG_SYSTEM_HASS` 时，QuickJS 应用仍可启动，但不会获得原生服务授权；
   正式连接和控制验证仍要求启用该配置。
@@ -31,10 +34,10 @@
 ## 能力边界
 
 - QuickJS 页面通过共享 `hass_open(HASS_READ | HASS_CONTROL)` 服务读取 `states`
-  缓存，状态有效期 10 秒，并每 10 秒自动同步；控制只走 `hass_control()`，且仅
-  接受 `light`、`switch`、`input_boolean`、`fan`，UI 层没有放宽服务白名单。
-- ESPClaw 的内置 MCP 服务 board 在 `CONFIG_SYSTEM_HASS=y` 时提供五个进程内
-  home_* 工具（status／list／state／control／service）：读取只用 `HASS_READ`，控制
+  缓存，状态有效期 10 秒，并每 10 秒自动同步；开关控制使用 `hass_control()`，内部功能使用同权限的
+  `hass_call_service()`，所有写入受共享的单实体、类型化服务表约束。
+- ESPClaw 的内置 MCP 服务 board 在 `CONFIG_SYSTEM_HASS=y` 时提供七个进程内
+  home_* 工具（status／list／state／control／service／light／device）：读取只用 `HASS_READ`，控制
   复用同一白名单、服务表和读回校验，结果不含地址与令牌，也没有 `HASS_CONFIGURE`
   路径。执行结果以设备小卡片渲染在对话内；工具不打开智能家居页面、不触碰界面。
 - AI 写入另受 Portal「允许 AI 控制家居」开关限制，默认关闭；门锁和安防控制排除。场景等动作只报告受理，其他服务按可映射属性核对回读，不能确认时明确显示未确认。
@@ -131,3 +134,15 @@
 `5dea759c4a63753935bb1aaf4a29ea646a0631d1b14296e5914c31726e9f0ac7`），
 SRAM 链接占用 469524 / 978880 bytes，程序分区、ILP32F ABI、关键符号和启动静态区
 边界检查通过；`hardware_tested` 仍为 `false`。
+
+## 内部功能与 AI 同步（2026-10-19）
+
+详情页补充风向、百叶叶片位置/动作、空调水平摆风/目标湿度/温度上下限、热水器外出模式与支持时的电源控制；按实体能力和 HA 服务目录显示。修正风扇、空调开关能力位以及播放器 PLAY 与 PLAY_MEDIA 的区分。布尔控件、选项和数值继续使用原设备卡片的更多参数与分页，不增加浏览器。
+
+排队控制在实际发送前重新检查功能、选项和数值范围，能力变化会丢弃过期意图。温度上下限同时提交，越序拒绝；不以修改另一个数值来迁就本次请求。
+
+新增 home_device 查询实际注册关联的多实体功能，并支持设备内部 query 筛选，适用于摄像机等具有大量辅助实体的设备。AI 状态查询扩充为各域公开属性与参数描述；原 home_light 的唯一匹配和单次写入路径保留。
+
+详情页和 AI 按风向、模式、叶片、温度等实际属性确认；空调制冷状态可表示电源已开启。动作没有可靠结果属性时只报告已受理。AI 卡片使用已核对的功能值。新功能只有在 HA 集成实际暴露对应实体/服务时可用，不补造 MIoT 私有服务。
+
+能力位对照：[Fan](https://github.com/home-assistant/core/blob/dev/homeassistant/components/fan/const.py)、[Climate](https://github.com/home-assistant/core/blob/dev/homeassistant/components/climate/const.py)、[Cover](https://github.com/home-assistant/core/blob/dev/homeassistant/components/cover/const.py)、[Media player](https://github.com/home-assistant/core/blob/dev/homeassistant/components/media_player/const.py)、[Water heater](https://github.com/home-assistant/core/blob/dev/homeassistant/components/water_heater/const.py)。部署仍以实际 HA 版本和返回属性为准。

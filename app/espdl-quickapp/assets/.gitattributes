@@ -1,0 +1,4 @@
+# Original dictionary and license hashes are recorded in opencc/UPSTREAM.json.
+opencc/*.txt -text -whitespace
+opencc/LICENSE -text -whitespace
+opencc/UPSTREAM.json text eol=lf

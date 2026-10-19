@@ -237,3 +237,5 @@ int glass_https_poll(struct webclient_tls_connection *conn,short events,int time
 
 void glass_https_set_deadline(struct webclient_tls_connection *conn,int64_t deadline_ms)
 { if(conn) conn->request.deadline_ms=deadline_ms; }
+void glass_https_set_abort_flag(struct webclient_tls_connection *conn,atomic_bool *flag)
+{ if(conn) conn->request.abort_flag=flag; }

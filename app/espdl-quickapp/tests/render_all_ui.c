@@ -5,7 +5,6 @@
 #include "mijia_card_fixture.h"
 #include "production_desktop.inc"
 #include "media_pages.inc"
-#include "glass_ble.inc"
 
 static uint8_t review_fb[1024*600*2];
 static void review_flush(lv_display_t *display,const lv_area_t *area,uint8_t *pixels)
@@ -22,7 +21,8 @@ static void review_grok_expression_fixture(void)
 {
   extern const char *ouo_get_app_js(unsigned int *);
   unsigned size;const char *source=ouo_get_app_js(&size);
-  const struct qpk_entry_s *manifest=&g_builtin_ouo_qpk.manifest;
+  const struct qpk_entry_s expression_manifest={.name="Grok Ball",.package="ouo",.version="2.0.0",.entry="builtin:/ouo/app.js"};
+  const struct qpk_entry_s *manifest=&expression_manifest;
   lv_obj_t *card=qapp_page_prepare(manifest->name);assert(card&&source&&size);
   assert(qpk_runtime_launch(card,manifest->name,manifest->package,manifest->version,manifest->entry,
     source,size,zh_font,show_toast,qpk_show_dialog,qpk_show_unresponsive)==0);
@@ -76,7 +76,10 @@ static lv_obj_t *review_callback_find(lv_obj_t *object,lv_event_cb_t callback)
 static void review_open_settings_entry(void)
 {
   panel_hide(NULL);lv_obj_update_layout(g_desktop.screen);
-  lv_obj_send_event(g_glass.theme_button,LV_EVENT_CLICKED,NULL);
+  if(!g_status_ui.bar)glass_status_create();
+  lv_obj_update_layout(lv_layer_top());
+  assert(g_status_ui.island && lv_obj_is_visible(g_status_ui.island));
+  lv_obj_send_event(g_status_ui.island,LV_EVENT_CLICKED,NULL);
   assert(g_desktop.settings_rebuild_pending);
   lv_async_call_cancel(settings_rebuild_async,NULL);settings_rebuild_async(NULL);
   assert(g_control_card==g_desktop.current_card&&!lv_obj_has_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN));
@@ -177,10 +180,8 @@ int main(int argc,char **argv)
     const char *networks[]={"审核示例网络","Studio WiFi","Guest Network"};
     for(unsigned i=0;i<3;i++){g_wifi_result.records[i].ssid_length=strlen(networks[i]);memcpy(g_wifi_result.records[i].ssid,networks[i],strlen(networks[i]));g_wifi_result.records[i].rssi=-42-i*12;}
     glass_wifi_render_list();glass_wifi_status_set(GLASS_WIFI_COUNT,3);review_capture(display,"wifi-scan","Wi-Fi 扫描结果");
-    lv_textarea_set_text(g_wifi_ssid,networks[0]);lv_keyboard_set_textarea(g_wifi_keyboard,g_wifi_password);review_capture(display,"wifi-password","Wi-Fi 密码输入");
+    lv_textarea_set_text(g_wifi_ssid,networks[0]);glass_wifi_edit_view(NULL);review_capture(display,"wifi-password","Wi-Fi 密码输入");
     SHOT("bluetooth","蓝牙设备",glass_bluetooth_page(NULL));
-    SHOT("ble-scan","BLE 扫描与连接",glass_ble_page(panel_card("蓝牙扫描")));
-    review_ble_fixture(1);glass_ble_refresh(NULL);review_capture(display,"ble-devices","BLE 扫描结果");
     SHOT("mouse","蓝牙鼠标",glass_mouse_open(NULL));
     SHOT("files","文件管理",glass_storage_page(NULL));
     glass_files_tick(NULL);review_capture(display,"files-loaded","文件列表");

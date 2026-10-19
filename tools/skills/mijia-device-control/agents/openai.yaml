@@ -1,0 +1,4 @@
+interface:
+  display_name: "米家设备功能控制"
+  short_description: "补全 openvela 设备详情页、AI 语音功能控制和真实状态回读"
+  default_prompt: "使用 $mijia-device-control 补全当前项目的米家设备内部功能，让详情页与 AI 控制共用实际能力和状态确认。"

@@ -1,0 +1,231 @@
+{
+  "date": "2026-10-18",
+  "analysis_only": true,
+  "firmware_modified": false,
+  "features_disabled": false,
+  "navigation_restored": true,
+  "firmware_sha256": "2b0c3eaa8dface01d0495fd4a40cd179125957c35c8cb617ad875d6ac148be4d",
+  "config_sha256": "918b1baf123753d2e6b825071ab7d678eb7af3201970b49ab07666a34f754b73",
+  "method": "Same board and firmware. Performance A, weather, home, performance B. Six samples per window, about 24 seconds; 65-second warmup for restored performance page. Existing visible animation and services remain active.",
+  "cpu_normalization": "100% is both P4 cores combined; scheduler estimates use a 100 Hz sampling clock and 2-second time constant",
+  "scenarios": [
+    {
+      "name": "performance_a",
+      "samples": 6,
+      "window_seconds": 24.3240687000216,
+      "total_median": 31.45,
+      "ui": {
+        "median": 10.7,
+        "minimum": 10.1,
+        "maximum": 11.5
+      },
+      "network": {
+        "median": 18.8,
+        "minimum": 17.8,
+        "maximum": 19.5
+      },
+      "render_window": {
+        "frames": 276,
+        "elapsed_ms": 25310,
+        "redraws_per_second": 10.904780719083366,
+        "approximate_render_average_us": 9393.0
+      },
+      "transport_rx_counter_delta_modulo_1mib": 2324,
+      "floating_pet_source": "fallback",
+      "floating_pet_open": true,
+      "grok_reader": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "grok": {
+        "reads": 0,
+        "frames": 0,
+        "ticks": 0,
+        "visible": 0,
+        "approximate_read_path_wall_us": null
+      }
+    },
+    {
+      "name": "weather",
+      "samples": 6,
+      "window_seconds": 24.44893349998165,
+      "total_median": 30.700000000000003,
+      "ui": {
+        "median": 10.05,
+        "minimum": 9.2,
+        "maximum": 18.7
+      },
+      "network": {
+        "median": 18.65,
+        "minimum": 14.2,
+        "maximum": 19.1
+      },
+      "render_window": {
+        "frames": 187,
+        "elapsed_ms": 25430,
+        "redraws_per_second": 7.353519465198584,
+        "approximate_render_average_us": 17737.1871657754
+      },
+      "transport_rx_counter_delta_modulo_1mib": 858,
+      "floating_pet_source": "fallback",
+      "floating_pet_open": true,
+      "grok_reader": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "grok": {
+        "reads": 0,
+        "frames": 0,
+        "ticks": 0,
+        "visible": 0,
+        "approximate_read_path_wall_us": null
+      }
+    },
+    {
+      "name": "home",
+      "samples": 6,
+      "window_seconds": 24.30352740001399,
+      "total_median": 46.0,
+      "ui": {
+        "median": 12.8,
+        "minimum": 10.9,
+        "maximum": 14.1
+      },
+      "network": {
+        "median": 18.200000000000003,
+        "minimum": 16.6,
+        "maximum": 20.7
+      },
+      "render_window": {
+        "frames": 279,
+        "elapsed_ms": 25280,
+        "redraws_per_second": 11.03639240506329,
+        "approximate_render_average_us": 7656.655913978495
+      },
+      "transport_rx_counter_delta_modulo_1mib": 2756,
+      "floating_pet_source": "fallback",
+      "floating_pet_open": true,
+      "grok_reader": {
+        "median": 13.1,
+        "minimum": 12.1,
+        "maximum": 13.3
+      },
+      "grok": {
+        "reads": 205,
+        "frames": 205,
+        "ticks": 625,
+        "visible": 1,
+        "approximate_read_path_wall_us": 29998.756097560974
+      }
+    },
+    {
+      "name": "performance_b",
+      "samples": 6,
+      "window_seconds": 24.370954500045627,
+      "total_median": 31.6,
+      "ui": {
+        "median": 10.3,
+        "minimum": 9.9,
+        "maximum": 11.2
+      },
+      "network": {
+        "median": 18.15,
+        "minimum": 17.3,
+        "maximum": 19.1
+      },
+      "render_window": {
+        "frames": 150,
+        "elapsed_ms": 25360,
+        "redraws_per_second": 5.914826498422713,
+        "approximate_render_average_us": 12176.0
+      },
+      "transport_rx_counter_delta_modulo_1mib": 1365,
+      "floating_pet_source": "fallback",
+      "floating_pet_open": true,
+      "grok_reader": {
+        "median": 0.0,
+        "minimum": 0.0,
+        "maximum": 0.0
+      },
+      "grok": {
+        "reads": 0,
+        "frames": 0,
+        "ticks": 0,
+        "visible": 0,
+        "approximate_read_path_wall_us": null
+      }
+    }
+  ],
+  "findings": {
+    "sd_card_bus": "SPI3 at configured 20 MHz; SPI3 DMA disabled; current PIO exchange batches at most 64 bytes and busy-waits",
+    "grok_format": "128x128 RGB565+A8; 49152 bytes/frame, nominal 100ms frame period",
+    "grok_idle_loop_frames": 80,
+    "grok_idle_cache_bytes": 3932160,
+    "grok_bank_file_bytes": 125829536,
+    "file_cache": "FAT per-file partial-sector buffer; driver read-ahead disabled; no multi-frame loop cache in player",
+    "network": "10 ms daemon sleep, four CMD52 accesses per empty length query, busy-wait response in SDMMC; no empty-poll or function-duration counter in current firmware",
+    "display": "LVGL DIRECT with two drawing buffers and dirty regions; framebuffer driver flushes the union of prior/current dirty rows for both drawing buffers; software rendering",
+    "existing_caches": "Weather decoded scene/frost and TTF glyph caches already exist",
+    "memory": "Latest sample: PSRAM heap free 29093712 bytes; internal kernel heap free 16608 bytes, largest block 15776 bytes; static boot-layout margin remains 132 bytes"
+  },
+  "recommendations": [
+    {
+      "priority": 1,
+      "layer": "Shared asset/resource layer",
+      "change": "Bounded reclaimable frame cache with lazy filling and stream fallback; reuse frames without changing sequence or live gaze; avoid duplicate caching if a shared file cache is introduced"
+    },
+    {
+      "priority": 2,
+      "layer": "SPI driver",
+      "change": "Evaluate DMA plus completion semaphore, including aligned bounded bounce buffers and static-memory budget; enabling the flag alone is insufficient"
+    },
+    {
+      "priority": 3,
+      "layer": "Hosted network transport and SDIO host",
+      "change": "Measure empty-poll count and real command time, then implement event wake plus budgeted active draining and timeout fallback; preserve RPC receive ownership"
+    },
+    {
+      "priority": 4,
+      "layer": "Renderer and display port",
+      "change": "Profile invalid area and cache writeback sizes; retain layer contents and narrow dirty-region work while preserving buffer synchronization"
+    },
+    {
+      "priority": 5,
+      "layer": "Diagnostics",
+      "change": "Gate verbose RPC hex output; preserve errors and on-demand diagnostics"
+    }
+  ],
+  "modern_os_principles": [
+    {
+      "topic": "Reclaimable file page cache",
+      "url": "https://docs.kernel.org/admin-guide/mm/concepts.html"
+    },
+    {
+      "topic": "DMA transfers and ownership",
+      "url": "https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/using-direct-i-o-with-dma"
+    },
+    {
+      "topic": "Interrupt notification and budgeted polling",
+      "url": "https://docs.kernel.org/networking/napi.html"
+    },
+    {
+      "topic": "Retained display lists and dirty invalidation",
+      "url": "https://developer.android.com/topic/performance/views/hardware-accel-views"
+    },
+    {
+      "topic": "Cached layer contents",
+      "url": "https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/CoreAnimation_guide/CoreAnimationBasics/CoreAnimationBasics.html"
+    }
+  ],
+  "limitations": [
+    "These are tick-sampled thread estimates, not cycle-accurate function attribution. A 10ms poll and 100Hz sampling may have phase bias.",
+    "Thread CPU medians and total CPU are separately sampled and need not sum exactly.",
+    "Read-path mean includes card I/O, scheduler preemption and gaze work; it is wall time, not exclusive CPU time.",
+    "Visible floating pet moves and rests naturally; A/B redraw counts differ and cannot isolate pet cost.",
+    "RX delta is the transport accumulator modulo 1MiB, including RPC; it is not an empty-poll ratio or Ethernet throughput measurement.",
+    "NSH register timing returned 0 or 10ms and includes diagnostics; insufficient for individual CMD52 costs.",
+    "No optimization savings are claimed before implementation and controlled validation."
+  ]
+}

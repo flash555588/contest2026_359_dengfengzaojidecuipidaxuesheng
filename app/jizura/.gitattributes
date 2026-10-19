@@ -1,0 +1,2 @@
+# Preserve the byte hashes recorded in upstream.lock.json on every platform.
+upstream/** -text -whitespace

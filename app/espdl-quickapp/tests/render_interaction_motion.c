@@ -62,7 +62,7 @@ int main(int argc,char **argv)
     g_desktop.light_theme=theme==0;g_glass.reduced_motion=false;
     glass_rebuild();motion_frames(display,"home-enter",18);
     review_capture(display,"motion-home","首页静态布局");
-    lv_obj_t *button=g_glass.theme_button;assert(button);
+    lv_obj_t *button=g_status_ui.island;assert(button&&lv_obj_is_visible(button));
     lv_obj_send_event(button,LV_EVENT_PRESSED,NULL);motion_frames(display,"press",6);
     lv_obj_send_event(button,LV_EVENT_RELEASED,NULL);motion_frames(display,"release",12);
     glass_apps(NULL);motion_frames(display,"apps-enter",16);

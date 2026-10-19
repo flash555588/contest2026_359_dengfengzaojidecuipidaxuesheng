@@ -56,7 +56,9 @@ int main(int argc,char **argv)
   review_capture(display,"lock-paused","锁屏 · 暂停");lock_toggle(NULL);
   lock_unlock(NULL);assert(!g_lock_ui.root && g_desktop.current_card==page);assert(!lv_timer_get_paused(g_music_ui.timer));
   panel_hide(NULL);struct music_now_playing after;glass_music_now_playing(&after);assert(after.state==MUSIC_PLAYING && after.position_ms==42000);
-  lv_obj_send_event(g_glass.clock,LV_EVENT_CLICKED,NULL);assert(g_lock_ui.root);
+  glass_music(NULL);lv_obj_update_layout(g_desktop.screen);
+  entry=review_callback_find(g_desktop.current_card,glass_lock_open);
+  assert(entry&&lv_obj_is_visible(entry));lv_obj_send_event(entry,LV_EVENT_CLICKED,NULL);assert(g_lock_ui.root);
   lv_obj_send_event(g_lock_ui.next,LV_EVENT_CLICKED,NULL);
   lv_obj_update_layout(g_lock_ui.root);
   assert(!strcmp(lv_label_get_text(g_lock_ui.title),"下一首示例"));assert(!strcmp(lv_label_get_text(g_lock_ui.lyric[1]),"正在获取歌词…"));

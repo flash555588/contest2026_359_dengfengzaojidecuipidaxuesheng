@@ -43,3 +43,4 @@ struct glass_board_home {
 void glass_agent_set_board_home(const struct glass_board_home *home);
 /* Same in-process provider contract, independent of the HA build option. */
 void glass_agent_set_board_music(const struct glass_board_home *music);
+void glass_agent_set_board_assistant(const struct glass_board_home *assistant);

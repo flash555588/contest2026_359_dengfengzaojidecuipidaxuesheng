@@ -1302,6 +1302,21 @@ static void es8311_returnbuffers(FAR struct es8311_dev_s *priv)
           priv->terminating = true;
         }
 
+      /* DEQUEUE carries a pointer but the upper half does not forward its
+       * status to the application. Report I2S errors explicitly before
+       * returning the buffer, so dropped audio cannot count as played.
+       */
+
+      if (result < 0)
+        {
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+          priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_IOERR, apb,
+                          result, NULL);
+#else
+          priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_IOERR, apb, result);
+#endif
+        }
+
       /* Release our reference to the audio buffer */
 
       apb_free(apb);

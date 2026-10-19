@@ -12,12 +12,21 @@
 
 ## 构建与集成入口
 
+官方 ESP-TTS、AI 家居操控与实板回归见
+[完整流程](../app/espdl-quickapp/speech/esp-tts/WORKFLOW.md)。完整 v3 构建启用语音后默认使用
+ESP-TTS；`verify_esp_tts.py` 检查依赖、音频回归和实际镜像，`deploy_esp_tts_device.py`
+在已有应用区备份及镜像校验报告的前提下完成上板、播报检查和失败恢复。
+
 [apply_final_overlays.sh](apply_final_overlays.sh)是历史发布的固定基线补丁入口，顺序与约束见
 [patches](patches/README.md)。它和开发期直接覆盖的 [apply_esp32p4_overlay.py](apply_esp32p4_overlay.py)
 不是同一流程。`build_esp32p4_desktop.sh` 要求 `v1.0` 或 `v3.2` 参数及
 `ESP_RISCV_TOOLCHAIN`，不能从任意目录无参数执行。
 
 ## 只读自检
+
+米家设备控制开发 skill 的可安装源码见
+[skills/mijia-device-control](skills/mijia-device-control/SKILL.md)，安装和提交范围见
+[源码集成说明](../docs/INTEGRATION_2026-10-19.md)。
 
 在仓库根目录运行：
 

@@ -154,8 +154,8 @@ static int prepare_parent(char *path)
   return 0;
 }
 
-int qpk_storage_write(const char *root, const char *package, const char *key,
-                      const char *value, size_t length)
+static int storage_write(const char *root, const char *package, const char *key,
+                         const char *value, size_t length, bool durable)
 {
   char path[QPK_STORAGE_PATH_MAX];
   char temporary[QPK_STORAGE_PATH_MAX + 4];
@@ -170,11 +170,20 @@ int qpk_storage_write(const char *root, const char *package, const char *key,
   file = fopen(temporary, "wb");
   if (file == NULL) return -errno;
   ret = fwrite(value, 1, length, file) == length ? 0 : -(errno ? errno : EIO);
+  if (!ret && durable && (fflush(file) || fsync(fileno(file)))) ret = -(errno ? errno : EIO);
   if (fclose(file) != 0 && ret == 0) ret = -(errno ? errno : EIO);
   if (ret == 0 && rename(temporary, path) < 0) ret = -errno;
   if (ret < 0) unlink(temporary);
   return ret;
 }
+
+int qpk_storage_write(const char *root, const char *package, const char *key,
+                      const char *value, size_t length)
+{ return storage_write(root, package, key, value, length, false); }
+
+int qpk_storage_write_sync(const char *root, const char *package, const char *key,
+                           const char *value, size_t length)
+{ return storage_write(root, package, key, value, length, true); }
 
 int qpk_storage_remove(const char *root, const char *package, const char *key)
 {

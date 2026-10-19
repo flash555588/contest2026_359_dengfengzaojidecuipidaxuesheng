@@ -16,7 +16,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--corpus',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--room-augmentation',action='store_true',help='Fit the same-size template bank to noise, echo and playback profiles')
+    p.add_argument('--training-multiplier',type=int,default=1,help='Train-only acoustic expansion and fitted medoids; 10 uses 60 variants per training clip while preserving validation/test')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
+    if not 1<=a.training_multiplier<=10:p.error('training multiplier must be 1..10')
     desktop=Path(__file__).resolve().parents[1]/'app/espdl-quickapp/overlay/apps/system/desktop'
     shared=a.output/'wake-features.so'
     subprocess.run(['gcc','-shared','-fPIC','-O3',str(desktop/'glass_wake_features.c'),'-lm','-o',str(shared)],check=True)
@@ -63,6 +65,11 @@ def main():
                 shifted=audio_profile(shifted,profile,bank_rng)
             bank.append(extract(shifted));bank_meta.append({**rows[index],'template_resample_rate':rate,'acoustic_profile':profile})
     templates=np.ascontiguousarray(bank,dtype=np.float32);tp=templates.ctypes.data_as(fp)
+    expansion=None
+    if a.training_multiplier>1:
+        from wake_training_expansion import fit_expanded
+        templates,bank_meta,expansion=fit_expanded(rows,audio,base,ids,extract,a.training_multiplier,a.output,templates,bank_meta)
+        tp=templates.ctypes.data_as(fp)
     stream=calibration_detector(desktop,a.output/'calibration',templates)
     streaming_validation=[]
     validation_scenarios={profile:[] for profile in PROFILES} if a.room_augmentation else {}
@@ -111,7 +118,7 @@ def main():
       'synthetic_only':True,'human_wake_tested':False,'human_false_alarms_per_hour':None,
       'split_policy':manifest['split_policy'],'speakers':{k:sorted(v) for k,v in speakers.items()},'ratio_threshold':threshold,
       'seed':20261016,'metrics':{k:metrics(k) for k in [*speakers,'streaming_validation']},'templates':bank_meta,
-      'room_augmentation':a.room_augmentation,'validation_scenarios':{k:metrics(k) for k in validation_scenarios},
+      'room_augmentation':a.room_augmentation,'training_expansion':expansion,'validation_scenarios':{k:metrics(k) for k in validation_scenarios},
       'calibration_policy':'Training-only templates; offline and production-VAD validation threshold; test is synthetic development evidence, not an untouched final evaluation',
       'corpus_sha256':hashlib.sha256((a.corpus/'corpus.json').read_bytes()).hexdigest(),
       'source_sha256':{name:hashlib.sha256(path.read_bytes()).hexdigest() for name,path in [('train_custom_wake.py',Path(__file__)),('wake_streaming.py',Path(__file__).with_name('wake_streaming.py')),('wake_augmentation.py',Path(__file__).with_name('wake_augmentation.py')),('glass_custom_wake.c',desktop/'glass_custom_wake.c'),('glass_custom_wake.h',desktop/'glass_custom_wake.h'),('glass_wake_features.c',desktop/'glass_wake_features.c'),('glass_wake_features.h',desktop/'glass_wake_features.h')]}}

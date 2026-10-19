@@ -28,6 +28,6 @@ static void qpk_yield_test_start(void)
   int ret = qpk_runtime_launch(card, "Yield test", "diagnostic.yield", "1", "yield-test.js",
     qpk_yield_test_js, sizeof(qpk_yield_test_js) - 1, zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   if (!ret) qapp_page_commit(card);
-  else lv_obj_delete(lv_obj_get_parent(card));
+  else qapp_page_discard(lv_obj_get_parent(card));
   desktop_ui_probe_print("qpk-yield-test launch=%d\n", ret);
 }

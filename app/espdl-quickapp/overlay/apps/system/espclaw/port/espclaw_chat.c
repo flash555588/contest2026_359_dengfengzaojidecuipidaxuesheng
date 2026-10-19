@@ -71,6 +71,7 @@ enum chat_error glass_chat_classify(int error, const char *detail)
   if (error == ESP_ERR_TIMEOUT) return CHAT_ERROR_TIMEOUT;
   if (error == ESP_ERR_NO_MEM) return CHAT_ERROR_MEMORY;
   if (detail) {
+    if (strstr(detail, "device memory limit") || strstr(detail, "Out of memory")) return CHAT_ERROR_MEMORY;
     if (strstr(detail, "output token limit")) return CHAT_ERROR_OUTPUT_LIMIT;
     if (strstr(detail, "stream interrupted")) return CHAT_ERROR_STREAM;
     if (strstr(detail, "Unknown LLM backend") || strstr(detail, "is empty")) return CHAT_ERROR_CONFIG;
@@ -101,6 +102,13 @@ static bool cleanup(void)
   retained = NULL; claw_qpk_close(&qpk_session); free(retained_context); retained_context = NULL; return true;
 }
 
+static uint64_t request_now_ms(void)
+{
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (uint64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
 enum chat_error glass_chat_request(const struct portal_ai_config *settings,
                                   const char *context, const char *prompt,
                                   uint32_t id, enum glass_agent_mode mode, atomic_bool *cancel, char **reply)
@@ -114,7 +122,7 @@ enum chat_error glass_chat_request(const struct portal_ai_config *settings,
   claw_core_config_t config = {
     .instance_id = 2, .api_key = settings->api_key, .backend_type = settings->backend,
     .model = settings->model, .base_url = settings->base_url, .system_prompt = settings->system_prompt,
-    .timeout_ms = settings->timeout_ms < 300000 ? 300000 : settings->timeout_ms, .max_tokens = settings->max_tokens,
+    .timeout_ms = settings->timeout_ms, .max_tokens = settings->max_tokens,
     .on_request_start = stream_start,
     .task_stack_size = 32768, .task_core = tskNO_AFFINITY,
     .request_queue_len = 1, .response_queue_len = 1, .max_tool_iterations = 1, .max_context_providers = 1
@@ -139,8 +147,20 @@ enum chat_error glass_chat_request(const struct portal_ai_config *settings,
   };
   err = claw_core_submit(retained, &request, 1000);
   if (err != ESP_OK) { result = glass_chat_classify(err, NULL); goto done; }
+  /* Inactivity deadlines renew on SSE heartbeats. Bound the whole tool loop
+   * independently so a live but non-finishing peer cannot pin its memory. */
+  uint64_t deadline = request_now_ms() + settings->timeout_ms;
   for (;;) {
-    if (atomic_load(cancel)) (void)claw_core_cancel_request(retained, id);
+    if (atomic_load(cancel)) {
+      (void)claw_core_cancel_request(retained, id);
+      result = CHAT_ERROR_NONE;
+      break;
+    }
+    if (request_now_ms() >= deadline) {
+      (void)claw_core_cancel_request(retained, id);
+      result = CHAT_ERROR_TIMEOUT;
+      break;
+    }
     claw_core_response_t response = {0};
     err = claw_core_receive_for(retained, id, &response, 100);
     if (err == ESP_OK) {

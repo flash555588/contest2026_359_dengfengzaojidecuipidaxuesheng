@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "../overlay/apps/system/espclaw/port/espclaw_qpk.c"
 #include <assert.h>
+#include "glass_assistant_tools.h"
 static unsigned providers,events;
 static enum glass_agent_mode expected_mode;
 static char *saved_config;
@@ -15,10 +16,11 @@ esp_err_t claw_core_add_context_provider(claw_core_handle_t core,const claw_core
   if(context.kind==CLAW_CORE_CONTEXT_KIND_SYSTEM_PROMPT){
     assert(strstr(context.content,glass_agent_mode_title(expected_mode)));
     assert((strstr(context.content,"Validated quick app guide")!=NULL)==(expected_mode==AGENT_MODE_CREATE));
+    if(expected_mode==AGENT_MODE_ASSISTANT){assert(strstr(context.content,"本轮完整原话优先"));assert(strstr(context.content,"不发送猜测的控制参数"));}
   }
   free(context.content);providers++;return ESP_OK;
 }
-static char last_card[256];static unsigned card_events;
+static char last_card[384];static unsigned card_events;
 void claw_stream_emit(enum claw_stream_kind kind,const char *text)
 {
   if(kind==CLAW_STREAM_CARD){assert(text&&*text&&strlen(text)<sizeof(last_card));strcpy(last_card,text);card_events++;return;}
@@ -36,12 +38,16 @@ int glass_mcp_http_perform(struct glass_mcp_http *r){(void)r;assert(!"No MCP end
 static const char fake_home_catalog[]=
   "{\"name\":\"home_test\",\"description\":\"Fixture card tool.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}},"
   "{\"name\":\"home_status\",\"description\":\"Fixture status tool.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}}";
+static bool fixture_verified=true;
 static char *fake_home_call(const char *tool,const cJSON *args,atomic_bool *cancel)
 {
   (void)args;(void)cancel;
-  if(!strcmp(tool,"home_test"))return strdup("{\"ok\":true,\"entity\":\"light.desk\",\"card\":{\"kind\":\"light\",\"name\":\"书桌灯\",\"state\":\"已开启\",\"level\":80,\"on\":true}}");
+  if(!strcmp(tool,"home_test"))return strdup(fixture_verified?
+    "{\"ok\":true,\"verified\":true,\"card\":{\"kind\":\"light\",\"name\":\"书桌灯\",\"state\":\"已开启\",\"level\":80,\"on\":true,\"verified\":false}}":
+    "{\"ok\":true,\"verified\":false,\"card\":{\"kind\":\"light\",\"name\":\"书桌灯\",\"state\":\"结果未确认\",\"level\":-1,\"on\":true,\"verified\":true}}");
   if(!strcmp(tool,"music_test"))return strdup("{\"ok\":true,\"accepted\":true,\"card\":{\"entity\":\"music.player\",\"kind\":\"music\",\"name\":\"测试歌曲\",\"state\":\"已请求播放\",\"level\":-1,\"on\":false}}");
   if(!strcmp(tool,"home_status"))return strdup("{\"ok\":true,\"configured\":true}");
+  if(!strcmp(tool,"assistant_status"))return strdup("{\"ok\":true,\"storage\":\"device_local\"}");
   return strdup("{\"ok\":false,\"error\":\"fixture_failure\"}");
 }
 static const struct glass_board_home fake_home={fake_home_catalog,fake_home_call};
@@ -62,9 +68,9 @@ int main(void)
     expected_mode=mode;session.mode=mode;memset(&config,0,sizeof(config));
     claw_qpk_configure(&config,&session);assert(session.agent);
     assert(config.supports_tools==(mode!=AGENT_MODE_CHAT));assert(claw_qpk_attach(NULL,&session)==ESP_OK);
-    const char *names[]={"qpk_list_examples","qpk_read_draft","qpk_read_example","qpk_write_draft","mcp_list_tools","mcp_call_tool","skill_list"};
-    for(unsigned i=0;i<7;i++){
-      bool denied=mode==AGENT_MODE_CHAT||(i<4&&mode!=AGENT_MODE_CREATE)||(i>=4&&i<6&&mode!=AGENT_MODE_ASSISTANT);
+    const char *names[]={"qpk_list_examples","qpk_read_draft","qpk_read_example","qpk_write_draft","mcp_list_tools","mcp_call_tool","skill_list","home_status","music_status","assistant_status"};
+    for(unsigned i=0;i<sizeof(names)/sizeof(names[0]);i++){
+      bool denied=mode==AGENT_MODE_CHAT||(i<4&&mode!=AGENT_MODE_CREATE)||((i==4||i==5||i>=7)&&mode!=AGENT_MODE_ASSISTANT);
       if(!denied)continue;
       unsigned before=events;assert(config.call_cap(names[i],"{}",NULL,&out,config.cap_user_ctx)!=ESP_OK);
       assert(strstr(out,"mode_denied")&&events==before);free(out);
@@ -84,11 +90,44 @@ int main(void)
   assert(strstr(out,"home_test")&&strstr(out,"home_status")&&strstr(out,"music_test"));free(out);
   assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"home_test\",\"arguments\":{}}",NULL,&out,config.cap_user_ctx)==ESP_OK);
   assert(card_events==1&&strstr(last_card,"\"kind\":\"light\"")&&strstr(last_card,"书桌灯"));
+  assert(strstr(last_card,"\"action\":true")&&strstr(last_card,"\"verified\":true"));
   assert(!strstr(out,"card")&&strstr(out,"\"ok\":true"));free(out);
   assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"home_broken\",\"arguments\":{}}",NULL,&out,config.cap_user_ctx)==ESP_FAIL);
   assert(card_events==1&&strstr(out,"fixture_failure"));free(out);
   assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"music_test\",\"arguments\":{}}",NULL,&out,config.cap_user_ctx)==ESP_OK);
   assert(card_events==2&&strstr(last_card,"\"kind\":\"music\"")&&!strstr(out,"card"));free(out);
+  fixture_verified=false;
+  assert(config.call_cap("home_test","{}",NULL,&out,config.cap_user_ctx)==ESP_OK);
+  assert(card_events==3&&!strstr(out,"card"));free(out);
+  assert(strstr(last_card,"\"action\":true")&&strstr(last_card,"\"verified\":false"));
+  assert(config.call_cap("home_test","{\"x\":1,\"x\":2}",NULL,&out,config.cap_user_ctx)!=ESP_OK);free(out);
+  /* Native assistant tools work directly and large board catalogs paginate. */
+  char *catalog=malloc(strlen(assistant_tool_catalog)+3);assert(catalog);sprintf(catalog,"[%s]",assistant_tool_catalog);
+  cJSON *entries=cJSON_Parse(catalog);free(catalog);assert(cJSON_GetArraySize(entries)==8);
+  char padding[9001];memset(padding,'x',9000);padding[9000]=0;
+  for(unsigned i=0;i<2;i++){
+    cJSON *t=cJSON_CreateObject();char name[40];snprintf(name,sizeof(name),"assistant_padding_%u",i);
+    cJSON_AddStringToObject(t,"name",name);cJSON_AddStringToObject(t,"description",padding);
+    cJSON_AddItemToObject(t,"inputSchema",cJSON_Parse("{\"type\":\"object\",\"properties\":{}}"));cJSON_AddItemToArray(entries,t);
+  }
+  char *expanded=cJSON_PrintUnformatted(entries);cJSON_Delete(entries);assert(expanded);
+  size_t size=strlen(expanded);memmove(expanded,expanded+1,size-2);expanded[size-2]=0;
+  struct glass_board_home assistant={expanded,fake_home_call};glass_agent_set_board_assistant(&assistant);
+  char *advertised=glass_agent_tools(session.agent,"[]");assert(strstr(advertised,"assistant_records")&&strstr(advertised,"assistant_camera"));free(advertised);
+  assert(config.call_cap("assistant_status","{}",NULL,&out,config.cap_user_ctx)==ESP_OK&&strstr(out,"device_local"));free(out);
+  assert(config.call_cap("assistant_records","{\"kind\":\"note\",\"kind\":\"todo\"}",NULL,&out,config.cap_user_ctx)!=ESP_OK&&strstr(out,"invalid_arguments"));free(out);
+  unsigned pages=0,total=0;char cursor[32]="";
+  do{
+    char args[96];snprintf(args,sizeof(args),cursor[0]?"{\"server\":\"board\",\"cursor\":\"%s\"}":"{\"server\":\"board\"}",cursor);
+    assert(config.call_cap("mcp_list_tools",args,NULL,&out,config.cap_user_ctx)==ESP_OK&&strlen(out)<=AGENT_TOOL_BYTES);
+    cJSON *page=cJSON_Parse(out);free(out);assert(page);total+=cJSON_GetArraySize(cJSON_GetObjectItem(page,"tools"));
+    const cJSON *next=cJSON_GetObjectItem(page,"nextCursor");snprintf(cursor,sizeof(cursor),"%s",cJSON_IsString(next)?next->valuestring:"");
+    cJSON_Delete(page);pages++;assert(pages<=4);
+  }while(cursor[0]);
+  assert(pages>1&&total==24);
+  assert(config.call_cap("mcp_list_tools","{\"server\":\"board\",\"cursor\":123}",NULL,&out,config.cap_user_ctx)!=ESP_OK);free(out);
+  glass_agent_set_board_assistant(NULL);free(expanded);
+  puts("ASSISTANT_BRIDGE_OK: direct native tools, duplicate-field rejection, mode boundaries and bounded board discovery pagination");
   glass_agent_set_board_music(NULL);glass_agent_set_board_home(NULL);claw_qpk_close(&session);
   puts("AGENT_BRIDGE_OK: real core context/tool callbacks; skill calls; cancellation; existing large QPK arguments preserved; board card events; cleanup");return 0;
 }

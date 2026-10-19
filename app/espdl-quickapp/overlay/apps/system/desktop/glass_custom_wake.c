@@ -71,7 +71,7 @@ static int wake_block(struct glass_custom_wake *s)
        * that initial estimate; subsequent idle blocks track the actual bed. */
       s->noise=fmaxf(10,fminf(500,s->initial_floor));
     }
-    if(rms>fmaxf(150,s->noise*3))s->above++;else{s->above=0;s->noise=.98f*s->noise+.02f*rms;}
+    if(rms>fmaxf(90,s->noise*2.5f))s->above++;else{s->above=0;s->noise=.98f*s->noise+.02f*rms;}
     if(s->above>=2){
       unsigned first=(s->pre_at+2560-s->pre_count)%2560;
       for(unsigned i=0;i<s->pre_count;i++)s->pcm[i]=s->pre[(first+i)%2560];
@@ -81,17 +81,22 @@ static int wake_block(struct glass_custom_wake *s)
   }
   memcpy(s->pcm+s->samples,s->block,320*sizeof(int16_t));s->samples+=320;
   if(rms<fmaxf(110,s->noise*1.8f))s->below++;else s->below=0;
-  if(s->below>=32||s->samples>=GLASS_WAKE_MAX_SAMPLES){
+  /* Quiet/far speech enters the same authenticated classifier. A strong
+   * match may finish after 320ms; uncertain or interrupted words retain the
+   * original 640ms endpoint and unchanged final acceptance threshold. */
+  bool final=s->below>=32||s->samples>=GLASS_WAKE_MAX_SAMPLES;
+  bool early=s->below==16&&s->samples>=8000;
+  if(final||early){
     if(s->samples>=8000){
       float feature[GLASS_WAKE_INPUTS];int ret=glass_wake_extract(s->pcm,s->samples,feature);
       if(!ret){
         float ratio=glass_wake_ratio(s->weights,feature);
         s->score=1/(1+expf(fmaxf(-30,fminf(30,20*(ratio-s->threshold)))));
-        s->evaluations++;event=ratio<s->threshold;
+        s->evaluations++;event=ratio<s->threshold-(early&&!final?.03f:0);
       }
       else if(ret!=-ENODATA)return ret;
     }
-    s->speaking=false;s->samples=s->above=s->below=s->pre_count=0;
+    if(final||event){s->speaking=false;s->samples=s->above=s->below=s->pre_count=0;}
     if(event)s->cooldown=16000;
   }
   return event;

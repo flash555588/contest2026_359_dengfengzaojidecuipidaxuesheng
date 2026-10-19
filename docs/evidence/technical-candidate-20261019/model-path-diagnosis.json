@@ -1,0 +1,35 @@
+{
+  "candidate_sha256": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+  "read_only": true,
+  "config_name_max": 32,
+  "config_fat_maxfname": 32,
+  "expected_assets": [
+    {
+      "name": "imagenet_cls_mobilenetv2_s8_v1.espdl",
+      "filename_characters": 36,
+      "exceeds_config_limit": true,
+      "stat_errno": 36,
+      "file_existence": "not_established"
+    },
+    {
+      "name": "human_face_detect_msr_s8_v1.espdl",
+      "filename_characters": 33,
+      "exceeds_config_limit": true,
+      "stat_errno": 36,
+      "file_existence": "not_established"
+    },
+    {
+      "name": "human_face_detect_mnp_s8_v1.espdl",
+      "filename_characters": 33,
+      "exceeds_config_limit": true,
+      "stat_errno": 36,
+      "file_existence": "not_established"
+    }
+  ],
+  "model_loader_reported_error": -2,
+  "underlying_stat_error": "ENAMETOOLONG",
+  "inference": "The configured filename limit is below all three expected model basenames. qpk_dl_model_load maps every fopen failure to -ENOENT, so its -2 result does not establish missing files.",
+  "needed_fix": "For a subsequent candidate, increase CONFIG_NAME_MAX and CONFIG_FAT_MAXFNAME to cover the 36-character basename (e.g. 64), rebuild, and rerun before accepting model inference. No config, source, model, SD or firmware alteration was made during diagnosis.",
+  "raw_log_sha256": "fb4617031885cf5c6b20af1c77ebb81589bd42346712dd05615413d929f93d0a",
+  "initial_parser_caveat": "Initial availability JSON only recognized ENOENT patterns; missing=false was not an existence proof. This diagnosis supersedes that interpretation without overwriting its record."
+}

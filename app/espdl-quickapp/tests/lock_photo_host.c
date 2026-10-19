@@ -5,9 +5,11 @@
 #include <stdatomic.h>
 #include "glass_lock_photo.c"
 static atomic_bool hold_cover,cover_entered;
+static atomic_uint downloads;
 int music_http_get(const char *url,music_data_cb sink,void *ctx,music_cancel_cb cancel,unsigned *status)
 {
  assert(!strncmp(url,"https://fixture/",16));if(status)*status=200;
+ atomic_fetch_add(&downloads,1);
  if(strstr(url,"hold")){atomic_store(&cover_entered,true);while(atomic_load(&hold_cover))usleep(1000);}
  FILE *f=fopen(GLASS_LOCK_PHOTO_PATH,"rb");assert(f);unsigned char data[137];size_t n;int ret=0;
  while((n=fread(data,1,sizeof(data),f))){if(cancel(ctx)){ret=-ECANCELED;break;}ret=sink(ctx,data,n);if(ret)break;}
@@ -28,12 +30,14 @@ static struct glass_lock_photo take(void)
 int main(int argc,char **argv)
 {
   if(argc==4 && !strcmp(argv[1],"--export")) {
-    FILE *f=fopen(argv[2],"rb");assert(f);fseek(f,0,SEEK_END);size_t size=ftell(f);rewind(f);assert(size<=LOCK_JPEG_MAX);
+    FILE *f=fopen(argv[2],"rb");assert(f);fseek(f,0,SEEK_END);size_t size=ftell(f);rewind(f);assert(size<=COVER_JPEG_MAX);
     uint8_t *data=malloc(size+512);assert(data);assert(fread(data,1,size,f)==size);fclose(f);
-    unsigned w,h;assert(!qpk_mjpeg_probe(data,size,&w,&h));assert(w<=368&&h<=368);
-    uint16_t *pixels=malloc(w*h*2);void *d=qpk_mjpeg_create();assert(pixels&&d);assert(!qpk_mjpeg_decode(d,data,size,size+512,pixels,w,h,w,h));
-    f=fopen(argv[3],"wb");assert(f);uint32_t dimensions[]={w,h};assert(fwrite(dimensions,4,2,f)==2);assert(fwrite(pixels,2,w*h,f)==w*h);fclose(f);
-    qpk_mjpeg_destroy(d);free(pixels);free(data);printf("LIVE_COVER_JPEG_OK %ux%u\n",w,h);return 0;
+    unsigned w,h;assert(!qpk_mjpeg_probe(data,size,&w,&h));assert(w<=4096&&h<=4096&&(uint64_t)w*h<=12000000);
+    unsigned scale=0;while(scale<3&&((w>>scale)>368||(h>>scale)>368))scale++;
+    unsigned dw=w>>scale,dh=h>>scale;assert(dw&&dh&&dw<=512&&dh<=512);
+    uint16_t *pixels=malloc(dw*dh*2);void *d=qpk_mjpeg_create();assert(pixels&&d);assert(!qpk_mjpeg_decode(d,data,size,size+512,pixels,dw,dh,w,h));
+    f=fopen(argv[3],"wb");assert(f);uint32_t dimensions[]={dw,dh};assert(fwrite(dimensions,4,2,f)==2);assert(fwrite(pixels,2,dw*dh,f)==dw*dh);fclose(f);
+    qpk_mjpeg_destroy(d);free(pixels);free(data);printf("LIVE_COVER_JPEG_OK %ux%u -> %ux%u\n",w,h,dw,dh);return 0;
   }
   assert(argc==2);assert(!strcmp(argv[1],GLASS_LOCK_PHOTO_PATH));
   assert(!glass_lock_photo_request());struct glass_lock_photo out=take();
@@ -45,7 +49,14 @@ int main(int argc,char **argv)
   atomic_store(&hold_cover,true);assert(!glass_lock_cover_request(GLASS_COVER_MUSIC,"https://fixture/hold"));
   while(!atomic_load(&cover_entered))usleep(1000);glass_lock_cover_cancel(GLASS_COVER_MUSIC);atomic_store(&hold_cover,false);quiet();
   assert(!glass_lock_cover_take(GLASS_COVER_MUSIC,&out));
+  unsigned fetched=atomic_load(&downloads);
   assert(!glass_lock_cover_request(GLASS_COVER_LOCK,"https://fixture/cover"));quiet();assert(glass_lock_cover_take(GLASS_COVER_LOCK,&out) && !out.error);free(out.pixels);
+  assert(atomic_load(&downloads)==fetched);
+  const char invalid[]="not a JPEG";
+  music_cache_write('c',"https://fixture/cover",invalid,sizeof(invalid)-1,COVER_JPEG_MAX);
+  assert(!glass_lock_cover_request(GLASS_COVER_LOCK,"https://fixture/cover"));quiet();
+  assert(glass_lock_cover_take(GLASS_COVER_LOCK,&out)&&!out.error&&out.pixels);free(out.pixels);
+  assert(atomic_load(&downloads)==fetched+1);
   for(unsigned i=0;i<20;i++){assert(!glass_lock_photo_request());glass_lock_photo_cancel();quiet();assert(!glass_lock_photo_take(&out));}
   assert(!unlink(GLASS_LOCK_PHOTO_PATH));assert(!glass_lock_photo_request());out=take();assert(out.error==-ENOENT && !out.pixels);
   FILE *f=fopen(GLASS_LOCK_PHOTO_PATH,"wb");assert(f);fputs("not a JPEG",f);fclose(f);
