@@ -9,31 +9,34 @@ static struct {
   uint32_t owner,tts_owner,revision,turn;
   bool recording;
 } g_speech_ui;
+/* Background level updates do not require reallocating unchanged labels. */
+static void speech_ui_label(lv_obj_t *label,const char *text)
+{if(label&&strcmp(lv_label_get_text(label),text))lv_label_set_text(label,text);}
 static bool speech_ui_command_pending(void){return false;}
 static void speech_ui_update(lv_timer_t *timer)
 {
-  (void)timer;if(!g_speech_ui.root)return;
+  (void)timer;if(!g_speech_ui.root||(!g_speech_ui.recording&&!g_speech_ui.turn))return;
   struct glass_voice_snapshot v;glass_voice_get(&v);
   if(g_speech_ui.recording){
-    if(v.request!=g_speech_ui.owner){g_speech_ui.recording=false;lv_label_set_text(g_speech_ui.status,"麦克风已交给新的语音请求");}
+    if(v.request!=g_speech_ui.owner){g_speech_ui.recording=false;speech_ui_label(g_speech_ui.status,"麦克风已交给新的语音请求");}
     else{
-      if(v.text[0])lv_label_set_text(g_speech_ui.result,v.text);
-      if(v.active)lv_label_set_text(g_speech_ui.status,v.phase==GLASS_VOICE_FINISHING?"正在联网识别…":v.phase==GLASS_VOICE_CONNECTING?"正在启动麦克风…":"正在聆听 · 说完点结束输入");
+      if(v.text[0])speech_ui_label(g_speech_ui.result,v.text);
+      if(v.active)speech_ui_label(g_speech_ui.status,v.phase==GLASS_VOICE_FINISHING?"正在联网识别…":v.phase==GLASS_VOICE_CONNECTING?"正在启动麦克风…":"正在聆听 · 说完点结束输入");
       else{
         g_speech_ui.recording=false;
         if(v.phase==GLASS_VOICE_DONE&&v.text[0]){
           int ret=glass_chat_send_mode(v.text,AGENT_MODE_ASSISTANT);
-          if(ret)lv_label_set_text(g_speech_ui.status,"AI 暂忙，识别文本已保留");
-          else{struct chat_result_snapshot r;if(glass_chat_result_get(&r,0,AGENT_MODE_ASSISTANT,0))g_speech_ui.turn=r.turn_id;lv_label_set_text(g_speech_ui.status,"AI 正在联网处理…");}
-        }else lv_label_set_text(g_speech_ui.status,v.phase==GLASS_VOICE_ERROR?glass_voice_error_text(v.error):"输入已结束");
+          if(ret)speech_ui_label(g_speech_ui.status,"AI 暂忙，识别文本已保留");
+          else{struct chat_result_snapshot r;if(glass_chat_result_get(&r,0,AGENT_MODE_ASSISTANT,0))g_speech_ui.turn=r.turn_id;speech_ui_label(g_speech_ui.status,"AI 正在联网处理…");}
+        }else speech_ui_label(g_speech_ui.status,v.phase==GLASS_VOICE_ERROR?glass_voice_error_text(v.error):"输入已结束");
       }
     }
   }
   if(g_speech_ui.turn){
     struct chat_result_snapshot r;
     if(glass_chat_result_get(&r,g_speech_ui.turn,AGENT_MODE_ASSISTANT,0)){
-      lv_label_set_text(g_speech_ui.feedback,r.reply[0]?r.reply:r.progress);
-      if(r.state!=CHAT_WAITING){lv_label_set_text(g_speech_ui.status,r.state==CHAT_DONE?"处理完成 · 完整结果保留在助手对话":"处理失败，请查看助手对话");g_speech_ui.turn=0;}
+      speech_ui_label(g_speech_ui.feedback,r.reply[0]?r.reply:r.progress);
+      if(r.state!=CHAT_WAITING){speech_ui_label(g_speech_ui.status,r.state==CHAT_DONE?"处理完成 · 完整结果保留在助手对话":"处理失败，请查看助手对话");g_speech_ui.turn=0;}
     }else g_speech_ui.turn=0;
   }
 }
@@ -47,7 +50,7 @@ static void speech_ui_action(lv_event_t *e)
   uintptr_t action=(uintptr_t)lv_event_get_user_data(e);int ret=0;
   if(action==0){
     ret=glass_voice_start_request(&g_speech_ui.owner);
-    if(!ret){g_speech_ui.recording=true;g_speech_ui.turn=0;lv_label_set_text(g_speech_ui.result,"");lv_label_set_text(g_speech_ui.feedback,"");}
+    if(!ret){g_speech_ui.recording=true;g_speech_ui.turn=0;speech_ui_label(g_speech_ui.result,"");speech_ui_label(g_speech_ui.feedback,"");}
   }else if(action==1)ret=glass_speech_say_request("你好，本地唤醒和中文播报已准备好。",&g_speech_ui.tts_owner);
   else glass_voice_stop_request(g_speech_ui.owner);
   if(ret)show_toast(action==0?"请检查联网语音识别配置":"播报暂不可用");
