@@ -18,3 +18,14 @@ quickapp/homeassistant/app.js text eol=lf
 app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js text eol=lf
 app/espdl-quickapp/speech/commands_cn.txt text eol=lf
 app/espdl-quickapp/models/*.gkw binary
+tools/patches/c6/*.patch -text -whitespace
+app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/*.js text eol=lf
+app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/qpk/*.js text eol=lf
+firmware/**/BUILD-METADATA.txt text eol=lf
+firmware/**/defconfig text eol=lf
+firmware/**/resolved.config text eol=lf
+firmware/**/README.md text eol=lf
+firmware/**/TEST_REPORT.md text eol=lf
+firmware/**/flash.ps1 text eol=lf
+firmware/**/*.patch -text -whitespace
+docs/evidence/technical-20261019/** -text -whitespace

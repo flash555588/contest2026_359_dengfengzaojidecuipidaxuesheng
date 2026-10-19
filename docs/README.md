@@ -4,7 +4,11 @@
 
 ## 阅读入口
 
+[2026-10-19 源码集成说明](INTEGRATION_2026-10-19.md)记录语音、助手、米家功能、
+开发 skill 的入口，以及本次未上传素材和新版模型的边界。
+
 [HISTORY.md](HISTORY.md)解释参赛目录、历史源码集合及其取回边界。
+[技术贡献与验证证据](TECHNICAL_CONTRIBUTIONS_2026-10-19.md)梳理团队适配增量、现有量化结果、证据边界和技术难度复评分。
 [LVGL_INSTALL.md](LVGL_INSTALL.md)保留 LVGL 安装和集成说明；实际版本应与所用构建树核对。
 [evidence](evidence/README.md)收录专题运行/构建记录，而不是通用验收保证。
 

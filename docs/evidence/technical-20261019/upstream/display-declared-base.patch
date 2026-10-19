@@ -1,0 +1,385 @@
+--- a/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
++++ b/arch/risc-v/src/common/espressif/esp_mipi_dsi.c
+@@ -75,6 +75,12 @@
+ 
+ #define ESP_MIPI_DSI_DMA_CHAN     0
+ 
++/* Keep PSRAM cache maintenance below the ESP32-P4 IDF default chunk size.
++ * Apart from bounding the interrupt-off time, this avoids depending on a
++ * single ROM cache operation spanning a framebuffer larger than L2 cache. */
++
++#define ESP_MIPI_DSI_CACHE_CHUNK  0x4000
++
+ #ifndef CONFIG_ESPRESSIF_MIPI_DSI_BUS
+ #  define CONFIG_ESPRESSIF_MIPI_DSI_BUS 0
+ #endif
+@@ -84,7 +90,7 @@
+ #endif
+ 
+ #ifndef CONFIG_ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS
+-#  define CONFIG_ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS 1000
++#  define CONFIG_ESPRESSIF_MIPI_DSI_LANE_BITRATE_MBPS 900
+ #endif
+ 
+ #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+@@ -127,6 +133,12 @@
+   bool dpi_configured;               /* DPI timing programmed */
+   bool fb_bound;                     /* Framebuffer bound to DW-GDMA */
+   bool dma_enabled;                  /* Allow ISR to re-arm DW-GDMA */
++  bool test_pattern_enabled;         /* Host VPG bypasses bridge/DMA */
++  volatile uint32_t dma_tfr_count;   /* Completed full-frame transfers */
++  volatile uint32_t dma_last_status; /* Last DW-GDMA interrupt status */
++  volatile uint32_t dma_last_amount; /* Completed 64-bit items */
++  volatile uint32_t dma_last_fifo;   /* Items left in channel FIFO */
++  volatile uint32_t dma_last_common; /* DW-GDMA common error status */
+   bool video_running;                /* Host in HS video mode */
+ };
+ 
+@@ -158,6 +170,7 @@
+ static void IRAM_ATTR esp_mipi_dsi_dma_restart(
+     FAR struct esp_mipi_dsi_priv_s *priv);
+ static int esp_mipi_dsi_dma_setup(FAR struct esp_mipi_dsi_priv_s *priv);
++static int esp_mipi_dsi_cache_writeback(FAR void *addr, size_t len);
+ 
+ /****************************************************************************
+  * Private Data
+@@ -263,10 +276,17 @@
+   flags = spin_lock_irqsave(&priv->dmalock);
+   status = dw_gdma_ll_channel_get_intr_status(dev, ESP_MIPI_DSI_DMA_CHAN);
+   dw_gdma_ll_channel_clear_intr(dev, ESP_MIPI_DSI_DMA_CHAN, status);
++  priv->dma_last_status = status;
+ 
+   if ((status & DW_GDMA_LL_CHANNEL_EVENT_DMA_TFR_DONE) != 0 &&
+       priv->dma_enabled)
+     {
++      priv->dma_last_amount = dw_gdma_ll_channel_get_trans_amount(
++                                dev, ESP_MIPI_DSI_DMA_CHAN);
++      priv->dma_last_fifo = dw_gdma_ll_channel_get_fifo_remain(
++                              dev, ESP_MIPI_DSI_DMA_CHAN);
++      priv->dma_last_common = dw_gdma_ll_get_common_intr_status(dev);
++      priv->dma_tfr_count++;
+       esp_mipi_dsi_dma_restart(priv);
+     }
+ 
+@@ -340,8 +360,7 @@
+     {
+       ret = esp_setup_irq(DW_GDMA_INTR_SOURCE,
+                           ESP_IRQ_PRIORITY_DEFAULT,
+-                          ESP_IRQ_TRIGGER_LEVEL,
+-                          esp_mipi_dsi_dma_isr, priv);
++                          ESP_IRQ_TRIGGER_LEVEL);
+       if (ret < 0)
+         {
+           verr("esp_mipi_dsi: DW-GDMA IRQ setup failed: %d\n",
+@@ -350,9 +369,49 @@
+         }
+ 
+       priv->dma_cpuint = ret;
++      irq_attach(ESP_IRQ_DW_GDMA, esp_mipi_dsi_dma_isr, priv);
+       up_enable_irq(ESP_IRQ_DW_GDMA);
+     }
+ 
++  return OK;
++}
++
++/****************************************************************************
++ * Name: esp_mipi_dsi_cache_writeback
++ *
++ * Description:
++ *   Write a dirty framebuffer range back in bounded chunks.  Cache writeback
++ *   masks interrupts, so keep each operation short enough for continuous I2S
++ *   playback while LVGL updates a moving object.
++ ****************************************************************************/
++
++static int esp_mipi_dsi_cache_writeback(FAR void *addr, size_t len)
++{
++  FAR uint8_t *cursor = (FAR uint8_t *)addr;
++  esp_err_t err;
++  size_t total = len;
++  size_t chunks = 0;
++  size_t chunk;
++
++  while (len > 0)
++    {
++      chunk = len > ESP_MIPI_DSI_CACHE_CHUNK ?
++              ESP_MIPI_DSI_CACHE_CHUNK : len;
++      err = esp_cache_msync(cursor, chunk,
++                            ESP_CACHE_MSYNC_FLAG_DIR_C2M |
++                            ESP_CACHE_MSYNC_FLAG_UNALIGNED);
++      if (err != ESP_OK)
++        {
++          return -EIO;
++        }
++
++      cursor += chunk;
++      len -= chunk;
++      chunks++;
++    }
++
++  vinfo("esp_mipi_dsi: cache writeback %zu bytes in %zu chunks\n",
++        total, chunks);
+   return OK;
+ }
+ 
+@@ -1445,6 +1504,7 @@
+ {
+   FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
+   FAR dw_gdma_link_list_item_t *lli_nc;
++  lcd_color_format_t input_fmt;
+   size_t expect;
+   uint32_t block_items;
+   int ret;
+@@ -1519,7 +1579,11 @@
+   lli_nc = priv->lli_nc;
+   block_items = (uint32_t)((fb_size * 8) / 64);
+ 
+-  /* Configure LLI via NC alias only: PSRAM FB → DSI bridge FIFO. */
++  /* ESP32-P4 block_ts is 22 bits, so one LLI carries the complete frame.
++   * ESP-IDF uses a singly-linked one-item list and re-arms it from the
++   * full-transfer interrupt.  Do not split at 4095: doing so corrupts the
++   * list contract and makes the bridge see incomplete frames.
++   */
+ 
+   dw_gdma_ll_lli_set_src_addr(lli_nc, (uint32_t)(uintptr_t)fb);
+   dw_gdma_ll_lli_set_dst_addr(lli_nc, MIPI_DSI_BRG_MEM_BASE);
+@@ -1530,19 +1594,33 @@
+   dw_gdma_ll_lli_set_dst_trans_width(lli_nc, DW_GDMA_TRANS_WIDTH_64);
+   dw_gdma_ll_lli_set_src_burst_items(lli_nc, DW_GDMA_BURST_ITEMS_512);
+   dw_gdma_ll_lli_set_dst_burst_items(lli_nc, DW_GDMA_BURST_ITEMS_256);
++#ifdef CONFIG_ESPRESSIF_MIPI_DSI_FIXED_SOURCE_TEST
++  dw_gdma_ll_lli_set_src_burst_mode(lli_nc, DW_GDMA_BURST_MODE_FIXED);
++#else
+   dw_gdma_ll_lli_set_src_burst_mode(lli_nc, DW_GDMA_BURST_MODE_INCREMENT);
++#endif
+   dw_gdma_ll_lli_set_dst_burst_mode(lli_nc, DW_GDMA_BURST_MODE_FIXED);
+   dw_gdma_ll_lli_set_src_burst_len(lli_nc, 16);
+   dw_gdma_ll_lli_set_dst_burst_len(lli_nc, 16);
+   dw_gdma_ll_lli_set_link_list_master_port(lli_nc,
+                                            DW_GDMA_LL_MASTER_PORT_MEMORY);
+   dw_gdma_ll_lli_set_next_item_addr(lli_nc, 0);
+-
+   dw_gdma_ll_lli_set_block_markers(lli_nc, false, true, true);
+ 
+-  esp_cache_msync(fb, fb_size,
+-                  ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+-                  ESP_CACHE_MSYNC_FLAG_UNALIGNED);
++  ret = esp_mipi_dsi_cache_writeback(fb, fb_size);
++  if (ret < 0)
++    {
++      nxmutex_unlock(&priv->lock);
++      return ret;
++    }
++
++  /* bpp describes the memory-side pixel stream.  ESP32-P4 revision 1.x
++   * shares one raw pixel type between bridge input and output, so boards
++   * targeting that silicon must configure the DPI path to the same format.
++   * Later revisions expose independent input/output format fields. */
++
++  input_fmt = bpp == 16 ? LCD_COLOR_FMT_RGB565 : LCD_COLOR_FMT_RGB888;
++  mipi_dsi_brg_ll_set_input_color_format(priv->hal.bridge, input_fmt);
+ 
+   /* Bridge expects DW-GDMA as flow controller. */
+ 
+@@ -1585,17 +1663,177 @@
+ 
+ int esp_mipi_dsi_flush_framebuffer(FAR void *addr, size_t len)
+ {
+-  esp_err_t err;
+-
+   if (addr == NULL || len == 0)
+     {
+       return -EINVAL;
+     }
+ 
+-  err = esp_cache_msync(addr, len,
+-                        ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+-                        ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+-  return (err == ESP_OK) ? OK : -EIO;
++  return esp_mipi_dsi_cache_writeback(addr, len);
++}
++
++/****************************************************************************
++ * Name: esp_mipi_dsi_set_test_pattern
++ ****************************************************************************/
++
++int esp_mipi_dsi_set_test_pattern(bool enable)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
++  int ret;
++
++  ret = nxmutex_lock(&priv->lock);
++  if (ret < 0)
++    {
++      return ret;
++    }
++
++  if (!priv->initialized || !priv->dpi_configured || priv->video_running)
++    {
++      nxmutex_unlock(&priv->lock);
++      return -EAGAIN;
++    }
++
++  mipi_dsi_host_ll_dpi_set_pattern_type(
++    priv->hal.host,
++    enable ? MIPI_DSI_PATTERN_BAR_VERTICAL : MIPI_DSI_PATTERN_NONE);
++  priv->test_pattern_enabled = enable;
++  nxmutex_unlock(&priv->lock);
++  return OK;
++}
++
++/****************************************************************************
++ * Name: esp_mipi_dsi_get_diagnostics
++ *
++ * Description:
++ *   Snapshot the video DMA and bridge status for board bring-up.
++ ****************************************************************************/
++
++int esp_mipi_dsi_get_diagnostics(FAR uint32_t *dma_frames,
++                                 FAR uint32_t *dma_status,
++                                 FAR uint32_t *bridge_status,
++                                 FAR uint32_t *lane_mbps_x100,
++                                 FAR uint32_t *dpi_expect_mhz_x100,
++                                 FAR uint32_t *dpi_real_mhz_x100,
++                                 FAR uint32_t *host_int_st0,
++                                 FAR uint32_t *host_int_st1,
++                                 FAR uint32_t *host_vid_pkt_status,
++                                 FAR uint32_t *host_phy_status,
++                                 FAR uint32_t *host_color_coding)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
++
++  if (dma_frames == NULL || dma_status == NULL || bridge_status == NULL ||
++      lane_mbps_x100 == NULL || dpi_expect_mhz_x100 == NULL ||
++      dpi_real_mhz_x100 == NULL || host_int_st0 == NULL ||
++      host_int_st1 == NULL || host_vid_pkt_status == NULL ||
++      host_phy_status == NULL || host_color_coding == NULL ||
++      !priv->initialized)
++    {
++      return -EINVAL;
++    }
++
++  *dma_frames = priv->dma_tfr_count;
++  *dma_status = priv->dw_hal.dev != NULL ? priv->dma_last_status : 0;
++  *bridge_status = mipi_dsi_brg_ll_get_interrupt_status(priv->hal.bridge);
++  *lane_mbps_x100 = (uint32_t)lroundf(priv->hal.lane_bit_rate_mbps * 100.0f);
++  *dpi_expect_mhz_x100 =
++    (uint32_t)lroundf(priv->hal.expect_dpi_clock_freq_mhz * 100.0f);
++  *dpi_real_mhz_x100 =
++    (uint32_t)lroundf(priv->hal.real_dpi_clock_freq_mhz * 100.0f);
++  *host_int_st0 = priv->hal.host->int_st0.val;
++  *host_int_st1 = priv->hal.host->int_st1.val;
++  *host_vid_pkt_status = priv->hal.host->vid_pkt_status.val;
++  *host_phy_status = priv->hal.host->phy_status.val;
++  *host_color_coding = priv->hal.host->dpi_color_coding_act.val;
++  return OK;
++}
++
++/****************************************************************************
++ * Name: esp_mipi_dsi_get_timing_diagnostics
++ *
++ * Description:
++ *   Read back the bridge timing and the programmed DSI host registers.
++ ****************************************************************************/
++
++int esp_mipi_dsi_get_timing_diagnostics(
++      FAR struct esp_mipi_dsi_timing_diagnostics_s *diag)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
++  FAR dsi_brg_dev_t *bridge;
++  FAR dsi_host_dev_t *host;
++
++  if (diag == NULL || !priv->initialized)
++    {
++      return -EINVAL;
++    }
++
++  bridge = priv->hal.bridge;
++  host = priv->hal.host;
++
++  diag->bridge_raw_words = bridge->raw_num_cfg.raw_num_total;
++  diag->bridge_fifo_status = bridge->fifo_flow_status.val;
++  diag->bridge_pixel_type = bridge->pixel_type.val;
++  diag->bridge_htotal = bridge->dpi_h_cfg0.htotal;
++  diag->bridge_hactive = bridge->dpi_h_cfg0.hdisp;
++  diag->bridge_hsync = bridge->dpi_h_cfg1.hsync;
++  diag->bridge_hback_porch = bridge->dpi_h_cfg1.hbank;
++  diag->bridge_vtotal = bridge->dpi_v_cfg0.vtotal;
++  diag->bridge_vactive = bridge->dpi_v_cfg0.vdisp;
++  diag->bridge_vsync = bridge->dpi_v_cfg1.vsync;
++  diag->bridge_vback_porch = bridge->dpi_v_cfg1.vbank;
++
++  diag->host_packet_pixels = host->vid_pkt_size.vid_pkt_size;
++  diag->host_hsync_time = host->vid_hsa_time.vid_hsa_time;
++  diag->host_hback_porch_time = host->vid_hbp_time.vid_hbp_time;
++  diag->host_hline_time = host->vid_hline_time.vid_hline_time;
++  diag->host_vsync_lines = host->vid_vsa_lines.vsa_lines;
++  diag->host_vback_porch_lines = host->vid_vbp_lines.vbp_lines;
++  diag->host_vfront_porch_lines = host->vid_vfp_lines.vfp_lines;
++  diag->host_vactive_lines = host->vid_vactive_lines.v_active_lines;
++  return OK;
++}
++
++/****************************************************************************
++ * Name: esp_mipi_dsi_get_dma_diagnostics
++ *
++ * Description:
++ *   Snapshot the DW-GDMA transfer counters and the active frame LLI.  This
++ *   distinguishes a real full-frame transfer from a premature completion
++ *   interrupt, which is especially important while validating ESP32-P4
++ *   revision 1.x silicon.
++ ****************************************************************************/
++
++int esp_mipi_dsi_get_dma_diagnostics(
++      FAR struct esp_mipi_dsi_dma_diagnostics_s *diag)
++{
++  FAR struct esp_mipi_dsi_priv_s *priv = &g_esp_mipi_dsi;
++  FAR dw_gdma_link_list_item_t *lli;
++  FAR dw_gdma_dev_t *dev;
++  irqstate_t flags;
++
++  if (diag == NULL || priv->dw_hal.dev == NULL || priv->lli_nc == NULL)
++    {
++      return -EAGAIN;
++    }
++
++  dev = priv->dw_hal.dev;
++  lli = priv->lli_nc;
++  flags = spin_lock_irqsave(&priv->dmalock);
++  diag->last_transfer_items = priv->dma_last_amount;
++  diag->last_fifo_items = priv->dma_last_fifo;
++  diag->last_common_status = priv->dma_last_common;
++  diag->live_transfer_items = dw_gdma_ll_channel_get_trans_amount(
++                                dev, ESP_MIPI_DSI_DMA_CHAN);
++  diag->live_fifo_items = dw_gdma_ll_channel_get_fifo_remain(
++                            dev, ESP_MIPI_DSI_DMA_CHAN);
++  diag->current_lli = (uint32_t)
++    dw_gdma_ll_channel_get_current_link_list_item_addr(
++      dev, ESP_MIPI_DSI_DMA_CHAN);
++  diag->lli_source = lli->sar_lo.sar0;
++  diag->lli_block_items = lli->block_ts_lo.block_ts + 1;
++  diag->lli_control_low = lli->ctrl_lo.val;
++  diag->lli_control_high = lli->ctrl_hi.val;
++  spin_unlock_irqrestore(&priv->dmalock, flags);
++  return OK;
+ }
+ 
+ /****************************************************************************
+@@ -1647,10 +1885,14 @@
+     }
+ 
+   mipi_dsi_host_ll_enable_video_mode(priv->hal.host, true);
+-  mipi_dsi_brg_ll_enable_dpi_output(priv->hal.bridge, true);
+-  mipi_dsi_brg_ll_update_dpi_config(priv->hal.bridge);
+-  mipi_dsi_brg_ll_enable_interrupt(priv->hal.bridge,
+-                                   MIPI_DSI_BRG_LL_EVENT_UNDERRUN, true);
++  if (!priv->test_pattern_enabled)
++    {
++      mipi_dsi_brg_ll_enable_dpi_output(priv->hal.bridge, true);
++      mipi_dsi_brg_ll_update_dpi_config(priv->hal.bridge);
++      mipi_dsi_brg_ll_enable_interrupt(priv->hal.bridge,
++                                       MIPI_DSI_BRG_LL_EVENT_UNDERRUN,
++                                       true);
++    }
+   priv->video_running = true;
+   nxmutex_unlock(&priv->lock);
+ 

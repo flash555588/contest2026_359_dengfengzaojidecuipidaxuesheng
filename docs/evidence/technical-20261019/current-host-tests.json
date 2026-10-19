@@ -1,0 +1,98 @@
+{
+  "scope": "Host and synthetic adapters only, not real device or human acceptance.",
+  "tests": [
+    {
+      "name": "javascript",
+      "passed": true,
+      "raw_log": "js-tests.log",
+      "raw_log_sha256": "eead896fb66543696d421baef7c2d3f32d146eb9ab0c7e1f5e50c2691c429dda",
+      "summary_lines": [
+        "# tests 179",
+        "# pass 179",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "python_unittest_and_import_time_c_harnesses",
+      "passed": true,
+      "raw_log": "python-tests.log",
+      "raw_log_sha256": "037e34cbdf7fa96c9a5bfbaba3ad236f7af92b1c11a3c3c9a469a88a7822f96e",
+      "summary_lines": [
+        "Ran 26 tests in 0.226s",
+        "OK"
+      ]
+    },
+    {
+      "name": "agent_mcp_home",
+      "passed": true,
+      "raw_log": "agent-tests.log",
+      "raw_log_sha256": "00bcb08240beda39c427e515ce0c94cab4feaca49f08883e2093d9cda5a8f7d5",
+      "summary_lines": [
+        "AGENT_HOST_OK: SD skills; config validation/secret redaction; MCP initialize/notification/session/version/list/pagination/call/allowlist/cancel/timeout/no replay/cleanup",
+        "MCP_HTTP_OK: real JSON/SSE parser; one-byte fragments; multiline data/notifications; IDs; headers; limits; redirects; cancellation; unsupported server requests",
+        "AGENT_BRIDGE_OK: real core context/tool callbacks; skill calls; cancellation; existing large QPK arguments preserved; board card events; cleanup",
+        "AGENT_MODES_OK: migration, durable mode tags, context isolation, same-mode UI history, scoped clear, retry identity, immutable queued/request mode, cancellation, card persistence",
+        "BOARD_HOME_OK: 16 board tools; card results with no page opened; states cache; verified/unconfirmed control; whitelist and injection rejection; scene executed card",
+        "CHAT_MARKUP_OK: fences, partial tags, UTF-8 chunk boundaries, literals, indentation, long text, line numbering, all streamed prefixes",
+        "CHAT_MARKDOWN_OK: headings, lists, quotes, rules, balanced inline styles, visible link destinations, every streamed prefix"
+      ]
+    },
+    {
+      "name": "stream_http_memory_and_deadlines",
+      "passed": true,
+      "raw_log": "chat-memory-tests.log",
+      "raw_log_sha256": "03bb8bb6ef6f42f3d38f09eb8cf71d29195b57c2920d63e9d14107b36c0784dd",
+      "summary_lines": [
+        "CHAT_MEMORY_OK: fragmented SSE, cumulative tool/framing/aggregate limits, 100 failures followed by successful requests",
+        "CHAT_DEADLINE_OK: 100 non-finishing requests, cancellation, bounded cleanup retention, recovery and success",
+        "CHAT_HTTP_MEMORY_OK: 100 oversized error bodies, cleanup and successful recovery; oversized outgoing request rejected before transport"
+      ]
+    },
+    {
+      "name": "quickjs_security",
+      "passed": true,
+      "raw_log": "runtime-security-final.log",
+      "raw_log_sha256": "078592a4610cee6e49acca4ec6f57bc6a8bbf362e9fb940feec378c14157be67",
+      "summary_lines": [
+        "PASS: real QuickJS exception hooks blocked; legitimate errors preserved; reserved identity enforced; production widget setters reject deletion/reuse; native LVGL operations are stubs"
+      ]
+    },
+    {
+      "name": "quickjs_compile_cache",
+      "passed": true,
+      "raw_log": "compile-cache-tests.log",
+      "raw_log_sha256": "7fef5e4019d1fe108b11322610128985fa86a47f516724dc2c76a20906c77789",
+      "summary_lines": [
+        "COMPILE_CACHE_OK bytes=229301 source_bytes=297983 cold_us=45993 warm_us=1776"
+      ]
+    },
+    {
+      "name": "camera_video",
+      "passed": true,
+      "raw_log": "camera-video-tests.log",
+      "raw_log_sha256": "dbebefacae4a65f6f738a5cec4c416bd3ebdc5e413a2efa0ec0633f146a9c7c8",
+      "summary_lines": [
+        "CAMERA_VIDEO_OK: real writer and worker; mic failure, missing SD, busy guard, three stop/reopen cycles, authorization revocation; ASan/UBSan",
+        "CAMERA_AV_SYNC_OK: all three files decode completely; video/audio duration mismatch <110ms"
+      ]
+    },
+    {
+      "name": "wake_capture_handoff",
+      "passed": true,
+      "raw_log": "wake-handoff-tests.log",
+      "raw_log_sha256": "97ea74f0f1ee0f931edf0fabb36b3cb6c52289af34a6a05dd411ac56f827fc63",
+      "summary_lines": [
+        "WAKE_HANDOFF_HOST_OK: one-shot release, missing model, busy audio, feed failure, cancellation and stale-owner stop rejection; no MultiNet linked",
+        "VOICE_CAPTURE_CANCEL_OK: cancellation before capture, after music wait, after ownership lock and before driver start releases every resource",
+        "VOICE_CONNECT_CANCEL_OK: ready/cancel races reject capture handoff; normal readiness and timeout retained"
+      ]
+    }
+  ],
+  "fixture_fixes": [
+    "Temporary desktop/c6probe include layout restored",
+    "Source/package LF bytes preserved by attributes",
+    "Static assertion checks authorization assignments; readonly page diagnostics allowed",
+    "QuickJS security harness updated for current inert presentation adapters; original adversarial cases retained"
+  ]
+}

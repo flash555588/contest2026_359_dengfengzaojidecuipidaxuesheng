@@ -3,9 +3,49 @@
 本目录保存 JS 回归、C 宿主用例与少量测试输入，不是实板测试结果目录。
 返回[应用快照说明](../README.md)，已有输出见 [evidence](../evidence/README.md)。
 
+## 麦克风接管与连续采音
+
+`tools/test_voice_requests.py --output <目录>` 使用生产请求调度代码检查 A/B/C 后来者优先、资源释放顺序、旧结果/旧停止隔离和音频环形队列边界。
+
+`tools/test_voice_pipeline.py --output <目录>` 使用真实采音/发送线程，驱动和网络采用替身；模拟 1 秒连接和每包 70ms 阻塞写，检查起音、顺序和短尾完整。这不验证实板驱动或真人转写准确率。
+
+`tools/test_wake_mini.py --apps <apps> --cache <LVGL缓存> --assets <小球素材> --harness-source app/espdl-quickapp/tests/wake_mini_preemption_host.c --output <目录>` 仅检查新全局唤醒交接路径：接管其他页面、让位后来的输入、不发送过期文本、完整结果仅发送一次、大球页路由。唤醒事件为宿主替身，实板需真实麦克风触发。
+
+## 长句识别与字体回退
+
+`tools/test_voice_transcript.py --apps <准备好的apps> --output <输出目录>`
+编译生产 ASR 文本拼接与完成判断，使用 ASan/UBSan 验证长句末尾否定、
+临时结果纠正、重复稳定包、漏句、缺 final、精确容量和超长拒绝，以及音频锁
+等待超时与取消。`render_grok_conversation.c` 检查连续说话超过 12 秒仍聆听、
+1.5 秒短暂停顿不结束；在 16/20/28 三档字体检查 72 个常用符号与全角空格样本并渲染
+两种主题的 AI 回复。原文和字号保持不变；不代表覆盖所有 Unicode 或真人 ASR 准确率。
+
+## 音乐搜索与助手控制流程
+
+本地助手服务、定时任务、天气／播报、拍照分类与别名的入口和验证命令见
+[ASSISTANT-TOOLS.md](../ASSISTANT-TOOLS.md#开发验证)。`assistant_service_host.c` 使用真实持久化并检查
+写入失败、动作完成回执丢失与新进程重启；`assistant_platform_host.c` 运行真实采集／分类线程与 BMP 保存，
+设备、模型和天气边界为离线替身。`agent_bridge_host.c` 另检查 assistant_* 模式限制、直接调用、
+重复字段拒绝和超过单页大小的 board 工具发现分页。默认提示内的口语理解规则仍须另行做模型／真人评测。
+
+`tools/test_music_background.py --apps <prepared-apps>` 使用真实音乐线程、MP3 解码与 MCP 入口，
+HTTP／PCM 使用离线替身。`MUSIC_SELECTED_RESULT_OK` 检查一次搜索后按 result_id 播放同一歌曲与歌手、
+不再检索、track_id 对应、单次使用、过期／替换／搜索失败后的拒绝、参数校验及普通播放重新检索。
+它不验证第三方音乐接口、人工听音或模型是否逐条遵循提示。
+助手桥接、模式隔离与米家控制回读沿用 `tools/test_agent.py --apps <prepared-apps> --output <目录>`；
+运行时提示修改后须执行 `tools/generate_agent_profiles.py` 同步内嵌头文件。
+
+## 桌面清理回归
+
+`render_desktop_cleanup.c` 通过 `tools/render_all_ui.py --harness-source` 运行真实 LVGL 页面，检查明暗主题、全屏页面尺寸、关于页完整文字、设置四个入口与返回、60 轮关于/设置复开，以及环境图表的空记录、部分样本和满记录。界面渲染不访问串口或网络服务。CLI 与音乐分别沿用 `render_claude_control.c` 和 `render_music_full.c` 回归。
+
+`render_shell_transitions.c` 检查从全屏 ESPClaw 切到普通快应用、家居和相机时的尺寸与返回来源；60 次无控件应用启动回滚后，原聊天页面和全屏尺寸必须保留，页面数量不能增长，快应用运行时必须停止。另检查从首页取消启动后恢复桌面。该测试使用真实 LVGL/QuickJS 和离线设备夹具，不调用模型或真实摄像头。
+
+`render_navigation_lifetime.c` 通过真实 LVGL 异步队列检查离开页面后取消待执行导航、有效的设置入口仍能打开、文件刷新取消、设置关闭回调归属、页面定时器释放，以及锁屏进入/删除后的导航取消。覆盖双主题和 60 次交错切换；蓝牙与播放器截图只使用当前生产入口。
+
 ## 三套实时歌词效果
 
-`render_music_full.c` 通过真实 LVGL 与 ASan／UBSan 检查明暗主题的聚焦、强调、逐字效果；覆盖任意中英文、短句、长句、完整 UTF-8 前缀、暂停不更新、回跳、减少动态效果、切歌清理和 60 次复开。默认路径不读取歌曲帧库、不创建解码线程或动画帧缓冲。`render_music_pv_sd.c` 显式定义 `MUSIC_PV_SD_BANKS`，只测试保留的预渲染实验路径。
+`render_music_full.c` 通过真实 LVGL 与 ASan／UBSan 检查明暗主题的聚焦、强调、逐字效果；覆盖任意中英文、短句、长句、完整 UTF-8 前缀、暂停不更新、回跳、减少动态效果、切歌清理和 60 次复开。默认路径不读取歌曲帧库、不创建解码线程或动画帧缓冲。旧 SD 预渲染播放分支及其界面测试已移除；离线文件格式校验独立保留在 JIZURA 工具中。
 
 `tools/test_music_native_device.py --phase styles` 在 P4 上逐套检查实际歌词、暂停、绘制统计和内存，`--phase cycles` 另记录 60 次页面开关与堆采样。结果分别记录，不将宿主测试当作实板稳定性或网络首播延迟。
 
@@ -264,3 +304,45 @@ TTS 的 `speech_tts_host.c` 使用真实中文模型验证首次与缓存命中�
 `music_background_host.c` 另外验证 192 对同时间戳原文／译文、独立 `.zh.lrc`、接口 tlyric、严格时间对齐、OpenCC 短语转换及日韩原文保护。`render_lock_music.c` 覆盖播放快照改为随锁屏分配／释放后的页面生命周期；此夹具需预置 `cover.rgb565`。
 
 `test_music_languages_device.py` 在真实 P4 上使用已有公开演示音频和原创日／韩测试文本，验证 SD 译文读取、简体显示、双语开关、三套效果、PCM 进度、暂停及第二行韩文实际排版。保留先前控制台提示符丢首字节的失败记录；修正后的测试只识别提示符，不因超时自动重放已派发的操作。此短测不代表长时间压力测试、所有歌曲拥有译文或真人确认扬声器声音。
+
+
+### Wi-Fi 与蓝牙新界面（2026-10-19）
+
+`render_wireless_ui.c` 使用实际 LVGL 页面覆盖两种主题的网络列表、选网、手动添加、连接提交、密码清除、忙碌禁用、失败与 IPv4 状态，以及蓝牙配对、安全连接、触摸板可用、Boot 模式和主机挂起。中文输入法候选栏与密码框、键盘分别占用独立区域。40 次 Wi-Fi／蓝牙打开关闭检查页面定时器与控件释放；设备服务使用离线夹具，不发出无线请求。通过 `tools/render_all_ui.py --harness-source app/espdl-quickapp/tests/render_wireless_ui.c` 运行，并用 `render_navigation_lifetime.c` 验证设置入口与切页生命周期。
+
+
+### 原图风格横屏相机与滑动倍率（2026-10-19）
+
+相机页面与实时 RGB565 预览共用 `camera/reference.jpg` 的原图按钮图块；快门按用户要求改为纯红圆形，街拍标签及其原点击区域已移除。倍率列替代 mm 焦距，支持 1×／1.5×／2×／3×、上下拖动和点击；当前档位用原样深底红字显示。`tools/generate_camera_reference.py` 编译只读素材与抗锯齿倍率字形，字形可用 `--font` 指定系统字体。
+
+按标注移除 LEICA、左侧展开、闪光灯和曝光按钮及其点击区域。右上是切换相机，中上是照片／录制切换，右下打开本机照片相册；三圆按钮循环原色、鲜艳和黑白，处理实际取景、照片与录像像素。原图的其他布局与纯红快门保留。
+
+`camera_upgrade.test.cjs` 验证设备分页、点选收起、设备代次、录像保存时禁止重启、发现节流、色彩、相册请求，以及倍率拖动／点选／取消／边界和设置页手势归属。`render_camera_upgrade.c` 用实际 LVGL 输入验证倍率上下滑动、选设备、启动／停止、相册预览返回与退出还原桌面安全区，两种主题各 12 个状态。
+
+`run_camera_controls.py` 验证两层共用纯红快门像素、共用触摸坐标、CSI／USB 的全部倍率和图像边界，以及原地缩放与显示写回；缩放使用固定 1140 字节栈上列映射，无新增整帧分配。USB 每次解码后重新合成 UI，避免取景线及快门被后续帧覆盖。
+
+`run_camera_controls.py` 另验证三种色彩下的全部倍率预览，以及相册等待预览释放、录像收尾后只消费一次的导航条件。`run_camera_photo_zoom.py` 检查三种色彩下共 24 个 CSI／USB 倍率照片的文件尺寸、画幅和采样像素。USB 原色 1× 保留输入 JPEG，放大或其他色彩以 RGB565 BMP 保存；CSI 沿用 BMP。`run_camera_video.py` 检查实际录像队列的裁切与黑白像素，并在不同倍率下验证录像、麦克风失败、无 SD 卡、停止／复开、授权撤销、AVI 解码与音画时长。测试使用离线合成画面，不代表实机画质或帧率。
+
+### 输入法焦点、布局与按键对比度（2026-10-19）
+
+输入法深色模式黑底白字，补齐的浅色模式白底黑字；候选栏、普通键、功能键和按下反馈采用相同中性色。禁用候选降低不透明度，语音入口及识别结束恢复均使用现有 `GLASS_ICON_MIC` 麦克风图标，录音中保持停止图标。输入框及宿主页面继续使用各自主题。
+
+`render_ime_ui.c` 使用实际 LVGL 输入法和 QuickJS 弹窗，复现旧候选词串入新密码框、候选栏移动／缩放不同步，并验证修复后密码框显示 EN、禁止拼音候选与语音输入。Wi-Fi 共享键盘通过 `glass_ime_set_target` 即时清除旧字段组合；原始 LVGL 换目标路径也有候选点击保护。字段删除会解除键盘引用，语音换字段时停止并恢复原草稿。
+
+两种主题各 5 张截图覆盖中文、密码、移动缩放、语音结束恢复和快应用输入；实际指针点击候选、禁用时拒绝点击，另检查 320／640／744／824／1024 宽度、40 次创建／销毁、先选词再提交的两次确认。普通键、功能键 CHECKED 与 PRESSED 状态分别检查文字和底色差异；快应用原先反置的按键底色已纠正。词库与语音后端为离线夹具，测试不发出录音或网络请求；ASan／UBSan 结果不替代实板触摸、词库或语音服务验收。
+
+运行方式：`python3 tools/render_all_ui.py --apps <prepared-apps> --cache <lvgl-host-cache> --output <review-output> --harness-source app/espdl-quickapp/tests/render_ime_ui.c`。`render_wireless_ui.c` 同时回归实际 Wi-Fi 表单和切页清理。
+
+### 语音页面全局唤醒（2026-10-19）
+
+`render_grok_conversation.c` 验证大球页移除唤醒开关、仅显示默认开启状态；全局唤醒释放录音后交给大球的现有识别／AI／播报状态机，结束当前会话和退出页面不取消其他后台音频所有者。无内容时回到全局待机。包含慢连接、连续对话和两种主题，主机夹具不创建真实网络或录音。浮层与大球使用同一球体播放器、app 表情库及正视效果；浮层的空闲计时不截断大球会话。
+
+`tools/test_wake_mini.py` 使用真实 LVGL 与 SD 小球素材，验证语音会话页面和本地语音页面空闲时可启动后台监听，前台录音／播报仍独占设备；已有 ASR 录音收到真实唤醒事件时显示浮层，连续 6 秒无输入或待处理任务时才收起，且不停止其他所有者的录音。覆盖事件过期、重复拒绝、切页、相机叠加和触摸穿透，启用 ASan／UBSan。
+
+大球页例外：新唤醒与已有 ASR 录音中的唤醒均只使用页面内的大球，不显示小球。其他页面的浮层录音中切入大球页时立即隐藏浮层并移交原录音；不会重开 ASR，也不会在原浮层的空闲计时到期时停止大球会话。`wake_mini_host.c` 验证呈现与所有权，`render_grok_conversation.c` 验证生产大球的接管状态。
+
+浮层从固定寿命改为连续空闲 6000ms 后收起。`wake_mini_host.c` 验证超过 6 秒的实际自有 ASR 输入不被截断、识别收尾、AI／工具任务、播报及本地设备核对期间持续显示；活动完成后重新计满 6 秒，新指令重置计时，过期指令不重置，后台唤醒采集本身不延长浮层寿命。浮层显示期间允许空闲麦克风恢复全局待机。
+
+AI 结果反馈：`wake_mini_host.c` 验证真实 LVGL 结果卡片、已确认／未确认播报、不重复播放、语音失败保留结果、历史清除时停止自身播报，以及可变高度卡片的相机快照。`render_grok_conversation.c` 使用两种主题验证大球结果面板和对应语音，AI 文本声称成功但设备未确认时仍播报未确认。`tools/test_agent.py` 验证原生工具回执的确认标记覆盖、失败不发卡、紧凑结果投影的模式／轮次隔离、UTF-8 分块和确认状态持久化。完整 AI 历史不复制到小球状态中，也不以历史卡片触发开机播报。
+
+`tools/test_voice_wake_observer.py --runtime <authenticated-model-runtime> --fixtures <pcm-fixtures> --output <output>` 使用生产唤醒观察器和真实认证模型，验证正例触发、负例不触发、原始 PCM 字节不变，以及模型缺失／坏分帧时仅关闭可选观察器。`tools/test_wake_handoff.py` 另检查共享录音发布唤醒事件时不改变前台任务、阶段或请求编号。主机输入夹具不能替代真人实板唤醒率验收。

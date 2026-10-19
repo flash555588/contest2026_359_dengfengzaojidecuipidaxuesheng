@@ -1,0 +1,1572 @@
+{
+  "date": "2026-10-19",
+  "timezone": "Asia/Shanghai",
+  "head": "79783795d4d3f576deec75b642e09a649f2a6d13",
+  "baseline_used_for_repository_delta_only": "48da6d570c619900d3a1426e9efe04b2c29ef366",
+  "scope": "Existing local and repository records; source/hash/metric cross-checks only; no new firmware or hardware validation.",
+  "provenance_limit": "Repository history and SPDX do not establish independent authorship, world-first novelty, or patent ownership. Baseline 48da6d5 is a team import and not a public upstream originality reference.",
+  "hash_limit": "A source hash match establishes byte identity only. No match does not alone establish semantic change. Historical benchmarks remain tied to their recorded snapshots.",
+  "claims": [
+    {
+      "id": "T01",
+      "title": "ESP32-P4 板级启动和显示适配",
+      "kind": "existing_board_adaptation",
+      "sources": [
+        "chip/esp32p4/common-espressif/esp_start.c",
+        "chip/esp32p4/common-espressif/esp_mipi_dsi.c",
+        "board/esp32p4-function-ev-board/src/esp32p4_display.c"
+      ],
+      "evidence": [
+        "project/REPRODUCIBILITY_REPORT_2026-08-27.md",
+        "project/firmware/v3/esp32p4-application-v3-20260919.md",
+        "output/flash-20261018/deployment.json"
+      ],
+      "attribution_boundary": "芯片 glue、HAL 与寄存器表来自上游；团队增量为具体板级兼容、启动调试和集成，不能将整个芯片目录声明为独立原创。"
+    },
+    {
+      "id": "T02",
+      "title": "PIE FPU 和硬件循环抢占上下文",
+      "kind": "kernel_and_inference_port",
+      "sources": [
+        "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/riscv_extctx.S",
+        "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_extctx.c",
+        "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_exception_common.S",
+        "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/context_verify.S",
+        "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/inference_backend.cpp"
+      ],
+      "evidence": [
+        "project/app/espdl-quickapp/evidence/face-preprocess-10.json",
+        "project/app/espdl-quickapp/evidence/face-simd-9.json",
+        "project/app/espdl-quickapp/evidence/host-validation.json",
+        "output/media-v3-ppa-irq/BUILD-METADATA.json"
+      ],
+      "attribution_boundary": "ESP-DL 算子和模型属于 Espressif；可主张的是 NuttX 上下文、ABI、内存与推理运行时适配，不是原创人脸模型。"
+    },
+    {
+      "id": "T03",
+      "title": "PSRAM 栈下 Flash 缓存恢复故障修复",
+      "kind": "linker_and_storage_adaptation",
+      "sources": [
+        "app/espdl-quickapp/overlay/nuttx/boards/risc-v/esp32p4/common/scripts/esp32p4_sections.rev3.ld",
+        "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/espressif/esp_spiflash.c"
+      ],
+      "evidence": [
+        "project/app/espdl-quickapp/CHAT-STABILITY.md",
+        "project/app/espdl-quickapp/evidence/chat-cache-iram-stress-1.json",
+        "project/app/espdl-quickapp/evidence/chat-cache-iram-live-stress-1.json",
+        "project/app/espdl-quickapp/evidence/chat-cache-iram-scroll-1.json",
+        "project/app/espdl-quickapp/evidence/firmware-validation.json"
+      ],
+      "attribution_boundary": "缓存和存储框架来自上游；贡献是定位失效取指链、修订链接段与内部栈调用路径。"
+    },
+    {
+      "id": "T04",
+      "title": "PPA DMA2D 图像转换驱动和播放器集成",
+      "kind": "hardware_acceleration_adaptation",
+      "sources": [
+        "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_ppa.c",
+        "app/espdl-quickapp/overlay/nuttx/include/nuttx/video/p4_ppa.h",
+        "app/bilibili_live/bili_ppa.c"
+      ],
+      "evidence": [
+        "output/media-v3-ppa-irq/COMPARISON.json",
+        "output/media-v3-ppa-irq/paired848.log",
+        "output/media-v3-ppa-irq/selftest.log",
+        "output/media-v3-ppa-irq/BUILD-METADATA.json"
+      ],
+      "attribution_boundary": "使用 Espressif HAL 和现有 PPA 硬件；新增 NuttX ioctl、DMA 完成同步、超时复位及 I420 到 UYVY 桥接与回退。"
+    },
+    {
+      "id": "T05",
+      "title": "H264 热点布局和媒体线程亲和性",
+      "kind": "decoder_port_and_scheduling",
+      "sources": [
+        "app/bilibili_live/bili_cpu.c",
+        "app/bilibili_live/bili_decoder.cpp",
+        "tools/install_bilibili_live.py"
+      ],
+      "evidence": [
+        "output/media-v3-decode-affinity-scoped/COMPARISON.json",
+        "output/media-v3-decode-affinity-scoped/play848.log",
+        "output/media-v3-decode-affinity-scoped/cpu-status.log",
+        "output/media-v3-decode-affinity-scoped/BUILD-METADATA.json"
+      ],
+      "attribution_boundary": "H264/AAC 算法来自 OpenH264/Helix；可主张 RV32 移植、热点放置、线程所有权和调度优化。"
+    },
+    {
+      "id": "T06",
+      "title": "QuickJS 编译缓存与有界家居视口",
+      "kind": "runtime_and_ui_architecture",
+      "sources": [
+        "app/espdl-quickapp/overlay/apps/system/desktop/qpk_compile_cache.h",
+        "app/espdl-quickapp/overlay/apps/system/desktop/qpk_viewport.inc",
+        "app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c",
+        "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js"
+      ],
+      "evidence": [
+        "output/mijia-waterfall/validation.json",
+        "output/mijia-waterfall/board-verification/cache-baseline.log",
+        "output/mijia-waterfall/board-verification/script-optimized.log",
+        "output/runtime-performance-20261016/deployment.json"
+      ],
+      "attribution_boundary": "QuickJS 字节码序列化和 LVGL 滚动来自上游；团队实现来源绑定、全新 context、进程内缓存及卡片复用窗口。"
+    },
+    {
+      "id": "T07",
+      "title": "共享 HA 服务与 MCP 家居音乐工具",
+      "kind": "service_and_agent_integration",
+      "sources": [
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_board_home.c",
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_board_music.c",
+        "app/espdl-quickapp/overlay/apps/system/hass/hass_service.c"
+      ],
+      "evidence": [
+        "output/home-mcp-review/verification.json",
+        "output/music-mcp-review/verification.json",
+        "output/flash-20261018/deployment.json"
+      ],
+      "attribution_boundary": "Home Assistant、MCP 和 ESPClaw 基础属于各自上游；贡献是共享服务、类型和权限约束、状态读回及原生工具结果接入。"
+    },
+    {
+      "id": "T08",
+      "title": "官方英语 Nano 模型的精确 INT8 PIE 内核",
+      "kind": "validated_local_diagnostic",
+      "sources": [
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_pie.S",
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_probe.c",
+        "tools/build_speech_runtime.py"
+      ],
+      "evidence": [
+        "project/docs/evidence/official-nano-pie-20261017.json",
+        "output/official-tts-q8-20261017/verification.json",
+        "output/official-tts-q8-20261017/review.json",
+        "output/official-tts-q8-20261017/deployment.json",
+        "output/official-tts-q8-20261017/provenance.json",
+        "output/official-tts-q8-20261017/board-short-tx.log"
+      ],
+      "attribution_boundary": "模型和权重来自 sanoTTS 官方；贡献是板端 INT8 点积内核和 NuttX 诊断运行适配。源码有未提交项，不能称已发布中文 TTS。"
+    },
+    {
+      "id": "T09",
+      "title": "指定唤醒词的流式 MFCC DTW 运行时",
+      "kind": "custom_wake_runtime",
+      "sources": [
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_custom_wake.c",
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_features.c",
+        "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_model.h"
+      ],
+      "evidence": [
+        "output/speech-wake-v3-20261016/verification.json",
+        "output/voice-wake-chat-v2-20261016/verification.json"
+      ],
+      "attribution_boundary": "MFCC/DTW 属已有方法；贡献是指定词模板、流式端点、噪声门限和资源交接实现；训练评测以合成为主。"
+    },
+    {
+      "id": "T10",
+      "title": "相机视频和音轨的有界异步录制",
+      "kind": "camera_media_integration",
+      "sources": [
+        "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_video.inc",
+        "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc",
+        "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_avi.h"
+      ],
+      "evidence": [
+        "output/mijia-waterfall/validation.json",
+        "output/mijia-waterfall/board-verification/camera-video-board.log",
+        "output/flash-20261018/deployment.json"
+      ],
+      "attribution_boundary": "UVC、AVI 和 PCM 属已有协议；贡献为预览、录制、退出保存、音视频工作线程与存储边界集成。"
+    }
+  ],
+  "source_inventory": [
+    {
+      "path": "chip/esp32p4/common-espressif/esp_start.c",
+      "exists": true,
+      "bytes": 20189,
+      "sha256": "90a72b50c4ff06a863ec5234d0135211eb9b6a6f3a36789e59d72a1dd6cb8680",
+      "lf_sha256": "77ce16670b86c0137e8ad8467c74d2abeb18afedc7f1b6764c9b28a5f3f9e160",
+      "in_head": true,
+      "head_sha256": "77ce16670b86c0137e8ad8467c74d2abeb18afedc7f1b6764c9b28a5f3f9e160",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "chip/esp32p4/common-espressif/esp_mipi_dsi.c",
+      "exists": true,
+      "bytes": 64331,
+      "sha256": "c46f75ce72b15c3a98b59b28b789df98cf4bddefbfe5e0e9a5d42bf182944526",
+      "lf_sha256": "abe2bf4f0530fbd37fa82ab5bbeb53e2ad46ec688c4af08f912c741acb14efcf",
+      "in_head": true,
+      "head_sha256": "abe2bf4f0530fbd37fa82ab5bbeb53e2ad46ec688c4af08f912c741acb14efcf",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "board/esp32p4-function-ev-board/src/esp32p4_display.c",
+      "exists": true,
+      "bytes": 17336,
+      "sha256": "1ac6701cd3c256503b887489a170d0ce366b8df1a72b02a8e452550f971941d1",
+      "lf_sha256": "aaff600c1f558bd66fd8558f7bf8ef98c20ff68d69a5ec9fef496e624a8f2072",
+      "in_head": true,
+      "head_sha256": "aaff600c1f558bd66fd8558f7bf8ef98c20ff68d69a5ec9fef496e624a8f2072",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/riscv_extctx.S",
+      "exists": true,
+      "bytes": 3131,
+      "sha256": "c58d62d99287c9dcea8a241d9f30e3d0a545d8c811848e22c43b5e9554595849",
+      "lf_sha256": "07e8ee60a69cc70ef6b465593cbce0f8d486a9c2b4db231b50b7cef03e0038a7",
+      "in_head": true,
+      "head_sha256": "c58d62d99287c9dcea8a241d9f30e3d0a545d8c811848e22c43b5e9554595849",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_extctx.c",
+      "exists": true,
+      "bytes": 446,
+      "sha256": "3174371ef627f95410d347a491f953ccf57bdf5b69eba067e39143e0630c37a5",
+      "lf_sha256": "86b57a95f54fb1d0d5b5105fc6cec27c5dafca830a6712629c250e291b977123",
+      "in_head": true,
+      "head_sha256": "86b57a95f54fb1d0d5b5105fc6cec27c5dafca830a6712629c250e291b977123",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_exception_common.S",
+      "exists": true,
+      "bytes": 12091,
+      "sha256": "15831a9e30340f724e8fbe2f43c1454d25895912d972c1797881e0d512207a28",
+      "lf_sha256": "f81db3eb1d027a723855dfd4e105cf3e880f68f98d6a73981671ab6056afb289",
+      "in_head": true,
+      "head_sha256": "f81db3eb1d027a723855dfd4e105cf3e880f68f98d6a73981671ab6056afb289",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/context_verify.S",
+      "exists": true,
+      "bytes": 1472,
+      "sha256": "715d227e521d966259c5f6fba8c334c5c339a0b778cb6424a256b4ba16056c41",
+      "lf_sha256": "bc67be5a179de77912faafac4e3ca7f0ea503ab8e247e1aef6453cc4b579e57b",
+      "in_head": true,
+      "head_sha256": "bc67be5a179de77912faafac4e3ca7f0ea503ab8e247e1aef6453cc4b579e57b",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/inference_backend.cpp",
+      "exists": true,
+      "bytes": 8035,
+      "sha256": "c12a418632ba1949daf48d5aa5e5ff11c17368c207e15bc05ef439005e559a3b",
+      "lf_sha256": "4ed32a2323146ee3dd0f0c1f9a17cc27907b08dcc33213015be0d54ad0234828",
+      "in_head": true,
+      "head_sha256": "c12a418632ba1949daf48d5aa5e5ff11c17368c207e15bc05ef439005e559a3b",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/boards/risc-v/esp32p4/common/scripts/esp32p4_sections.rev3.ld",
+      "exists": true,
+      "bytes": 41031,
+      "sha256": "fee619d44cd84c60068cb60174568d6693bb0161cc4261faeece7e6dc58b6d39",
+      "lf_sha256": "cfbb7c81a96583f4e7c6f8de899bd1959df80bc4e824cce9475c71a8aff51ce4",
+      "in_head": true,
+      "head_sha256": "cfbb7c81a96583f4e7c6f8de899bd1959df80bc4e824cce9475c71a8aff51ce4",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/espressif/esp_spiflash.c",
+      "exists": true,
+      "bytes": 22632,
+      "sha256": "4fe9b3330371d3e40ba4c1d6dd97c33594b8256bcfcbb7ad147303e7ebca44f0",
+      "lf_sha256": "66c24b4fa376c8f516627a78d41f097fb4294d558fd07c254ad52ce73c6f8e57",
+      "in_head": true,
+      "head_sha256": "66c24b4fa376c8f516627a78d41f097fb4294d558fd07c254ad52ce73c6f8e57",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_ppa.c",
+      "exists": true,
+      "bytes": 12029,
+      "sha256": "b16e79a15a935a036a532f3e081747a46a9ef07d54ec9380596ddd1316257b72",
+      "lf_sha256": "b16e79a15a935a036a532f3e081747a46a9ef07d54ec9380596ddd1316257b72",
+      "in_head": true,
+      "head_sha256": "b16e79a15a935a036a532f3e081747a46a9ef07d54ec9380596ddd1316257b72",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "f351b0c feat(media): integrate local/live playback and ESP32-P4 PPA optimizations"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/nuttx/include/nuttx/video/p4_ppa.h",
+      "exists": true,
+      "bytes": 849,
+      "sha256": "6dd71e02de17af69927fa22c278b83168c8da62c97d08b98926223f01166a271",
+      "lf_sha256": "6dd71e02de17af69927fa22c278b83168c8da62c97d08b98926223f01166a271",
+      "in_head": true,
+      "head_sha256": "6dd71e02de17af69927fa22c278b83168c8da62c97d08b98926223f01166a271",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "f351b0c feat(media): integrate local/live playback and ESP32-P4 PPA optimizations"
+      ]
+    },
+    {
+      "path": "app/bilibili_live/bili_ppa.c",
+      "exists": true,
+      "bytes": 9870,
+      "sha256": "7caa448e7b947f19ba2459c6bad05098543fa380d47ef2a2fdc385f374075404",
+      "lf_sha256": "7caa448e7b947f19ba2459c6bad05098543fa380d47ef2a2fdc385f374075404",
+      "in_head": true,
+      "head_sha256": "7caa448e7b947f19ba2459c6bad05098543fa380d47ef2a2fdc385f374075404",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "f351b0c feat(media): integrate local/live playback and ESP32-P4 PPA optimizations"
+      ]
+    },
+    {
+      "path": "app/bilibili_live/bili_cpu.c",
+      "exists": true,
+      "bytes": 2526,
+      "sha256": "733ada56df6c66fddba39837928b6955178746e17a55a8dcf9c13550eee471a2",
+      "lf_sha256": "733ada56df6c66fddba39837928b6955178746e17a55a8dcf9c13550eee471a2",
+      "in_head": true,
+      "head_sha256": "733ada56df6c66fddba39837928b6955178746e17a55a8dcf9c13550eee471a2",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "f351b0c feat(media): integrate local/live playback and ESP32-P4 PPA optimizations"
+      ]
+    },
+    {
+      "path": "app/bilibili_live/bili_decoder.cpp",
+      "exists": true,
+      "bytes": 4773,
+      "sha256": "b2eb42719de62bbc9f8868cd4757efe5ed5f97a6403cada5247ab2abc32c0edb",
+      "lf_sha256": "1fa1680f19aa3a186742754ec8d4864c0b60d1c0f427107202c7fa50826051f1",
+      "in_head": true,
+      "head_sha256": "1fa1680f19aa3a186742754ec8d4864c0b60d1c0f427107202c7fa50826051f1",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "f351b0c feat(media): integrate local/live playback and ESP32-P4 PPA optimizations"
+      ]
+    },
+    {
+      "path": "tools/install_bilibili_live.py",
+      "exists": true,
+      "bytes": 31621,
+      "sha256": "930813c9b85ad3108ff6c796f078f03455ec1ff79cb445e990a7fafec7e1ec9d",
+      "lf_sha256": "b22040ec894b4dd1db259f2dd63ed81059072c0482084cfc75e23c71275538a9",
+      "in_head": true,
+      "head_sha256": "b22040ec894b4dd1db259f2dd63ed81059072c0482084cfc75e23c71275538a9",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "f351b0c feat(media): integrate local/live playback and ESP32-P4 PPA optimizations"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_compile_cache.h",
+      "exists": true,
+      "bytes": 2836,
+      "sha256": "9c1f0d64c13c4c604b5aeca8689416e45cce3a3d6d2dbb22fc6eead846d160e6",
+      "lf_sha256": "9c1f0d64c13c4c604b5aeca8689416e45cce3a3d6d2dbb22fc6eead846d160e6",
+      "in_head": true,
+      "head_sha256": "9c1f0d64c13c4c604b5aeca8689416e45cce3a3d6d2dbb22fc6eead846d160e6",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "6732275 feat(homeassistant): refine waterfall interactions and optimize script runtime"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_viewport.inc",
+      "exists": true,
+      "bytes": 9683,
+      "sha256": "f22b1580eabcef93dceaeafaf1edfe94ac3e43a6b53c797d42c9d6f5569921a2",
+      "lf_sha256": "f22b1580eabcef93dceaeafaf1edfe94ac3e43a6b53c797d42c9d6f5569921a2",
+      "in_head": true,
+      "head_sha256": "f22b1580eabcef93dceaeafaf1edfe94ac3e43a6b53c797d42c9d6f5569921a2",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI",
+        "6732275 feat(homeassistant): refine waterfall interactions and optimize script runtime"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c",
+      "exists": true,
+      "bytes": 170045,
+      "sha256": "739de252c95fa92d971397c669ea77093e72065a38a517186b8c12f610daec93",
+      "lf_sha256": "174204d9fdc224fb045bdbd54afbb9711916dbf28e31cf94692a180267d33520",
+      "in_head": true,
+      "head_sha256": "e140cfb15659b2b3ccda006d72f1e2ebfb2db0bfc48494b5b02cb842d15aef20",
+      "matches_head_after_lf_normalization": false,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI",
+        "6732275 feat(homeassistant): refine waterfall interactions and optimize script runtime",
+        "d0a9413 feat(desktop): add music lock screen, status bar and SD storage runtime"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js",
+      "exists": true,
+      "bytes": 297983,
+      "sha256": "e571fb13353a4aa87cb5980b76d1042d5d4b0b5c68aa0faa35935aa766328450",
+      "lf_sha256": "e571fb13353a4aa87cb5980b76d1042d5d4b0b5c68aa0faa35935aa766328450",
+      "in_head": true,
+      "head_sha256": "e571fb13353a4aa87cb5980b76d1042d5d4b0b5c68aa0faa35935aa766328450",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI",
+        "6732275 feat(homeassistant): refine waterfall interactions and optimize script runtime",
+        "a01851d feat(espclaw): add voice agents and streamed Markdown workspace"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_board_home.c",
+      "exists": true,
+      "bytes": 33002,
+      "sha256": "04b2ddb1e5cd879fc908d03d58d40a43d3a278f0a475d89dcd878a1ac5d30dd7",
+      "lf_sha256": "04b2ddb1e5cd879fc908d03d58d40a43d3a278f0a475d89dcd878a1ac5d30dd7",
+      "in_head": true,
+      "head_sha256": "04b2ddb1e5cd879fc908d03d58d40a43d3a278f0a475d89dcd878a1ac5d30dd7",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_board_music.c",
+      "exists": true,
+      "bytes": 10540,
+      "sha256": "369926f289a07020c5cb3c5ea0b598c85a0b90a534d284b4d1c1962a2793cd6f",
+      "lf_sha256": "369926f289a07020c5cb3c5ea0b598c85a0b90a534d284b4d1c1962a2793cd6f",
+      "in_head": true,
+      "head_sha256": "369926f289a07020c5cb3c5ea0b598c85a0b90a534d284b4d1c1962a2793cd6f",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "7978379 feat(desktop): integrate music lyrics, SD fonts and weather presentation",
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/hass/hass_service.c",
+      "exists": true,
+      "bytes": 12194,
+      "sha256": "1c04112fe154f714cb612f4bf9e60705c7f7130d4c74b505bef395796ee4cc8e",
+      "lf_sha256": "3e9c58eea86304e854547b2f50a15088e62a519ffb7b3ad25601b14280f4e16e",
+      "in_head": true,
+      "head_sha256": "3e9c58eea86304e854547b2f50a15088e62a519ffb7b3ad25601b14280f4e16e",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI",
+        "0539490 fix(portal): preserve remote configuration and add typed Home Assistant services",
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_pie.S",
+      "exists": true,
+      "bytes": 642,
+      "sha256": "46810598ebc63404287a5c882a5fceebd87f7d98875a3d830b0f3c291a4d4e31",
+      "lf_sha256": "46810598ebc63404287a5c882a5fceebd87f7d98875a3d830b0f3c291a4d4e31",
+      "in_head": false,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": []
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_probe.c",
+      "exists": true,
+      "bytes": 5836,
+      "sha256": "704fc0963a9f900628694bfe167651605c9c2c68a2154db851044a2d8ef8205e",
+      "lf_sha256": "704fc0963a9f900628694bfe167651605c9c2c68a2154db851044a2d8ef8205e",
+      "in_head": false,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": []
+    },
+    {
+      "path": "tools/build_speech_runtime.py",
+      "exists": true,
+      "bytes": 16008,
+      "sha256": "97d2981aba667fb4d2212576b71a92b4b3110aee649109b4d055fb780c69e2f2",
+      "lf_sha256": "b73ef3e6aa68d75534fd525d854c92a7f96ae05827e2a85cf89834273241355d",
+      "in_head": true,
+      "head_sha256": "b73ef3e6aa68d75534fd525d854c92a7f96ae05827e2a85cf89834273241355d",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI",
+        "d0a9413 feat(desktop): add music lock screen, status bar and SD storage runtime"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_custom_wake.c",
+      "exists": true,
+      "bytes": 5228,
+      "sha256": "3e6c74d9a01622786ebec6718b93ef5a3902d544c1beb86fac4c2991597df65f",
+      "lf_sha256": "3e6c74d9a01622786ebec6718b93ef5a3902d544c1beb86fac4c2991597df65f",
+      "in_head": true,
+      "head_sha256": "3e6c74d9a01622786ebec6718b93ef5a3902d544c1beb86fac4c2991597df65f",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_features.c",
+      "exists": true,
+      "bytes": 4915,
+      "sha256": "2deccee35d8c75320840500d02ca25b5f0698c3f1ae1684997fb790578d23d22",
+      "lf_sha256": "fc8aa53ab1586681b3c5caa0ef7450fa65be95a424715e7c02a175dbda12b207",
+      "in_head": true,
+      "head_sha256": "fc8aa53ab1586681b3c5caa0ef7450fa65be95a424715e7c02a175dbda12b207",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_model.h",
+      "exists": true,
+      "bytes": 387,
+      "sha256": "f059f41a576ce9012abb7a25226863002e795a562fb3c2c5b0ef33825b72bb52",
+      "lf_sha256": "f059f41a576ce9012abb7a25226863002e795a562fb3c2c5b0ef33825b72bb52",
+      "in_head": true,
+      "head_sha256": "f059f41a576ce9012abb7a25226863002e795a562fb3c2c5b0ef33825b72bb52",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_video.inc",
+      "exists": true,
+      "bytes": 8688,
+      "sha256": "d80b11322b86c7f02d4144f47ee6aa2d77066ef70254f441cc59b089ae97ab51",
+      "lf_sha256": "d80b11322b86c7f02d4144f47ee6aa2d77066ef70254f441cc59b089ae97ab51",
+      "in_head": true,
+      "head_sha256": "654d851a61e36c7fb3c3c483b1c6ed1f00d3511ba9c94a95aa127ce9199ed3e7",
+      "matches_head_after_lf_normalization": false,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc",
+      "exists": true,
+      "bytes": 6824,
+      "sha256": "69dead2729eb97aca0f2eb6769f13d5420bde682ab9dca8a81bee7700782451c",
+      "lf_sha256": "42c8ae14d97b2f06016adf0c8c8b8196c27061aec4b2aea28a3455a972e92997",
+      "in_head": true,
+      "head_sha256": "b82c5e37b8e38c3aaf4b58e10332239d115c7a76b99ffd7dcffc68670cd285cf",
+      "matches_head_after_lf_normalization": false,
+      "exists_in_contest_baseline_48da6d5": true,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI",
+        "48da6d5 Prepare PR #12 for rebase merge"
+      ]
+    },
+    {
+      "path": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_avi.h",
+      "exists": true,
+      "bytes": 4843,
+      "sha256": "ab2503cb17b4d9e10997b283ee2b4826312977cd09a8667485509edc502f1f90",
+      "lf_sha256": "ab2503cb17b4d9e10997b283ee2b4826312977cd09a8667485509edc502f1f90",
+      "in_head": true,
+      "head_sha256": "ab2503cb17b4d9e10997b283ee2b4826312977cd09a8667485509edc502f1f90",
+      "matches_head_after_lf_normalization": true,
+      "exists_in_contest_baseline_48da6d5": false,
+      "recent_commits": [
+        "031253f feat(espdl-quickapp): integrate board MCP providers, camera recording and compact device UI"
+      ]
+    }
+  ],
+  "evidence_inventory": [
+    {
+      "workspace_path": "project/REPRODUCIBILITY_REPORT_2026-08-27.md",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 4691,
+      "sha256": "1211c8a942df83bf32405b395c5dfcda935184524f0bf517219c9fd139505875"
+    },
+    {
+      "workspace_path": "project/firmware/v3/esp32p4-application-v3-20260919.md",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 1381,
+      "sha256": "efbdc93344dd6006ea2ea29a972bc1efc7d6ccbbc93cb623476db66856dda636"
+    },
+    {
+      "workspace_path": "output/flash-20261018/deployment.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 3917,
+      "sha256": "7056256445a3c9669f4dd4f1c450f8c44f89746e525a4f3c22498da56b05b34b"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/face-preprocess-10.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 4882,
+      "sha256": "4cc0f4bc5ec1be70891fe06d83f85d9a61ce5c1bf530971f27f4ac2e8fc13568"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/face-simd-9.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 2708,
+      "sha256": "57522c45ea9e509282c2bf9ebdf1a3feb6e4dbf41d35f9e060c7a06133f81351"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/host-validation.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 150,
+      "sha256": "3fa15ae41ae7a05e2c3db2f2588165ece8df764b4c1924a4a6e9f2fea35cdc66"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/BUILD-METADATA.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 62074,
+      "sha256": "a85e59ba1fd24b990eb0f4c5e660791a2151aee6b7fa2ad31385e3e033d6c490"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/CHAT-STABILITY.md",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 7266,
+      "sha256": "8640218ca687f9ae0a83c0111282e47d98ea7fc83c80ff0609b933707ea7fd94"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/chat-cache-iram-stress-1.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 4822,
+      "sha256": "f6a30a7ab9f38eab58528dd2b903ade2e5b0e8da8d8d6c510b8259b7ab44e847"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/chat-cache-iram-live-stress-1.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 7314,
+      "sha256": "34a0f03b27720f01ba9d8e0e72ba305e3df4cda80e90f6bc18be2e0310a525b4"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/chat-cache-iram-scroll-1.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 1414,
+      "sha256": "e6bf95e6b6d4045fda9134e5a7346d16d945b450e7a30d823c09f9b3244d89d7"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/firmware-validation.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 3051,
+      "sha256": "a8defcc75322fbe4ed71a9d3d9d06395a589e05dfa7bdaf33a99f77abe005059"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/COMPARISON.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1720,
+      "sha256": "555682d19bbdc6db352dd273ff6268ce79b92888937a7b372aec40faf266ab23"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/paired848.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 4971,
+      "sha256": "370df76df7936e11a1f9dc78baea103e16668a9e5effc6c206bddc8693f18019"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/selftest.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1897,
+      "sha256": "22ec4bf022358c3e6df18aa88c52664c4e1583ac2b99fe4a391ce32362fc88b1"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/COMPARISON.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2226,
+      "sha256": "2e0cfb02a47803f51f30846c0658a7fc15c39d251c025d91cb65e25346f4c703"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/play848.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2283,
+      "sha256": "a89654bff2029dccdee1d1e08eaf202215917fff42deb8a3a7ada2696a77be2b"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/cpu-status.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1612,
+      "sha256": "89594ec20b47d2b18e61683f3bd32858d3988090536a586cb84e0ec4c29cbfcb"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/BUILD-METADATA.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 61170,
+      "sha256": "e2aa290b15f4655501fa0affaacba6c8fcfdb46e735e6ea776485fd464a4f0f0"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/validation.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 109987,
+      "sha256": "2747faaad1edf39f77ea0bc5fc25c594faed4880ebd2f29efcb51a603c9e02da"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/board-verification/cache-baseline.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 22690,
+      "sha256": "d1460417b999253ebf0599f40570e626d009305bee8f920777537e62dd53e4a5"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/board-verification/script-optimized.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 22728,
+      "sha256": "bd9d3f6e9714eb340da5c766222e8cee192243d192b0f2fce65f130cae6554ac"
+    },
+    {
+      "workspace_path": "output/runtime-performance-20261016/deployment.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 257,
+      "sha256": "1bb6d9f909e2533a9aba891439895d16f090e4c0a0d3fd3a8e1e56aad231b618"
+    },
+    {
+      "workspace_path": "output/home-mcp-review/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2762,
+      "sha256": "a9d9813b2e066d7383d5625e251b032e27eaf999f981f8eb27f8359e6857f187"
+    },
+    {
+      "workspace_path": "output/music-mcp-review/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2632,
+      "sha256": "01750caa530ac395223ff083532befb52c26dbbc05f2cac2a0da0f375ef9a38c"
+    },
+    {
+      "workspace_path": "project/docs/evidence/official-nano-pie-20261017.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 1589,
+      "sha256": "0e1b10f9020a2f598b0641092b8f6dc55251c4c6a632974f8fdca5015d29ec6b"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 4665,
+      "sha256": "50d27a9af0e9ff0f7c5f8073598ed918ca9ea7ee310af106c0ff4374cc42371d"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/review.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 10300,
+      "sha256": "9fd56fce1387f29e5f3fb828fb5c92f39cf56d4dd56d1d19f8e3d41c55aaef3f"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/deployment.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 457,
+      "sha256": "7148ca3fd1ec2068facd212235e9e98e743547ffe24933bef85b8c033f945535"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/provenance.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1696,
+      "sha256": "d7ed9f5a2125986d402cbdabf79a28bef7b16d553504b7751ad6f245ce1aaefc"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/board-short-tx.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 678,
+      "sha256": "b59992a5e7f209d8ad4af646eca85e390310ab62ac90278df81ec6f8424617c0"
+    },
+    {
+      "workspace_path": "output/speech-wake-v3-20261016/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 20420,
+      "sha256": "14148467d8f61aa1af1d0baa042a0a2db5a5c4c05a0809bd04f034531beb24e4"
+    },
+    {
+      "workspace_path": "output/voice-wake-chat-v2-20261016/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 22800,
+      "sha256": "6f640dbe7cc041de132d9ada7780f1049f854fb68c9d794792927de3ee8da772"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/board-verification/camera-video-board.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 12845,
+      "sha256": "584514f47b4b0454b8bcf60e9a9c19fe6d39aff8b8d5b75db508bfa65cb26bca"
+    }
+  ],
+  "source_evidence_bindings": [
+    {
+      "evidence": "output/media-v3-ppa-irq/BUILD-METADATA.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/riscv_extctx.S",
+          "expected_sha256": "c58d62d99287c9dcea8a241d9f30e3d0a545d8c811848e22c43b5e9554595849",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_extctx.c",
+          "expected_sha256": "3174371ef627f95410d347a491f953ccf57bdf5b69eba067e39143e0630c37a5",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_exception_common.S",
+          "expected_sha256": "15831a9e30340f724e8fbe2f43c1454d25895912d972c1797881e0d512207a28",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/context_verify.S",
+          "expected_sha256": "715d227e521d966259c5f6fba8c334c5c339a0b778cb6424a256b4ba16056c41",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/inference_backend.cpp",
+          "expected_sha256": "c12a418632ba1949daf48d5aa5e5ff11c17368c207e15bc05ef439005e559a3b",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/boards/risc-v/esp32p4/common/scripts/esp32p4_sections.rev3.ld",
+          "expected_sha256": "fee619d44cd84c60068cb60174568d6693bb0161cc4261faeece7e6dc58b6d39",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/espressif/esp_spiflash.c",
+          "expected_sha256": "4fe9b3330371d3e40ba4c1d6dd97c33594b8256bcfcbb7ad147303e7ebca44f0",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_ppa.c",
+          "expected_sha256": "b16e79a15a935a036a532f3e081747a46a9ef07d54ec9380596ddd1316257b72",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/include/nuttx/video/p4_ppa.h",
+          "expected_sha256": "6dd71e02de17af69927fa22c278b83168c8da62c97d08b98926223f01166a271",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/bilibili_live/bili_ppa.c",
+          "expected_sha256": "7caa448e7b947f19ba2459c6bad05098543fa380d47ef2a2fdc385f374075404",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/bilibili_live/bili_cpu.c",
+          "expected_sha256": "5164a766aee4c9d5b5f6a5d655bac5c9427a065ac26b8b01516f51e7760bca4b",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/bilibili_live/bili_decoder.cpp",
+          "expected_sha256": "b2eb42719de62bbc9f8868cd4757efe5ed5f97a6403cada5247ab2abc32c0edb",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c",
+          "expected_sha256": "e5c7ffa39979bd70fabad89206996ee2f89f496c29e7b8cc4db30ac35d7a8b7a",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js",
+          "expected_sha256": "5cf79a1c8a91153819ad4757e4e813a07775f3a2254d35286bdc3d1b4f586492",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/hass/hass_service.c",
+          "expected_sha256": "6990ac9cb119fc96676539a24a371b1852b7c797b8931b4b044a579c4878ed86",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc",
+          "expected_sha256": "0bb4c3a889b45a428c071874e02407df0852182d9b5d4466f8095f5ac6f0234d",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        }
+      ]
+    },
+    {
+      "evidence": "output/media-v3-decode-affinity-scoped/BUILD-METADATA.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/riscv_extctx.S",
+          "expected_sha256": "c58d62d99287c9dcea8a241d9f30e3d0a545d8c811848e22c43b5e9554595849",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_extctx.c",
+          "expected_sha256": "3174371ef627f95410d347a491f953ccf57bdf5b69eba067e39143e0630c37a5",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_exception_common.S",
+          "expected_sha256": "15831a9e30340f724e8fbe2f43c1454d25895912d972c1797881e0d512207a28",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/context_verify.S",
+          "expected_sha256": "715d227e521d966259c5f6fba8c334c5c339a0b778cb6424a256b4ba16056c41",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/inference_backend.cpp",
+          "expected_sha256": "c12a418632ba1949daf48d5aa5e5ff11c17368c207e15bc05ef439005e559a3b",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/boards/risc-v/esp32p4/common/scripts/esp32p4_sections.rev3.ld",
+          "expected_sha256": "fee619d44cd84c60068cb60174568d6693bb0161cc4261faeece7e6dc58b6d39",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/espressif/esp_spiflash.c",
+          "expected_sha256": "4fe9b3330371d3e40ba4c1d6dd97c33594b8256bcfcbb7ad147303e7ebca44f0",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/bilibili_live/bili_cpu.c",
+          "expected_sha256": "5164a766aee4c9d5b5f6a5d655bac5c9427a065ac26b8b01516f51e7760bca4b",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/bilibili_live/bili_decoder.cpp",
+          "expected_sha256": "b2eb42719de62bbc9f8868cd4757efe5ed5f97a6403cada5247ab2abc32c0edb",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c",
+          "expected_sha256": "e5c7ffa39979bd70fabad89206996ee2f89f496c29e7b8cc4db30ac35d7a8b7a",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js",
+          "expected_sha256": "5cf79a1c8a91153819ad4757e4e813a07775f3a2254d35286bdc3d1b4f586492",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/hass/hass_service.c",
+          "expected_sha256": "6990ac9cb119fc96676539a24a371b1852b7c797b8931b4b044a579c4878ed86",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc",
+          "expected_sha256": "0bb4c3a889b45a428c071874e02407df0852182d9b5d4466f8095f5ac6f0234d",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        }
+      ]
+    },
+    {
+      "evidence": "output/mijia-waterfall/validation.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_compile_cache.h",
+          "expected_sha256": "9c1f0d64c13c4c604b5aeca8689416e45cce3a3d6d2dbb22fc6eead846d160e6",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_viewport.inc",
+          "expected_sha256": "2f67ab1b00fc29bea4e43c95694e521ae0bf6d72ae75b093c3c00f3d07e0ba76",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c",
+          "expected_sha256": "51e6f4edb104938622ba1d10eac4c3b60aa529acebfc4ea0101aff8d4e2a7088",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js",
+          "expected_sha256": "4349fc63d5c58b087c039b426bab86c30cb31b8b05236b4caac9ab4fafd9c138",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_custom_wake.c",
+          "expected_sha256": "8f88a50e19b969f7b50603f2b5051d7bd7b2a9b4a313d4bdce1e827bd7f4d7a9",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_features.c",
+          "expected_sha256": "2deccee35d8c75320840500d02ca25b5f0698c3f1ae1684997fb790578d23d22",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_model.h",
+          "expected_sha256": "37dc1204e67fbf1ca2fe4d22dcd6452c889454064a7b011eaec5820efd58c74f",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_video.inc",
+          "expected_sha256": "a63ee4126ba884ff8cd70f9b763e4c941ac5778cdfb44e88e1d87d073663a792",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc",
+          "expected_sha256": "c4258d7c127ff68bb853b720e1a317f55ef31c21e244776f800fb6ba17271931",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_avi.h",
+          "expected_sha256": "ab2503cb17b4d9e10997b283ee2b4826312977cd09a8667485509edc502f1f90",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        }
+      ]
+    },
+    {
+      "evidence": "output/home-mcp-review/verification.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_board_home.c",
+          "expected_sha256": "04b2ddb1e5cd879fc908d03d58d40a43d3a278f0a475d89dcd878a1ac5d30dd7",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        }
+      ]
+    },
+    {
+      "evidence": "output/music-mcp-review/verification.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_board_music.c",
+          "expected_sha256": "7c610a40b11e930863157eaabc2bb730f2a4805bf1d9e475a28b5a5991146031",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        }
+      ]
+    },
+    {
+      "evidence": "output/official-tts-q8-20261017/review.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/hass/hass_service.c",
+          "expected_sha256": "1c04112fe154f714cb612f4bf9e60705c7f7130d4c74b505bef395796ee4cc8e",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_pie.S",
+          "expected_sha256": "46810598ebc63404287a5c882a5fceebd87f7d98875a3d830b0f3c291a4d4e31",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_probe.c",
+          "expected_sha256": "704fc0963a9f900628694bfe167651605c9c2c68a2154db851044a2d8ef8205e",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "tools/build_speech_runtime.py",
+          "expected_sha256": "4a2023c5e2b95fac06119478830f300cb66c3276b24b5ac62347380656574017",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        }
+      ]
+    },
+    {
+      "evidence": "output/speech-wake-v3-20261016/verification.json",
+      "source_comparisons": [
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/qpk_viewport.inc",
+          "expected_sha256": "f22b1580eabcef93dceaeafaf1edfe94ac3e43a6b53c797d42c9d6f5569921a2",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_custom_wake.c",
+          "expected_sha256": "3e6c74d9a01622786ebec6718b93ef5a3902d544c1beb86fac4c2991597df65f",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_features.c",
+          "expected_sha256": "2deccee35d8c75320840500d02ca25b5f0698c3f1ae1684997fb790578d23d22",
+          "raw_match": true,
+          "current_lf_hash_match": false
+        },
+        {
+          "source": "app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_model.h",
+          "expected_sha256": "f059f41a576ce9012abb7a25226863002e795a562fb3c2c5b0ef33825b72bb52",
+          "raw_match": true,
+          "current_lf_hash_match": true
+        }
+      ]
+    },
+    {
+      "evidence": "output/voice-wake-chat-v2-20261016/verification.json",
+      "source_comparisons": [
+        {
+          "source": "tools/build_speech_runtime.py",
+          "expected_sha256": "3aa5bb935ba70190bd410977ed262988bf4c8c66b04f97e4c7d72a21c1e13779",
+          "raw_match": false,
+          "current_lf_hash_match": false
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "T03": {
+      "storage_rounds": 12,
+      "concurrent_storage_rounds": 16,
+      "firmware_sha256": "4b90e80765c630db939d9d80031fa2a083f67d773851838f8718d299fbe21de4"
+    },
+    "T04": {
+      "firmware_sha256": "8dfe65ddef454c28383edcee33090570e1c5494628592efa962a7206fdea84eb",
+      "render_reduction_percent": 23.676880222841227,
+      "summed_stage_reduction_percent": 5.02408809359945,
+      "paired_480": [
+        {
+          "samples": 60,
+          "read_ms": 20,
+          "decode_ms": 5300,
+          "render_ms": 1860,
+          "wait_ms": 160,
+          "submitted": 32,
+          "dropped": 28,
+          "lag_ms": 1054,
+          "ppa_enabled": 0
+        },
+        {
+          "samples": 60,
+          "read_ms": 0,
+          "decode_ms": 5490,
+          "render_ms": 1320,
+          "wait_ms": 0,
+          "submitted": 31,
+          "dropped": 29,
+          "lag_ms": 649,
+          "ppa_enabled": 1
+        },
+        {
+          "samples": 60,
+          "read_ms": 40,
+          "decode_ms": 5530,
+          "render_ms": 1420,
+          "wait_ms": 0,
+          "submitted": 32,
+          "dropped": 28,
+          "lag_ms": 777,
+          "ppa_enabled": 1
+        },
+        {
+          "samples": 60,
+          "read_ms": 30,
+          "decode_ms": 5410,
+          "render_ms": 1730,
+          "wait_ms": 20,
+          "submitted": 31,
+          "dropped": 29,
+          "lag_ms": 1033,
+          "ppa_enabled": 0
+        }
+      ],
+      "local_360": [
+        {
+          "samples": 60,
+          "read_ms": 20,
+          "decode_ms": 3520,
+          "render_ms": 1650,
+          "wait_ms": 920,
+          "submitted": 60,
+          "dropped": 0,
+          "lag_ms": 0
+        },
+        {
+          "samples": 60,
+          "read_ms": 0,
+          "decode_ms": 3620,
+          "render_ms": 1670,
+          "wait_ms": 840,
+          "submitted": 60,
+          "dropped": 0,
+          "lag_ms": 0
+        }
+      ]
+    },
+    "T05": {
+      "firmware_sha256": "629cc8dc7430f25e220f63d824e9ac11dbc1e8639762b5ced6f35a2071522223",
+      "playback_480_decode_reduction_percent": 8.828522920203735,
+      "baseline_playback_480": [
+        {
+          "samples": 60,
+          "read_ms": 30,
+          "decode_ms": 5840,
+          "render_ms": 1790,
+          "wait_ms": 10,
+          "submitted": 31,
+          "dropped": 29,
+          "lag_ms": 1502
+        },
+        {
+          "samples": 60,
+          "read_ms": 10,
+          "decode_ms": 5940,
+          "render_ms": 1930,
+          "wait_ms": 20,
+          "submitted": 31,
+          "dropped": 29,
+          "lag_ms": 1737
+        }
+      ],
+      "selected_playback_480": [
+        {
+          "samples": 60,
+          "read_ms": 10,
+          "decode_ms": 5350,
+          "render_ms": 1840,
+          "wait_ms": 280,
+          "submitted": 32,
+          "dropped": 28,
+          "lag_ms": 990
+        },
+        {
+          "samples": 60,
+          "read_ms": 10,
+          "decode_ms": 5390,
+          "render_ms": 1810,
+          "wait_ms": 10,
+          "submitted": 31,
+          "dropped": 29,
+          "lag_ms": 1033
+        }
+      ],
+      "pure_decode_480": [
+        {
+          "mode": 0,
+          "error": 0,
+          "frames": 80,
+          "decode_us": 5470000,
+          "read_us": 40000,
+          "hash": "a5eefb09"
+        },
+        {
+          "mode": 0,
+          "error": 0,
+          "frames": 80,
+          "decode_us": 5290000,
+          "read_us": 10000,
+          "hash": "a5eefb09"
+        }
+      ]
+    },
+    "T06": {
+      "native_waterfall": {
+        "passed": true,
+        "themes": [
+          "light",
+          "dark"
+        ],
+        "devices": 512,
+        "widgets": 325,
+        "card_pool": 12,
+        "sanitizers": [
+          "ASan",
+          "UBSan"
+        ],
+        "checks": [
+          "native pointer scrolling",
+          "vertical swipe starting on slider",
+          "next pointer click opens detail",
+          "white thumb pixel visibility",
+          "clipping",
+          "bounded objects",
+          "detail target and scroll restoration",
+          "generation validation",
+          "callback deletion and cancellation"
+        ]
+      },
+      "compile_cache": {
+        "host_sanitizers_passed": true,
+        "cache_bytes": 227237,
+        "host_cold_us": 58557,
+        "host_warm_us": 2055,
+        "board_measured": true,
+        "first_launch_compiles_source": true,
+        "existing_package_tests_failed": 2,
+        "existing_failures": [
+          "unrelated dafeiyu generated script byte mismatch",
+          "readonly HA diagnostic package name triggers overbroad security regex"
+        ],
+        "board_cache_hits": 4,
+        "cache_bytes_scope": "64-bit host serialization; board cache capped at 512 KiB"
+      },
+      "startup_samples": [
+        {
+          "compile_ms": 890,
+          "execute_ms": 120,
+          "cache": "miss"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        }
+      ],
+      "board_acceptance_scope": "92-second physical board navigation/filter test; no device control; not continuous FPS or touch-to-photon latency"
+    },
+    "T07": {
+      "revision": "7f0436595996e3488d07a28addd59eacfe1e33f4",
+      "firmware_sha256": "3dcbf985b775d9bb38b6875210fcfc177bcd763984fe1fd9807d349518e22d89",
+      "home_assistant": {
+        "connected": true,
+        "phase": "ready",
+        "entityCount": 200,
+        "deviceCount": 4,
+        "registeredTypes": 59,
+        "registeredVariants": 127
+      },
+      "mcp_live_read": {
+        "home_status_ok": true,
+        "music_status_ok": true,
+        "actual_call_count": 2,
+        "page_retained": true,
+        "mutating_tool_requested": false
+      }
+    },
+    "T08": {
+      "scalar_median_us": 2180000,
+      "pie_median_us": 720000,
+      "speedup": 3.0277777777777777,
+      "pie_rtf": 0.26785714285714285,
+      "bit_exact_pcm": true,
+      "kernel_cases_per_run": 288,
+      "human_listening_verified": false
+    },
+    "T09": {
+      "wake_phrase": "你好 openvela",
+      "model_type": "MFCC/DTW templates; not a retrained WakeNet neural network",
+      "synthetic_only": true,
+      "human_wake_tested": false,
+      "human_false_alarms_per_hour": null,
+      "runtime_verified": true
+    },
+    "T10": {
+      "board_verified": true,
+      "format": "AVI RGB565 320x180 10fps; PCM16 mono 16000Hz",
+      "saved_directory": "/sdcard/videos",
+      "board": {
+        "elapsed_s": 72.713,
+        "preview_starts": 3,
+        "recordings": [
+          {
+            "status": 4,
+            "frames": 62,
+            "pcm_bytes": 199328,
+            "elapsed_ms": 6229
+          },
+          {
+            "status": 4,
+            "frames": 61,
+            "pcm_bytes": 195360,
+            "elapsed_ms": 6105
+          }
+        ],
+        "fault_detected": false,
+        "command_failures": [],
+        "checks": [
+          "recording with microphone and stop/save",
+          "exit preview during recording saves and releases",
+          "reopen preview after two recordings",
+          "SD AVI files present; data volume mounted"
+        ],
+        "data_volume_mounted": true
+      },
+      "file_headers": {
+        "headers": [
+          {
+            "file": "VID_00009b00_000.avi",
+            "file_bytes": 7348386,
+            "frames": 62,
+            "audio_samples": 99664,
+            "width": 320,
+            "height": 180,
+            "fps": 10,
+            "sample_rate": 16000
+          },
+          {
+            "file": "VID_0000ec0e_000.avi",
+            "file_bytes": 7229098,
+            "frames": 61,
+            "audio_samples": 97680,
+            "width": 320,
+            "height": 180,
+            "fps": 10,
+            "sample_rate": 16000
+          }
+        ],
+        "metadata_only": true
+      },
+      "host": "camera-video-host.log",
+      "native_ui": "camera-native.log",
+      "max_file_bytes": 268435456,
+      "data_region_written": false
+    }
+  },
+  "technical_reassessment": {
+    "previous": 25,
+    "current": 28,
+    "maximum": 30,
+    "official_subrubric": false,
+    "reviewer_subscores": {
+      "platform_and_context": [
+        11,
+        12
+      ],
+      "system_architecture": [
+        9,
+        10
+      ],
+      "measured_hardware_optimization": [
+        8,
+        8
+      ]
+    },
+    "reason_for_change": "Previously underweighted same-firmware PPA A/B, scoped affinity benchmarks, QuickJS board cache measurements and independently checked PIE diagnostic evidence.",
+    "reserves": [
+      "Exact public-upstream delta and ownership for imported low-level context/display snapshot are not fully mapped.",
+      "Some deeper guarantees of the custom runtime/accelerator are not yet demonstrated across configuration and exceptional concurrency paths; do not assume them from happy-path measurements."
+    ],
+    "not_deducted_again": [
+      "missing_presentation",
+      "missing_skill",
+      "log_schema",
+      "repository_packaging",
+      "working_tree_cleanliness"
+    ]
+  },
+  "completion_20261019": {
+    "scope": "New frozen-source build, upstream replay and current host regressions; no new board or human validation.",
+    "package": "technical-20261019/manifest.json",
+    "instructions": "TECHNICAL_PACKAGE_2026-10-19.md",
+    "source_snapshot_files": 2647,
+    "firmware_sha256": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+    "javascript_pass": 179,
+    "python_unittest_pass": 26,
+    "upstream_replayed_files": 8,
+    "technical_score_unchanged": 28,
+    "board_written": false
+  }
+}

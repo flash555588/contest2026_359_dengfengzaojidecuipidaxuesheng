@@ -1,0 +1,345 @@
+{
+  "scope": "Historical snapshots only; not new device measurements.",
+  "metrics": {
+    "T03": {
+      "storage_rounds": 12,
+      "concurrent_storage_rounds": 16,
+      "firmware_sha256": "4b90e80765c630db939d9d80031fa2a083f67d773851838f8718d299fbe21de4"
+    },
+    "T04": {
+      "firmware_sha256": "8dfe65ddef454c28383edcee33090570e1c5494628592efa962a7206fdea84eb",
+      "render_reduction_percent": 23.676880222841227,
+      "summed_stage_reduction_percent": 5.02408809359945
+    },
+    "T05": {
+      "firmware_sha256": "629cc8dc7430f25e220f63d824e9ac11dbc1e8639762b5ced6f35a2071522223",
+      "playback_480_decode_reduction_percent": 8.828522920203735
+    },
+    "T06": {
+      "host_fixture_devices": 512,
+      "card_pool": 12,
+      "host_widgets": 325,
+      "board_startup_samples": [
+        {
+          "compile_ms": 890,
+          "execute_ms": 120,
+          "cache": "miss"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        },
+        {
+          "compile_ms": 30,
+          "execute_ms": 110,
+          "cache": "hit"
+        }
+      ]
+    },
+    "T07": {
+      "revision": "7f0436595996e3488d07a28addd59eacfe1e33f4",
+      "firmware_sha256": "3dcbf985b775d9bb38b6875210fcfc177bcd763984fe1fd9807d349518e22d89",
+      "home_assistant": {
+        "connected": true,
+        "phase": "ready",
+        "entityCount": 200,
+        "deviceCount": 4,
+        "registeredTypes": 59,
+        "registeredVariants": 127
+      },
+      "mcp_live_read": {
+        "home_status_ok": true,
+        "music_status_ok": true,
+        "actual_call_count": 2,
+        "page_retained": true,
+        "mutating_tool_requested": false
+      }
+    },
+    "T08": {
+      "scalar_median_us": 2180000,
+      "pie_median_us": 720000,
+      "speedup": 3.0277777777777777,
+      "pie_rtf": 0.26785714285714285,
+      "bit_exact_pcm": true,
+      "kernel_cases_per_run": 288,
+      "human_listening_verified": false
+    },
+    "T09": {
+      "wake_phrase": "你好 openvela",
+      "model_type": "MFCC/DTW templates; not a retrained WakeNet neural network",
+      "synthetic_only": true,
+      "human_wake_tested": false,
+      "human_false_alarms_per_hour": null,
+      "runtime_verified": true
+    },
+    "T10": {
+      "format": "AVI RGB565 320x180 10fps; PCM16 mono 16000Hz",
+      "recordings": [
+        {
+          "status": 4,
+          "frames": 62,
+          "pcm_bytes": 199328,
+          "elapsed_ms": 6229
+        },
+        {
+          "status": 4,
+          "frames": 61,
+          "pcm_bytes": 195360,
+          "elapsed_ms": 6105
+        }
+      ],
+      "fault_detected": false
+    }
+  },
+  "original_records": [
+    {
+      "workspace_path": "project/REPRODUCIBILITY_REPORT_2026-08-27.md",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 4691,
+      "sha256": "1211c8a942df83bf32405b395c5dfcda935184524f0bf517219c9fd139505875"
+    },
+    {
+      "workspace_path": "project/firmware/v3/esp32p4-application-v3-20260919.md",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 1381,
+      "sha256": "efbdc93344dd6006ea2ea29a972bc1efc7d6ccbbc93cb623476db66856dda636"
+    },
+    {
+      "workspace_path": "output/flash-20261018/deployment.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 3917,
+      "sha256": "7056256445a3c9669f4dd4f1c450f8c44f89746e525a4f3c22498da56b05b34b"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/face-preprocess-10.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 4882,
+      "sha256": "4cc0f4bc5ec1be70891fe06d83f85d9a61ce5c1bf530971f27f4ac2e8fc13568"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/face-simd-9.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 2708,
+      "sha256": "57522c45ea9e509282c2bf9ebdf1a3feb6e4dbf41d35f9e060c7a06133f81351"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/host-validation.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 150,
+      "sha256": "3fa15ae41ae7a05e2c3db2f2588165ece8df764b4c1924a4a6e9f2fea35cdc66"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/BUILD-METADATA.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 62074,
+      "sha256": "a85e59ba1fd24b990eb0f4c5e660791a2151aee6b7fa2ad31385e3e033d6c490"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/CHAT-STABILITY.md",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 7266,
+      "sha256": "8640218ca687f9ae0a83c0111282e47d98ea7fc83c80ff0609b933707ea7fd94"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/chat-cache-iram-stress-1.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 4822,
+      "sha256": "f6a30a7ab9f38eab58528dd2b903ade2e5b0e8da8d8d6c510b8259b7ab44e847"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/chat-cache-iram-live-stress-1.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 7314,
+      "sha256": "34a0f03b27720f01ba9d8e0e72ba305e3df4cda80e90f6bc18be2e0310a525b4"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/chat-cache-iram-scroll-1.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 1414,
+      "sha256": "e6bf95e6b6d4045fda9134e5a7346d16d945b450e7a30d823c09f9b3244d89d7"
+    },
+    {
+      "workspace_path": "project/app/espdl-quickapp/evidence/firmware-validation.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 3051,
+      "sha256": "a8defcc75322fbe4ed71a9d3d9d06395a589e05dfa7bdaf33a99f77abe005059"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/COMPARISON.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1720,
+      "sha256": "555682d19bbdc6db352dd273ff6268ce79b92888937a7b372aec40faf266ab23"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/paired848.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 4971,
+      "sha256": "370df76df7936e11a1f9dc78baea103e16668a9e5effc6c206bddc8693f18019"
+    },
+    {
+      "workspace_path": "output/media-v3-ppa-irq/selftest.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1897,
+      "sha256": "22ec4bf022358c3e6df18aa88c52664c4e1583ac2b99fe4a391ce32362fc88b1"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/COMPARISON.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2226,
+      "sha256": "2e0cfb02a47803f51f30846c0658a7fc15c39d251c025d91cb65e25346f4c703"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/play848.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2283,
+      "sha256": "a89654bff2029dccdee1d1e08eaf202215917fff42deb8a3a7ada2696a77be2b"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/cpu-status.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1612,
+      "sha256": "89594ec20b47d2b18e61683f3bd32858d3988090536a586cb84e0ec4c29cbfcb"
+    },
+    {
+      "workspace_path": "output/media-v3-decode-affinity-scoped/BUILD-METADATA.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 61170,
+      "sha256": "e2aa290b15f4655501fa0affaacba6c8fcfdb46e735e6ea776485fd464a4f0f0"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/validation.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 109987,
+      "sha256": "2747faaad1edf39f77ea0bc5fc25c594faed4880ebd2f29efcb51a603c9e02da"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/board-verification/cache-baseline.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 22690,
+      "sha256": "d1460417b999253ebf0599f40570e626d009305bee8f920777537e62dd53e4a5"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/board-verification/script-optimized.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 22728,
+      "sha256": "bd9d3f6e9714eb340da5c766222e8cee192243d192b0f2fce65f130cae6554ac"
+    },
+    {
+      "workspace_path": "output/runtime-performance-20261016/deployment.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 257,
+      "sha256": "1bb6d9f909e2533a9aba891439895d16f090e4c0a0d3fd3a8e1e56aad231b618"
+    },
+    {
+      "workspace_path": "output/home-mcp-review/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2762,
+      "sha256": "a9d9813b2e066d7383d5625e251b032e27eaf999f981f8eb27f8359e6857f187"
+    },
+    {
+      "workspace_path": "output/music-mcp-review/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 2632,
+      "sha256": "01750caa530ac395223ff083532befb52c26dbbc05f2cac2a0da0f375ef9a38c"
+    },
+    {
+      "workspace_path": "project/docs/evidence/official-nano-pie-20261017.json",
+      "exists": true,
+      "inside_contest_repository": true,
+      "bytes": 1589,
+      "sha256": "0e1b10f9020a2f598b0641092b8f6dc55251c4c6a632974f8fdca5015d29ec6b"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 4665,
+      "sha256": "50d27a9af0e9ff0f7c5f8073598ed918ca9ea7ee310af106c0ff4374cc42371d"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/review.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 10300,
+      "sha256": "9fd56fce1387f29e5f3fb828fb5c92f39cf56d4dd56d1d19f8e3d41c55aaef3f"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/deployment.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 457,
+      "sha256": "7148ca3fd1ec2068facd212235e9e98e743547ffe24933bef85b8c033f945535"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/provenance.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 1696,
+      "sha256": "d7ed9f5a2125986d402cbdabf79a28bef7b16d553504b7751ad6f245ce1aaefc"
+    },
+    {
+      "workspace_path": "output/official-tts-q8-20261017/board-short-tx.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 678,
+      "sha256": "b59992a5e7f209d8ad4af646eca85e390310ab62ac90278df81ec6f8424617c0"
+    },
+    {
+      "workspace_path": "output/speech-wake-v3-20261016/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 20420,
+      "sha256": "14148467d8f61aa1af1d0baa042a0a2db5a5c4c05a0809bd04f034531beb24e4"
+    },
+    {
+      "workspace_path": "output/voice-wake-chat-v2-20261016/verification.json",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 22800,
+      "sha256": "6f640dbe7cc041de132d9ada7780f1049f854fb68c9d794792927de3ee8da772"
+    },
+    {
+      "workspace_path": "output/mijia-waterfall/board-verification/camera-video-board.log",
+      "exists": true,
+      "inside_contest_repository": false,
+      "bytes": 12845,
+      "sha256": "584514f47b4b0454b8bcf60e9a9c19fe6d39aff8b8d5b75db508bfa65cb26bca"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "previous_bundle_manifest": "../technical-20261019/manifest.json",
+  "previous_bundle_manifest_sha256": "840b6670e50987e6ab81849bc959c07de750f67c8a266198d087f34c4f6a261b",
+  "current_build_receipt": "../technical-20261019/current-build.json",
+  "current_build_receipt_sha256": "f51c66f679e95f2d1f72f35a641930fe420ebc0b2f3e93fb2ff7040a79ff1582",
+  "host_tests_receipt": "../technical-20261019/current-host-tests.json",
+  "host_tests_receipt_sha256": "10c6fab65cbde54875145b1ac8334171f8a0586a9dce7d0abac640e8da910c1a",
+  "stages": "Previous build receipt keeps its original board_written=false as a build-time fact. board-acceptance.json records the subsequent deployment. Historical measurements are not reassigned to this candidate."
+}
