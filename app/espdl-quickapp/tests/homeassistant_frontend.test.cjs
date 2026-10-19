@@ -127,6 +127,7 @@ function boot(width = 1024, height = 600, options = {}) {
     primary: options.dark ? 0xffffff : 0x252d46,
     nowMs: options.nowMs,
     getSize: () => ({ width, height }),
+    isVisible: () => options.visible !== false,
     background: () => {},
     button(text, x, y, w, h, callback) {
       const id = create(x, y, w, h);
@@ -201,6 +202,32 @@ function boot(width = 1024, height = 600, options = {}) {
     touch: (state, nx, ny) => touch(state, nx, ny),
     swipe: direction => swipe(direction) };
 }
+
+test('covered frontend completes requests without painting and catches up after reveal', () => {
+  const options={states:[{entity_id:'light.desk',state:'on',attributes:{friendly_name:'Desk',supported_color_modes:['brightness']}}]};
+  const r=boot(1024,536,options);
+  for(let i=0;i<30;i++)r.tick();
+  options.visible=false;r.nativeWrites.length=0;
+  options.states[0].attributes.friendly_name='Changed while covered';
+  r.context.ESPHomeHA.refresh();for(let i=0;i<30;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().phase,'ready');
+  assert.equal(r.context.ESPHomeHA.snapshot().entities.length,1);
+  assert.equal(r.nativeWrites.length,0,'covered refresh must not update native widgets');
+  options.visible=true;for(let i=0;i<10;i++)r.tick();
+  assert(r.nativeWrites.length>0,'latest state paints after reveal');
+});
+
+test('covered frontend defers construction but continues its connection', () => {
+  const options={visible:false};const r=boot(1024,536,options);
+  const created=r.geometry.size;r.nativeWrites.length=0;
+  for(let i=0;i<30;i++)r.tick();
+  assert.equal(r.geometry.size,created);
+  assert.equal(r.nativeWrites.length,0);
+  assert(r.requests.includes('states'),'connection must continue before UI construction completes');
+  options.visible=true;for(let i=0;i<30;i++)r.tick();
+  assert.equal(r.context.ESPHomeHA.snapshot().uiReady,true);
+  assert(r.geometry.size>created);
+});
 
 test('large reading snapshots avoid repeated full-list scans and follow committed states', () => {
   const states=Array.from({length:512},(_,i)=>({entity_id:'sensor.monitor_'+i,state:String(i),

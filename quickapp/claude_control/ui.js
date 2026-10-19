@@ -81,7 +81,10 @@ function wrap(value) {
   }
   lines.push(line); return lines;
 }
+let paintDeferred=false;
 function render() {
+  if(ui.isVisible&&!ui.isVisible()){paintDeferred=true;return;}
+  paintDeferred=false;
   const t = snapshot.task, idle = !controller.queued && (!controller.flight || controller.flight.action === 'status');
   const uncertain = controller.pending;
   const engine = snapshot.clis.find(c => c.id === cfg.cli);
@@ -198,7 +201,7 @@ function configure() {
     });
   });
 }
-function tick() {controller.tick(receive);}
+function tick() {controller.tick(receive);if(paintDeferred&&(!ui.isVisible||ui.isVisible()))render();}
 controller.changed=render;
 save();render();
 setInterval(tick,250);

@@ -115,7 +115,7 @@ static void music_pv_plan(struct music_pv_ui *p,const char *text,const char *tra
 
 static void music_pv_refresh(struct music_pv_ui *p)
 {
-  if(!p->visible)return;
+  if(!p->visible||!glass_ui_can_paint(p->root))return;
   struct music_now_playing now;glass_music_now_playing(&now);
   music_pv_text(p->title,now.name[0]?now.name:"音乐 · 文字 PV");
   glass_music_lyrics_read(p->current<0?0:(unsigned)p->current,&p->window);

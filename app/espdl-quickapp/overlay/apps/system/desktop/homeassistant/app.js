@@ -143,6 +143,8 @@
   let cardRenderCursor = 0,cardRenderOrder=[];
   let renderRunning = false;
   let renderAgain = false;
+  let paintDeferred = false, creationDeferred = false;
+  function canPaint() { return !ui.isVisible || ui.isVisible(); }
   let windowRows=null,windowColumns=[];
   let detailBuilding = false;
 
@@ -907,6 +909,11 @@
   }
 
   function tick() {
+    if (disposed) return;
+    if (canPaint()) {
+      if (creationDeferred) resumeUiCreation();
+      if (paintDeferred) render();
+    }
     if (disposed || !bridgeReady) return;
     let feedbackExpired=false;
     Object.keys(controlTargets).forEach(id=>{const target=controlTargets[id];if(!target.slow&&steadyNow()-target.createdAt>=4000){target.slow=true;feedbackExpired=true;}});
@@ -3511,6 +3518,8 @@
 
   function renderNow() {
     if (!widgets || !uiReady || disposed) return;
+    if (!canPaint()) { paintDeferred = true; return; }
+    paintDeferred = false;
     validateInputs();
     // A pointer update paints only its slider. Background state sync may
     // finish, but must not rebuild hit targets or overwrite the live preview.
@@ -3755,6 +3764,7 @@
 
   function render() {
     if (!widgets || disposed) return;
+    if (!canPaint()) { paintDeferred = true; return; }
     renderAgain = true;
     if (renderRunning) return;
     renderRunning = true;
@@ -3860,6 +3870,8 @@
   widgets = uiCreation.next().value;
   function resumeUiCreation() {
     if (disposed) return;
+    if (!canPaint()) { creationDeferred = true; return; }
+    creationDeferred = false;
     const next = uiCreation.next();
     widgets = next.value;
     if (next.done) { uiReady = true; render(); }

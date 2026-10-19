@@ -8,6 +8,7 @@
  ****************************************************************************/
 
 #include "pet_lvgl.h"
+#include "glass_ui_visibility.h"
 #include "glass_chat.h"
 #include "glass_music_pcm.h"
 #include "glass_voice.h"
@@ -717,8 +718,8 @@ static void pet_timer_cb(lv_timer_t *timer)
     }
 
   g_ui.render_elapsed_ms += PET_TICK_MS;
-  if (!music_pcm_session_active() ||
-      g_ui.render_elapsed_ms >= PET_AUDIO_RENDER_MS)
+  if (!glass_ui_covered(g_ui.root) && (!music_pcm_session_active() ||
+      g_ui.render_elapsed_ms >= PET_AUDIO_RENDER_MS))
     {
       pet_lvgl_sync();
     }

@@ -90,18 +90,20 @@ static void resources_append(unsigned metric,int32_t value)
 static void glass_resources_show(const struct glass_system_sample *s)
 {
   g_resources.latest=*s;char text[96];
-  if(!s->cpu_error)snprintf(text,sizeof(text),"%u.%u%%",s->cpu_tenths/10,s->cpu_tenths%10);
-  else strcpy(text,s->cpu_error==ENOTSUP?"未启用":"暂不可用");
-  glass_resources_text(0,text);
   bool heap_ok=!s->heap_error&&s->heap_total&&s->heap_free<=s->heap_total;
-  if(heap_ok){unsigned pct=resources_memory_pct(s);snprintf(text,sizeof(text),"%u.%u%%",pct/10,pct%10);}else strcpy(text,"暂不可用");glass_resources_text(1,text);
-  const uint64_t values[]={s->heap_largest,s->heap_peak,heap_ok?s->heap_total-s->heap_free:0,s->heap_free};const unsigned fields[]={2,3,7,8};
-  for(unsigned i=0;i<4;i++){if(heap_ok)resources_mib(text,sizeof(text),values[i]);else strcpy(text,"--");glass_resources_text(fields[i],text);}
   if(!g_resources.sampled||lv_tick_elaps(g_resources.sample_tick)>=900){
     if(!s->cpu_error)resources_append(0,s->cpu_tenths>1000?1000:s->cpu_tenths);
     if(heap_ok)resources_append(1,resources_memory_pct(s));
     g_resources.sample_tick=lv_tick_get();g_resources.sampled=true;
   }
+  /* Keep collecting history while covered; defer labels/plots, not sampling. */
+  if(!glass_ui_can_paint(g_resources.card))return;
+  if(!s->cpu_error)snprintf(text,sizeof(text),"%u.%u%%",s->cpu_tenths/10,s->cpu_tenths%10);
+  else strcpy(text,s->cpu_error==ENOTSUP?"未启用":"暂不可用");
+  glass_resources_text(0,text);
+  if(heap_ok){unsigned pct=resources_memory_pct(s);snprintf(text,sizeof(text),"%u.%u%%",pct/10,pct%10);}else strcpy(text,"暂不可用");glass_resources_text(1,text);
+  const uint64_t values[]={s->heap_largest,s->heap_peak,heap_ok?s->heap_total-s->heap_free:0,s->heap_free};const unsigned fields[]={2,3,7,8};
+  for(unsigned i=0;i<4;i++){if(heap_ok)resources_mib(text,sizeof(text),values[i]);else strcpy(text,"--");glass_resources_text(fields[i],text);}
   glass_resources_text(5,s->cpu_error==ENOTSUP?"CPU 统计未启用 · 内存范围为系统堆":s->cpu_error||!heap_ok?"部分数据暂不可用 · 每秒重试":"每秒采样 · 最多保留 60 次 · 内存范围为系统堆");
   resources_present();
 }

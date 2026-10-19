@@ -277,6 +277,7 @@ static void music_ui_refresh(lv_timer_t *timer)
 {
   LV_UNUSED(timer);
   if (!g_music_ui.root) return;
+  if(!g_music_ui.full&&!glass_ui_can_paint(g_music_ui.root)){g_music_ui.valid=false;return;}
   unsigned previous_revision=g_music_ui.snapshot.revision;
   unsigned previous_search=g_music_ui.snapshot.search_revision;
   unsigned previous_count=g_music_ui.snapshot.favorite_count;

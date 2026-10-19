@@ -112,11 +112,13 @@ void local_video_play_path(const char *path){(void)path;}
     binding_names=['qpk_arg_int','qpk_arg_color','qpk_arg_string','qpk_widget_deleted','qpk_add_widget','qpk_widget_current',
       'qpk_event_release','qpk_event_deleted','js_ui_text','qpk_number_style','js_ui_number','js_ui_set_text',
       'qpk_touch_call','qpk_event_touched','qpk_event_swiped',
-      'js_ui_camera_reference','js_ui_camera_reference_zoom','js_ui_camera_reference_controls','js_ui_set_hidden','js_ui_background','js_ui_get_size','js_ui_set_color','js_ui_set_style','js_ui_measure_text','js_ui_panel',
+      'js_ui_camera_reference','js_ui_camera_reference_zoom','js_ui_camera_reference_controls','js_ui_set_hidden','js_ui_background','js_ui_get_size','js_ui_is_visible','js_ui_set_color','js_ui_set_style','js_ui_measure_text','js_ui_panel',
       'js_ui_set_pos','js_ui_set_size','js_ui_present','js_ui_range','js_ui_set_opacity','js_ui_show','js_ui_hide','js_ui_remove','js_ui_rect',
       'js_ui_arc','js_ui_arc_set','js_ui_line','js_ui_line_set','js_ui_button','qpk_input_finish',
       'qpk_input_cancel','qpk_input_submit','qpk_input_button','js_prompt_input','qpk_message_arg','js_prompt_toast','js_prompt_dialog']
-    (work/'production_qpk_bindings.inc').write_text('#include "camera_reference_ui.h"\nstatic bool qpk_viewport_object(lv_obj_t *);\nstatic void qpk_viewport_origin(lv_obj_t *,int *,int *);\nstatic void qpk_viewport_cleanup(lv_obj_t *,void *);\n'+'\n\n'.join(function(runtime,n) for n in binding_names)+'\n#include "qpk_polygon.inc"\n#include "qpk_viewport.inc"\n')
+    visibility='js_ui_is_visible(' in runtime
+    if not visibility:binding_names.remove('js_ui_is_visible')
+    (work/'production_qpk_bindings.inc').write_text(('#include "glass_ui_visibility.h"\n' if visibility else '')+'#include "camera_reference_ui.h"\nstatic bool qpk_viewport_object(lv_obj_t *);\nstatic void qpk_viewport_origin(lv_obj_t *,int *,int *);\nstatic void qpk_viewport_cleanup(lv_obj_t *,void *);\n'+'\n\n'.join(function(runtime,n) for n in binding_names)+'\n#include "qpk_polygon.inc"\n#include "qpk_viewport.inc"\n')
     registration={'text':('js_ui_text',6),'number':('js_ui_number',6),'setText':('js_ui_set_text',2),
       'cameraReference':('js_ui_camera_reference',0),'cameraReferenceZoom':('js_ui_camera_reference_zoom',2),'cameraReferenceControls':('js_ui_camera_reference_controls',3),'setHidden':('js_ui_set_hidden',2),'background':('js_ui_background',1),'getSize':('js_ui_get_size',0),
       'setColor':('js_ui_set_color',2),'setStyle':('js_ui_set_style',2),'measureText':('js_ui_measure_text',2),'panel':('js_ui_panel',7),
@@ -127,6 +129,7 @@ void local_video_play_path(const char *path){(void)path;}
       'polygonBuffer':('js_ui_polygon_buffer',5),'polygonSetBuffer':('js_ui_polygon_set_buffer',6),'front':('js_ui_front',1),
       'grokSprite':('js_ui_grok_sprite',6),'grokControl':('js_ui_grok_control',3)}
     registration.update({'viewport':('js_ui_viewport',5),'attach':('js_ui_attach',2),'scrollInfo':('js_ui_scroll_info',1),'scrollTo':('js_ui_scroll_to',3),'scrollExtent':('js_ui_scroll_extent',2),'scrollLock':('js_ui_scroll_lock',2)})
+    if visibility:registration['isVisible']=('js_ui_is_visible',0)
     registration['colorWheel']=('js_ui_color_wheel',3)
     (work/'production_qpk_registration.inc').write_text('\n'.join(f'JS_SetPropertyStr(c,ui,"{name}",JS_NewCFunction(c,{fn},"{name}",{count}));' for name,(fn,count) in registration.items()))
     qrdir=apps/'graphics/lvgl/lvgl/src/libs/qrcode'
@@ -201,6 +204,7 @@ void local_video_play_path(const char *path){(void)path;}
     with ProcessPoolExecutor(max_workers=4) as pool:list(pool.map(png565,captures))
     tracked=sources+[repo/'tools/render_all_ui.py',repo/'app/espdl-quickapp/tests/all_ui_fixture.js',desktop/'desktop_main.c',desktop/'qpk_runtime.c']+list(desktop.glob('*.inc'))+[desktop/'glass_file_types.h',desktop/'glass_pager.h',desktop/'glass_speech_level.h',desktop/'glass_grok_gaze.h',desktop/'glass_chat_markup.h',desktop/'glass_chat.h']
     records=[]
+    if (desktop/'glass_ui_visibility.h').exists():tracked.append(desktop/'glass_ui_visibility.h')
     for path in sorted(set(tracked)):
         try:name=str(path.relative_to(repo))
         except ValueError:name='prepared-apps/'+str(path.relative_to(apps)) if path.is_relative_to(apps) else path.name

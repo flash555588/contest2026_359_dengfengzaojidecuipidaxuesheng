@@ -38,7 +38,7 @@ static void chat_ball_wave_render(unsigned phase,unsigned level)
 static void chat_ball_wave_tick(lv_timer_t *timer)
 {
   LV_UNUSED(timer);
-  if(!g_chat_ui.root||!lv_obj_is_visible(g_chat_ui.root)||g_chat_ui.voice_wave==BALL_WAVE_OFF)return;
+  if(!glass_ui_can_paint(g_chat_ui.root)||g_chat_ui.voice_wave==BALL_WAVE_OFF)return;
   unsigned level=0,period=2400;
   if(g_chat_ui.voice_wave==BALL_WAVE_LISTEN){
     struct glass_voice_snapshot v;glass_voice_get(&v);
@@ -282,14 +282,14 @@ static void chat_ball_refresh(void)
     result.card_count=t->card_count;memcpy(result.cards,t->cards,t->card_count*sizeof(t->cards[0]));
     have_result=true;
   }
-  if(have_result){
+  if(have_result&&glass_ui_can_paint(g_chat_ui.root)){
     uint32_t signature=chat_result_signature(&result);
     if(signature!=g_chat_ui.voice_result_signature){
       if(g_chat_ui.voice_result)lv_obj_delete(g_chat_ui.voice_result);
       g_chat_ui.voice_result=chat_result_build(g_chat_ui.root,714,96,284,&result);
       g_chat_ui.voice_result_signature=signature;
     }
-  }else if(g_chat_ui.voice_result){lv_obj_delete(g_chat_ui.voice_result);g_chat_ui.voice_result=NULL;g_chat_ui.voice_result_signature=0;}
+  }else if(!have_result&&g_chat_ui.voice_result){lv_obj_delete(g_chat_ui.voice_result);g_chat_ui.voice_result=NULL;g_chat_ui.voice_result_signature=0;}
   chat_ball_face_poll();
   uint32_t now=lv_tick_get();
   if(!g_chat_ui.voice_session)return;

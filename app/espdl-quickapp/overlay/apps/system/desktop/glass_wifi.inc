@@ -218,6 +218,7 @@ static void glass_wifi_update(lv_timer_t *timer)
 {
   LV_UNUSED(timer);
   if (g_wifi_status == NULL || g_wifi_list == NULL) return;
+  if (!glass_ui_can_paint(g_wifi_status)) return;
   struct c6_desktop_result result;
   if (c6_desktop_worker_read(&g_wifi_worker, &result) < 0) return;
   if (result.busy != g_wifi_display.busy)
