@@ -1,0 +1,14 @@
+{
+  "failures": [
+    {
+      "file": "runtime-security-tests.log",
+      "sha256": "92c049d4fd3fca4f80c22ca012884c27404651b6bb05048d624cc69f60752e8e",
+      "reason": "Stale native-presentation test adapters; corrected before final pass."
+    },
+    {
+      "file": "runtime-security-fixed.log",
+      "sha256": "bf5a15fb4b9b805078ed5114a5e3e579bae980af586d03a63273728d50135eb1",
+      "reason": "Stale native-presentation test adapters; corrected before final pass."
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "sd_written": true,
+  "sd_target": "/sdcard/jizura",
+  "sd_file_count": 30,
+  "sd_bytes": 90770585,
+  "catalog_readback_equal": true,
+  "board_font_sha256_verified": false,
+  "manifest_sha256": "736e57307d74075891253a33d438621792a9ba064aec75fb3ce1afbfef8ef8a1",
+  "font_commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+  "native_firmware_updated": false,
+  "browser": {
+    "styles": 27,
+    "sampled_frames": 135,
+    "layouts": 16,
+    "enter": 13,
+    "exit": 13,
+    "external_requests": [],
+    "errors": [],
+    "pass": true
+  },
+  "native_host": {
+    "palette_screens": 54,
+    "themes": 2,
+    "sd_palettes": 27,
+    "layouts": 8,
+    "sanitizers": [
+      "ASan",
+      "UBSan"
+    ],
+    "parser": "MUSIC_PV_SD_ASSETS_PASS 27 styles; malformed, deep, oversized and NUL inputs rejected\n"
+  },
+  "limits": [
+    "Complete effects still use the browser engine; P4 Canvas2D is not implemented here.",
+    "Native style button is source/host verified and needs a firmware update.",
+    "Board checks cover downloaded sizes and full native catalog readback; font hashes are verified on host only."
+  ]
+}

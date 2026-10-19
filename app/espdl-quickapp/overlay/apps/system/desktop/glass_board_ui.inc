@@ -71,7 +71,19 @@ static void board_ui_labels(lv_obj_t *object,cJSON *list,bool *truncated)
 static cJSON *board_ui_execute(const char *operation,const cJSON *args)
 {
   cJSON *out=cJSON_CreateObject();if(!out)return NULL;
-  if(!strcmp(operation,"device_status")) {
+  if(!strcmp(operation,"camera_capture")) {
+    uint32_t request=0;bool accepted=qpk_runtime_camera_capture_request(&request);
+    cJSON_AddBoolToObject(out,"ok",accepted);
+    if(accepted){cJSON_AddBoolToObject(out,"accepted",true);cJSON_AddNumberToObject(out,"request_id",request);}
+    else cJSON_AddStringToObject(out,"error","camera_preview_required_or_busy");
+  } else if(!strcmp(operation,"camera_photo_status")) {
+    const cJSON *v=cJSON_GetObjectItemCaseSensitive(args,"request_id");char path[128];
+    int status=qpk_runtime_camera_photo_status(v?(uint32_t)v->valuedouble:0,path,sizeof(path));
+    cJSON_AddBoolToObject(out,"ok",status>=0);cJSON_AddNumberToObject(out,"status",status);
+    cJSON_AddBoolToObject(out,"done",status!=1);
+    if(status==2)cJSON_AddStringToObject(out,"path",path);
+    if(status<0)cJSON_AddStringToObject(out,"error",status==-ESTALE?"photo_request_replaced":"photo_save_failed");
+  } else if(!strcmp(operation,"device_status")) {
     cJSON_AddBoolToObject(out,"ok",true);
     cJSON_AddStringToObject(out,"page",lv_obj_has_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN)?"home":g_desktop.apps_page?"apps":g_desktop.chat_page?"chat":g_desktop.qapp_page?"qapp":"panel");
     cJSON_AddBoolToObject(out,"light_theme",g_desktop.light_theme);

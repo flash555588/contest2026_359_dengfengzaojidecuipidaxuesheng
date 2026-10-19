@@ -3,6 +3,47 @@
  */
 #include "glass_icons.h"
 
+static bool icon_unicode_glyph(const lv_font_t *font,lv_font_glyph_dsc_t *out,uint32_t letter,uint32_t next)
+{
+  /* Presentation selectors and joiners have no standalone visible glyph. */
+  if(letter==0xfe0f||letter==0xfe0e||letter==0x200d){
+    *out=(lv_font_glyph_dsc_t){0};return true;
+  }
+  if(letter==0x3000||letter==0xa0||letter==0x2002||letter==0x2003||letter==0x2009||letter==0x202f){
+    unsigned em=font->line_height-4;
+    *out=(lv_font_glyph_dsc_t){0};
+    out->adv_w=letter==0x3000||letter==0x2003?em:letter==0x2009||letter==0x202f?em/4:em/2;
+    return true;
+  }
+  switch(letter){
+    case 0x2705:letter=0xf00c;break;
+    case 0x2611:letter=0xf00c;break;
+    case 0x2714:letter=0xf00c;break;
+    case 0x274c:letter=0xf00d;break;
+    case 0x2715:letter=0xf00d;break;
+    case 0x274e:letter=0xf00d;break;
+    case 0x26a0:letter=0xf071;break;
+    case 0x1f4a1:letter=0xf0eb;break;
+    case 0x1f50a:letter=0xf028;break;
+    case 0x1f509:letter=0xf027;break;
+    case 0x1f507:letter=0xf026;break;
+    case 0x1f3b5:letter=0xf001;break;
+    case 0x1f3b6:letter=0xf001;break;
+    case 0x1f50d:letter=0xf002;break;
+    case 0x1f50e:letter=0xf002;break;
+    case 0x23f0:letter=0xf0f3;break;
+    case 0x1f514:letter=0xf0f3;break;
+    case 0x1f4f7:letter=0xe002;break;
+    case 0x1f3a4:letter=0xe005;break;
+    case 0x1f3a7:letter=0xe00d;break;
+    case 0x2728:letter=0xe001;break;
+    case 0x1f4ac:letter=0xe006;break;
+
+    default:break;
+  }
+  return lv_font_get_glyph_dsc_fmt_txt(font,out,letter,next);
+}
+
 static const uint8_t bitmap_14[] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3c,0xd5,0x00,0x00,0x00,0x00,0x00,0xc9,0x6e,0x10,0x00,0x00,0x00,0x00,0xc9,0x6e,
     0x10,0x00,0x00,0x00,0x00,0x2c,0xd5,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -461,7 +502,7 @@ static const lv_font_fmt_txt_dsc_t dsc_14 = {
     .cmap_num=1, .bpp=4, .bitmap_format=0
 };
 static const lv_font_t font_14 = {
-    .get_glyph_dsc=lv_font_get_glyph_dsc_fmt_txt,
+    .get_glyph_dsc=icon_unicode_glyph,
     .get_glyph_bitmap=lv_font_get_bitmap_fmt_txt,
     .line_height=18, .base_line=3, .dsc=&dsc_14,
     .fallback=&lv_font_montserrat_14
@@ -1033,7 +1074,7 @@ static const lv_font_fmt_txt_dsc_t dsc_16 = {
     .cmap_num=1, .bpp=4, .bitmap_format=0
 };
 static const lv_font_t font_16 = {
-    .get_glyph_dsc=lv_font_get_glyph_dsc_fmt_txt,
+    .get_glyph_dsc=icon_unicode_glyph,
     .get_glyph_bitmap=lv_font_get_bitmap_fmt_txt,
     .line_height=20, .base_line=3, .dsc=&dsc_16,
     .fallback=&lv_font_montserrat_14
@@ -1866,7 +1907,7 @@ static const lv_font_fmt_txt_dsc_t dsc_20 = {
     .cmap_num=1, .bpp=4, .bitmap_format=0
 };
 static const lv_font_t font_20 = {
-    .get_glyph_dsc=lv_font_get_glyph_dsc_fmt_txt,
+    .get_glyph_dsc=icon_unicode_glyph,
     .get_glyph_bitmap=lv_font_get_bitmap_fmt_txt,
     .line_height=24, .base_line=3, .dsc=&dsc_20,
     .fallback=&lv_font_montserrat_24
@@ -3252,7 +3293,7 @@ static const lv_font_fmt_txt_dsc_t dsc_24 = {
     .cmap_num=1, .bpp=4, .bitmap_format=0
 };
 static const lv_font_t font_24 = {
-    .get_glyph_dsc=lv_font_get_glyph_dsc_fmt_txt,
+    .get_glyph_dsc=icon_unicode_glyph,
     .get_glyph_bitmap=lv_font_get_bitmap_fmt_txt,
     .line_height=28, .base_line=3, .dsc=&dsc_24,
     .fallback=&lv_font_montserrat_24
@@ -5216,7 +5257,7 @@ static const lv_font_fmt_txt_dsc_t dsc_32 = {
     .cmap_num=1, .bpp=4, .bitmap_format=0
 };
 static const lv_font_t font_32 = {
-    .get_glyph_dsc=lv_font_get_glyph_dsc_fmt_txt,
+    .get_glyph_dsc=icon_unicode_glyph,
     .get_glyph_bitmap=lv_font_get_bitmap_fmt_txt,
     .line_height=36, .base_line=3, .dsc=&dsc_32,
     .fallback=&lv_font_montserrat_24
@@ -8863,7 +8904,7 @@ static const lv_font_fmt_txt_dsc_t dsc_64 = {
     .cmap_num=1, .bpp=4, .bitmap_format=0
 };
 static const lv_font_t font_64 = {
-    .get_glyph_dsc=lv_font_get_glyph_dsc_fmt_txt,
+    .get_glyph_dsc=icon_unicode_glyph,
     .get_glyph_bitmap=lv_font_get_bitmap_fmt_txt,
     .line_height=68, .base_line=3, .dsc=&dsc_64,
     .fallback=&lv_font_montserrat_24

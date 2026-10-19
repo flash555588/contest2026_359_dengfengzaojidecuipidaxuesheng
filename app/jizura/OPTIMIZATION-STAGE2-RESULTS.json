@@ -1,0 +1,188 @@
+{
+  "stage": 2,
+  "host_only": true,
+  "board_rendering_tested": false,
+  "build": {
+    "stage": 2,
+    "upstream_unchanged": true,
+    "reference_engine_sha256": "c0ff11068c4e84d1733123dd4593bed0a91d70f962e5b4618c224ab2ea791d14",
+    "optimized_engine_sha256": "4bbf0664fed91b2ec8f8d8cbddafda448735db697bcc45132e4bbbe10eed2cab",
+    "stage1_engine_sha256": "a9ff4973f5113c1f9accd178f3570b44113c3578b56fd4e005b345e48ae82562",
+    "sprite_raster_budget_bytes": 4194304,
+    "preserved": [
+      "all effect registrations",
+      "original piece IDs/order",
+      "thresholds and dilation priority",
+      "font rasterization and resolution"
+    ]
+  },
+  "conformance": {
+    "pass": true,
+    "counts": {
+      "layout": 184,
+      "enter": 125,
+      "hold": 52,
+      "exit": 109,
+      "decor": 130,
+      "treat": 62,
+      "bg": 66,
+      "cam": 36,
+      "fx": 69,
+      "trans": 27
+    },
+    "styles": 27,
+    "glyphs": 54,
+    "frames": 4384,
+    "differentFrames": 0,
+    "differentChannels": 0,
+    "maxDelta": 0,
+    "errors": [],
+    "warnings": [],
+    "inputMode": "Reference-generated scene cloned before rendering; identical numeric font-advance snapshots; independent local metrics functions, glyph rasterization and renderers.",
+    "tests": {
+      "eviction": {
+        "pass": true,
+        "evictions": 252,
+        "budgetBytes": 32768,
+        "retainedBytes": 19096
+      },
+      "nativeResolution": {
+        "width": 1024,
+        "height": 576,
+        "frames": 6
+      },
+      "gradientInvalidation": {
+        "frames": 15,
+        "pass": true
+      }
+    }
+  },
+  "completed_frame_comparison": {
+    "pairs": 384,
+    "timing": [
+      {
+        "variant": "noir",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 11,
+        "stage1MedianMs": 10,
+        "stage2MedianMs": 10.100000023841858,
+        "stage1P95Ms": 35.69999998807907,
+        "stage2P95Ms": 35.80000001192093,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "paper",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 13,
+        "stage1MedianMs": 11.300000011920929,
+        "stage2MedianMs": 11.100000023841858,
+        "stage1P95Ms": 37.10000002384186,
+        "stage2P95Ms": 36.19999998807907,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "crimson",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 15,
+        "stage1MedianMs": 10.199999988079071,
+        "stage2MedianMs": 10.699999988079071,
+        "stage1P95Ms": 30.600000023841858,
+        "stage2P95Ms": 30.80000001192093,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      },
+      {
+        "variant": "long-events",
+        "samples": 96,
+        "width": 640,
+        "height": 360,
+        "events": 20001,
+        "stage1MedianMs": 9.600000023841858,
+        "stage2MedianMs": 10,
+        "stage1P95Ms": 36.5,
+        "stage2P95Ms": 36.89999997615814,
+        "timingScope": "Full Canvas readback included; synthetic long-events fixture where stated; not physical display FPS."
+      }
+    ],
+    "consistent_speedup": false
+  },
+  "hot_kernel_tests": {
+    "pass": true,
+    "cases": 1099,
+    "hostOnly": true,
+    "timings": {
+      "stage1DecodeMs": 0.393100000000004,
+      "stage2DecodeMs": 0.05010000000001469
+    },
+    "rleBytes": 4458,
+    "cameraEvents": 10000,
+    "gradientCreations": 4
+  },
+  "quickjs_hot_paths": {
+    "pass_checks": true,
+    "host_only": true,
+    "quickjs_version": "2024-02-14",
+    "bignum": false,
+    "limit_mib": 16,
+    "scope": "Isolated synthetic decode/event queries; excludes Canvas and P4 hardware.",
+    "runs": {
+      "stage1-decode": {
+        "medianMs": 154.58333333333334,
+        "samplesMs": [
+          146,
+          154.58333333333334,
+          155
+        ],
+        "checksum": 510,
+        "payloadHash": 2297458721
+      },
+      "stage2-decode": {
+        "medianMs": 1.3333333333333333,
+        "samplesMs": [
+          1.3333333333333333,
+          1.3333333333333333,
+          1.4166666666666667
+        ],
+        "checksum": 510,
+        "payloadHash": 2297458721
+      },
+      "stage1-events": {
+        "medianMs": 14.333333333333334,
+        "samplesMs": [
+          14.25,
+          14.333333333333334,
+          15.333333333333334
+        ],
+        "checksum": 144.47575827606903,
+        "payloadHash": 369296735
+      },
+      "stage2-events": {
+        "medianMs": 7.416666666666667,
+        "samplesMs": [
+          7.333333333333333,
+          7.416666666666667,
+          7.416666666666667
+        ],
+        "checksum": 144.47575827606903,
+        "payloadHash": 369296735
+      }
+    }
+  },
+  "engine_probe": {
+    "bytecode_bytes": 2036893,
+    "js_limit_mib": 8,
+    "host_stack_guard_kib": 64,
+    "inspected_malloc_bytes": 4747662
+  },
+  "limitations": [
+    "QuickJS timings are isolated synthetic Linux-host paths, not P4 timings or whole-frame FPS.",
+    "Full Canvas readback is included in browser frame timing.",
+    "Numeric font-advance snapshots and a canonical scene isolate rendering from independent planning/font-loading races.",
+    "Desktop completed-frame timings remain mixed; no consistent whole-frame speedup is established."
+  ]
+}

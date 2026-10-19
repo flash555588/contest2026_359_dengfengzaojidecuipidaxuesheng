@@ -5,6 +5,8 @@
 
 ## 入口
 
+[jizura](jizura/README.md) 保存 JIZURA 原版完整功能基线，先在浏览器验证全部效果、编辑器和导出，再进行 ESP 移植。
+
 [espdl-quickapp](espdl-quickapp/README.md)是 v3 应用开发快照，含 overlay、模型、测试和
 实板证据；聊天、音乐、硬件 API、Home Assistant 等功能以该目录的专题文档为准。
 

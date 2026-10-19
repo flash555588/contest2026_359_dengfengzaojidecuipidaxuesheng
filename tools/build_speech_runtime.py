@@ -94,9 +94,16 @@ def prepare_compute_sources(vendor, output):
     return result
 
 
-def build(apps, vendor, output, toolchain, nano_prepared=None, zh_prepared=None, esp_tts_prepared=None, p4tts_prepared=None):
+def build(apps, vendor, output, toolchain, nano_prepared=None, zh_prepared=None, esp_tts_prepared=None, p4tts_prepared=None, esp_tts_storage='flash'):
     repo = Path(__file__).resolve().parents[1]
     desktop = repo / 'app/espdl-quickapp/overlay/apps/system/desktop'
+    if esp_tts_prepared:
+        if esp_tts_storage not in ('flash','sd'):raise ValueError('Unknown ESP-TTS voice storage')
+        from esp_tts_inputs import verify_prepared
+        esp_lock = verify_prepared(esp_tts_prepared)
+        config = (apps.parent/'nuttx/.config').read_text()
+        if not re.search(r'^CONFIG_ARCH_CHIP_ESP32P4=y$', config, re.M):
+            raise ValueError('Official ESP-TTS archive requires an ESP32-P4 configuration')
     output.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env['PATH'] = str(toolchain) + ':' + env['PATH']
@@ -111,10 +118,14 @@ def build(apps, vendor, output, toolchain, nano_prepared=None, zh_prepared=None,
     flags += ['-I'+str(desktop), '-I'+str(desktop/'speech_port'), '-I'+str(vendor),
               '-I'+str(vendor/'fft'), '-I'+str(vendor/'fft/base'), '-I'+str(vendor/'fft/base/isa'),
               '-DGLASS_LOCAL_SPEECH', '-Dlog1pf=speech_log1pf', '-Os', '-fno-strict-aliasing']
+    if esp_tts_prepared and '-mabi=ilp32f' not in flags:
+        raise ValueError('Official ESP32-P4 ESP-TTS requires the ilp32f ABI')
     sources = [desktop/name for name in ['glass_speech.c','glass_speech_assets.c','glass_speech_port.c',
-                                        'glass_speech_sr.c','glass_speech_tts.c','glass_speech_compute.c',
+                                        'glass_speech_sr.c','glass_speech_compute.c',
                                         'glass_custom_wake.c','glass_wake_features.c']]
-    sources += [vendor/name for name in ['snt_front_f32.c','snt_piperlite.c','esp_mn_speech_commands.c','esp_sr_debug.c']]
+    sources += [vendor/name for name in ['esp_mn_speech_commands.c','esp_sr_debug.c']]
+    if not esp_tts_prepared:
+        sources += [desktop/'glass_speech_tts.c',vendor/'snt_front_f32.c',vendor/'snt_piperlite.c']
     sources += list((vendor/'fft').glob('*.c')) + list((vendor/'fft/base').glob('*.c'))
     if nano_prepared:
         nano_lock=json.loads((repo/'app/espdl-quickapp/speech/nano.lock.json').read_text())
@@ -128,7 +139,7 @@ def build(apps, vendor, output, toolchain, nano_prepared=None, zh_prepared=None,
         flags += ['-DGLASS_NANO_PROBE', '-I'+str(nano_prepared/'vendor'), '-I'+str(nano_prepared/'generated')]
         sources += [desktop/'glass_nano_probe.c', desktop/'glass_nano_pie.S',
                     nano_prepared/'vendor/snt_nano.c', nano_prepared/'generated/nano_blobs.S']
-    compute=prepare_compute_sources(vendor,output/'compute-sources')
+    compute={} if esp_tts_prepared else prepare_compute_sources(vendor,output/'compute-sources')
     if nano_prepared:
         compute['snt_nano.c']=prepare_nano_storage(nano_prepared/'vendor/snt_nano.c',output/'compute-sources/snt_nano.c')
     if zh_prepared:
@@ -150,15 +161,21 @@ def build(apps, vendor, output, toolchain, nano_prepared=None, zh_prepared=None,
         flags+=['-DGLASS_P4TTS_PROBE','-DP4_TARGET','-I'+str(p4tts_prepared)]
         sources += [p4tts_prepared.parent/'p4tts_bench.c',desktop/'glass_nano_pie.S',desktop/'glass_zh_q8_pie.S']
     if esp_tts_prepared:
-        esp_lock=json.loads((esp_tts_prepared/'upstream.lock.json').read_text())
-        for row in esp_lock['sources']:
-            if hashlib.sha256((esp_tts_prepared/'upstream'/row['path']).read_bytes()).hexdigest()!=row['sha256']:
-                raise ValueError('Espressif TTS input changed: '+row['path'])
         esp=esp_tts_prepared/'upstream/esp-tts/esp_tts_chinese'
         flags+=['-DGLASS_ESP_TTS','-DGLASS_ESP_TTS_PROBE','-I'+str(esp/'include')]
-        voice=output/'esp_voice.S'
-        voice.write_text('.section .rodata.esp_voice,"a",@progbits\n.balign 16\n.global glass_esp_voice_data\nglass_esp_voice_data:\n.incbin "'+str(esp/'esp_tts_voice_data_xiaoxin_small.dat')+'"\n.section .note.GNU-stack,"",@progbits\n')
-        sources+=[desktop/'glass_esp_tts.c',desktop/'glass_esp_tts_probe.c',voice]
+        sources+=[desktop/'glass_esp_tts.c',desktop/'glass_esp_tts_probe.c',desktop/'glass_esp_tts_voice.c']
+        if esp_tts_storage=='sd':
+            flags+=['-DGLASS_ESP_TTS_VOICE_SD','-I'+str(output)]
+            from esp_tts_inputs import voice_config,voice_variants
+            (output/'esp_tts_voice_config.h').write_text(voice_config('/sdcard/speech/esp-tts'))
+            sd=output/'sdcard/speech/esp-tts';sd.mkdir(parents=True,exist_ok=True)
+            for name,target,row in voice_variants(esp_lock):
+                shutil.copyfile(esp_tts_prepared/'upstream'/row['path'],sd/target)
+            shutil.copyfile(esp_tts_prepared/'upstream/LICENSE',sd/'LICENSE')
+        else:
+            voice=output/'esp_voice.S'
+            voice.write_text('.section .rodata.esp_voice,"a",@progbits\n.balign 16\n.global glass_esp_voice_data\nglass_esp_voice_data:\n.incbin "'+str(esp/'esp_tts_voice_data_xiaoxin_small.dat')+'"\n.section .note.GNU-stack,"",@progbits\n')
+            sources.append(voice)
         esp_libraries=[esp/'esp32p4/libesp_tts_chinese.a',esp/'esp32p4/libvoice_set_xiaole.a']
     objects, records = [], []
     for i, source in enumerate(sources):
@@ -186,11 +203,16 @@ def build(apps, vendor, output, toolchain, nano_prepared=None, zh_prepared=None,
             # Supply the bounded scalar copy in glass_speech_port.c. Other
             # inference kernels remain the pinned vendor implementation.
             subprocess.run([str(toolchain/'riscv32-esp-elf-ar'),'d',str(libraries/source.name),'dl_esp32p4_sr_memcpy.S.obj'],check=True)
-    metadata={'sources':records,'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest()}
+    metadata={'sources':records,'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
+              'tts_backend':'esp-tts' if esp_tts_prepared else 'sanotts',
+              'link_libraries':[str(libraries/path.name) for path in sorted((vendor/'lib').glob('*.a'))]+[str(libraries/path.name) for path in esp_libraries],
+              'compiler_command':cc,'compiler_flags':flags,
+              'config_sha256':hashlib.sha256((apps.parent/'nuttx/.config').read_bytes()).hexdigest()}
     if p4tts_prepared:
         metadata['p4tts_diagnostic']=p4tts_manifest
     if esp_tts_prepared:
         metadata['tts_backend']='esp-tts'
+        metadata['esp_tts_voice_storage']=esp_tts_storage
         for library in esp_libraries:
             target=libraries/library.name
             if library.name=='libvoice_set_xiaole.a':
@@ -220,5 +242,6 @@ if __name__ == '__main__':
     p.add_argument('--nano-prepared',type=Path,help='Verified official nano sources, weights and generated fixture (diagnostic only)')
     p.add_argument('--zh-prepared',type=Path,help='Verified custom Chinese Q8 fixture (diagnostic only)')
     p.add_argument('--esp-tts-prepared',type=Path,help='Pinned official ESP-SR TTS P4 libraries and voice data')
+    p.add_argument('--esp-tts-storage',choices=['flash','sd'],default='flash',help='Store the official voice in flash or load verified voice.dat from SD')
     p.add_argument('--p4tts-prepared',type=Path,help='User P4TTS diagnostic tensor export and reference cases; weights loaded from SD')
-    a=p.parse_args();build(a.apps.resolve(),a.vendor.resolve(),a.output.resolve(),a.toolchain.resolve(),a.nano_prepared.resolve() if a.nano_prepared else None,a.zh_prepared.resolve() if a.zh_prepared else None,a.esp_tts_prepared.resolve() if a.esp_tts_prepared else None,a.p4tts_prepared.resolve() if a.p4tts_prepared else None)
+    a=p.parse_args();build(a.apps.resolve(),a.vendor.resolve(),a.output.resolve(),a.toolchain.resolve(),a.nano_prepared.resolve() if a.nano_prepared else None,a.zh_prepared.resolve() if a.zh_prepared else None,a.esp_tts_prepared.resolve() if a.esp_tts_prepared else None,a.p4tts_prepared.resolve() if a.p4tts_prepared else None,esp_tts_storage=a.esp_tts_storage)

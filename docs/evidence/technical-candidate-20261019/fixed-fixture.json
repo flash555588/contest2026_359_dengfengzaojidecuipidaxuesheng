@@ -1,0 +1,24 @@
+{
+  "candidate_sha256": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+  "passed": false,
+  "started_at_utc": "2026-10-19T07:56:06.966683+00:00",
+  "camera_opened": false,
+  "model_files_written": false,
+  "scope": "Existing built-in synthetic GEMM/register tests and fixed JPEG fixture; no live camera.",
+  "checks": {
+    "same_cpu_simd_context": true,
+    "selected_scalar_preprocess": true,
+    "fixed_model_fixture": false,
+    "service_completion": false,
+    "fixture_repeat_stable": false,
+    "blank_face_negative": false
+  },
+  "vendor_image_simd_comparison": [
+    "mismatches=34033/57600"
+  ],
+  "post_test_home": true,
+  "post_test_status_idle": true,
+  "error": "AssertionError('Fixed-fixture check failed; inspect retained log')",
+  "completed_at_utc": "2026-10-19T07:56:13.630163+00:00",
+  "raw_log_sha256": "638e3b3c1e8bb8d01f89ad069cd58a6ada0ee1c0f091ce0a6b06c121dc4ed51f"
+}

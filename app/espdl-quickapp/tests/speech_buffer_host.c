@@ -18,6 +18,9 @@ static size_t played;
 static int16_t input[40000];
 static uint64_t speech_milliseconds(void){return 1000;}
 static bool speech_cancelled(void *unused){(void)unused;return stopped;}
+static unsigned glass_speech_volume(void){return 75;}
+static int glass_speech_normalize(int16_t *pcm,size_t n,bool (*cancel)(void *),void *user,unsigned *gain)
+{(void)pcm;(void)n;(void)cancel;(void)user;*gain=100;return 0;}
 static void *buffer_realloc(void *old,size_t size)
 {if(++allocations==fail_at)return NULL;return realloc(old,size);}
 static int speech_write(void *opaque,const int16_t *pcm,size_t n)
@@ -39,6 +42,8 @@ static int glass_esp_synthesize(const char *text,speech_pcm_fn write,speech_canc
   }
   rendered=true;return 0;
 }
+static int glass_sano_synthesize(const char *root,const char *text,speech_pcm_fn write,speech_cancel_fn cancel,void *user)
+{assert(!strcmp(root,"/sdcard/speech"));return glass_esp_synthesize(text,write,cancel,user);}
 #define realloc buffer_realloc
 #include "speech_buffer_production.inc"
 #undef realloc
@@ -47,6 +52,8 @@ static void run(int kind,int fail,int expected)
   mode=kind;fail_at=fail;allocations=0;stopped=rendered=false;played=0;
   struct speech_play play={0};
   assert(speech_esp_play("测试",&play)==expected);
+  allocations=0;stopped=rendered=false;played=0;
+  assert(speech_sano_play("测试",&play)==expected);
 }
 int main(void)
 {

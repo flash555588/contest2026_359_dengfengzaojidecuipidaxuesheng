@@ -8,6 +8,8 @@ extern void review_status_fixture(int,bool,bool);
 static lv_point_t touch_point;
 static lv_indev_state_t touch_state;
 static unsigned leaked_touches;
+static unsigned status_draws;
+static void status_count_draw(lv_event_t *e){LV_UNUSED(e);status_draws++;}
 static void touch_read(lv_indev_t *input,lv_indev_data_t *data)
 {(void)input;data->point=touch_point;data->state=touch_state;}
 static void touch(lv_indev_t *input,int x,int y,bool pressed)
@@ -42,6 +44,7 @@ int main(int argc,char **argv)
   lv_indev_t *input=lv_indev_create();lv_indev_set_type(input,LV_INDEV_TYPE_POINTER);lv_indev_set_read_cb(input,touch_read);lv_indev_set_display(input,display);
 
   glass_edge_back_create();glass_status_create();
+  lv_obj_add_event_cb(g_status_ui.bar,status_count_draw,LV_EVENT_DRAW_MAIN,NULL);
   for(unsigned theme=0;theme<2;theme++) {
     g_desktop.light_theme=theme!=0;glass_rebuild();glass_status_tick();
     review_net=(struct glass_status_network){0};glass_status_tick();
@@ -55,6 +58,11 @@ int main(int argc,char **argv)
     review_net.rssi_valid=true;review_net.rssi_dbm=-48;glass_status_tick();
     assert(g_status_ui.signal_level==4&&g_status_ui.bluetooth_count==1&&g_status_ui.battery_percent==76);
     review_capture(display,"island-strong","首页 · 合并状态岛");
+    glass_status_tick();lv_refr_now(display);
+    status_draws=0;
+    for(unsigned idle=0;idle<120;idle++){glass_status_tick();lv_refr_now(display);}
+    assert(status_draws==0);
+    printf("STATUS_IDLE_OK theme=%u unchanged ticks=120 redraws=0\n",theme);
     review_status_fixture(76,true,true);glass_status_tick();
     assert(!lv_obj_has_flag(g_status_ui.charging,LV_OBJ_FLAG_HIDDEN));
     assert(strcmp(lv_label_get_text(g_status_ui.battery),LV_SYMBOL_CHARGE));

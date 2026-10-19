@@ -1,10 +1,14 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "glass_music.h"
+#include "glass_music_sd.h"
+#include "glass_music_track_key.h"
+#include <limits.h>
 #include "glass_portal.h"
 #include "glass_music_pcm.h"
 #include "glass_music_duration.h"
 #include "glass_music_lyrics.h"
+#include "glass_music_cache.h"
 #include "qpk_storage.h"
 #include <cJSON.h>
 #include <errno.h>
@@ -40,6 +44,15 @@ static bool player_active;
 static unsigned play_generation, search_generation;
 static struct music_song pending_song, pending_favorite;
 static char pending_query[128];
+static uint64_t result_deadline, pending_result_deadline;
+static unsigned consumed_result;
+
+static uint64_t music_now_ms(void)
+{
+  struct timespec t;
+  if (clock_gettime(CLOCK_MONOTONIC, &t)) return 0;
+  return (uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000;
+}
 
 struct transfer {
   unsigned generation;
@@ -84,6 +97,9 @@ done:
 /* Lyrics use the existing search worker, so audio never waits for the network
  * or SD and lock/unlock does not create another decoder or background thread. */
 #define LYRIC_OBJECT_MAX 65536
+#ifndef MUSIC_LYRICS_ROOT
+#define MUSIC_LYRICS_ROOT "/sdcard/music/lyrics"
+#endif
 struct lyric_transfer {
   struct transfer transfer;
   const struct music_song *song;
@@ -146,13 +162,22 @@ static int collect_lyrics(void *ctx,const unsigned char *data,size_t size)
       if(!cJSON_IsString(lrc))lrc=cJSON_GetObjectItemCaseSensitive(item,"lrc");
       bool match=cJSON_IsString(title)&&cJSON_IsString(artist)&&
         music_lyrics_identity(title->valuestring,t->song->name)&&music_lyrics_identity(artist->valuestring,t->song->artist);
-      int ret=-ENOENT;
+      int ret=-ENOENT;bool artwork=false;
       if(match) {
-        music_metadata_cover(item,t->cover);
+        char candidate[1024];music_metadata_cover(item,candidate);
+        artwork=candidate[0]!=0;
+        if(t->cover&&artwork)memcpy(t->cover,candidate,strlen(candidate)+1);
         ret=t->local_lyrics?0:cJSON_IsString(lrc)?music_lrc_parse(lrc->valuestring,strlen(lrc->valuestring),t->out):-ENODATA;
+        if(!ret){
+          const cJSON *translated=cJSON_GetObjectItemCaseSensitive(item,"translated_lyrics");
+          if(!cJSON_IsString(translated))translated=cJSON_GetObjectItemCaseSensitive(item,"translation");
+          if(!cJSON_IsString(translated))translated=cJSON_GetObjectItemCaseSensitive(item,"tlyric");
+          if(cJSON_IsObject(translated))translated=cJSON_GetObjectItemCaseSensitive(translated,"lyric");
+          if(cJSON_IsString(translated))music_lrc_translation(t->out,translated->valuestring,strlen(translated->valuestring));
+        }
       }
       cJSON_Delete(item);
-      if(match && (!ret || (t->cover && t->cover[0]))) {t->lyric_error=ret;t->found=true;return -EALREADY;}
+      if(match && (!ret || artwork)) {t->lyric_error=ret;t->found=true;return -EALREADY;}
     }
   }
   return 0;
@@ -173,8 +198,12 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
   /* A user-supplied exact song/artist sidecar takes priority over fuzzy APIs. */
   if(lyric_filename(song->name) && lyric_filename(song->artist)) {
     char path[512];
-    int n=snprintf(path,sizeof(path),"/sdcard/music/lyrics/%s - %s.lrc",song->name,song->artist);
-    FILE *f=n>0&&(size_t)n<sizeof(path)?fopen(path,"rb"):NULL;
+    int n=snprintf(path,sizeof(path),MUSIC_LYRICS_ROOT "/%s - %s.lrc",song->name,song->artist);
+    FILE *f=n>0&&(size_t)n<sizeof(path)&&strlen(song->name)+strlen(song->artist)+7<=NAME_MAX?fopen(path,"rb"):NULL;
+    if(!f){
+      snprintf(path,sizeof(path),MUSIC_LYRICS_ROOT "/%08lx.lrc",(unsigned long)music_track_key(song->name,song->artist));
+      f=fopen(path,"rb");
+    }
     if(f) {
       t.used=fread(t.body,1,MUSIC_LRC_MAX+1,f);
       ret=ferror(f)?-EIO:music_lrc_parse(t.body,t.used,out);
@@ -184,20 +213,57 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
     }
   }
   free(t.body);
+  /* Offline audio must not wait on an artwork API before publishing its
+   * local sidecar. A disconnected router cannot stall an SD-only player. */
+  if(!strncmp(song->url,MUSIC_SD_ROOT,sizeof(MUSIC_SD_ROOT)-1))return local_lyrics?0:-ENOENT;
+  /* Cover fetching is independent of lyric availability. Prefer a small exact
+   * metadata cover, but keep the official cover endpoint when JSON has none. */
+  if(music_cover_url(song,cover,1024))cover[0]=0;
   struct lyric_transfer stream={.transfer={.generation=generation},.song=song,.out=out,.cover=cover,.local_lyrics=local_lyrics};
   stream.transfer.body=malloc(LYRIC_OBJECT_MAX+1);
   if(!stream.transfer.body)return -ENOMEM;
   char url[2048];unsigned status=0;
   ret=music_lyrics_url(song,url,sizeof(url));
+  if(!ret){
+    size_t cached_size=0;unsigned char *cached=music_cache_read('l',url,LYRIC_OBJECT_MAX,0,&cached_size);
+    if(cached){
+      stream.array=true;int hit=collect_lyrics(&stream,cached,cached_size);free(cached);
+      if(hit==-EALREADY&&stream.found){ret=stream.lyric_error;free(stream.transfer.body);return ret;}
+      char *body=stream.transfer.body;
+      stream=(struct lyric_transfer){.transfer={.generation=generation,.body=body},.song=song,.out=out,.cover=cover,.local_lyrics=local_lyrics};
+    }
+  }
   if(!ret)ret=music_http_get(url,collect_lyrics,&stream,transfer_cancelled,&status);
-  if(ret==-EALREADY && stream.found && status==200)ret=stream.lyric_error;
-  else {cover[0]=0;if(local_lyrics)ret=0;else if(!ret)ret=-ENODATA;}
+  if(ret==-EALREADY && stream.found && status==200){
+    ret=stream.lyric_error;
+    /* Cache successful timed lyrics, not transient empty/not-found responses. */
+    if(!ret&&!local_lyrics&&!transfer_cancelled(&stream))music_cache_write('l',url,stream.transfer.body,stream.transfer.used,LYRIC_OBJECT_MAX);
+  }else {if(local_lyrics)ret=0;else if(!ret)ret=-ENODATA;}
   free(stream.transfer.body);return ret;
 }
 
 static void clear_lyrics_locked(void)
 {
   free(lyrics);lyrics=NULL;want_lyrics=false;lyrics_state=MUSIC_LYRICS_NONE;current_cover[0]=0;
+}
+
+/* A translated sidecar is optional and must match the original timestamps.
+ * It never changes the audio URL, original timings or another song's cache. */
+static void finish_lyrics(const struct music_song *song,struct music_lrc *out)
+{
+  char path[512];FILE *f=NULL;
+  if(lyric_filename(song->name)&&lyric_filename(song->artist)&&
+     strlen(song->name)+strlen(song->artist)+10<=NAME_MAX){
+    snprintf(path,sizeof(path),MUSIC_LYRICS_ROOT "/%s - %s.zh.lrc",song->name,song->artist);
+    f=fopen(path,"rb");
+  }
+  if(!f){snprintf(path,sizeof(path),MUSIC_LYRICS_ROOT "/%08lx.zh.lrc",(unsigned long)music_track_key(song->name,song->artist));f=fopen(path,"rb");}
+  if(f){char *body=malloc(MUSIC_LRC_MAX+1);
+    if(body){size_t n=fread(body,1,MUSIC_LRC_MAX+1,f);
+      if(!ferror(f))music_lrc_translation(out,body,n);free(body);}
+    fclose(f);
+  }
+  music_lrc_simplify(out);
 }
 
 bool glass_music_is_favorite(const struct music_snapshot *s, const struct music_song *song)
@@ -280,6 +346,7 @@ static void *search_worker(void *unused)
       struct music_lrc *parsed=calloc(1,sizeof(*parsed));
       char cover[1024]={0};
       int ret=parsed?fetch_lyrics(&song,generation,parsed,cover):-ENOMEM;
+      if(!ret)finish_lyrics(&song,parsed);
       pthread_mutex_lock(&lock);
       if(generation==play_generation) {
         free(lyrics);lyrics=ret?NULL:parsed;
@@ -323,7 +390,9 @@ static void *search_worker(void *unused)
     if (generation == search_generation) {
       state.searching = false; state.search_error = ret; state.has_result = ret == 0;
       if (!ret) state.result = song;
-      state.search_revision++; state.revision++;
+      if (++state.search_revision == 0) state.search_revision++;
+      result_deadline = ret ? 0 : music_now_ms() + 60000;
+      state.revision++;
       printf("[music] search result=%d\n", ret);
     }
     pthread_mutex_unlock(&lock);
@@ -380,7 +449,9 @@ static void *network_worker(void *ctx)
 {
   struct stream *s = ctx;
   pthread_setname_np(pthread_self(), "music_net");
-  int ret = music_http_get(s->url, stream_sink, s, stream_cancelled, NULL);
+  int ret = !strncmp(s->url,MUSIC_SD_ROOT,sizeof(MUSIC_SD_ROOT)-1)?
+    music_sd_stream(s->url,stream_sink,s,stream_cancelled):
+    music_http_get(s->url, stream_sink, s, stream_cancelled, NULL);
   pthread_mutex_lock(&s->mutex);
   s->error = ret; s->done = true;
   pthread_cond_broadcast(&s->condition);
@@ -501,10 +572,14 @@ static void *player_worker(void *unused)
     while (!want_play) pthread_cond_wait(&wake, &lock);
     unsigned generation = play_generation;
     struct music_song song = pending_song;
+    uint64_t resolved_until = pending_result_deadline;
     want_play = false;
     player_active = true;
     pthread_mutex_unlock(&lock);
-    int ret = lookup(song.query[0] ? song.query : song.name, &song, generation, false);
+    bool local=!strncmp(song.url,MUSIC_SD_ROOT,sizeof(MUSIC_SD_ROOT)-1);
+    int ret = resolved_until ? (music_now_ms() < resolved_until ? 0 : -ESTALE) :
+      local ? (music_sd_path(song.url) ? 0 : -EINVAL) :
+      lookup(song.query[0] ? song.query : song.name, &song, generation, false);
     pthread_mutex_lock(&lock);
     bool current = generation == play_generation;
     if (current && !ret) {
@@ -562,7 +637,30 @@ void glass_music_now_playing(struct music_now_playing *out)
   out->lyrics_started=index>=0;
   for(int i=0;lyrics && i<3;i++) {
     int n=index+i-1;
-    if(n>=0 && (unsigned)n<lyrics->count)memcpy(out->lyrics[i],lyrics->lines[n].text,MUSIC_LYRIC_TEXT_MAX);
+    if(n>=0 && (unsigned)n<lyrics->count){
+      memcpy(out->lyrics[i],lyrics->lines[n].text,MUSIC_LYRIC_TEXT_MAX);
+      memcpy(out->translations[i],lyrics->lines[n].translation,MUSIC_LYRIC_TEXT_MAX);
+    }
+  }
+  pthread_mutex_unlock(&lock);
+}
+
+void glass_music_lyrics_read(unsigned first, struct music_lyrics_window *out)
+{
+  if(!out)return;
+  pthread_mutex_lock(&lock);
+  memset(out,0,sizeof(*out));out->track_id=play_generation;
+  out->state=lyrics_state;out->current=music_lrc_index(lyrics,state.position_ms);
+  out->total=lyrics?lyrics->count:0;
+  unsigned last=out->total>MUSIC_LYRICS_WINDOW?out->total-MUSIC_LYRICS_WINDOW:0;
+  out->first=first>last?last:first;
+  for(unsigned i=out->first;i<out->total&&out->count<MUSIC_LYRICS_WINDOW;i++){
+    unsigned slot=out->count++;
+    out->start_ms[slot]=lyrics->lines[i].ms;
+    /* A zero end denotes unknown duration, never an invented cut boundary. */
+    out->end_ms[slot]=i+1<out->total?lyrics->lines[i+1].ms:state.duration_ms;
+    memcpy(out->lines[slot],lyrics->lines[i].text,MUSIC_LYRIC_TEXT_MAX);
+    memcpy(out->translations[slot],lyrics->lines[i].translation,MUSIC_LYRIC_TEXT_MAX);
   }
   pthread_mutex_unlock(&lock);
 }
@@ -593,14 +691,40 @@ int glass_music_search(const char *query)
   pthread_cond_broadcast(&wake); pthread_mutex_unlock(&lock); return 0;
 }
 
+/* Caller holds lock. A deadline marks a trusted, freshly resolved result. */
+static void music_queue_locked(const struct music_song *song, uint64_t deadline)
+{
+  clear_lyrics_locked();
+  pending_result_deadline = deadline;
+  pending_song = *song; state.current = *song; play_generation++; want_play = true; want_pause = false;
+  state.state = MUSIC_LOADING; state.position_ms = 0; state.duration_ms = 0; state.error = 0; state.revision++;
+  pthread_cond_broadcast(&wake);
+}
+
 int glass_music_play(const struct music_song *song)
 {
   if (!song || !song->name[0]) return -EINVAL;
   pthread_mutex_lock(&lock);
-  clear_lyrics_locked();
-  pending_song = *song; state.current = *song; play_generation++; want_play = true; want_pause = false;
-  state.state = MUSIC_LOADING; state.position_ms = 0; state.duration_ms = 0; state.error = 0; state.revision++;
-  pthread_cond_broadcast(&wake); pthread_mutex_unlock(&lock); return 0;
+  music_queue_locked(song, 0);
+  pthread_mutex_unlock(&lock); return 0;
+}
+
+int glass_music_play_result(const char *query, unsigned result_id, unsigned *track_id)
+{
+  if (!query || !query[0] || !result_id) return -EINVAL;
+  pthread_mutex_lock(&lock);
+  if (consumed_result == result_id) {
+    pthread_mutex_unlock(&lock); return -EALREADY;
+  }
+  if (state.searching || !state.has_result || state.search_error ||
+      state.search_revision != result_id ||
+      strcmp(state.result.query, query) || music_now_ms() >= result_deadline) {
+    pthread_mutex_unlock(&lock); return -ESTALE;
+  }
+  music_queue_locked(&state.result, result_deadline);
+  consumed_result = result_id;
+  if (track_id) *track_id = play_generation;
+  pthread_mutex_unlock(&lock); return 0;
 }
 
 void glass_music_toggle(void)
@@ -613,6 +737,7 @@ void glass_music_toggle(void)
   } else if (state.current.name[0]) {
     clear_lyrics_locked();
     pending_song = state.current; play_generation++; want_play = true; want_pause = false;
+    pending_result_deadline = 0;
     state.state = MUSIC_LOADING; state.error = 0; state.position_ms = 0; state.duration_ms = 0; state.revision++;
     pthread_cond_broadcast(&wake);
   }

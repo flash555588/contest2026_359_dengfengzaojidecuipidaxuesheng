@@ -1,0 +1,1456 @@
+--- a/arch/risc-v/src/common/espressif/esp_start.c
++++ b/arch/risc-v/src/common/espressif/esp_start.c
+@@ -48,11 +48,21 @@
+ #include "hal/cache_ll.h"
+ #include "hal/cache_hal.h"
+ #include "soc/ext_mem_defs.h"
+-#include "soc/extmem_reg.h"
+-#include "soc/mmu.h"
++#ifndef CONFIG_ARCH_CHIP_ESP32P4
++#  include "soc/extmem_reg.h"
++#  include "soc/mmu.h"
++#endif
+ #include "soc/reg_base.h"
+ #include "spi_flash_mmap.h"
+ #include "rom/cache.h"
++
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++#  include "soc/soc.h"
++#  include "soc/hp_peri_pms_reg.h"
++#  include "soc/lp_peri_pms_reg.h"
++#  include "soc/timer_group_reg.h"
++#  include "soc/lp_wdt_reg.h"
++#endif
+ 
+ #include "bootloader_init.h"
+ 
+@@ -86,20 +96,27 @@
+ #endif
+ #  define HDR_ATTR              __attribute__((section(".entry_addr"))) \
+                                   __attribute__((used))
++#ifndef CONFIG_ARCH_CHIP_ESP32P4
+ #  define FLASH_MMU_TABLE       ((volatile uint32_t*) DR_REG_MMU_TABLE)
+ #  define FLASH_MMU_TABLE_SIZE  (ICACHE_MMU_SIZE/sizeof(uint32_t))
+-#  define MMU_BLOCK_SIZE        0x00010000  /* 64 KB */
+ #  define CACHE_REG             EXTMEM_ICACHE_CTRL1_REG
+ #  define CACHE_MASK            (EXTMEM_ICACHE_SHUT_IBUS_M | \
+                                  EXTMEM_ICACHE_SHUT_DBUS_M)
++#endif
++#  define MMU_BLOCK_SIZE        0x00010000  /* 64 KB */
+ 
+ #  define CHECKSUM_ALIGN        16
+ #  define IS_PADD(addr) ((addr) == 0)
+ #  define IS_DRAM(addr) ((addr) >= SOC_DRAM_LOW && (addr) < SOC_DRAM_HIGH)
+ #  define IS_IRAM(addr) ((addr) >= SOC_IRAM_LOW && (addr) < SOC_IRAM_HIGH)
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++#  define IS_TCM(addr)  ((addr) >= SOC_TCM_LOW && (addr) < SOC_TCM_HIGH)
++#else
++#  define IS_TCM(addr)  false
++#endif
+ #  define IS_IROM(addr) ((addr) >= SOC_IROM_LOW && (addr) < SOC_IROM_HIGH)
+ #  define IS_DROM(addr) ((addr) >= SOC_DROM_LOW && (addr) < SOC_DROM_HIGH)
+-#  define IS_SRAM(addr) (IS_IRAM(addr) || IS_DRAM(addr))
++#  define IS_SRAM(addr) (IS_IRAM(addr) || IS_DRAM(addr) || IS_TCM(addr))
+ #  define IS_MMAP(addr) (IS_IROM(addr) || IS_DROM(addr))
+ #  ifdef SOC_RTC_FAST_MEM_SUPPORTED
+ #    define IS_RTC_FAST_IRAM(addr) \
+@@ -123,6 +140,7 @@
+                          && !IS_DROM(addr) \
+                          && !IS_IRAM(addr) \
+                          && !IS_DRAM(addr) \
++                         && !IS_TCM(addr) \
+                          && !IS_RTC_FAST_IRAM(addr) \
+                          && !IS_RTC_FAST_DRAM(addr) \
+                          && !IS_RTC_SLOW_DRAM(addr) \
+@@ -156,6 +174,29 @@
+ #endif
+ 
+ extern void cache_set_idrom_mmu_size(uint32_t irom_size, uint32_t drom_size);
++
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++extern void esp_chip_revision_check(void);
++
++#  define ESP32P4_WDT_WKEY  0x50d83aa1
++
++static inline void esp32p4_disable_flashboot_wdts(void)
++{
++  REG_WRITE(TIMG_WDTWPROTECT_REG(0), ESP32P4_WDT_WKEY);
++  REG_CLR_BIT(TIMG_WDTCONFIG0_REG(0), TIMG_WDT_FLASHBOOT_MOD_EN);
++  REG_CLR_BIT(TIMG_WDTCONFIG0_REG(0), TIMG_WDT_EN);
++  REG_WRITE(TIMG_WDTWPROTECT_REG(0), 0);
++
++  REG_WRITE(LP_WDT_WPROTECT_REG, ESP32P4_WDT_WKEY);
++  REG_CLR_BIT(LP_WDT_CONFIG0_REG, LP_WDT_WDT_FLASHBOOT_MOD_EN);
++  REG_CLR_BIT(LP_WDT_CONFIG0_REG, LP_WDT_WDT_EN);
++  REG_WRITE(LP_WDT_WPROTECT_REG, 0);
++
++  REG_WRITE(LP_WDT_SWD_WPROTECT_REG, ESP32P4_WDT_WKEY);
++  REG_SET_BIT(LP_WDT_SWD_CONFIG_REG, LP_WDT_SWD_AUTO_FEED_EN);
++  REG_WRITE(LP_WDT_SWD_WPROTECT_REG, 0);
++}
++#endif
+ 
+ /****************************************************************************
+  * Private Function Prototypes
+@@ -300,7 +341,8 @@
+               IS_MMAP(segment_hdr.load_addr) ?
+                 IS_IROM(segment_hdr.load_addr) ? "imap" : "dmap" :
+                   IS_PADD(segment_hdr.load_addr) ? "padd" :
+-                    IS_DRAM(segment_hdr.load_addr) ? "dram" : "iram",
++                    IS_TCM(segment_hdr.load_addr) ? "tcm" :
++                      IS_DRAM(segment_hdr.load_addr) ? "dram" : "iram",
+           offset + sizeof(esp_image_segment_header_t),
+           segment_hdr.load_addr, segment_hdr.data_len,
+           segment_hdr.data_len);
+@@ -346,21 +388,30 @@
+   ets_printf("total segments stored %d\n", segments - 1);
+ #endif
+ 
++  ets_printf("M0\n");
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++  cache_hal_disable(CACHE_LL_LEVEL_EXT_MEM, CACHE_TYPE_ALL);
++#else
+   cache_hal_disable(CACHE_TYPE_ALL);
++#endif
++  ets_printf("M1\n");
+ 
+   /* Clear the MMU entries that are already set up,
+    * so the new app only has the mappings it creates.
+    */
+ 
+   mmu_hal_unmap_all();
++  ets_printf("M2\n");
+ 
+   mmu_hal_map_region(0, MMU_TARGET_FLASH0,
+                      app_drom_vaddr_aligned, app_drom_start_aligned,
+                      app_drom_size, &actual_mapped_len);
++  ets_printf("M3\n");
+ 
+   mmu_hal_map_region(0, MMU_TARGET_FLASH0,
+                      app_irom_vaddr_aligned, app_irom_start_aligned,
+                      app_irom_size, &actual_mapped_len);
++  ets_printf("M4\n");
+ 
+   /* ------------------Enable corresponding buses--------------------- */
+ 
+@@ -369,7 +420,8 @@
+   cache_ll_l1_enable_bus(0, bus_mask);
+   bus_mask = cache_ll_l1_get_bus(0, app_irom_vaddr_aligned, app_irom_size);
+   cache_ll_l1_enable_bus(0, bus_mask);
+-#if CONFIG_ESPRESSIF_NUM_CPUS > 1
++  ets_printf("M5\n");
++#if CONFIG_ESPRESSIF_NUM_CPUS > 1 && !defined(CONFIG_ARCH_CHIP_ESP32P4)
+   bus_mask = cache_ll_l1_get_bus(1, app_drom_vaddr_aligned, app_drom_size);
+   cache_ll_l1_enable_bus(1, bus_mask);
+   bus_mask = cache_ll_l1_get_bus(1, app_irom_vaddr_aligned, app_irom_size);
+@@ -378,7 +430,12 @@
+ 
+   /* ------------------Enable Cache----------------------------------- */
+ 
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++  cache_hal_enable(CACHE_LL_LEVEL_EXT_MEM, CACHE_TYPE_ALL);
++#else
+   cache_hal_enable(CACHE_TYPE_ALL);
++#endif
++  ets_printf("M6\n");
+ 
+   return (int)rc;
+ }
+@@ -394,6 +451,16 @@
+ 
+ void __esp_start(void)
+ {
++#if defined(CONFIG_ARCH_CHIP_ESP32P4) && \
++    defined(CONFIG_ESPRESSIF_SIMPLE_BOOT)
++  /* The ESP32-P4 ROM arms the timer-group and LP flashboot watchdogs
++   * independently. Disable both before entering the comparatively long
++   * NuttX Simple Boot path.
++   */
++
++  esp32p4_disable_flashboot_wdts();
++#endif
++
+ #ifdef CONFIG_ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE
+   uint32_t _instruction_size;
+   uint32_t cache_mmu_irom_size;
+@@ -405,6 +472,12 @@
+       ets_printf("Hardware init failed, aborting\n");
+       while (true);
+     }
++
++  /* Simple Boot on P4 skips the 2nd-stage loader BSS wipe. NuttX globals
++   * such as g_kthread_group.tg_info must be zeroed before nx_start.
++   */
++
++  bootloader_clear_bss_section();
+ #else
+   bootloader_clear_bss_section();
+ #endif
+@@ -425,6 +498,8 @@
+       ets_printf("Failed to setup XIP, aborting\n");
+       while (true);
+     }
++
++  ets_printf("M7\n");
+ #endif
+ 
+ #if CONFIG_ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE
+@@ -444,9 +519,11 @@
+   rtc_clk_recalib_bbpll();
+ #endif
+ 
+-#ifdef CONFIG_ESPRESSIF_REGION_PROTECTION
+-  /* Configure region protection */
+-
++#if defined(CONFIG_ESPRESSIF_REGION_PROTECTION) && \
++    !defined(CONFIG_ARCH_CHIP_ESP32P4)
++  /* P4 HAL region protect walks PSRAM size; L0 nsh has no PSRAM. */
++
++  ets_printf("M8\n");
+   esp_cpu_configure_region_protection();
+ #endif
+ 
+@@ -454,11 +531,20 @@
+    * RTC slow clock calibration.
+    */
+ 
++  ets_printf("M9\n");
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++  /* ROM already set XTAL/MSPI. Full esp_clk_init() waits on RTC slow-clock
++   * calibration and hangs on this EV board.
++   */
++#else
+   esp_clk_init();
++  ets_printf("M10\n");
+ 
+   /* Disable clock of unused peripherals */
+ 
+   esp_perip_clk_init();
++  ets_printf("M11\n");
++#endif
+ 
+ #ifdef CONFIG_ESPRESSIF_BROWNOUT_DET
+   /* Initialize hardware brownout check and reset */
+@@ -476,11 +562,17 @@
+   riscv_earlyserialinit();
+ #endif
+ 
++#ifdef CONFIG_ARCH_CHIP_ESP32P4
++  esp_chip_revision_check();
++#endif
++
++  ets_printf("M12\n");
+   showprogress('A');
+ 
+   /* Setup the syscall table needed by the ROM code */
+ 
+   esp_setup_syscall_table();
++  ets_printf("M13\n");
+ 
+   showprogress('B');
+ 
+@@ -497,12 +589,15 @@
+ 
+   /* Initialize onboard resources */
+ 
++  ets_printf("M14\n");
+   esp_board_initialize();
++  ets_printf("M15\n");
+ 
+   showprogress('C');
+ 
+   /* Bring up NuttX */
+ 
++  ets_printf("M16 nx_start\n");
+   nx_start();
+ 
+   for (; ; );
+--- a/arch/risc-v/src/common/espressif/esp_spiflash.c
++++ b/arch/risc-v/src/common/espressif/esp_spiflash.c
+@@ -1,5 +1,7 @@
+ /****************************************************************************
+  * arch/risc-v/src/common/espressif/esp_spiflash.c
++ *
++ * SPDX-License-Identifier: Apache-2.0
+  *
+  * Licensed to the Apache Software Foundation (ASF) under one or more
+  * contributor license agreements.  See the NOTICE file distributed with
+@@ -23,597 +25,671 @@
+  ****************************************************************************/
+ 
+ #include <nuttx/config.h>
++#include <nuttx/arch.h>
++#include <nuttx/init.h>
++#include <nuttx/nuttx.h>
+ 
+ #include <stdint.h>
+ #include <assert.h>
++
+ #include <debug.h>
+-#include <string.h>
++#include <nuttx/mutex.h>
++#include <nuttx/semaphore.h>
++#include <nuttx/kthread.h>
++#include "esp_memory_utils.h"
+ #include <sys/types.h>
+ #include <inttypes.h>
+-#include <errno.h>
+-#include "riscv_internal.h"
+-#include "riscv/rv_utils.h"
+-
+-#include <nuttx/arch.h>
+-#include <nuttx/init.h>
+-#include <nuttx/mutex.h>
+-#include <nuttx/spinlock.h>
+-#include "esp_spiflash.h"
+-#include "esp_attr.h"
+-#include "memspi_host_driver.h"
+-#include "spi_flash_defs.h"
+-#include "hal/spimem_flash_ll.h"
+-#include "hal/spi_flash_ll.h"
+-#include "esp_rom_spiflash.h"
+-#include "esp_irq.h"
++#include <sched/sched.h>
++
++#include "esp_private/esp_flash_internal.h"
++#include "esp_flash.h"
++#include "esp_flash_encrypt.h"
++#include "esp_private/cache_utils.h"
++#include "hal/efuse_hal.h"
++#include "bootloader_flash_priv.h"
+ 
+ /****************************************************************************
+  * Pre-processor Definitions
+  ****************************************************************************/
+ 
+-#ifndef CONFIG_ESPRESSIF_SPI_FLASH_USE_ROM_CODE
+-/* SPI buffer size */
+-
+-#  define SPI_BUFFER_WORDS          (16)
+-#  define SPI_BUFFER_BYTES          (SPI_BUFFER_WORDS * 4)
+-
+-/* SPI flash hardware definition */
+-
+-#  define FLASH_SECTOR_SIZE         (4096)
+-
+-/* SPI flash SR1 bits */
+-
+-#  define FLASH_SR1_BUSY            ESP_ROM_SPIFLASH_BUSY_FLAG
+-#  define FLASH_SR1_WREN            ESP_ROM_SPIFLASH_WRENABLE_FLAG
+-
+-/* SPI flash operation */
+-
+-#  define FLASH_CMD_WRDI            CMD_WRDI
+-#  define FLASH_CMD_WREN            CMD_WREN
+-#  define FLASH_CMD_RDSR            CMD_RDSR
+-#ifdef CONFIG_ESPRESSIF_SPI_FLASH_USE_32BIT_ADDRESS
+-#  define ADDR_BITS(addr)         (((addr) & 0xff000000) ? 32 : 24)
+-#  define READ_CMD(addr)          (ADDR_BITS(addr) == 32 ?                  \
+-                                   CMD_FASTRD_4B : CMD_FASTRD)
+-#  define WRITE_CMD(addr)         (ADDR_BITS(addr) == 32 ? CMD_PROGRAM_PAGE_4B : \
+-                                   CMD_PROGRAM_PAGE)
+-#  define ERASE_CMD(addr)         (ADDR_BITS(addr) == 32 ? CMD_SECTOR_ERASE_4B : \
+-                                   CMD_SECTOR_ERASE)
+-#  define READ_DUMMY(addr)        (8)
++#ifdef CONFIG_ESPRESSIF_EFUSE_VIRTUAL_KEEP_IN_FLASH
++#define ENCRYPTION_IS_VIRTUAL (!efuse_hal_flash_encryption_enabled())
+ #else
+-#  define ADDR_BITS(addr)         (24)
+-#  define READ_CMD(addr)          CMD_FASTRD
+-#  define WRITE_CMD(addr)         CMD_PROGRAM_PAGE
+-#  define ERASE_CMD(addr)         CMD_SECTOR_ERASE
+-#  define READ_DUMMY(addr)        (8)
+-#endif
+-
+-#  define SEND_CMD8_TO_FLASH(cmd)                           \
+-    esp_spi_trans((cmd), 8,                                 \
+-                  0, 0,                                     \
+-                  NULL, 0,                                  \
+-                  NULL, 0,                                  \
+-                  0)
+-
+-#  define READ_SR1_FROM_FLASH(cmd, status)                  \
+-    esp_spi_trans((cmd), 8,                                 \
+-                  0, 0,                                     \
+-                  NULL, 0,                                  \
+-                  (status), 1,                              \
+-                  0)
+-
+-#  define ERASE_FLASH_SECTOR(addr)                          \
+-    esp_spi_trans(ERASE_CMD(addr), 8,                       \
+-                  (addr), ADDR_BITS(addr),                  \
+-                  NULL, 0,                                  \
+-                  NULL, 0,                                  \
+-                  0)
+-
+-#  define WRITE_DATA_TO_FLASH(addr, buffer, size)           \
+-    esp_spi_trans(WRITE_CMD(addr), 8,                       \
+-                  (addr), ADDR_BITS(addr),                  \
+-                  buffer, size,                             \
+-                  NULL, 0,                                  \
+-                  0)
+-
+-#  define READ_DATA_FROM_FLASH(addr, buffer, size)          \
+-    esp_spi_trans(READ_CMD(addr), 8,                        \
+-                  (addr), ADDR_BITS(addr),                  \
+-                  NULL, 0,                                  \
+-                  buffer, size,                             \
+-                  READ_DUMMY(addr))
+-
+-/****************************************************************************
+- * Private Types
+- ****************************************************************************/
+-
+-spi_mem_dev_t *dev = spimem_flash_ll_get_hw(SPI1_HOST);
+-#endif /* CONFIG_ESPRESSIF_SPI_FLASH_USE_ROM_CODE */
+-
+-/****************************************************************************
+- * Private Functions Declaration
+- ****************************************************************************/
+-
+-void spiflash_start(void);
+-void spiflash_end(void);
+-#ifndef CONFIG_ESPRESSIF_SPI_FLASH_USE_ROM_CODE
+-extern bool spi_flash_check_and_flush_cache(size_t start_addr,
+-                                            size_t length);
+-#endif /* CONFIG_ESPRESSIF_SPI_FLASH_USE_ROM_CODE */
++#define ENCRYPTION_IS_VIRTUAL 0
++#endif
++
++#ifndef ALIGN_OFFSET
++#define ALIGN_OFFSET(num, align) ((num) & ((align) - 1))
++#endif
++
++#ifndef ROUND_DOWN
++#define ROUND_DOWN(x, align) ((unsigned long)(x) & ~((unsigned long)align - 1))
++#endif
++
++#ifndef ROUND_UP
++#define ROUND_UP(x, align) \
++        (((unsigned long)(x) + ((unsigned long)align - 1)) & \
++        ~((unsigned long)align - 1))
++#endif
++
++ #define FLASH_BUFFER_SIZE          32
++ #define FLASH_ERASE_VALUE          0xff
++ #define SPIFLASH_OP_TASK_STACKSIZE 768
+ 
+ /****************************************************************************
+  * Private Data
+  ****************************************************************************/
+ 
+-static struct spiflash_guard_funcs g_spi_flash_guard_funcs =
+-{
+-  .start           = spiflash_start,
+-  .end             = spiflash_end,
+-  .op_lock         = NULL,
+-  .op_unlock       = NULL,
+-  .address_is_safe = NULL,
+-  .yield           = NULL,
++#if CONFIG_ESPRESSIF_SECURE_FLASH_ENC_ENABLED
++static uint8_t write_aux_buf[FLASH_SECTOR_SIZE] =
++{
++  0
+ };
+-
+-static mutex_t s_flash_op_mutex;
+-static uint32_t s_flash_op_cache_state[CONFIG_ESPRESSIF_NUM_CPUS];
+-static volatile bool s_sched_suspended[CONFIG_ESPRESSIF_NUM_CPUS];
++static uint8_t erase_aux_buf[FLASH_SECTOR_SIZE] =
++{
++  0
++};
++#endif
+ 
+ /****************************************************************************
+  * Private Functions
+  ****************************************************************************/
+ 
+ /****************************************************************************
+- * Name: spiflash_start
+- *
+- * Description:
+- *   Prepare for an SPIFLASH operation.
++ * Name: flash_esp32_read_check_enc
++ *
++ * Description:
++ *   Read data from flash, automatically handling encryption if enabled.
++ *   This function checks if flash encryption is enabled and uses the
++ *   appropriate read function (encrypted or raw).
+  *
+  * Input Parameters:
+- *   None.
++ *   address - Source address of the data in flash.
++ *   buffer  - Pointer to the destination buffer.
++ *   length  - Length of data in bytes.
+  *
+  * Returned Value:
+- *   None.
+- *
+- ****************************************************************************/
+-
+-IRAM_ATTR void spiflash_start(void)
+-{
+-  extern uint32_t cache_suspend_icache(void);
+-  int cpu;
+-  irqstate_t flags;
+-  uint32_t regval;
+-
+-  nxmutex_lock(&s_flash_op_mutex);
+-  flags = enter_critical_section();
+-  cpu = this_cpu();
+-  s_sched_suspended[cpu] = true;
+-
+-  esp_intr_noniram_disable();
+-
+-  s_flash_op_cache_state[cpu] = cache_suspend_icache() << 16;
+-
+-  leave_critical_section(flags);
+-}
+-
+-/****************************************************************************
+- * Name: spiflash_end
+- *
+- * Description:
+- *   Undo all the steps of opstart.
++ *   OK on success; -EIO on failure.
++ *
++ ****************************************************************************/
++
++static int flash_esp32_read_check_enc(uint32_t address, void *buffer,
++                                      size_t length)
++{
++  int ret;
++
++  if (esp_flash_encryption_enabled())
++    {
++      finfo("Flash read ENCRYPTED - address 0x%lx size 0x%x",
++            address, length);
++      ret = esp_flash_read_encrypted(NULL, address, buffer, length);
++    }
++  else
++    {
++      finfo("Flash read RAW - address 0x%lx size 0x%x", address, length);
++      ret = esp_flash_read(NULL, buffer, address, length);
++    }
++
++  if (ret != OK)
++    {
++      ferr("ERROR: failed to read: ret=%d", ret);
++      return -EIO;
++    }
++
++  return OK;
++}
++
++/****************************************************************************
++ * Name: flash_esp32_write_check_enc
++ *
++ * Description:
++ *   Write data to flash, automatically handling encryption if enabled.
++ *   This function checks if flash encryption is enabled and uses the
++ *   appropriate write function (encrypted or raw).
+  *
+  * Input Parameters:
+- *   None.
++ *   address - Destination address in flash.
++ *   buffer  - Pointer to the source buffer.
++ *   length  - Length of data in bytes.
+  *
+  * Returned Value:
+- *   None.
+- *
+- ****************************************************************************/
+-
+-IRAM_ATTR void spiflash_end(void)
+-{
+-  extern void cache_resume_icache(uint32_t);
+-  extern void cache_invalidate_icache_all(void);
+-
+-  int cpu;
+-  irqstate_t flags;
+-
+-  flags = enter_critical_section();
+-
+-  cpu = this_cpu();
+-
+-  cache_invalidate_icache_all();
+-  cache_resume_icache(s_flash_op_cache_state[cpu] >> 16);
+-
+-  esp_intr_noniram_enable();
+-  s_sched_suspended[cpu] = false;
+-
+-  leave_critical_section(flags);
+-  nxmutex_unlock(&s_flash_op_mutex);
+-}
+-
+-/****************************************************************************
+- * Name: esp_spi_trans
+- *
+- * Description:
+- *   Transmit given command, address and data.
++ *   OK on success; -EIO on failure.
++ *
++ ****************************************************************************/
++
++static int flash_esp32_write_check_enc(uint32_t address, const void *buffer,
++                                       size_t length)
++{
++  int ret;
++
++  if (esp_flash_encryption_enabled() && !ENCRYPTION_IS_VIRTUAL)
++    {
++      finfo("Flash write ENCRYPTED - address 0x%lx size 0x%x",
++            address, length);
++      ret = esp_flash_write_encrypted(NULL, address, buffer, length);
++    }
++  else
++    {
++      finfo("Flash write RAW - address 0x%lx size 0x%x",
++            address, length);
++      ret = esp_flash_write(NULL, buffer, address, length);
++    }
++
++  if (ret != 0)
++    {
++      ferr("ERROR: failed to write: ret=%d", ret);
++      return -EIO;
++    }
++
++  return OK;
++}
++
++#if CONFIG_ESPRESSIF_SECURE_FLASH_ENC_ENABLED
++/****************************************************************************
++ * Name: aligned_flash_write
++ *
++ * Description:
++ *   Write data to flash with proper alignment handling. This function
++ *   ensures that writes are aligned according to flash encryption
++ *   requirements. When flash encryption is enabled, writes must be
++ *   aligned to 32 bytes (or FLASH_SECTOR_SIZE if erase is required).
++ *   For unaligned writes, the function reads the existing data, merges
++ *   it with the new data, and writes back the aligned chunk.
+  *
+  * Input Parameters:
+- *   command      - command value
+- *   command_bits - command bits
+- *   address      - address value
+- *   address_bits - address bits
+- *   tx_buffer    - write buffer
+- *   tx_bytes     - write buffer size
+- *   rx_buffer    - read buffer
+- *   rx_bytes     - read buffer size
+- *   dummy_bits   - dummy bits
++ *   dest_addr - Destination address in flash.
++ *   src       - Pointer to the source buffer.
++ *   size      - Length of data in bytes.
++ *   erase     - If true, erase the region before writing (required when
++ *               flash encryption is enabled).
+  *
+  * Returned Value:
+- *   0 if success or a negative value if fail.
+- *
+- ****************************************************************************/
+-
+-#ifndef CONFIG_ESPRESSIF_SPI_FLASH_USE_ROM_CODE
+-static IRAM_ATTR void esp_spi_trans(uint32_t command,
+-                                    uint32_t command_bits,
+-                                    uint32_t address,
+-                                    uint32_t address_bits,
+-                                    uint32_t *tx_buffer,
+-                                    uint32_t tx_bytes,
+-                                    uint32_t *rx_buffer,
+-                                    uint32_t rx_bytes,
+-                                    uint32_t dummy_bits)
+-{
+-  /* Initiliaze SPI user register */
+-
+-  spi_flash_ll_reset(dev);
+-
+-  while (!spi_flash_ll_host_idle(dev));
+-
+-  /* Set command bits and value, and command is always needed */
+-
+-  spi_flash_ll_set_command(dev, command, command_bits);
+-
+-  /* Set address bits and value */
+-
+-  if (address_bits)
+-    {
+-      spi_flash_ll_set_addr_bitlen(dev, address_bits);
+-      spi_flash_ll_set_address(dev, address);
+-    }
+-
+-  /* Set dummy */
+-
+-  if (dummy_bits)
+-    {
+-      spi_flash_ll_set_dummy(dev, dummy_bits);
+-    }
+-
+-  /* Set TX data */
+-
+-  if (tx_bytes)
+-    {
+-      spi_flash_ll_set_mosi_bitlen(dev, tx_bytes * 8);
+-      spi_flash_ll_set_buffer_data(dev, tx_buffer, tx_bytes);
+-    }
+-
+-  /* Set RX data */
+-
+-  if (rx_bytes)
+-    {
+-      spi_flash_ll_set_miso_bitlen(dev, rx_bytes * 8);
+-    }
+-
+-  /* Set I/O mode */
+-
+-  spi_flash_ll_set_read_mode(dev, SPI_FLASH_FASTRD);
+-
+-  /* Set clock and delay */
+-
+-  spimem_flash_ll_suspend_cmd_setup(dev, 0);
+-
+-  /* Start transmision */
+-
+-  spi_flash_ll_user_start(dev);
+-
+-  /* Wait until transmission is done */
+-
+-  while (!spi_flash_ll_cmd_is_done(dev));
+-
+-  /* Get read data */
+-
+-  if (rx_bytes)
+-    {
+-      spi_flash_ll_get_buffer_data(dev, rx_buffer, rx_bytes);
+-    }
+-}
+-
+-/****************************************************************************
+- * Name: wait_flash_idle
+- *
+- * Description:
+- *   Wait until flash enters idle state
++ *   true on success; false on failure.
++ *
++ ****************************************************************************/
++
++static bool aligned_flash_write(size_t dest_addr, const void *src,
++                                size_t size, bool erase)
++{
++  bool flash_enc_enabled = esp_flash_encryption_enabled();
++  size_t alignment;
++  size_t write_addr = dest_addr;
++  size_t bytes_remaining = size;
++  size_t src_offset = 0;
++
++  /* When flash encryption is enabled, write alignment is 32 bytes, however
++   * to avoid inconsistences the region may be erased right before writing,
++   * thus the alignment is set to the erase required alignment
++   * (FLASH_SECTOR_SIZE).
++   * When flash encryption is not enabled, regular write alignment
++   * is 4 bytes.
++   */
++
++  alignment = flash_enc_enabled ? (erase ? FLASH_SECTOR_SIZE : 32) : 4;
++
++  if (IS_ALIGNED(dest_addr, alignment) && IS_ALIGNED((uintptr_t)src, 4) &&
++      IS_ALIGNED(size, alignment))
++    {
++      /* A single write operation is enough when all parameters are aligned */
++
++      if (flash_enc_enabled && erase)
++        {
++          if (esp_flash_erase_region(NULL, dest_addr, size) != OK)
++            {
++              ferr("ERROR: erase failed at 0x%08x", (uintptr_t)dest_addr);
++              return false;
++            }
++        }
++
++      return flash_esp32_write_check_enc(dest_addr, (void *)src, size) == OK;
++    }
++
++  finfo("forcing unaligned write dest_addr: "
++        "0x%08x src: 0x%08x size: 0x%x erase: %c",
++        (uintptr_t)dest_addr, (uintptr_t)src, size, erase ? 't' : 'f');
++
++  while (bytes_remaining > 0)
++    {
++      size_t aligned_curr_addr = ROUND_DOWN(write_addr, alignment);
++      size_t curr_buf_off = write_addr - aligned_curr_addr;
++      size_t chunk_len = MIN(bytes_remaining,
++                             FLASH_SECTOR_SIZE - curr_buf_off);
++
++      /* Read data before modifying */
++
++      if (flash_esp32_read_check_enc(aligned_curr_addr, write_aux_buf,
++                                     ROUND_UP(chunk_len, alignment)) != OK)
++        {
++          ferr("ERROR: flash read failed at 0x%08x",
++               (uintptr_t)aligned_curr_addr);
++          return false;
++        }
++
++      /* Erase if needed */
++
++      if (flash_enc_enabled && erase)
++        {
++          if (esp_flash_erase_region(NULL, aligned_curr_addr,
++                                     ROUND_UP(
++                                      chunk_len, FLASH_SECTOR_SIZE)) != OK)
++            {
++              ferr("ERROR: flash erase failed at 0x%08x",
++                   (uintptr_t)aligned_curr_addr);
++              return false;
++            }
++        }
++
++      /* Merge data into buffer */
++
++      memcpy(&write_aux_buf[curr_buf_off],
++             &((const uint8_t *)src)[src_offset],
++             chunk_len);
++
++      /* Write back aligned chunk */
++
++      if (flash_esp32_write_check_enc(aligned_curr_addr, write_aux_buf,
++                                      ROUND_UP(chunk_len, alignment)) != OK)
++        {
++          ferr("ERROR: flash write failed at 0x%08x",
++               (uintptr_t)aligned_curr_addr);
++          return false;
++        }
++
++      write_addr += chunk_len;
++      src_offset += chunk_len;
++      bytes_remaining -= chunk_len;
++    }
++
++  return true;
++}
++
++/****************************************************************************
++ * Name: erase_partial_sector
++ *
++ * Description:
++ *   Erase a partial sector while preserving data outside the erase region.
++ *   This function reads the full sector, erases it, then writes back the
++ *   preserved data at the head and tail of the sector.
+  *
+  * Input Parameters:
+- *   None.
++ *   addr        - Base address of the sector to erase.
++ *   sector_size - Size of the sector in bytes.
++ *   erase_start - Offset from sector start where erase begins.
++ *   erase_end   - Offset from sector start where erase ends.
+  *
+  * Returned Value:
+- *   None.
+- *
+- ****************************************************************************/
+-
+-static IRAM_ATTR void wait_flash_idle(void)
+-{
+-  uint32_t status;
+-
+-  do
+-    {
+-      READ_SR1_FROM_FLASH(FLASH_CMD_RDSR, &status);
+-      if ((status & FLASH_SR1_BUSY) == 0)
+-        {
+-          break;
+-        }
+-    }
+-  while (1);
+-}
+-
+-/****************************************************************************
+- * Name: enable_flash_write
+- *
+- * Description:
+- *   Enable Flash write mode
++ *   true on success; false on failure.
++ *
++ ****************************************************************************/
++
++static bool erase_partial_sector(size_t addr, size_t sector_size,
++                                 size_t erase_start, size_t erase_end)
++{
++  /* Read full sector before erasing */
++
++  if (flash_esp32_read_check_enc(addr, erase_aux_buf, sector_size) != OK)
++    {
++      ferr("ERROR: flash read failed at 0x%08x", (uintptr_t)addr);
++      return false;
++    }
++
++  /* Erase full sector */
++
++  if (esp_flash_erase_region(NULL, addr, sector_size) != OK)
++    {
++      ferr("ERROR: flash erase failed at 0x%08x", (uintptr_t)addr);
++      return false;
++    }
++
++  /* Write back preserved head data up to erase_start */
++
++  if (erase_start > 0)
++    {
++      if (!aligned_flash_write(addr, erase_aux_buf, erase_start, false))
++        {
++          ferr("ERROR: flash write failed at 0x%08x", (uintptr_t)addr);
++          return false;
++        }
++    }
++
++  /* Write back preserved tail data from erase_end up to sector end */
++
++  if (erase_end < sector_size)
++    {
++      if (!aligned_flash_write(addr + erase_end, &erase_aux_buf[erase_end],
++                               sector_size - erase_end, false))
++        {
++          ferr("ERROR: flash write failed at 0x%08x",
++               (uintptr_t)(addr + erase_end));
++          return false;
++        }
++    }
++
++  return true;
++}
++
++/****************************************************************************
++ * Name: aligned_flash_erase
++ *
++ * Description:
++ *   Erase a region of flash with proper sector alignment handling.
++ *   This function handles both aligned and unaligned erase operations.
++ *   For unaligned operations, it preserves data outside the erase region
++ *   by reading sectors, erasing them, and writing back the preserved data.
+  *
+  * Input Parameters:
+- *   None.
++ *   addr - Start address of the region to erase.
++ *   size - Length of the region to erase in bytes.
+  *
+  * Returned Value:
+- *   None.
+- *
+- ****************************************************************************/
+-
+-static IRAM_ATTR void enable_flash_write(void)
+-{
+-  uint32_t status;
+-
+-  do
+-    {
+-      SEND_CMD8_TO_FLASH(FLASH_CMD_WREN);
+-      READ_SR1_FROM_FLASH(FLASH_CMD_RDSR, &status);
+-
+-      if ((status & FLASH_SR1_WREN) != 0)
+-        {
+-          break;
+-        }
+-    }
+-  while (1);
+-}
+-
+-/****************************************************************************
+- * Name: disable_flash_write
+- *
+- * Description:
+- *   Disable Flash write mode
+- *
+- * Input Parameters:
+- *   None.
+- *
+- * Returned Value:
+- *   None.
+- *
+- ****************************************************************************/
+-
+-static IRAM_ATTR void disable_flash_write(void)
+-{
+-  uint32_t status;
+-
+-  do
+-    {
+-      SEND_CMD8_TO_FLASH(FLASH_CMD_WRDI);
+-      READ_SR1_FROM_FLASH(FLASH_CMD_RDSR, &status);
+-
+-      if ((status & FLASH_SR1_WREN) == 0)
+-        {
+-          break;
+-        }
+-    }
+-  while (1);
+-}
+-
+-/****************************************************************************
+- * Name: spi_flash_read
+- *
+- * Description:
+- *   Read data from Flash.
++ *   true on success; false on failure.
++ *
++ ****************************************************************************/
++
++static bool aligned_flash_erase(size_t addr, size_t size)
++{
++  const size_t sector_size = FLASH_SECTOR_SIZE;
++  const size_t start_addr = ROUND_DOWN(addr, sector_size);
++  const size_t end_addr = ROUND_UP(addr + size, sector_size);
++  const size_t total_len = end_addr - start_addr;
++  size_t current_addr;
++
++  if (IS_ALIGNED(addr, FLASH_SECTOR_SIZE) && \
++      IS_ALIGNED(size, FLASH_SECTOR_SIZE))
++    {
++      /* A single erase operation is enough when all parameters are aligned */
++
++      return esp_flash_erase_region(NULL, addr, size) == OK;
++    }
++
++  finfo("forcing unaligned erase on sector offset: "
++        "0x%08x Length: 0x%x total_len: 0x%x",
++        (uintptr_t)addr, (int)size, total_len);
++
++  current_addr = start_addr;
++
++  while (current_addr < end_addr)
++    {
++      bool preserve_head = (addr > current_addr);
++      bool preserve_tail = ((addr + size) < (current_addr + sector_size));
++
++      if (preserve_head || preserve_tail)
++        {
++          size_t erase_start = preserve_head ? (addr - current_addr) : 0;
++          size_t erase_end =
++            MIN(current_addr + sector_size, addr + size) - current_addr;
++
++          finfo("partial sector erase: 0x%08x to: 0x%08x length: 0x%x",
++                (uintptr_t)(current_addr + erase_start),
++                (uintptr_t)(current_addr + erase_end),
++                erase_end - erase_start);
++
++          if (!erase_partial_sector(current_addr, sector_size, erase_start,
++                                    erase_end))
++            {
++              return false;
++            }
++
++          current_addr += sector_size;
++        }
++      else
++        {
++          /* Full sector erase is safe, erase the next consecutive full
++           * sectors
++           */
++
++          size_t contiguous_size =
++            ROUND_DOWN(addr + size, sector_size) - current_addr;
++
++          finfo("sectors erased from: 0x%08x length: 0x%x",
++                (uintptr_t)current_addr, contiguous_size);
++
++          if (esp_flash_erase_region(
++                NULL, current_addr, contiguous_size) != OK)
++            {
++              ferr("ERROR: flash erase failed at 0x%08x",
++                   (uintptr_t)current_addr);
++              return false;
++            }
++
++          current_addr += contiguous_size;
++        }
++    }
++
++  return true;
++}
++#endif /* CONFIG_ESP_FLASH_ENCRYPTION */
++
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++/****************************************************************************
++ * Name: esp_spiflash_read
++ *
++ * Description:
++ *   Read data from flash.
+  *
+  * Parameters:
+- *   address - source address of the data in Flash.
+- *   buffer  - pointer to the destination buffer
+- *   length  - length of data
++ *   address - Source address of the data in flash.
++ *   buffer  - Pointer to the destination buffer.
++ *   length  - Length of data in bytes.
+  *
+  * Returned Values:
+  *   Zero (OK) is returned or a negative error.
+  *
+  ****************************************************************************/
+ 
+-IRAM_ATTR int spi_flash_read(uint32_t address, void *buffer, uint32_t length)
++static int spiflash_direct_read(uint32_t address, void *buffer,
++                      uint32_t length)
+ {
+   int ret = OK;
+-  uint8_t *rx_buf = (uint8_t *)buffer;
+-  uint32_t rx_bytes = length;
+-  uint32_t rx_addr = address;
+-
+-  spiflash_start();
+-
+-  for (uint32_t i = 0; i < length; i += SPI_BUFFER_BYTES)
+-    {
+-      uint32_t spi_buffer[SPI_BUFFER_WORDS];
+-      uint32_t n = MIN(rx_bytes, SPI_BUFFER_BYTES);
+-
+-      READ_DATA_FROM_FLASH(rx_addr, spi_buffer, n);
+-
+-      memcpy(rx_buf, spi_buffer, n);
+-      rx_bytes -= n;
+-      rx_buf += n;
+-      rx_addr += n;
+-    }
+-
+-  spiflash_end();
++
++  ret = flash_esp32_read_check_enc(address, buffer, length);
++  if (ret != 0)
++    {
++      ferr("esp_flash_read failed %d", ret);
++      ret = ERROR;
++    }
+ 
+   return ret;
+ }
+ 
+ /****************************************************************************
+- * Name: spi_flash_erase_sector
+- *
+- * Description:
+- *   Erase the Flash sector.
++ * Name: esp_spiflash_write
++ *
++ * Description:
++ *   Write data to Flash.
+  *
+  * Parameters:
+- *   sector - Sector number, the count starts at sector 0, 4KB per sector.
+- *
+- * Returned Values: esp_err_t
+- *   Zero (OK) is returned or a negative error.
+- *
+- ****************************************************************************/
+-
+-IRAM_ATTR int spi_flash_erase_sector(uint32_t sector)
+-{
+-  int ret = OK;
+-  uint32_t addr = sector * FLASH_SECTOR_SIZE;
+-
+-  spiflash_start();
+-
+-  wait_flash_idle();
+-  enable_flash_write();
+-
+-  ERASE_FLASH_SECTOR(addr);
+-
+-  wait_flash_idle();
+-  disable_flash_write();
+-
+-  spiflash_end();
+-
+-  return ret;
+-}
+-
+-/****************************************************************************
+- * Name: spi_flash_erase_range
+- *
+- * Description:
+- *   Erase a range of flash sectors
+- *
+- * Parameters:
+- *   start_address - Address where erase operation has to start.
+- *                   Must be 4kB-aligned
+- *   size          - Size of erased range, in bytes. Must be divisible by
+- *                   4kB.
++ *   address - Destination address in Flash.
++ *   buffer  - Pointer to the source buffer.
++ *   length  - Length of data, in bytes.
+  *
+  * Returned Values:
+  *   Zero (OK) is returned or a negative error.
+  *
+  ****************************************************************************/
+ 
+-IRAM_ATTR int spi_flash_erase_range(uint32_t start_address, uint32_t size)
++static int spiflash_direct_write(uint32_t address, const void *buffer,
++                       uint32_t length)
+ {
+   int ret = OK;
+-  uint32_t addr = start_address;
+-
+-  spiflash_start();
+-
+-  for (uint32_t i = 0; i < size; i += FLASH_SECTOR_SIZE)
+-    {
+-      wait_flash_idle();
+-      enable_flash_write();
+-
+-      ERASE_FLASH_SECTOR(addr);
+-      addr += FLASH_SECTOR_SIZE;
+-    }
+-
+-  wait_flash_idle();
+-  disable_flash_write();
+-  spi_flash_check_and_flush_cache(start_address, size);
+-
+-  spiflash_end();
++#if CONFIG_ESPRESSIF_SECURE_FLASH_ENC_ENABLED
++  bool erase = false;
++#endif
++
++#if CONFIG_ESPRESSIF_SECURE_FLASH_ENC_ENABLED
++  if (esp_flash_encryption_enabled())
++    {
++      /* Ensuring flash region has been erased before writing in order to
++       * avoid inconsistences when hardware flash encryption is enabled.
++       */
++
++      erase = true;
++    }
++
++  if (!aligned_flash_write(address, buffer, length, erase))
++    {
++      ferr("flash erase before write failed\n");
++      ret = ERROR;
++    }
++#else
++    ret = flash_esp32_write_check_enc(address, buffer, length);
++#endif
++
++  if (ret != OK)
++    {
++      ferr("ERROR: write failed: ret=%d", ret);
++      ret = ERROR;
++    }
+ 
+   return ret;
+ }
+ 
+ /****************************************************************************
+- * Name: spi_flash_write
+- *
+- * Description:
+- *   Write data to Flash.
++ * Name: esp_spiflash_erase
++ *
++ * Description:
++ *   Erase data from Flash.
+  *
+  * Parameters:
+- *   dest_addr - Destination address in Flash.
+- *   buffer    - Pointer to the source buffer.
+- *   size      - Length of data, in bytes.
++ *   address - Start address of the data in Flash.
++ *   length  - Length of the data to erase.
+  *
+  * Returned Values:
+  *   Zero (OK) is returned or a negative error.
+  *
+  ****************************************************************************/
+ 
+-IRAM_ATTR int spi_flash_write(uint32_t dest_addr,
+-                              const void *buffer,
+-                              uint32_t size)
++static int spiflash_direct_erase(uint32_t address, uint32_t length)
+ {
+   int ret = OK;
+-  const uint8_t *tx_buf = (const uint8_t *)buffer;
+-  uint32_t tx_bytes = size;
+-  uint32_t tx_addr = dest_addr;
+-
+-  spiflash_start();
+-
+-  for (int i = 0; i < size; i += SPI_BUFFER_BYTES)
+-    {
+-      uint32_t spi_buffer[SPI_BUFFER_WORDS];
+-      uint32_t n = MIN(tx_bytes, SPI_BUFFER_BYTES);
+-
+-      memcpy(spi_buffer, tx_buf, n);
+-
+-      wait_flash_idle();
+-      enable_flash_write();
+-
+-      WRITE_DATA_TO_FLASH(tx_addr, spi_buffer, n);
+-
+-      tx_bytes -= n;
+-      tx_buf += n;
+-      tx_addr += n;
+-    }
+-
+-  wait_flash_idle();
+-  disable_flash_write();
+-  spi_flash_check_and_flush_cache(dest_addr, size);
+-
+-  spiflash_end();
++
++#if CONFIG_ESPRESSIF_SECURE_FLASH_ENC_ENABLED
++  if (!aligned_flash_erase(address, length))
++    {
++      ret = -EIO;
++    }
++
++  if (esp_flash_encryption_enabled())
++    {
++      uint8_t erased_val_buf[FLASH_BUFFER_SIZE];
++      uint32_t bytes_remaining = length;
++      uint32_t offset = address;
++      uint32_t bytes_written = MIN(sizeof(erased_val_buf), length);
++
++      memset(erased_val_buf, FLASH_ERASE_VALUE, sizeof(erased_val_buf));
++
++      /* When hardware flash encryption is enabled, force expected erased
++       * value (0xFF) into flash when erasing a region.
++       * This is handled on this implementation because MCUboot's state
++       * machine relies on erased valued data (0xFF) read from a
++       * previously erased region that was not written yet, however when
++       * hardware flash encryption is enabled, the flash read always
++       * decrypts what's being read from flash, thus a region that was
++       * erased would not be read as what MCUboot expected (0xFF).
++       */
++
++      while (bytes_remaining != 0)
++        {
++          if (!aligned_flash_write(offset, erased_val_buf, bytes_written,
++                                   false))
++            {
++              ferr("ERROR: aligned_flash_write failed during erase\n");
++              ret = ERROR;
++              break;
++            }
++
++          offset += bytes_written;
++          bytes_remaining -= bytes_written;
++        }
++    }
++#else
++  ret = esp_flash_erase_region(NULL, address, length);
++#endif
++
++  if (ret != OK)
++    {
++      ferr("ERROR: erase failed: ret=%d", ret);
++      ret = ERROR;
++    }
+ 
+   return ret;
+ }
+-#endif /* CONFIG_ESPRESSIF_SPI_FLASH_USE_ROM_CODE */
+-
+-/****************************************************************************
+- * Name: esp_spiflash_init
+- *
+- * Description:
+- *   Initialize ESP SPI flash driver.
+- *
+- * Input Parameters:
+- *   None.
+- *
+- * Returned Value:
+- *   OK if success or a negative value if fail.
+- *
+- ****************************************************************************/
+-
+-int esp_spiflash_init(void)
+-{
+-  extern void spi_flash_guard_set(const struct spiflash_guard_funcs *);
+-
+-  nxmutex_init(&s_flash_op_mutex);
+-
+-  spi_flash_guard_set(&g_spi_flash_guard_funcs);
+-
+-  return OK;
+-}
++
++
++/* P4 suspends the shared external-memory cache during SPI1 operations.
++ * An ordinary pthread may own a PSRAM stack. Running the HAL on that stack
++ * can fault while cache is off and strand the other CPU in its flash IPC.
++ * Use a privileged NuttX thread (internal kernel heap stack) for those callers,
++ * the same separation used by ESP32's PSRAM-stack flash support. */
++static mutex_t g_flash_dispatch_lock = NXMUTEX_INITIALIZER;
++static sem_t g_flash_work = SEM_INITIALIZER(0);
++static sem_t g_flash_done = SEM_INITIALIZER(0);
++static int g_flash_worker_pid;
++static struct {
++  unsigned operation;
++  uint32_t address, length;
++  void *buffer;
++  int result;
++} g_flash_job;
++volatile uint32_t g_flash_external_stack_ops;
++volatile uintptr_t g_flash_caller_sp, g_flash_worker_sp;
++
++static int spiflash_stack_worker(int argc, char **argv)
++{
++  (void)argc; (void)argv;
++  int marker;
++  g_flash_worker_sp = (uintptr_t)&marker;
++  for (;;) {
++    int ret = nxsem_wait_uninterruptible(&g_flash_work);
++    if (ret < 0) continue;
++    if (!esp_ptr_in_dram(&marker)) g_flash_job.result = -EFAULT;
++    else if (g_flash_job.operation == 0)
++      g_flash_job.result = spiflash_direct_read(g_flash_job.address, g_flash_job.buffer, g_flash_job.length);
++    else if (g_flash_job.operation == 1)
++      g_flash_job.result = spiflash_direct_write(g_flash_job.address, g_flash_job.buffer, g_flash_job.length);
++    else g_flash_job.result = spiflash_direct_erase(g_flash_job.address, g_flash_job.length);
++    nxsem_post(&g_flash_done);
++  }
++  return 0;
++}
++
++static int spiflash_dispatch(unsigned op, uint32_t address, void *buffer, uint32_t length)
++{
++  int ret = nxmutex_lock(&g_flash_dispatch_lock);
++  if (ret < 0) return ret;
++  if (!g_flash_worker_pid) {
++    int pid = kthread_create("flash-stack", 100, 4096, spiflash_stack_worker, NULL);
++    if (pid < 0) { nxmutex_unlock(&g_flash_dispatch_lock); return pid; }
++    g_flash_worker_pid = pid;
++  }
++  g_flash_caller_sp = (uintptr_t)&ret; g_flash_external_stack_ops++;
++  g_flash_job.operation = op; g_flash_job.address = address;
++  g_flash_job.buffer = buffer; g_flash_job.length = length;
++  nxsem_post(&g_flash_work);
++  ret = nxsem_wait_uninterruptible(&g_flash_done);
++  if (ret >= 0) ret = g_flash_job.result;
++  nxmutex_unlock(&g_flash_dispatch_lock);
++  return ret;
++}
++
++int esp_spiflash_read(uint32_t address, void *buffer, uint32_t length)
++{
++  int marker;
++  return esp_ptr_in_dram(&marker) ? spiflash_direct_read(address, buffer, length) :
++    spiflash_dispatch(0, address, buffer, length);
++}
++int esp_spiflash_write(uint32_t address, const void *buffer, uint32_t length)
++{
++  int marker;
++  return esp_ptr_in_dram(&marker) ? spiflash_direct_write(address, buffer, length) :
++    spiflash_dispatch(1, address, (void *)buffer, length);
++}
++int esp_spiflash_erase(uint32_t address, uint32_t length)
++{
++  int marker;
++  return esp_ptr_in_dram(&marker) ? spiflash_direct_erase(address, length) :
++    spiflash_dispatch(2, address, NULL, length);
++}

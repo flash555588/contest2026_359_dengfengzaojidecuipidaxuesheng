@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0
- * Glass desktop for the 355ef31 camera baseline, 1024 x 600.
- * 中文说明：仅重建桌面容器，应用页和相机运行时的生命周期仍由原桌面管理。
+ * Glass desktop and shared application lifecycle, 1024 x 600.
  * 渐变和半透明填充模拟磨砂层；不进行全屏模糊或连续背景重绘。
  */
 
@@ -19,7 +18,7 @@ static void glass_status_visibility(bool locked);
 #include "glass_settings_service.h"
 #include "glass_weather.h"
 #include "glass_ime.h"
-#define GLASS_SIMPLE_SETTINGS 1
+#include "glass_sd_font.h"
 #if defined(CONFIG_ESPRESSIF_LEDC_TIMER0) && \
     CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN == 26 && CONFIG_PWM_NCHANNELS == 1
 #include <fcntl.h>
@@ -73,8 +72,6 @@ static void glass_brightness_changed(lv_event_t *e)
 static struct
 {
   lv_obj_t *home;
-  lv_obj_t *clock;
-  lv_obj_t *date;
   lv_obj_t *temperature;
   lv_obj_t *humidity;
   lv_obj_t *humidity_status;
@@ -92,8 +89,6 @@ static struct
   lv_obj_t *chart;
   lv_chart_series_t *series;
   lv_obj_t *chart_hint;
-  lv_obj_t *theme_button;
-  lv_obj_t *wifi_button;
   lv_obj_t *settings_switch;
   lv_obj_t *widget_dropdown;
   lv_obj_t *home_cards[GLASS_HOME_CARD_COUNT];
@@ -101,6 +96,7 @@ static struct
   lv_obj_t *brightness_slider;
   lv_font_t *font72;
   lv_font_t *font48;
+  lv_font_t *music_font72;
   lv_timer_t *timer;
   int temperature_c;
   int humidity_pct;
@@ -112,6 +108,7 @@ static struct
   uint32_t received;
   bool has_sample;
   bool reduced_motion;
+  bool music_original_only;
   unsigned int palette;
   unsigned int widget;
 } g_glass;
@@ -128,17 +125,13 @@ static struct glass_display_s
   int aqi;
   unsigned weather_revision;
   bool weather_stale;
+  enum glass_weather_state weather_state;
+  bool weather_valid;
   int available;
   int total;
-  uint8_t hour;
-  uint8_t minute;
-  uint8_t month;
-  uint8_t day;
-  uint8_t weekday;
   uint8_t widget;
   uint8_t sync_unit;
   bool has_sample;
-  bool clock_valid;
   bool valid;
 } g_glass_display;
 
@@ -198,13 +191,6 @@ static void glass_save_preferences(void)
   g_preferences_waiting = !g_preferences_save_failed;
   glass_preferences_show_status();
   if (g_preferences_save_failed) show_toast("设置保存失败");
-}
-
-static uint32_t glass_tint(void)
-{
-  static const uint32_t light[] = {0x6358a0, 0xc64d36, 0x237f73};
-  static const uint32_t dark[] = {0x413461, 0x963c35, 0x215c58};
-  return g_desktop.light_theme ? light[g_glass.palette] : dark[g_glass.palette];
 }
 
 static lv_obj_t *glass_box(lv_obj_t *parent, int x, int y, int w, int h,
@@ -328,23 +314,28 @@ static void glass_chart_refresh(void)
     {
       return;
     }
-  for (i = 0; i < GLASS_HISTORY; i++)
+  /* Render only real samples. This LVGL chart backend performs arithmetic
+   * on POINT_NONE before clipping, which overflows on an empty history. */
+  lv_chart_set_point_count(g_glass.chart, g_glass.samples ? g_glass.samples : 1);
+  for (i = 0; i < g_glass.samples; i++)
     {
       if (i < g_glass.samples)
         {
           if (g_glass.history[i] < low) low = g_glass.history[i] - 5;
           if (g_glass.history[i] > high) high = g_glass.history[i] + 5;
         }
-      lv_chart_set_value_by_id(g_glass.chart, g_glass.series, i,
-        i < g_glass.samples ? g_glass.history[i] : LV_CHART_POINT_NONE);
+      lv_chart_set_value_by_id(g_glass.chart, g_glass.series, i, g_glass.history[i]);
     }
   lv_chart_set_range(g_glass.chart, LV_CHART_AXIS_PRIMARY_Y, low, high);
   if (g_glass.samples == 0)
     {
+      lv_chart_set_value_by_id(g_glass.chart, g_glass.series, 0, 0);
+      lv_obj_add_flag(g_glass.chart, LV_OBJ_FLAG_HIDDEN);
       lv_label_set_text(g_glass.chart_hint, "暂无温度记录 · 在智能家居中连接传感器");
     }
   else
     {
+      lv_obj_remove_flag(g_glass.chart, LV_OBJ_FLAG_HIDDEN);
       lv_label_set_text_fmt(g_glass.chart_hint,
         "本次运行已采集 %u 个温度样本 · 轻触折线查看数值", g_glass.samples);
     }
@@ -437,25 +428,26 @@ static void glass_update(lv_timer_t *timer)
   glass_preferences_update();
   home_devices_tick();
   struct timespec uptime = {0};
-  struct tm local = {0};
-  time_t now = time(NULL);
-  char buffer[80];
   struct glass_weather_snapshot weather;
   glass_weather_get(&weather);
   bool initial = !g_glass_display.valid;
   LV_UNUSED(timer);
-#ifndef CONFIG_LIBC_LOCALTIME
-  /* This build has no zoneinfo database, so localtime_r() returns UTC. Only
-   * the displayed clock is shifted; CLOCK_REALTIME stays UTC for TLS. */
-  now += GLASS_CLOCK_OFFSET_SECONDS;
-#endif
   if (g_glass.home == NULL)
     {
       return;
     }
-  glass_home_devices_paint();
   clock_gettime(CLOCK_MONOTONIC, &uptime);
   uint64_t weather_now = (uint64_t)uptime.tv_sec * 1000 + uptime.tv_nsec / 1000000;
+  bool weather_stale=weather.valid&&weather_now>=weather.received_ms&&
+    weather_now-weather.received_ms>=7200000;
+  /* Keep service polling and status alive, but do not repaint or decode a
+   * fully covered home. Its cached image stays ready for the back gesture. */
+  if(glass_page_covers_home()){
+    g_weather_home.deferred=true;
+    glass_weather_detail_update(&weather,weather_stale);
+    return;
+  }
+  glass_home_devices_paint();
   uint32_t sync_seconds = lv_tick_elaps(g_glass.received) / 1000;
   struct glass_display_s display =
     {
@@ -469,55 +461,15 @@ static void glass_update(lv_timer_t *timer)
       .humidity = weather.valid ? weather.data.humidity : -1,
       .aqi = weather.valid ? weather.data.aqi : -1,
       .weather_revision = weather.revision,
-      .weather_stale = weather.valid && weather_now - weather.received_ms >= 7200000,
+      .weather_stale = weather_stale,
+      .weather_state = weather.state,
+      .weather_valid = weather.valid,
       .available = g_glass.available,
       .total = g_glass.total,
       .widget = g_glass.widget < 2 ? g_glass.widget : 2,
       .has_sample = g_glass.has_sample,
-      .clock_valid = localtime_r(&now, &local) != NULL && local.tm_year >= 120,
       .valid = true,
     };
-  if (display.clock_valid)
-    {
-      display.hour = local.tm_hour;
-      display.minute = local.tm_min;
-      display.month = local.tm_mon;
-      display.day = local.tm_mday;
-      display.weekday = local.tm_wday;
-    }
-  bool clock_changed = display.clock_valid != g_glass_display.clock_valid;
-  if (initial || clock_changed ||
-      (display.clock_valid &&
-       (display.hour != g_glass_display.hour ||
-        display.minute != g_glass_display.minute)))
-    {
-      if (display.clock_valid)
-        {
-          strftime(buffer, sizeof(buffer), "%H:%M", &local);
-          lv_label_set_text(g_glass.clock, buffer);
-        }
-      else
-        lv_label_set_text(g_glass.clock, "--:--");
-    }
-  if (initial || clock_changed ||
-      (display.clock_valid &&
-       (display.month != g_glass_display.month ||
-        display.day != g_glass_display.day ||
-        display.weekday != g_glass_display.weekday)) ||
-      (!display.clock_valid &&
-       display.uptime_minutes != g_glass_display.uptime_minutes))
-    {
-      if (display.clock_valid)
-        {
-          static const char *week[] = {"周日", "周一", "周二", "周三", "周四", "周五", "周六"};
-          snprintf(buffer, sizeof(buffer), "%d 月 %d 日    %s",
-                   local.tm_mon + 1, local.tm_mday, week[local.tm_wday]);
-        }
-      else
-        snprintf(buffer, sizeof(buffer), "时钟待校准 · 已运行 %lu 分钟",
-                 display.uptime_minutes);
-      lv_label_set_text(g_glass.date, buffer);
-    }
   if (initial || display.temperature != g_glass_display.temperature)
     {
       if (display.temperature != -999)
@@ -562,7 +514,9 @@ static void glass_update(lv_timer_t *timer)
     }
   bool widget_changed = initial || display.widget != g_glass_display.widget;
   bool weather_changed = widget_changed ||
-    display.weather_revision != g_glass_display.weather_revision ||
+    weather_home_data_changed(&weather) ||
+    display.weather_state != g_glass_display.weather_state ||
+    display.weather_valid != g_glass_display.weather_valid ||
     display.weather_stale != g_glass_display.weather_stale;
   if (initial || display.humidity != g_glass_display.humidity)
     lv_label_set_text(g_glass.humidity_status,
@@ -653,16 +607,17 @@ static void glass_update(lv_timer_t *timer)
           weather.state == WEATHER_WAIT_TIME ? "等待校时" :
           weather.state == WEATHER_FAILED ? "天气暂不可用 · 稍后重试" : "正在更新天气");
     }
+  weather_home_update(&weather, display.weather_stale, weather_is_night());
   glass_weather_detail_update(&weather, display.weather_stale);
   g_glass_display = display;
+  g_weather_home.deferred=false;
 }
 
-static void glass_theme_toggle(lv_event_t *e)
+static void glass_weather_home_resume(void)
 {
-  LV_UNUSED(e);
-  g_desktop.light_theme = !g_desktop.light_theme;
-  glass_rebuild();
-  glass_save_preferences();
+  if(!g_weather_home.deferred)return;
+  g_weather_home.deferred=false;
+  glass_update(NULL);
 }
 
 static void glass_palette_select(lv_event_t *e)
@@ -733,43 +688,10 @@ static void glass_control_close_request(void)
     g_control_close_pending = true;
 }
 
-static void glass_control_outside(lv_event_t *e)
-{
-  /* Settings is a page: background clicks never dismiss it. */
-  LV_UNUSED(e);
-}
-
 static void glass_settings_back(lv_event_t *e)
 {
   LV_UNUSED(e);
   glass_control_close_request();
-}
-
-static void glass_control_slide(void *object, int32_t y)
-{
-  lv_obj_set_y(object, y);
-}
-
-static void glass_control_gesture(lv_event_t *e)
-{
-  if (GLASS_SIMPLE_SETTINGS) return;
-  lv_indev_t *input = lv_indev_active();
-  if (input == NULL) return;
-  lv_dir_t direction = lv_indev_get_gesture_dir(input);
-  bool closed = lv_obj_has_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN);
-  if (closed && direction == LV_DIR_BOTTOM)
-    {
-      lv_indev_wait_release(input);
-      if (!g_desktop.settings_rebuild_pending &&
-          lv_async_call(settings_rebuild_async, NULL) == LV_RESULT_OK)
-        g_desktop.settings_rebuild_pending = true;
-    }
-  else if (!closed && direction == LV_DIR_TOP)
-    {
-      lv_indev_wait_release(input);
-      glass_control_close_request();
-    }
-  LV_UNUSED(e);
 }
 
 static void glass_control_switch_style(lv_obj_t *sw)
@@ -805,45 +727,7 @@ static void glass_control_switch_style(lv_obj_t *sw)
   lv_obj_set_style_anim_duration(sw, g_glass.reduced_motion ? 0 : 160, 0);
 }
 
-static bool g_control_preferences;
 static void glass_settings(lv_event_t *e);
-
-static void glass_preferences_open(lv_event_t *e)
-{
-  LV_UNUSED(e);
-  g_control_preferences = true;
-  if (!g_desktop.settings_rebuild_pending &&
-      lv_async_call(settings_rebuild_async, NULL) == LV_RESULT_OK)
-    g_desktop.settings_rebuild_pending = true;
-}
-
-static void glass_control_return(lv_event_t *e)
-{
-  LV_UNUSED(e);
-  g_control_preferences = false;
-  if (!g_desktop.settings_rebuild_pending &&
-      lv_async_call(settings_rebuild_async, NULL) == LV_RESULT_OK)
-    g_desktop.settings_rebuild_pending = true;
-}
-
-static void glass_icon_hint(lv_event_t *e)
-{
-  show_toast((const char *)lv_event_get_user_data(e));
-}
-
-static lv_obj_t *glass_control_icon(lv_obj_t *parent, const char *symbol,
-                                   int x, int y, const char *hint,
-                                   lv_event_cb_t action)
-{
-  lv_obj_t *button = glass_button(parent, "", x, y, 64, theme_surface(), action, NULL);
-  lv_obj_set_size(button, 64, 56);
-  lv_obj_set_style_radius(button, 16, 0);
-  lv_obj_t *icon = glass_symbol(button, symbol, 0, 0, theme_primary());
-  lv_obj_center(icon);
-  lv_obj_add_event_cb(button, glass_icon_hint, LV_EVENT_LONG_PRESSED, (void *)hint);
-  lv_obj_add_event_cb(button, glass_icon_hint, LV_EVENT_HOVER_OVER, (void *)hint);
-  return button;
-}
 
 /* Shared form styling includes the placeholder, which otherwise uses
  * LVGL's Latin-only theme font. Keep keyboard symbols in Montserrat. */
@@ -905,22 +789,30 @@ static void glass_bluetooth_page(void *unused)
 #ifdef CONFIG_SYSTEM_GLASS_BLE
   glass_mouse_page(card);
 #else
-#if defined(CONFIG_SYSTEM_C6BLE_V3_EXPERIMENTAL) && defined(CONFIG_NIMBLE)
-  glass_text(card, "BLE 协议栈已编译", 24, 92, 850, 28, theme_primary());
-#else
-  glass_text(card, "蓝牙服务未启用", 24, 92, 850, 28, theme_primary());
-#endif
-  glass_text(card, "ESP32-C6 固件状态：未检测", 24, 150, 850, 20, theme_secondary());
-  glass_text(card, "BLE 扫描与连接暂不可用", 24, 192, 850, 20, theme_secondary());
+  detail_page(card);
+  detail_sidebar(card, "蓝牙", LV_SYMBOL_BLUETOOTH, panel_hide);
+  detail_text(card, "蓝牙设备", 216, 26, 500, 28, detail_ink());
+  lv_obj_t *status = detail_tile(card, 216, 104, 784, 160);
+  detail_text(status, "蓝牙鼠标服务未启用", 24, 28, 720, 20, detail_ink());
+  detail_text(status, "当前配置无法配对或发送鼠标操作", 24, 80, 720, 16, detail_muted());
 #endif
 }
 
 static bool g_system_page_pending;
 static unsigned int g_system_page_kind;
+static void glass_system_page_async(void *unused);
+
+static void glass_system_page_cancel(void)
+{
+  if (g_system_page_pending)
+    lv_async_call_cancel(glass_system_page_async, NULL);
+  g_system_page_pending = false;
+}
 
 static void glass_system_page_async(void *unused)
 {
   LV_UNUSED(unused);
+  if (!g_system_page_pending) return;
   g_system_page_pending = false;
   if (g_system_page_kind == 1) glass_storage_page(NULL);
   else if (g_system_page_kind == 2) glass_bluetooth_page(NULL);
@@ -941,18 +833,15 @@ static void glass_system_page_open(lv_event_t *e)
 #include "glass_portal_ui.inc"
 
 #include "glass_settings_ui.inc"
+#include "glass_about_ui.inc"
 
 static void glass_lock_open(lv_event_t *e);
 #include "glass_music_cover_ui.inc"
 #include "glass_music_ui.inc"
-#ifdef CONFIG_SYSTEM_HASS
-#include "glass_hass_ui.inc"
-#else
 static void glass_homeassistant(lv_event_t *e)
 {
   launch_builtin_homeassistant_qapp(e);
 }
-#endif
 #include "glass_speech_ui.inc"
 #include "glass_chat_ui.inc"
 
@@ -1162,11 +1051,6 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
   if (g_desktop.qpk_scan_failed) show_toast("内存不足，部分应用暂未列出；请稍后重新打开");
 }
 
-static void glass_fade(void *object, int32_t value)
-{
-  lv_obj_set_style_opa(object, (lv_opa_t)value, 0);
-}
-
 #include "glass_home_ui.inc"
 #include "glass_lockscreen.inc"
 #include "glass_status_ui.inc"
@@ -1204,11 +1088,9 @@ static void glass_edge_back_async(void *data)
   g_edge_back_pending = false;
   /* Ignore a gesture if another action changed the page before dispatch. */
   if (g_lock_ui.root || g_edge_page != g_desktop.current_card) return;
+  if(g_music_ui.full){music_full_close(NULL);return;}
   if (g_desktop.dialog != NULL)
     dialog_cancel();
-  else if (g_control_card != NULL && g_control_card == g_desktop.current_card &&
-           g_control_preferences && !GLASS_SIMPLE_SETTINGS)
-    glass_control_return(NULL);
   else if (!lv_obj_has_flag(g_desktop.panel, LV_OBJ_FLAG_HIDDEN))
     {
       if (g_desktop.chat_page) glass_chat_back(NULL);
@@ -1351,10 +1233,15 @@ static void desktop_ui_create(void)
     128, LV_FONT_KERNING_NORMAL, 24);
   g_glass.font48 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
     48, LV_FONT_KERNING_NORMAL, 24);
+  /* The home temperature face above is 128 px despite its historical name.
+   * Lyrics need their own actual 72 px face for measurement and clipping. */
+  g_glass.music_font72 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+    72, LV_FONT_KERNING_NORMAL, 24);
   glass_home_fonts_init(g_desktop_font_start, size);
   if (g_desktop.font16) g_desktop.font16->fallback = glass_icon_font(16);
   if (g_desktop.font20) g_desktop.font20->fallback = glass_icon_font(20);
   if (g_desktop.font28) g_desktop.font28->fallback = glass_icon_font(24);
+  glass_sd_font_start();
   g_desktop.screen = glass_box(lv_screen_active(), 0, GLASS_STATUS_HEIGHT,
                                 1024, GLASS_CONTENT_HEIGHT, theme_card(), 0);
   lv_obj_set_style_text_font(g_desktop.screen, zh_font(20), 0);

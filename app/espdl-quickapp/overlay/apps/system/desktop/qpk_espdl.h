@@ -8,7 +8,7 @@
 #define QPK_DL_HEIGHT 240
 #define QPK_DL_PIXELS (QPK_DL_WIDTH * QPK_DL_HEIGHT)
 #define QPK_DL_MAX_RESULTS 10
-enum qpk_dl_mode { QPK_DL_CLASSIFY, QPK_DL_FACE };
+enum qpk_dl_mode { QPK_DL_CLASSIFY, QPK_DL_FACE, QPK_DL_SNAPSHOT };
 enum qpk_dl_stage { QPK_DL_IDLE, QPK_DL_CAPTURE, QPK_DL_LOAD, QPK_DL_INFER,
                     QPK_DL_DONE, QPK_DL_CANCELLED, QPK_DL_ERROR };
 struct qpk_dl_item { char label[96]; float score; int x1, y1, x2, y2; };

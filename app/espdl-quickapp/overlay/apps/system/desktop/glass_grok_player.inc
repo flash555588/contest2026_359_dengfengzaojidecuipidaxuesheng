@@ -28,7 +28,7 @@ struct glass_grok {
   uint64_t read_us,max_read_us;unsigned displayed,reads,errors,seeks,ticks;
   int error;bool thread_started,quit,pending,busy,ready,initialized;
   bool reduced,settled,celebrating,manual,active;
-  bool gaze_enabled,black,job_gaze;
+  bool gaze_enabled,black,job_gaze,suspended;
   int gaze_x,gaze_y,job_gaze_x,job_gaze_y;
   struct grok_gaze_scratch *gaze_scratch;
 };
@@ -89,7 +89,19 @@ static void *grok_reader(void *opaque)
  * the original polling bound without letting the reader call LVGL. */
 static void grok_wake(struct glass_grok *b)
 {
-  if(b->timer)lv_timer_set_period(b->timer,GROK_POLL_MS);
+  if(b->timer){
+    lv_timer_set_period(b->timer,GROK_POLL_MS);
+    if(b->suspended){b->suspended=false;lv_timer_resume(b->timer);}
+  }
+}
+static bool grok_visible(const struct glass_grok *b)
+{return b->active&&lv_obj_is_visible(b->root)&&!(b->overlay&&lv_obj_is_visible(b->overlay));}
+/* Revealing a parent or dismissing an overlay invalidates this retained root.
+ * Resume from its draw event, without a second timer polling hidden players. */
+static void grok_revealed(lv_event_t *e)
+{
+  struct glass_grok *b=lv_event_get_user_data(e);
+  if(b->suspended&&grok_visible(b))grok_wake(b);
 }
 static void grok_select_id(struct glass_grok *b,unsigned id)
 {
@@ -110,8 +122,9 @@ static void grok_poll_state(struct glass_grok *b,uint32_t now)
 static void grok_tick(lv_timer_t *timer)
 {
   struct glass_grok *b=lv_timer_get_user_data(timer);uint32_t now=lv_tick_get();
-  b->ticks++;grok_wake(b);
-  if(!b->active||!lv_obj_is_visible(b->root)||(b->overlay&&lv_obj_is_visible(b->overlay)))return;
+  b->ticks++;
+  if(!grok_visible(b)){b->suspended=true;lv_timer_pause(timer);return;}
+  grok_wake(b);
   if(now-b->last_tick>500)b->due=now;b->last_tick=now;grok_poll_state(b,now);
   pthread_mutex_lock(&b->lock);
   if(b->ready&&(b->result_epoch!=b->epoch||(int32_t)(now-b->due)>=0)){
@@ -166,6 +179,7 @@ static struct glass_grok *grok_create(lv_obj_t *parent,int width,unsigned style,
   lv_obj_remove_style_all(b->root);lv_obj_set_size(b->root,width,style==0?64:89);
   lv_obj_clear_flag(b->root,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_user_data(b->root,b);
   lv_obj_add_event_cb(b->root,grok_deleted,LV_EVENT_DELETE,b);
+  lv_obj_add_event_cb(b->root,grok_revealed,LV_EVENT_DRAW_MAIN_BEGIN,b);
   b->image=lv_image_create(b->root);lv_obj_set_pos(b->image,style==0?0:12,style==0?0:1);lv_obj_add_flag(b->image,LV_OBJ_FLAG_HIDDEN);
   b->notice=lv_label_create(b->root);lv_obj_set_style_text_font(b->notice,font(12),0);lv_label_set_text(b->notice,"加载小球…");lv_obj_set_pos(b->notice,8,20);
   for(unsigned i=0;i<2;i++){
@@ -219,6 +233,7 @@ bool glass_grok_gaze(struct glass_grok *b,int x,int y)
 }
 void glass_grok_action(struct glass_grok *b,unsigned action){if(b&&b->states==42&&(action==0||(action>=42&&action<=51))&&action!=b->action){b->action=action;b->epoch++;b->next_frame=0;b->due=lv_tick_get();grok_wake(b);}}
 void glass_grok_set_active(struct glass_grok *b,bool active){if(b&&b->active!=active){b->active=active;grok_wake(b);}}
+void glass_grok_refresh(struct glass_grok *b){if(b)grok_tick(b->timer);}
 void glass_grok_follow_chat(struct glass_grok *b,bool follow){if(b){b->manual=!follow;b->polled_at=0;grok_wake(b);}}
 void glass_grok_set_reduced_motion(struct glass_grok *b,bool reduced){if(b&&b->reduced!=reduced){b->reduced=reduced;grok_wake(b);}}
 void glass_grok_set_obscured_by(struct glass_grok *b,lv_obj_t *o){if(b){b->overlay=o;grok_wake(b);}}

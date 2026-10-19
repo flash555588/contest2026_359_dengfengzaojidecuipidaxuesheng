@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 20,
+      "sha256": "e97602ab9cac70102245345c5ab0fc9830df8b17f1072b188265a662a3a547ae"
+    },
+    {
+      "path": "additional-runtime.json",
+      "bytes": 1919,
+      "sha256": "8031d92555cee13d7f14bb19ddd03d1b33b890eea38cdad1cf42d14104245354"
+    },
+    {
+      "path": "board-acceptance.json",
+      "bytes": 4576,
+      "sha256": "098dfaccda3355c417e81e3f5f6ba866fd2659a49ab407dd2460c2cc5a3f97a4"
+    },
+    {
+      "path": "continuity.json",
+      "bytes": 5057,
+      "sha256": "7eb5e611268d49c6fc0a59be61585b24b79446351b7721b13b528d8fc3fb3f13"
+    },
+    {
+      "path": "evidence-links.json",
+      "bytes": 740,
+      "sha256": "8d256d1e62da77f55a37587402a7462c865a9aa0b39c647c6741ba90b9ebf9d7"
+    },
+    {
+      "path": "fixed-fixture.json",
+      "bytes": 914,
+      "sha256": "9cf8108ae8fb8cff8bdcbd9e3991d677faadc48ab04359c6614a920887552b3a"
+    },
+    {
+      "path": "log-excerpts.json",
+      "bytes": 11032,
+      "sha256": "d36f1d471eed2d91d35c30066b969dec69584daaa727c0f7fb761c4629a97bbc"
+    },
+    {
+      "path": "model-path-diagnosis.json",
+      "bytes": 1645,
+      "sha256": "d1e46e69153475fc0218e215f3bb411372b7351d033b716d9c11995a2e397bd8"
+    },
+    {
+      "path": "remaining-evidence.json",
+      "bytes": 2704,
+      "sha256": "62231467eafe37e88e124508067f924517d16efcdeaaa0eb36345e408ef37d08"
+    }
+  ],
+  "authenticity_limit": "Checksums verify byte integrity; excerpts and local tests do not independently certify authorship or universal reliability."
+}

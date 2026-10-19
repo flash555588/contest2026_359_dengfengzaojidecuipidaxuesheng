@@ -32,6 +32,8 @@ bool glass_grok_gaze(struct glass_grok *ball,int x,int y);
 /* Pre-rendered app gestures: 42 spin; 43..51 gaze grid; 0 restore state. */
 void glass_grok_action(struct glass_grok *ball,unsigned action);
 void glass_grok_set_active(struct glass_grok *ball,bool active);
+/* UI-thread refresh when a direct camera owns display pages and timers pause. */
+void glass_grok_refresh(struct glass_grok *ball);
 /* Follow the same chat/voice state as ESPClaw; no extra conversation worker. */
 void glass_grok_follow_chat(struct glass_grok *ball,bool follow);
 void glass_grok_debug_status(void);

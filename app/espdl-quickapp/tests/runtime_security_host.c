@@ -18,6 +18,7 @@ struct {
   JSContext *context;
   lv_obj_t **widgets;
   uint8_t *widget_types;
+  void **widget_extra;
   uint64_t *widget_generations;
   uint64_t widget_serial;
   int widget_capacity, widget_hint;
@@ -30,10 +31,16 @@ static char g_qpk_last_error[256];
 #define LV_STATE_DISABLED 1
 #define LV_TEXT_ALIGN_CENTER 1
 #define LV_TEXT_ALIGN_LEFT 0
+#define LV_TEXT_ALIGN_RIGHT 2
+#define LV_GRAD_DIR_NONE 0
+#define LV_GRAD_DIR_HOR 1
+#define LV_GRAD_DIR_VER 2
+#define LV_OBJ_FLAG_PRESS_LOCK 1
 #define LV_LABEL_LONG_DOT 1
 #define LV_LABEL_LONG_WRAP 0
 
-static size_t strlcpy(char *out,const char *in,size_t n)
+#define strlcpy security_strlcpy
+static size_t security_strlcpy(char *out,const char *in,size_t n)
 { size_t size=strlen(in); if(n){size_t c=size<n-1?size:n-1;memcpy(out,in,c);out[c]=0;}return size; }
 static void *lv_event_get_user_data(lv_event_t *e) { return e->data; }
 static lv_obj_t *lv_event_get_target(lv_event_t *e) { return e->target; }
@@ -51,6 +58,10 @@ STYLE(lv_obj_set_style_border_opa,int)
 STYLE(lv_obj_set_style_text_color,uint32_t)
 STYLE(lv_obj_set_style_text_font,const void *)
 STYLE(lv_obj_set_style_text_align,int)
+STYLE(lv_obj_set_style_bg_grad_color,uint32_t)
+STYLE(lv_obj_set_style_bg_grad_dir,int)
+STYLE(lv_obj_set_style_bg_main_stop,int)
+STYLE(lv_obj_set_style_bg_grad_stop,int)
 static void lv_obj_set_style_radius(lv_obj_t *o,int value,int selector)
 { assert(o&&o->alive);(void)selector;o->radius=value; }
 static void lv_label_set_long_mode(lv_obj_t *o,int value) { assert(o&&o->alive);(void)value; }
@@ -58,6 +69,24 @@ static void lv_obj_remove_state(lv_obj_t *o,int value) { assert(o&&o->alive);(vo
 static void lv_obj_add_state(lv_obj_t *o,int value) { assert(o&&o->alive);(void)value; }
 static void lv_obj_set_pos(lv_obj_t *o,int x,int y) { assert(o&&o->alive);o->x=x;o->y=y; }
 static void lv_obj_set_size(lv_obj_t *o,int w,int h) { assert(o&&o->alive);o->w=w;o->h=h; }
+static int lv_obj_get_x(lv_obj_t *o) { assert(o&&o->alive);return o->x; }
+static int lv_obj_get_y(lv_obj_t *o) { assert(o&&o->alive);return o->y; }
+static int lv_obj_get_width(lv_obj_t *o) { assert(o&&o->alive);return o->w; }
+static int lv_obj_get_height(lv_obj_t *o) { assert(o&&o->alive);return o->h; }
+static lv_obj_t *lv_obj_get_parent(lv_obj_t *o) { assert(o&&o->alive);return NULL; }
+static void lv_obj_add_flag(lv_obj_t *o,int flag) { assert(o&&o->alive);(void)flag; }
+static void lv_obj_remove_flag(lv_obj_t *o,int flag) { assert(o&&o->alive);(void)flag; }
+static const void *glass_icon_font(int size) { static int font;(void)size;return &font; }
+/* This harness exercises authorization and handle reuse, not real viewports
+ * or animations. Keep presentation adapters explicit and inert. */
+static void qpk_viewport_cleanup(lv_obj_t *o,void *extra)
+{ assert(o&&o->alive);assert(extra==NULL); }
+static void qpk_viewport_origin(lv_obj_t *parent,int *x,int *y)
+{ assert(parent==NULL);*x=*y=0; }
+static bool qpk_viewport_object(lv_obj_t *o) { assert(o&&o->alive);return false; }
+static int qpk_color_wheel_resize(lv_obj_t *o,int width,int height)
+{ assert(o&&o->alive);(void)width;(void)height;return 0; }
+static bool (*desktop_motion_geometry)(lv_obj_t *,int,int,int,int,unsigned,bool);
 
 /* Exact production function bodies are extracted by run_security.py. */
 #include "runtime_subset.inc"
@@ -143,7 +172,7 @@ int main(void)
       "let caught=false;try{ui.setSize(a,{valueOf(){throw Error('conversion')}},10)}catch(e){caught=true}expect(caught);ui.setPos(a,20,30);ui.setSize(a,50,60);ui.remove(a);\n"
       "let list=[];for(let i=0;i<80;i++)list.push(ui.make());for(const id of list)ui.remove(id)");
   for(int i=0;i<g_qpk.widget_capacity;i++)assert(!g_qpk.widgets[i]);
-  free(g_qpk.widgets);free(g_qpk.widget_types);free(g_qpk.widget_generations);
+  free(g_qpk.widgets);free(g_qpk.widget_types);free(g_qpk.widget_extra);free(g_qpk.widget_generations);
 #endif
   JS_FreeContext(ctx);JS_FreeRuntime(rt);
 #ifdef BASELINE_ONLY

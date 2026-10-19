@@ -1,0 +1,23 @@
+{
+  "repo": "rhasspy/piper-voices",
+  "revision": "c10ece1aade47bb51c153c893d14e5bf8e5b7117",
+  "voice": "zh_CN-xiao_ya-medium",
+  "sources": [
+    {
+      "path": "zh/zh_CN/xiao_ya/medium/MODEL_CARD",
+      "bytes": 434,
+      "sha256": "5720e170d3872dcea10803c77a4a6b4424a9af366431fdc5668adafd95e33f42"
+    },
+    {
+      "path": "zh/zh_CN/xiao_ya/medium/zh_CN-xiao_ya-medium.onnx",
+      "bytes": 63221984,
+      "sha256": "cb2ce4ca1f5a36a7b23ae48f0651ce2c854c331ef7a804e5c5dc643d0f74f0e2"
+    },
+    {
+      "path": "zh/zh_CN/xiao_ya/medium/zh_CN-xiao_ya-medium.onnx.json",
+      "bytes": 2927,
+      "sha256": "e1ec027b7065959643c1463705398d413ed4fdaa626d7d8ef1d12ab87e9a0320"
+    }
+  ],
+  "license_note": "MODEL_CARD lists BZNSYP non-commercial use; preserve this restriction for research outputs."
+}

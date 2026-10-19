@@ -3,6 +3,9 @@
 #ifndef VOICE_CAPTURE_CANCELLED
 #define VOICE_CAPTURE_CANCELLED() false
 #endif
+#ifndef VOICE_CAPTURE_LOCK
+#define VOICE_CAPTURE_LOCK() music_pcm_session_lock()
+#endif
 struct voice_capture {
   int fd;
   mqd_t mq;
@@ -23,13 +26,17 @@ static int capture_open(struct voice_capture *capture)
   capture->mq=(mqd_t)-1;
   capture->settle=VOICE_SETTLE_FRAMES;
   if(VOICE_CAPTURE_CANCELLED())return -ECANCELED;
-  int ret=glass_music_stop_wait(5000);
+  int ret=0;
+#ifdef VOICE_CAPTURE_BACKGROUND
+  if(!VOICE_CAPTURE_BACKGROUND())
+#endif
+    ret=glass_music_stop_wait(5000);
   if(ret) return ret;
   if(VOICE_CAPTURE_CANCELLED())return -ECANCELED;
   #ifdef SPEECH_CAPTURE_TRY
   ret=music_pcm_session_trylock();
 #else
-  ret=music_pcm_session_lock();
+  ret=VOICE_CAPTURE_LOCK();
 #endif
   if(ret) return ret;
   capture->session_locked=true;

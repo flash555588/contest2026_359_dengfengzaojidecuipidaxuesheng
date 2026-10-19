@@ -1,0 +1,352 @@
+--- a/arch/risc-v/src/common/riscv_exception_common.S
++++ b/arch/risc-v/src/common/riscv_exception_common.S
+@@ -1,7 +1,5 @@
+ /****************************************************************************
+  * arch/risc-v/src/common/riscv_exception_common.S
+- *
+- * SPDX-License-Identifier: Apache-2.0
+  *
+  * Licensed to the Apache Software Foundation (ASF) under one or more
+  * contributor license agreements.  See the NOTICE file distributed with
+@@ -81,15 +79,11 @@
+ #  endif
+ #endif
+ 
+-/* Provide a default section for the exception handler. */
++/* Provide a default section for the exeception handler. */
+ 
+ #ifndef EXCEPTION_SECTION
+ #  define EXCEPTION_SECTION .text
+ #endif
+-
+-/* Valid exceptions causes range is from 0 to 63 */
+-
+-#define CAUSE_EXCEPTION   63
+ 
+ /****************************************************************************
+  * Public Symbols
+@@ -108,8 +102,6 @@
+   .global exception_common
+   .global return_from_exception
+   .global return_from_syscall
+-  .type   exception_common, function
+-  .type   return_from_exception, function
+   .align  8
+ 
+ exception_common:
+@@ -135,42 +127,70 @@
+   csrrw      a0, CSR_SCRATCH, a0
+ #endif
+ 
++#if defined(CONFIG_ARCH_CHIP_ESP32P4) && defined(CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS)
++  /* PIE loads/stores require a 16-byte aligned context, including interrupts
++   * inside ESP-DL leaf assembly with a temporarily unaligned stack. Keep t0
++   * above the new frame until the original SP has been recorded. */
++  addi       sp, sp, -16
++  REGSTORE   t0, 0(sp)
++  mv         t0, sp
++  andi       sp, sp, -16
+   addi       sp, sp, -XCPTCONTEXT_SIZE
++  addi       t0, t0, 16
++  REGSTORE   t0, REG_SP(sp)
++  REGLOAD    t0, -16(t0)
++#else
++  addi       sp, sp, -XCPTCONTEXT_SIZE
++#endif
+   save_ctx   sp
++  .cfi_def_cfa sp, 0
+ 
+   /* Save the extended context */
+ 
+ #ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+   save_extctx sp
++#endif
++  .cfi_def_cfa sp, 0
++#if defined(CONFIG_ARCH_CHIP_ESP32P4) && defined(CONFIG_ARCH_FPU) && !defined(CONFIG_ARCH_LAZYFPU)
++  addi       a1, sp, INT_XCPT_SIZE
++  riscv_savefpu a1
+ #endif
+ 
+   csrr       s0, CSR_STATUS       /* s0=status */
+   csrr       s1, CSR_EPC          /* s1=exception PC */
+   csrr       s2, CSR_CAUSE        /* s2=cause */
++#ifdef CONFIG_ARCH_RV_HAVE_CLIC
++  csrr       s4, CSR_INTTHRESH    /* s4=interrupt threshold */
++#endif
++#ifdef CONFIG_ARCH_RV_SHADOW_STACK
++  csrr       s5, CSR_SSP          /* s5=shadow stack pointer */
++#endif
+ 
+ #ifdef CONFIG_ARCH_KERNEL_STACK
+   csrr       s3, CSR_SCRATCH
+   REGLOAD    s3, RISCV_PERCPU_USP(s3)
+ #else
++#  if defined(CONFIG_ARCH_CHIP_ESP32P4) && defined(CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS)
++  REGLOAD    s3, REG_SP(sp)
++#  else
+   addi       s3, sp, XCPTCONTEXT_SIZE
++#  endif
+ #endif
+ 
+   REGSTORE   s0, REG_INT_CTX(sp)
+   REGSTORE   s1, REG_EPC(sp)
+   REGSTORE   s3, REG_SP(sp)
++#ifdef CONFIG_ARCH_RV_HAVE_CLIC
++  REGSTORE   s4, REG_INT_THRESH(sp)
++#endif
++#ifdef CONFIG_ARCH_RV_SHADOW_STACK
++  REGSTORE   s5, REG_SSP(sp)       /* Save shadow stack pointer */
++#endif
+ 
+ #ifdef CONFIG_LIB_SYSCALL
+-  csrr       tp, CSR_SCRATCH      /* Load kernel TP */
+-  REGLOAD    tp, RISCV_PERCPU_TCB(tp)
+-
+   /* Check whether it is an exception or interrupt */
+ 
+   blt        s2, x0, handle_irq   /* If cause < 0 it is interrupt */
+-
+-  /* Adjust exception cause range from 0 to 63 */
+-
+-  li         s3, CAUSE_EXCEPTION
+-  and        s2, s2, s3
+ 
+   /* Is it a system call ? */
+ 
+@@ -191,6 +211,9 @@
+ 1:
+   addi       s1, s1, 0x4          /* Must move EPC forward by +4 */
+   REGSTORE   s1, REG_EPC(sp)      /* Updated EPC to user context */
++
++  csrr       tp, CSR_SCRATCH      /* Load kernel TP */
++  REGLOAD    tp, RISCV_PERCPU_TCB(tp)
+ 
+   mv         a7, sp               /* a7 = context */
+   call       x1, dispatch_syscall /* Dispatch the system call */
+@@ -226,7 +249,7 @@
+ 
+ #if CONFIG_ARCH_INTERRUPTSTACK > 15
+ 
+-  /* Switch to interrupt stack */
++  /* Switch to interrupt stack if not already done so */
+ 
+   setintstack t0, t1
+ 
+@@ -251,7 +274,7 @@
+   REGSTORE   s0, 0(sp)
+   add        s0, sp, (INT_REG_SIZE * 2)
+ 
+-#ifdef CONFIG_ENABLE_ALL_SIGNALS
++#ifndef CONFIG_DISABLE_SIGNALS
+   addi       sp, sp, -XCPTCONTEXT_SIZE
+ #endif
+ 
+@@ -263,7 +286,7 @@
+   REGLOAD    s0, 0(sp)
+   add        sp, sp, (INT_REG_SIZE * 2)
+ 
+-#ifdef CONFIG_ENABLE_ALL_SIGNALS
++#ifndef CONFIG_DISABLE_SIGNALS
+   /* Restore sp */
+ 
+   addi       sp, sp, XCPTCONTEXT_SIZE
+@@ -281,12 +304,21 @@
+ 
+   REGLOAD    s0, REG_INT_CTX(sp)  /* restore status */
+   csrw       CSR_STATUS, s0
++#ifdef CONFIG_ARCH_RV_HAVE_CLIC
++  REGLOAD    s0, REG_INT_THRESH(sp) /* restore interrupt threshold */
++  csrw       CSR_INTTHRESH, s0
++#endif
++#ifdef CONFIG_ARCH_RV_SHADOW_STACK
++  REGLOAD    s0, REG_SSP(sp)       /* restore shadow stack pointer */
++  csrw       CSR_SSP, s0
++#endif
+ 
+ #ifdef CONFIG_LIB_SYSCALL
+   /* Store tcb to scratch register */
+ 
++  call       x1, nxsched_self
+   csrr       s1, CSR_SCRATCH
+-  REGSTORE   tp, RISCV_PERCPU_TCB(s1)
++  REGSTORE   a0, RISCV_PERCPU_TCB(s1)
+ #endif
+ 
+ #ifdef CONFIG_ARCH_KERNEL_STACK
+@@ -311,6 +343,10 @@
+   load_extctx sp
+ #endif
+ 
++#if defined(CONFIG_ARCH_CHIP_ESP32P4) && defined(CONFIG_ARCH_FPU) && !defined(CONFIG_ARCH_LAZYFPU)
++  addi       a1, sp, INT_XCPT_SIZE
++  riscv_loadfpu a1
++#endif
+   load_ctx   sp
+ 
+   REGLOAD    sp, REG_SP(sp)      /* restore original sp */
+@@ -339,7 +375,6 @@
+ 
+   .section EXCEPTION_SECTION
+   .global riscv_jump_to_user
+-  .type   riscv_jump_to_user, function
+ 
+ riscv_jump_to_user:
+ 
+--- a/arch/risc-v/src/common/riscv_saveusercontext.S
++++ b/arch/risc-v/src/common/riscv_saveusercontext.S
+@@ -1,7 +1,5 @@
+ /****************************************************************************
+  * arch/risc-v/src/common/riscv_saveusercontext.S
+- *
+- * SPDX-License-Identifier: Apache-2.0
+  *
+  * Licensed to the Apache Software Foundation (ASF) under one or more
+  * contributor license agreements.  See the NOTICE file distributed with
+@@ -29,6 +27,7 @@
+ #include "riscv_macros.S"
+ 
+ #ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
++#  define P4_EXT_KEEP_ENABLED 1
+ #  include "riscv_extctx.S"
+ #endif
+ 
+--- /dev/null
++++ b/arch/risc-v/src/esp32p4/riscv_extctx.S
+@@ -0,0 +1,123 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++/* P4 PIE and hardware-loop context for NuttX exception/saveusercontext hooks.
++ * Q0-Q7: 128 bytes; QACC:64; UA:16; XACC:8; SAR/SAR_BYTES/FFT/CFG:16;
++ * PIE state:4; loop CSRs:24; HWLP state:4. The buffer is 16-byte aligned.
++ * Only a1/a2 are scratch, so this also works with an a0 context pointer. */
++#define P4_EXT_BASE (((REG_INT_CTX_NDX + 1) * 4 + 15) & ~15)
++#if INT_XCPT_SIZE < P4_EXT_BASE + 264
++#  error "P4 extended context allocation is too small"
++#endif
++#if (XCPTCONTEXT_SIZE & 15) != 0
++#  error "P4 exception context must preserve 16-byte stack alignment"
++#endif
++
++.option arch, +xespv
++.macro save_extctx in
++  addi a1, \in, P4_EXT_BASE
++  csrr a2, 0x7f2
++  sw a2, 232(a1)
++  andi a2, a2, 3
++  beqz a2, .Lpie_saved\@
++  esp.vst.128.ip q0, a1, 16
++  esp.vst.128.ip q1, a1, 16
++  esp.vst.128.ip q2, a1, 16
++  esp.vst.128.ip q3, a1, 16
++  esp.vst.128.ip q4, a1, 16
++  esp.vst.128.ip q5, a1, 16
++  esp.vst.128.ip q6, a1, 16
++  esp.vst.128.ip q7, a1, 16
++  esp.st.qacc.l.l.128.ip a1, 16
++  esp.st.qacc.l.h.128.ip a1, 16
++  esp.st.qacc.h.l.128.ip a1, 16
++  esp.st.qacc.h.h.128.ip a1, 16
++  esp.st.ua.state.ip a1, 16
++  esp.st.u.xacc.ip a1, 8
++  esp.movx.r.sar a2
++  sw a2, 0(a1)
++  esp.movx.r.sar.bytes a2
++  sw a2, 4(a1)
++  esp.movx.r.fft.bit.width a2
++  sw a2, 8(a1)
++  esp.movx.r.cfg a2
++  sw a2, 12(a1)
++.Lpie_saved\@:
++  /* Disable PIE in handlers; accidental vector use traps instead of silently
++   * corrupting the interrupted task. All C/ROM IRQ code is scalar. */
++#ifndef P4_EXT_KEEP_ENABLED
++  csrwi 0x7f2, 0
++#endif
++  addi a1, \in, P4_EXT_BASE
++  csrr a2, 0x7f1
++  sw a2, 260(a1)
++  andi a2, a2, 3
++  beqz a2, .Lhwlp_saved\@
++  csrr a2, 0x7c6
++  sw a2, 236(a1)
++  csrr a2, 0x7c7
++  sw a2, 240(a1)
++  csrr a2, 0x7c8
++  sw a2, 244(a1)
++  csrr a2, 0x7c9
++  sw a2, 248(a1)
++  csrr a2, 0x7ca
++  sw a2, 252(a1)
++  csrr a2, 0x7cb
++  sw a2, 256(a1)
++.Lhwlp_saved\@:
++#ifndef P4_EXT_KEEP_ENABLED
++  csrwi 0x7f1, 0
++#endif
++.endm
++
++.macro load_extctx out
++  addi a1, \out, P4_EXT_BASE
++  lw a2, 232(a1)
++  andi a2, a2, 3
++  beqz a2, .Lpie_off\@
++  csrwi 0x7f2, 1
++  esp.vld.128.ip q0, a1, 16
++  esp.vld.128.ip q1, a1, 16
++  esp.vld.128.ip q2, a1, 16
++  esp.vld.128.ip q3, a1, 16
++  esp.vld.128.ip q4, a1, 16
++  esp.vld.128.ip q5, a1, 16
++  esp.vld.128.ip q6, a1, 16
++  esp.vld.128.ip q7, a1, 16
++  esp.ld.qacc.l.l.128.ip a1, 16
++  esp.ld.qacc.l.h.128.ip a1, 16
++  esp.ld.qacc.h.l.128.ip a1, 16
++  esp.ld.qacc.h.h.128.ip a1, 16
++  esp.ld.ua.state.ip a1, 16
++  esp.ld.xacc.ip a1, 8
++  lw a2, 0(a1)
++  esp.movx.w.sar a2
++  lw a2, 4(a1)
++  esp.movx.w.sar.bytes a2
++  lw a2, 8(a1)
++  esp.movx.w.fft.bit.width a2
++  lw a2, 12(a1)
++  esp.movx.w.cfg a2
++  li a2, 3
++.Lpie_off\@:
++  csrw 0x7f2, a2
++  addi a1, \out, P4_EXT_BASE
++  lw a2, 260(a1)
++  andi a2, a2, 3
++  beqz a2, .Lhwlp_off\@
++  csrwi 0x7f1, 1
++  lw a2, 236(a1)
++  csrw 0x7c6, a2
++  lw a2, 240(a1)
++  csrw 0x7c7, a2
++  lw a2, 248(a1)
++  csrw 0x7c9, a2
++  lw a2, 252(a1)
++  csrw 0x7ca, a2
++  lw a2, 244(a1)
++  csrw 0x7c8, a2
++  lw a2, 256(a1)
++  csrw 0x7cb, a2
++  li a2, 3
++.Lhwlp_off\@:
++  csrw 0x7f1, a2
++.endm
+--- /dev/null
++++ b/arch/risc-v/src/esp32p4/esp32p4_extctx.c
+@@ -0,0 +1,11 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++#include <nuttx/config.h>
++#include <nuttx/sched.h>
++#include <arch/irq.h>
++#include <string.h>
++void riscv_initial_extctx_state(struct tcb_s *tcb)
++{
++  /* New tasks start with both coprocessors disabled. The ESP-DL worker enables
++   * them explicitly after it starts. The initialstate path already zeroes regs. */
++  memset(tcb->xcp.regs+REG_INT_CTX_NDX+1,0,CONFIG_ARCH_RISCV_INTXCPT_EXTREGS*4);
++}

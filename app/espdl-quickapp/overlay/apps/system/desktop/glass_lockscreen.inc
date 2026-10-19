@@ -16,7 +16,7 @@ static struct {
   struct glass_weather_snapshot weather;
   bool weather_valid,photo_requested,photo_done;
   lv_timer_t *timer;
-  struct music_now_playing shown;
+  struct music_now_playing *shown;
   struct music_cover_view cover;
   time_t second;
   struct tm local;
@@ -142,7 +142,7 @@ static void lock_refresh(lv_timer_t *timer)
   else if(g_lock_page==3){lock_photo_update();return;}
   struct music_now_playing now;glass_music_now_playing(&now);
   if(g_lock_page==1)music_cover_tick(&g_lock_ui.cover,&now);
-  struct music_now_playing *old=&g_lock_ui.shown;bool first=!g_lock_ui.valid;
+  struct music_now_playing *old=g_lock_ui.shown;bool first=!g_lock_ui.valid;
   if(!first && old->revision==now.revision)return;
   if(g_lock_page==0 && (first || !!now.name[0]!=!!old->name[0])) {
     lv_obj_t *items[]={g_lock_ui.player,g_lock_ui.status,g_lock_ui.lyric[1],g_lock_ui.lyric[2]};
@@ -186,8 +186,9 @@ static void lock_refresh(lv_timer_t *timer)
 
 static void lock_deleted(lv_event_t *e)
 {
+  if(g_lock_page_pending){lv_async_call_cancel(lock_page_async,NULL);g_lock_page_pending=false;}
   LV_UNUSED(e);music_cover_reset(&g_lock_ui.cover);glass_lock_photo_cancel();if(g_lock_ui.timer)lv_timer_delete(g_lock_ui.timer);
-  memset(&g_lock_ui,0,sizeof(g_lock_ui));
+  free(g_lock_ui.shown);memset(&g_lock_ui,0,sizeof(g_lock_ui));
   if(g_music_ui.timer)lv_timer_resume(g_music_ui.timer);
   glass_status_visibility(false);
 }
@@ -224,7 +225,7 @@ static void lock_gesture(lv_event_t *e)
 }
 
 static void lock_toggle(lv_event_t *e)
-{ LV_UNUSED(e);if(!g_lock_ui.shown.name[0])return;glass_music_toggle();lock_refresh(NULL); }
+{ LV_UNUSED(e);if(!g_lock_ui.shown||!g_lock_ui.shown->name[0])return;glass_music_toggle();lock_refresh(NULL); }
 static void lock_skip(lv_event_t *e)
 { glass_music_skip((intptr_t)lv_event_get_user_data(e));lock_refresh(NULL); }
 
@@ -298,6 +299,12 @@ static void lock_clock_page(lv_obj_t *root)
 static void glass_lock_open(lv_event_t *e)
 {
   LV_UNUSED(e);if(g_lock_ui.root)return;
+  /* Keep growing lyric snapshots in PSRAM and release them with the overlay;
+   * internal static RAM is reserved for DMA and the kernel. */
+  g_lock_ui.shown=calloc(1,sizeof(*g_lock_ui.shown));
+  if(!g_lock_ui.shown){show_toast("内存不足，稍后再试");return;}
+  desktop_navigation_cancel();
+  music_full_close(NULL);
   toast_cancel();dialog_cancel();glass_status_visibility(true);
   glass_lock_cover_cancel(GLASS_COVER_MUSIC);g_music_ui.cover.requested=false;
   if(g_music_ui.timer)lv_timer_pause(g_music_ui.timer);

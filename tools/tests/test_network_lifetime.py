@@ -22,6 +22,8 @@ def function(text, name):
 with tempfile.TemporaryDirectory(prefix='network-lifetime-') as folder:
     root = Path(folder)
     (root / 'netutils').mkdir()
+    (root / 'desktop').mkdir()
+    (root / 'c6probe').mkdir()
     (root / 'netutils/netlib.h').write_text('''
 #include <stdint.h>
 #include <netinet/in.h>
@@ -57,7 +59,8 @@ int c6net_reconnect(void);
 bool c6net_is_initialized(void);
 ''')
     shutil.copy2(repo / 'tools/c6/link_state.h', root)
-    shutil.copy2(desktop / 'glass_netboot.inc', root)
+    shutil.copy2(desktop / 'glass_netboot.inc', root / 'desktop')
+    shutil.copy2(c6 / 'status_rssi.h', root / 'c6probe')
     shutil.copy2(desktop / 'glass_status.h', root)
     source = (c6 / 'c6net.c').read_text()
     (root / 'reconnect.inc').write_text(
@@ -68,6 +71,7 @@ bool c6net_is_initialized(void);
                     '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
                     '-Wno-unused-variable', '-fsanitize=address,undefined',
                     '-fno-omit-frame-pointer', '-pthread', '-I' + str(root),
+                    '-I' + str(root / 'desktop'),
                     str(repo / 'app/espdl-quickapp/tests/network_lifetime_host.c'),
                     '-o', str(binary)], check=True)
     subprocess.run([str(binary)], check=True, timeout=30)

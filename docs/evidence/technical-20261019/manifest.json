@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "path": "current-build.json",
+      "bytes": 2948,
+      "sha256": "f51c66f679e95f2d1f72f35a641930fe420ebc0b2f3e93fb2ff7040a79ff1582"
+    },
+    {
+      "path": "current-host-tests.json",
+      "bytes": 5004,
+      "sha256": "10c6fab65cbde54875145b1ac8334171f8a0586a9dce7d0abac640e8da910c1a"
+    },
+    {
+      "path": "historical-excerpts.json",
+      "bytes": 3777,
+      "sha256": "02e768b8948dccae893623ba661e2de3033616358d77272469bac68fe62abec8"
+    },
+    {
+      "path": "historical-metrics.json",
+      "bytes": 11714,
+      "sha256": "ad53a0e2fc32977e1c3266440bbd20461d5ffed576096a147324da9daed1fb72"
+    },
+    {
+      "path": "retained-attempts.json",
+      "bytes": 481,
+      "sha256": "7c5834adb3fa7de3999ebd94fb2c9eff7140aa17199d49ad5e31427e3144f50a"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 488621,
+      "sha256": "2e6216f402b19a16c66fc4667f795dcf7d8db3f720b63082ee43a6f7a1541a10"
+    },
+    {
+      "path": "upstream/context-declared-base.patch",
+      "bytes": 9844,
+      "sha256": "b17cca542f315a67c51dcac47b695a5ed344ba388cbd6469e505cc4cb2cace48"
+    },
+    {
+      "path": "upstream/context.patch",
+      "bytes": 5761,
+      "sha256": "34d3e50b0196c75f9f6e411947b410c46130a9f6cb95f7ec5af7bac5f2f52893"
+    },
+    {
+      "path": "upstream/declared-base/arch/risc-v/src/common/espressif/esp_mipi_dsi.c",
+      "bytes": 52972,
+      "sha256": "861bb1e6dc4381a9ed0e710f6640f78ed344c1232875727b8b2e71c2d621b9fc"
+    },
+    {
+      "path": "upstream/declared-base/arch/risc-v/src/common/espressif/esp_spiflash.c",
+      "bytes": 18873,
+      "sha256": "c81da4e6116e42bc86cb72b5612c70a134920a720b0cfc64b8a54c5b24059e64"
+    },
+    {
+      "path": "upstream/declared-base/arch/risc-v/src/common/espressif/esp_start.c",
+      "bytes": 20776,
+      "sha256": "9216c9b072371ad1d998c0b18e20fcb6504ede9a151cd09dda4bea23ca55adfd"
+    },
+    {
+      "path": "upstream/declared-base/arch/risc-v/src/common/riscv_exception_common.S",
+      "bytes": 10280,
+      "sha256": "c973a30492a0b48f3c5be952c2d136c475fc36c70c6f777bf607549eef5eade1"
+    },
+    {
+      "path": "upstream/declared-base/arch/risc-v/src/common/riscv_saveusercontext.S",
+      "bytes": 2506,
+      "sha256": "1dc599b8546a2afdf91c8daeec9df9ed4487a65a86d021a9d2ee107917aed396"
+    },
+    {
+      "path": "upstream/display-declared-base.patch",
+      "bytes": 14600,
+      "sha256": "25d5666255f209634edac93d8b3936c83b2d61772366d63dffa6bd1918c7e6d4"
+    },
+    {
+      "path": "upstream/display.patch",
+      "bytes": 64418,
+      "sha256": "a705d32b9ab1d7ca9b88422edded0c9d7659ef9e60b33170253460e62e5e459a"
+    },
+    {
+      "path": "upstream/LICENSE",
+      "bytes": 417053,
+      "sha256": "52e81e23ef1e4ad52c05dd2cc237d84841450e0a3b50933fecab60be3457dbb0"
+    },
+    {
+      "path": "upstream/NOTICE",
+      "bytes": 3107,
+      "sha256": "1f6ac972692c4f94fe4b904590654aeb795ff08efd9799427c2358fb568814bb"
+    },
+    {
+      "path": "upstream/patch-replay.json",
+      "bytes": 1248,
+      "sha256": "291667148309b163c0045c9a059a54b91b406ff9674f9cf8b20b6315b047c109"
+    },
+    {
+      "path": "upstream/ppa-declared-base.patch",
+      "bytes": 12478,
+      "sha256": "d814c85a2df3a14fe16ee4a8e276cc19996bc196a2ae431f286b201aa9c4440e"
+    },
+    {
+      "path": "upstream/ppa.patch",
+      "bytes": 12478,
+      "sha256": "d814c85a2df3a14fe16ee4a8e276cc19996bc196a2ae431f286b201aa9c4440e"
+    },
+    {
+      "path": "upstream/reference/arch/risc-v/src/common/espressif/esp_spiflash.c",
+      "bytes": 16667,
+      "sha256": "817b913176af233c83fbcd653b2bb99a5cf015fc147380027af46884aa4ebffe"
+    },
+    {
+      "path": "upstream/reference/arch/risc-v/src/common/espressif/esp_start.c",
+      "bytes": 16813,
+      "sha256": "6448e51a446aac2bf6b06caaabf287e2bab3f1c8e74cb45fc2d5756cc1cc187a"
+    },
+    {
+      "path": "upstream/reference/arch/risc-v/src/common/riscv_exception_common.S",
+      "bytes": 10647,
+      "sha256": "1af5b4418ce315e3d4c4aff2efa26606911698ebbd9ecdc40a1f95345168c18a"
+    },
+    {
+      "path": "upstream/reference/arch/risc-v/src/common/riscv_saveusercontext.S",
+      "bytes": 2464,
+      "sha256": "cbdb75be8cb50cadc31ae2175a50b4666c0f876c396ff1bba5abb229091c78fa"
+    },
+    {
+      "path": "upstream/startup-declared-base.patch",
+      "bytes": 21489,
+      "sha256": "3422a6f5434ffc5f0d1e4840e80fa27c1a0ab67c227e8b507094f05eeab1ec95"
+    },
+    {
+      "path": "upstream/startup.patch",
+      "bytes": 44371,
+      "sha256": "de3d6927bfa06422b7bf3a3b5e2d2dc68e873848ec18ad71917f123915dfe163"
+    },
+    {
+      "path": "upstream/upstream-comparison.json",
+      "bytes": 8011,
+      "sha256": "c9cdf120dec9048ffc055c8cac84e4558dad7838c309877f4e99b77447ce6272"
+    }
+  ],
+  "authenticity_limit": "Checksums verify byte integrity only; summaries do not substitute for raw measurements or certify authorship."
+}

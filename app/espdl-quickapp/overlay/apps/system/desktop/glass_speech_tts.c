@@ -18,7 +18,9 @@
 #define SPEECH_IDS 2048
 #define SPEECH_CHUNK_IDS 40
 #define SPEECH_FRAMES 256
-#define SPEECH_ARENA_FLOATS (24 * 1024 * 1024 / sizeof(float))
+#define SPEECH_ARENA_FLOATS (8 * 1024 * 1024 / sizeof(float))
+#define SPEECH_DECODER_TILE 64
+#define SPEECH_DECODER_HALO 16
 
 /* The speech service serializes jobs. The mutex also protects host callers
  * and makes eviction nonblocking for the UI while inference owns the data. */
@@ -149,6 +151,62 @@ static int sano_compute_body(void *opaque)
   if(call->stage==1)return snt_front_latent(call->front,call->ids,call->dur,call->n,call->frames,call->latent,call->arena,call->floats);
   return snt_piperlite_synthesize(call->decoder,call->latent,call->frames,call->audio,call->arena,call->floats);
 }
+
+/* The pinned, unfiltered Chinese decoder has a finite receptive field:
+ * pre-conv radius 3, then three upsample/residual banks (radius <=45 in
+ * each bank), and post-conv radius 3. Sixteen latent frames on either side
+ * cover that field. Decode overlapping tiles and emit only their centers;
+ * keep original utterance durations and acoustic context. No crossfade,
+ * resampling, new padding at emitted boundaries, or weight approximation.
+ * Reject a changed decoder geometry instead of silently truncating context.
+ */
+static int sano_decode(snt_piperlite_model *model,float *latent,long frames,
+                       speech_pcm_fn write_pcm,speech_cancel_fn cancel,
+                       void *user,struct sano_profile *profile)
+{
+  if(model->in_ch!=192||model->c0!=160||model->c1!=80||
+     model->c2!=40||model->c3!=20||model->pf_channels)return -ENOTSUP;
+  long capacity=SPEECH_DECODER_TILE+2*SPEECH_DECODER_HALO;
+  if(capacity>frames)capacity=frames;
+  size_t floats=snt_piperlite_arena_floats(model,capacity);
+  size_t latent_floats=(size_t)model->in_ch*capacity;
+  size_t audio_floats=(size_t)capacity*SNT_PIPERLITE_HOP;
+  if(floats+latent_floats+audio_floats>SPEECH_ARENA_FLOATS)return -E2BIG;
+  float *arena=calloc(floats+latent_floats+audio_floats,sizeof(float));
+  if(!arena)return -ENOMEM;
+  float *tile=arena+floats,*audio=tile+latent_floats;
+  printf("[speech] tts decoder workspace_bytes=%u tile=%d halo=%d\n",
+    (unsigned)((floats+latent_floats+audio_floats)*sizeof(float)),
+    SPEECH_DECODER_TILE,SPEECH_DECODER_HALO);
+  int ret=0;
+  for(long start=0;start<frames&&!ret;start+=SPEECH_DECODER_TILE){
+    if(cancel&&cancel(user)){ret=-ECANCELED;break;}
+    long stop=start+SPEECH_DECODER_TILE;if(stop>frames)stop=frames;
+    long begin=start>SPEECH_DECODER_HALO?start-SPEECH_DECODER_HALO:0;
+    long end=stop+SPEECH_DECODER_HALO;if(end>frames)end=frames;
+    long count=end-begin;
+    for(int ch=0;ch<model->in_ch;ch++)
+      memcpy(tile+ch*count,latent+ch*frames+begin,count*sizeof(float));
+    struct sano_compute_call call={.decoder=model,.stage=2,.frames=count,
+      .latent=tile,.audio=audio,.arena=arena,.floats=floats};
+    profile->last=sano_now();
+    ret=glass_speech_compute_run(sano_compute_body,&call,cancel,user);
+    for(size_t offset=(start-begin)*SNT_PIPERLITE_HOP,
+               limit=(stop-begin)*SNT_PIPERLITE_HOP;!ret&&offset<limit;){
+      if(cancel&&cancel(user)){ret=-ECANCELED;break;}
+      int16_t pcm[512];size_t size=limit-offset;if(size>512)size=512;
+      for(size_t i=0;i<size;i++){
+        float sample=audio[offset+i];
+        if(!isfinite(sample)){ret=-EBADMSG;break;}
+        if(sample>1)sample=1;if(sample<-1)sample=-1;
+        pcm[i]=(int16_t)(sample*32767);
+      }
+      if(!ret)ret=write_pcm(user,pcm,size);
+      offset+=size;
+    }
+  }
+  free(arena);return ret;
+}
 int glass_sano_synthesize(const char *root,const char *text,
                           speech_pcm_fn write_pcm,speech_cancel_fn cancel,void *user)
 {
@@ -200,40 +258,27 @@ int glass_sano_synthesize(const char *root,const char *text,
       unsigned long duration_ms=(unsigned long)(sano_now()-stage_started);
       if(frames<0){ret=(int)frames;break;}
       if(frames<=0||frames>SPEECH_FRAMES){ret=-E2BIG;break;}
-      size_t af=snt_front_latent_arena_floats(&fm,n,frames),df=snt_piperlite_arena_floats(&dm,frames);
-      floats=af>df?af:df;
-      size_t latent_floats=(size_t)fm.a_out*frames,audio_floats=frames*SNT_PIPERLITE_HOP;
-      if(floats+latent_floats+audio_floats>SPEECH_ARENA_FLOATS){ret=-E2BIG;break;}
-      arena=calloc(floats+latent_floats+audio_floats,sizeof(float));
-      if(!arena){ret=-ENOMEM;break;}
-      float *latent=arena+floats,*audio=latent+latent_floats;
-      call.frames=frames;call.latent=latent;call.audio=audio;call.arena=arena;call.floats=floats;call.stage=1;
+      floats=snt_front_latent_arena_floats(&fm,n,frames);
+      size_t latent_floats=(size_t)fm.a_out*frames;
+      if(floats+latent_floats>SPEECH_ARENA_FLOATS){ret=-E2BIG;break;}
+      arena=calloc(floats,sizeof(float));
+      float *latent=calloc(latent_floats,sizeof(float));
+      if(!arena||!latent){free(arena);free(latent);ret=-ENOMEM;break;}
+      call.frames=frames;call.latent=latent;call.arena=arena;call.floats=floats;call.stage=1;
       stage_started=sano_now();
       ret=glass_speech_compute_run(sano_compute_body,&call,cancel,user);
+      free(arena);
       unsigned long latent_ms=(unsigned long)(sano_now()-stage_started);stage_started=sano_now();
       struct sano_profile profile={.last=stage_started};
       dm.stage_cb=sano_stage;dm.stage_user=&profile;
-      if(!ret&&!sano_cancelled(&job)){call.stage=2;ret=glass_speech_compute_run(sano_compute_body,&call,cancel,user);}
+      if(!ret&&!sano_cancelled(&job))ret=sano_decode(&dm,latent,frames,write_pcm,cancel,user,&profile);
+      else if(!ret)ret=-ECANCELED;
       unsigned long decoder_ms=(unsigned long)(sano_now()-stage_started);
       for(unsigned i=0;i<profile.count;i++)printf("[speech] tts hotspot=%s elapsed_ms=%lu\n",profile.stage[i].name,profile.stage[i].ms);
       printf("[speech] tts stages duration_ms=%lu latent_ms=%lu decoder_ms=%lu\n",
         duration_ms,latent_ms,decoder_ms);
       printf("[speech] tts chunk frames=%ld compute_ms=%lu result=%d\n",frames,(unsigned long)(sano_now()-chunk_started),ret);
-      if(!ret)
-        for(size_t offset=0;offset<audio_floats;)
-          {
-            if(sano_cancelled(&job)){ret=-ECANCELED;break;}
-            int16_t pcm[512];size_t size=audio_floats-offset;if(size>512)size=512;
-            for(size_t i=0;i<size;i++){
-              float sample=audio[offset+i];
-              if(!isfinite(sample)){ret=-EBADMSG;break;}
-              if(sample>1)sample=1;if(sample<-1)sample=-1;
-              pcm[i]=(int16_t)(sample*32767);
-            }
-            if(ret)break;
-            ret=write_pcm(user,pcm,size);if(ret)break;offset+=size;
-          }
-      free(arena);
+      free(latent);
     }
 done:
   if(front!=sano_cache.front)free(front);

@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-18",
+  "board": "ESP32-P4 Function-EV-Board",
+  "scenario": "Same system performance page, CPU view; 8 samples per image, approximately 32 seconds; 65-second warmup after reboot",
+  "normalization": "Two cores together equal 100%; ps task and /proc/cpuload totals are separately sampled",
+  "cpu": {
+    "total": {
+      "before_percent": 36.0,
+      "after_percent": 31.35,
+      "percentage_point_reduction": 4.649999999999999,
+      "relative_reduction_percent": 12.916666666666664
+    },
+    "desktop": {
+      "before_percent": 18.3,
+      "after_percent": 10.7,
+      "percentage_point_reduction": 7.600000000000001,
+      "relative_reduction_percent": 41.53005464480875
+    },
+    "c6net": {
+      "before_percent": 15.7,
+      "after_percent": 18.1,
+      "percentage_point_reduction": -2.400000000000002,
+      "relative_reduction_percent": -15.28662420382167
+    }
+  },
+  "range_before": [
+    35.2,
+    36.7
+  ],
+  "range_after": [
+    30.2,
+    32.1
+  ],
+  "hidden_grok": {
+    "before": {
+      "ticks": 1239,
+      "frames": 0,
+      "reads": 0,
+      "visible": 0
+    },
+    "after": {
+      "ticks": 0,
+      "frames": 0,
+      "reads": 0,
+      "visible": 0
+    }
+  },
+  "render_window": {
+    "before": {
+      "elapsed_ms": 32110,
+      "frames": 238,
+      "fps": 7.412021177203363,
+      "approximate_render_average_us": 12051.35294117647,
+      "approximate_refresh_average_us": 13147.268907563026,
+      "note": "Derived from differences of cumulative counters; rounded averages introduce small error. Render/refresh are wall-clock intervals, not isolated CPU cycles."
+    },
+    "after": {
+      "elapsed_ms": 32140,
+      "frames": 200,
+      "fps": 6.222775357809583,
+      "approximate_render_average_us": 11502.28,
+      "approximate_refresh_average_us": 11750.42,
+      "note": "Derived from differences of cumulative counters; rounded averages introduce small error. Render/refresh are wall-clock intervals, not isolated CPU cycles."
+    }
+  },
+  "features": {
+    "visible_animation_cadence_unchanged": true,
+    "identical_native_frame_hashes": 757,
+    "native_animation_frames_per_10_seconds": 100,
+    "native_status_identical_update_draws": [
+      0,
+      0
+    ],
+    "hardware_home_weather_performance_return_cycles": 5,
+    "preserved": [
+      "Visible animation cadence, gaze and actions",
+      "Themes, status icons, RSSI, battery and charging",
+      "Lock/unlock and gestures",
+      "Background service polling and music",
+      "Weather scenes and frosted glass",
+      "One-second performance sampling and 60-point history"
+    ],
+    "native_regressions": [
+      "Both themes",
+      "Hidden animation pause/reveal and controls",
+      "Side-swipe reveal/cancel",
+      "Transparent and opaque pages",
+      "Latest weather on return",
+      "Fixed/changing charts and metric selection",
+      "Background music state and 40 lock/unlock cycles"
+    ],
+    "limitations": "Native service fixtures do not substitute for physical audio playback or every peripheral"
+  },
+  "firmware": {
+    "before_sha256": "36ba8521866f443637d2d1bdcec6c573d1644f154165601760c40655666ba45d",
+    "after_sha256": "2b0c3eaa8dface01d0495fd4a40cd179125957c35c8cb617ad875d6ac148be4d",
+    "bytes": 10062756,
+    "growth_bytes": 544,
+    "ebss": "0x4ffaef3c",
+    "ebss_unchanged": true,
+    "config_sha256": "918b1baf123753d2e6b825071ab7d678eb7af3201970b49ab07666a34f754b73",
+    "flash_offset": "0x2000",
+    "board_written": true,
+    "boot_verified": true,
+    "runtime_verified": true,
+    "data_region_written": false,
+    "sdcard_written": false
+  },
+  "scope": "Pause hidden animation timers, defer covered-home painting, skip duplicate chart and status writes. Network polling and visible animation frame rate are unchanged.",
+  "limitations": "Single before/after window, not an A/B confidence interval. Network and NSH traffic fluctuate. Performance-page redraw count is not an animation frame-rate measurement.",
+  "source_sha256": {
+    "desktop_main.c": "bb8356f9a10176a1073ad0462b1651b1601f952374d45ae937b6467cb69f52b9",
+    "glass_home_ui.inc": "3f8c4ef738cfe02c8ac26318bbd08fd83a99ea4d9d57c8b6030cd52a7433d3e3",
+    "glass_ui.inc": "0f091d7ef09ec832c03a3aebed2f160f064cfa3f2a5d55defd1aad6adb1e0ab0",
+    "glass_weather_ui.inc": "f1574295572f516eeabb5cfe220048180e33adcfbf3b05f4ef40c78f7787bae0",
+    "glass_weather_modern.inc": "feace2937ab6e3cddda5708d930679cbe54ef18d153f752e78ec0417d564cc6e",
+    "glass_weather_scene.inc": "d10aa74bf44e514d720330f17bc1156503df9455c863f94bac8e03412c21fc9f",
+    "glass_weather_art.inc": "6fb9b992d23ecd08310cd768df03e2032eb8ba1af34df0e7340cc34fd8206876",
+    "qpk_mjpeg.c": "f976b00c3e79749c035d095772d854d37d59951c0d3b08cd6177c5ae9a135af5",
+    "qpk_mjpeg.h": "ecdd001b589904cab2488a07eb1ae4399bb8f4c007a7e28fa8a495bf1e4579fd",
+    "glass_grok_player.inc": "bed3c67b5901fe813d245e05e09f6505ffd5ef1b3f8cf2d239febbaa5b9dae3e",
+    "glass_status_ui.inc": "dc57e0488653991dade9fa201d1067b0657abdbb540a7fefe9a2d52dfed18070",
+    "glass_resources_modern.inc": "d96dbe09090174ef72e718f819998e84ba6f85ebad2d21d2faeaae6d7ff6fa87"
+  }
+}

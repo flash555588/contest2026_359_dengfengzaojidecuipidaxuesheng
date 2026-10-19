@@ -49,6 +49,7 @@ static void glass_save_preferences(void){}
 static void glass_preferences_update(void){}
 void glass_weather_get(struct glass_weather_snapshot *s){*s=sample;}
 static void glass_weather_detail_update(const struct glass_weather_snapshot *s,bool stale){(void)s;(void)stale;}
+static bool glass_page_covers_home(void){return false;}
 static uint32_t theme_primary(void){return g_desktop.light_theme?0x252d46:0xf4f2ff;}
 static uint32_t theme_secondary(void){return g_desktop.light_theme?0x616981:0xabb3cd;}
 static const lv_font_t *zh_font(int size){return size>=28?g_desktop.font28:size>=20?g_desktop.font20:g_desktop.font16;}

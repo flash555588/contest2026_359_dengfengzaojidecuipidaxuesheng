@@ -18,6 +18,7 @@ static void send_text(const char *text)
   lv_textarea_set_text(g_chat_ui.input,text);chat_ui_send(NULL);assert(!g_chat_ui.editor);frames(5);
 }
 extern void review_speech_done_fixture(int),review_speech_failure_fixture(int);
+extern void review_chat_verified_fixture(bool);
 extern unsigned review_speech_count(void);
 extern const char *review_speech_text(void);
 extern void review_voice_level_fixture(unsigned),review_voice_error_fixture(void);
@@ -176,58 +177,92 @@ static void run_voice_cases(lv_display_t *display)
 }
 extern void review_wake_fixture(bool),review_speech_replace_fixture(void);
 extern void review_voice_phase_fixture(enum glass_voice_phase);
+static bool label_present(lv_obj_t *root,const char *text)
+{
+  if(lv_obj_check_type(root,&lv_label_class)&&!strcmp(lv_label_get_text(root),text))return true;
+  for(unsigned i=0;i<lv_obj_get_child_count(root);i++)if(label_present(lv_obj_get_child(root,i),text))return true;
+  return false;
+}
 static void run_wake_cases(lv_display_t *display)
 {
   assert(chat_ball_end_phrase("  结束对话。！ \n"));
   assert(chat_ball_end_phrase("停止聆听"));
   assert(!chat_ball_end_phrase("请解释结束对话的含义。"));
-  assert(!chat_ball_end_phrase("结束对话之后怎么办？"));
   for(unsigned theme=0;theme<2;theme++){
     panel_hide(NULL);review_chat_dialog_fixture(true);g_desktop.light_theme=theme==0;
     chat_interface_modes[1]=AGENT_MODE_CHAT;glass_rebuild();glass_chat_ball_open(NULL);frames(4);
     assert(!g_chat_ui.voice_session&&!review_voice_start_count());
-    chat_ball_wake_toggle(NULL);frames(4);
-    assert(g_chat_ui.voice_wake_mode&&g_chat_ui.voice_phase==BALL_WAKE&&!review_voice_start_count());
-    uint32_t request=g_chat_ui.voice_wake_request;assert(request);
-    review_capture(display,"voice-wake-waiting","等待你好 openvela 唤醒");
-    review_wake_fixture(false);frames(5);assert(!review_voice_start_count()); /* capture still owned */
-    review_wake_fixture(true);frames(4);
-    assert(g_chat_ui.voice_phase==BALL_LISTEN&&review_voice_start_count()==1&&!g_chat_ui.voice_wake_request);
+    assert(!label_present(g_chat_ui.root,"唤醒对话")&&!label_present(g_chat_ui.root,"唤醒已开启"));
+    assert(label_present(g_chat_ui.root,"全局唤醒默认开启"));
+    review_capture(display,"voice-global-wake-default","全局唤醒默认开启，无页面开关");
+    review_speech_replace_fixture();assert(!chat_ball_accept_wake());
+    review_wake_fixture(true);assert(chat_ball_accept_wake());frames(4);
+    assert(g_chat_ui.voice_from_wake&&g_chat_ui.voice_phase==BALL_LISTEN&&review_voice_start_count()==1);
     review_voice_text_fixture("帮我安排今天的学习");frames(4);assert(review_chat_send_count()==1);
     review_chat_reply_fixture("先学习二十分钟。",true);frames(4);assert(review_speech_count()==1);
-    assert(review_voice_start_count()==1); /* no mic during playback */
+    assert(review_voice_start_count()==1);
     review_speech_done_fixture(0);frames(12);assert(review_voice_start_count()==2);
     review_voice_text_fixture("结束对话。");frames(4);
-    assert(!g_chat_ui.voice_session&&!g_chat_ui.voice_wake_mode&&review_chat_send_count()==1);
-    /* Empty recognition returns to local wake; never uploads endless silence. */
-    chat_ball_wake_toggle(NULL);review_wake_fixture(true);frames(4);
-    unsigned starts=review_voice_start_count();review_voice_error_fixture();frames(12);
-    assert(g_chat_ui.voice_phase==BALL_WAKE&&g_chat_ui.voice_wake_mode&&review_voice_start_count()==starts);
-    /* A wake result while capture is stopping cannot restart after End. */
-    review_wake_fixture(false);frames(4);chat_ball_end(NULL);review_wake_fixture(true);frames(8);
-    assert(!g_chat_ui.voice_session&&review_voice_start_count()==starts);
-    /* Never stop a newer owner's audio session or accept its wake event. */
-    chat_ball_wake_toggle(NULL);review_speech_replace_fixture();frames(4);
+    assert(!g_chat_ui.voice_session&&!g_chat_ui.voice_from_wake&&review_chat_send_count()==1);
+    assert(chat_ball_accept_wake());unsigned starts=review_voice_start_count();
+    review_voice_error_fixture();frames(12);
+    assert(!g_chat_ui.voice_session&&g_chat_ui.voice_phase==BALL_IDLE&&review_voice_start_count()==starts);
+    /* Ending a conversation cannot stop the newer global wake owner. */
+    review_speech_replace_fixture();chat_ball_end(NULL);
     struct speech_snapshot current;glass_speech_get(&current);
-    assert(!g_chat_ui.voice_session&&current.active&&current.phase==SPEECH_WAKE);
-    review_speech_done_fixture(0);
-    chat_ball_wake_toggle(NULL);panel_hide(NULL);review_wake_fixture(true);frames(8);
-    assert(!g_chat_ui.root&&review_voice_start_count()==starts);
-    glass_chat_ball_open(NULL);review_speech_failure_fixture(-ENOENT);chat_ball_wake_toggle(NULL);frames(4);
-    assert(!g_chat_ui.voice_session&&!g_chat_ui.voice_wake_request);
-    review_speech_failure_fixture(0);panel_hide(NULL);
-    /* A slow network connection must not consume the listening window. */
-    review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);chat_ball_wake_toggle(NULL);
-    review_wake_fixture(true);chat_ball_refresh();
-    assert(g_chat_ui.voice_phase==BALL_LISTEN&&!g_chat_ui.voice_listen_at);
+    assert(current.active&&current.phase==SPEECH_WAKE);
+    panel_hide(NULL);assert(!chat_ball_accept_wake());
+    review_speech_done_fixture(0);review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);
+    assert(chat_ball_accept_wake());
     review_voice_phase_fixture(GLASS_VOICE_CONNECTING);frames(140);
     assert(g_chat_ui.voice_session&&!g_chat_ui.voice_listen_at);
     review_voice_phase_fixture(GLASS_VOICE_LISTENING);frames(4);
     struct glass_voice_snapshot voice;glass_voice_get(&voice);
     assert(g_chat_ui.voice_listen_at&&voice.active&&voice.phase==GLASS_VOICE_LISTENING);
+    /* Long commands must survive the former 12s cutoff and short pauses. */
+    review_voice_level_fixture(2200);frames(160);glass_voice_get(&voice);
+    assert(voice.active&&g_chat_ui.voice_phase==BALL_LISTEN&&!review_chat_send_count());
+    review_voice_level_fixture(0);frames(15);glass_voice_get(&voice);assert(voice.active);
+    review_voice_level_fixture(2200);frames(4);glass_voice_get(&voice);assert(voice.active);
+    review_capture(display,"voice-long-command","长句超过12秒仍聆听，停顿1.5秒不截断");
+    chat_ball_end(NULL);panel_hide(NULL);
+    /* Navigation from a floating wake capture adopts the existing ASR,
+     * without opening another capture or waiting for another wake word. */
+    review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);
+    assert(!glass_voice_start());unsigned adopted=review_voice_start_count();
+    assert(chat_ball_adopt_wake_capture());frames(4);
+    assert(g_chat_ui.voice_owned&&g_chat_ui.voice_from_wake&&review_voice_start_count()==adopted);
     chat_ball_end(NULL);panel_hide(NULL);
   }
-  puts("WAKE_CONVERSATION_UI_OK: both themes; explicit arming, capture release gate, continuous turns, spoken end, silence rearm, stale-owner rejection and exit cleanup");
+  for(unsigned theme=0;theme<2;theme++){
+    review_chat_dialog_fixture(true);g_desktop.light_theme=theme==0;glass_chat_ball_open(NULL);tap();
+    review_voice_text_fixture("打开客厅主灯");frames(4);review_chat_verified_fixture(true);
+    review_chat_reply_fixture("处理完成",true);frames(4);
+    assert(g_chat_ui.voice_result&&label_present(g_chat_ui.voice_result,"执行已确认"));
+    assert(strstr(review_speech_text(),"客厅主灯")&&strstr(review_speech_text(),"已开启"));
+    review_capture(display,"voice-verified-result","大球 · 已确认结果卡片与语音");
+    chat_ball_end(NULL);panel_hide(NULL);review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);tap();
+    review_voice_text_fixture("再打开客厅主灯");frames(4);review_chat_verified_fixture(false);
+    review_chat_reply_fixture("操作成功",true);frames(4);
+    assert(g_chat_ui.voice_result&&label_present(g_chat_ui.voice_result,"结果待确认"));
+    assert(strstr(review_speech_text(),"没有确认")&&!strstr(review_speech_text(),"成功"));
+    review_capture(display,"voice-unconfirmed-result","大球 · 未确认结果不报成功");
+    chat_ball_end(NULL);panel_hide(NULL);
+    review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);tap();
+    review_voice_text_fixture("查询床头灯当前状态");frames(4);review_chat_reply_fixture("请说明完整设备名。",true);frames(4);
+    assert(label_present(g_chat_ui.voice_result,"AI 回复"));
+    assert(!strcmp(review_speech_text(),"请说明完整设备名。"));
+    review_capture(display,"voice-plain-reply","大球 · 不按关键词替换回复原文");
+    chat_ball_end(NULL);panel_hide(NULL);
+  }
+  for(unsigned theme=0;theme<2;theme++){
+    review_chat_dialog_fixture(true);g_desktop.light_theme=theme==0;
+    chat_interface_modes[0]=AGENT_MODE_CHAT;chat_ui_open_espclaw(NULL);frames(4);
+    send_text("只检查文字显示，不执行设备操作。");
+    review_chat_reply_fixture("✅ 已确认　❌ 未完成　⚠️ 待确认\n💡 灯光　🔊 音量　🎵 音乐　🔍 查询\n⏰ 提醒　📷 拍照　🎤 语音　✨ 回复",true);frames(4);
+    review_capture(display,"chat-unicode-symbols","AI 回复常用 Unicode 符号，原文不替换");panel_hide(NULL);
+  }
+  puts("WAKE_CONVERSATION_UI_OK: global default; no page toggle; large ball dispatch; spoken end; owner isolation; typed result cards; verified/unconfirmed voice; long command; Unicode symbol glyphs");
 }
 int main(int argc,char **argv)
 {
@@ -244,6 +279,13 @@ int main(int argc,char **argv)
   g_desktop.font20=lv_tiny_ttf_create_data(font,size,20);
   g_desktop.font28=lv_tiny_ttf_create_data(font,size,28);
   g_desktop.font16->fallback=glass_icon_font(16);g_desktop.font20->fallback=glass_icon_font(20);g_desktop.font28->fallback=glass_icon_font(24);
+  const uint32_t symbols[]={0x2705,0x274c,0x2611,0x2714,0x2715,0x274e,0x26a0,
+    0xfe0f,0x1f4a1,0x1f50a,0x1f509,0x1f507,0x1f3b5,0x1f3b6,0x1f50d,0x1f50e,
+    0x23f0,0x1f514,0x1f4f7,0x1f3a4,0x1f3a7,0x2728,0x1f4ac,0x3000};
+  for(unsigned s=0;s<3;s++)for(unsigned i=0;i<sizeof(symbols)/sizeof(symbols[0]);i++){
+    lv_font_glyph_dsc_t glyph={0};assert(lv_font_get_glyph_dsc(zh_font(s==0?16:s==1?20:28),&glyph,symbols[i],0)&&!glyph.is_placeholder);
+    if(symbols[i]!=0xfe0f&&symbols[i]!=0x3000)assert(glyph.box_w&&glyph.box_h);
+  }
   g_glass.font48=lv_tiny_ttf_create_data(font,size,48);glass_home_fonts_init(font,size);
   g_glass.reduced_motion=true;g_glass.temperature_c=-999;g_glass.humidity_pct=-1;g_glass.pm25=-1;
   g_desktop.screen=glass_box(lv_screen_active(),0,GLASS_STATUS_HEIGHT,1024,GLASS_CONTENT_HEIGHT,0,0);

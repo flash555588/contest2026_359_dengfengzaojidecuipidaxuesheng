@@ -1,0 +1,39 @@
+{
+  "revision": "f73b8382bc98a1c8de3488ba30d727ab82587828",
+  "release_url": "https://github.com/Ampixa/sanoTTS/releases/download/voices-v2/heartnano.tar.gz",
+  "release_sha256": "7ae0ad03d86cdb7bef1edd75b4f48bb8cf5c85ab2ea164024a2a7b1af61908c5",
+  "release_files": {
+    "front_q8.bin": "5553ae5abf37c18d31c0b64ea791785b30e7a08cc32c07bff8bb2ab4aae0b94b",
+    "meta.json": "194c824deb7e75b7eb0b5bdb6adf35ece84ad0da7fb074ef37a6fb6510542c9b",
+    "model_q8.bin": "4a6cdf0d0bf1996aa2c056298265ea8dd0c200c9025cba4a9b04e0e987bea88c",
+    "nano_q8_meta.h": "ccdaa20f1268ee8ec98bb2f71bf900e36bdc672488b86d2b30d773b80a5892eb",
+    "README.md": "b79a38c847b7e241919b75153e3a63a539b78add11edc7b107e6f7a3957e0ff2",
+    "SHA256SUMS": "f0e6cd47d21c5c84f57102fb247cbb058343f7db4c8190a535181e1097780243"
+  },
+  "sources": [
+    {
+      "path": "mcu/src/snt_nano.c",
+      "sha256": "46357762ea163af7dc23bc2b4f47378a571386f2f4fd384eb74872e33a7db88e"
+    },
+    {
+      "path": "mcu/include/snt_nano.h",
+      "sha256": "59749fba949e52e9e6d6b66bbac818ea43813e367edbc04990d04481ae192ea6"
+    },
+    {
+      "path": "mcu/include/snt_port.h",
+      "sha256": "ea50294bb811b0cbef74796300ae419e3ccbf713ec0a94a393cdec3f25ad796d"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "LICENSE.MIT",
+      "sha256": "2f544ceb6a679cf706652c9df3bf8a6753197ee36456ba61665d97fbed43210e"
+    },
+    {
+      "path": "arduino/examples/BoardBenchmark/sanotts_bench_data.h",
+      "sha256": "8f7a98c21002de5fdf6293d038282b99f57526884dae826f2800089bdb8572f3"
+    }
+  ]
+}

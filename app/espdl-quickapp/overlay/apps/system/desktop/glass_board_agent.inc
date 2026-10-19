@@ -63,6 +63,8 @@ static char *board_call(struct glass_agent *a,const char *tool,const cJSON *args
     g_board_home->call(tool,args,a->cancel):error_result("unknown_tool_or_invalid_arguments");
   if(!strncmp(tool,"music_",6))return g_board_music&&g_board_music->call?
     g_board_music->call(tool,args,a->cancel):error_result("unknown_tool_or_invalid_arguments");
+  if(!strncmp(tool,"assistant_",10))return g_board_assistant&&g_board_assistant->call?
+    g_board_assistant->call(tool,args,a->cancel):error_result("unknown_tool_or_invalid_arguments");
   if(!strcmp(tool,"hardware_release")&&cJSON_GetArraySize(args)==0){
     pthread_mutex_lock(&board_hardware_lock);
     if(board_hardware_owner&&board_hardware_owner!=a){pthread_mutex_unlock(&board_hardware_lock);return error_result("hardware_controller_busy");}

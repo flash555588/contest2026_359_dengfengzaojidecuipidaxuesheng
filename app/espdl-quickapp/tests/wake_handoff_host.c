@@ -15,6 +15,9 @@
 static pthread_mutex_t speech_lock=PTHREAD_MUTEX_INITIALIZER;
 static struct speech_snapshot speech;
 static atomic_bool speech_cancel;
+struct speech_job {char *text;bool probe,wake_only;int nano;};
+static struct speech_job *speech_pending;
+static bool speech_pending_cancelled;
 static uint64_t speech_milliseconds(void){return 1000;}
 static bool model_live,capture_live;
 static int create_error,open_error,feed_error,calls,cancel_at;
@@ -36,11 +39,20 @@ static int capture_next(struct voice_capture *capture,int16_t *pcm,unsigned *lev
 static bool speech_cancelled(void *unused){(void)unused;return atomic_load(&speech_cancel);}
 /* Wake handoff has no retained TTS weights in this isolated fixture. */
 void glass_speech_clear_cache(void){}
+static bool pcm_busy;
+static bool music_pcm_session_active(void){return pcm_busy;}
+static void *speech_worker(void *argument){(void)argument;return NULL;}
+static int test_thread_create(pthread_t *tid,const pthread_attr_t *attr,void *(*worker)(void *),void *argument)
+{(void)tid;(void)attr;assert(worker==speech_worker);free(argument);return 0;}
+#define pthread_create test_thread_create
 #include "wake_handoff_production.inc"
 static void reset(void)
 {assert(!capture_live&&!model_live);memset(&speech,0,sizeof(speech));atomic_store(&speech_cancel,false);create_error=open_error=feed_error=calls=cancel_at=0;}
 int main(void)
 {
+  reset();speech.active=true;speech.request=7;speech.phase=SPEECH_SPEAKING;
+  glass_speech_capture_woke();assert(speech.wake_event==1&&speech.wake_ms==1000&&speech.active&&speech.request==7&&speech.phase==SPEECH_SPEAKING);
+  glass_speech_capture_woke();assert(speech.wake_event==2);
   reset();speech_publish(SPEECH_WAKE,0,"打开灯光",1,0);assert(speech.command_event==1&&speech.last_command==1&&speech.command_ms==1000);
   speech_publish(SPEECH_COMMAND,0,"等待指令",0,0);assert(speech.command_event==1&&speech.last_command==1);
   reset();assert(!speech_wait_wake());assert(speech.wake_events==1&&speech.frames==3*VOICE_FRAMES&&!model_live&&!capture_live);
@@ -56,6 +68,20 @@ int main(void)
   reset();speech.active=true;speech.request=7;speech.phase=SPEECH_WAKE;
   speech_stop(8);assert(!speech_cancelled(NULL)&&speech.phase==SPEECH_WAKE);
   speech_stop(7);assert(speech_cancelled(NULL)&&speech.phase==SPEECH_STOPPING);
+  /* Foreground dispatch is nonblocking and queued until wake teardown. */
+  reset();speech.active=speech.background_wake=true;speech.request=9;pcm_busy=true;
+  uint32_t request=0;assert(!speech_start_mode("你好",false,false,&request,0,false));
+  assert(request==10&&speech_pending&&speech_cancelled(NULL)&&speech.active&&!speech.background_wake);
+  assert(speech_start_mode("重复",false,false,NULL,0,false)==-EBUSY);
+  struct speech_job *next=speech_next_job(-ECANCELED,true);
+  assert(next&&!strcmp(next->text,"你好")&&speech.active&&!speech_cancelled(NULL)&&!speech.wake_event);
+  free(next->text);free(next);speech_next_job(0,false);assert(!speech.active);
+  reset();speech.active=speech.background_wake=true;speech.request=11;
+  assert(!speech_start_mode("取消这句",false,false,&request,0,false));speech_stop(request);
+  assert(!speech_next_job(0,true)&&!speech.active&&!speech.wake_event&&!speech_pending);
+  pcm_busy=false;
+  reset();speech.wake_events=1;speech_complete(0,true);assert(speech.wake_event==1);
+  speech_next_job(0,false);assert(speech.wake_event==1); /* TTS/status cannot replay wake. */
   puts("WAKE_HANDOFF_HOST_OK: one-shot release, missing model, busy audio, feed failure, cancellation and stale-owner stop rejection; no MultiNet linked");
   return 0;
 }

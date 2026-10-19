@@ -2,6 +2,7 @@
 #include "glass_lock_photo.h"
 #include "glass_music.h"
 #include "qpk_mjpeg.h"
+#include "glass_music_cache.h"
 #include <pthread.h>
 #include <errno.h>
 #include <stdio.h>
@@ -11,12 +12,13 @@
 #define GLASS_LOCK_PHOTO_PATH "/sdcard/lockscreen/photo.jpg"
 #endif
 #define LOCK_JPEG_MAX (512u*1024u)
+#define COVER_JPEG_MAX (2u*1024u*1024u)
 static pthread_mutex_t photo_lock=PTHREAD_MUTEX_INITIALIZER;
 static bool busy;
 static struct {
   unsigned generation;bool ready;struct glass_lock_photo result;
 } slots[3];
-struct image_job {unsigned owner,generation;char url[1024];uint8_t *input;size_t used,capacity;};
+struct image_job {unsigned owner,generation;char url[1024];uint8_t *input;size_t used,capacity;bool cached,skip_cache;};
 static bool image_cancelled(void *ctx)
 {
   struct image_job *job=ctx;pthread_mutex_lock(&photo_lock);
@@ -26,11 +28,12 @@ static bool image_cancelled(void *ctx)
 static int image_receive(void *ctx,const unsigned char *data,size_t size)
 {
   struct image_job *job=ctx;if(image_cancelled(job))return -ECANCELED;
-  if(size>LOCK_JPEG_MAX-job->used)return -E2BIG;
+  size_t limit=job->owner?COVER_JPEG_MAX:LOCK_JPEG_MAX;
+  if(size>limit-job->used)return -E2BIG;
   if(job->used+size>job->capacity) {
     size_t capacity=job->capacity;
     while(capacity<job->used+size)capacity*=2;
-    if(capacity>LOCK_JPEG_MAX)capacity=LOCK_JPEG_MAX;
+    if(capacity>limit)capacity=limit;
     uint8_t *next=realloc(job->input,capacity+512);if(!next)return -ENOMEM;
     job->input=next;job->capacity=capacity;
   }
@@ -39,6 +42,10 @@ static int image_receive(void *ctx,const unsigned char *data,size_t size)
 static int image_read(struct image_job *job)
 {
   if(job->owner) {
+    if(!job->skip_cache){
+      job->input=music_cache_read('c',job->url,COVER_JPEG_MAX,512,&job->used);
+      if(job->input){job->cached=true;job->capacity=job->used;return 0;}
+    }
     job->capacity=65536;job->input=malloc(job->capacity+512);if(!job->input)return -ENOMEM;
     return music_http_get(job->url,image_receive,job,image_cancelled,NULL);
   }
@@ -56,12 +63,14 @@ done:
 static void *photo_worker(void *arg)
 {
   struct image_job *job=arg;struct glass_lock_photo out={0};void *decoder=NULL;
+retry:
   out.error=image_read(job);if(out.error)goto done;
   unsigned width=0,height=0;out.error=qpk_mjpeg_probe(job->input,job->used,&width,&height);
   if(out.error)goto done;
   if(!width || !height || width>4096 || height>4096 || (uint64_t)width*height>12000000){out.error=-E2BIG;goto done;}
-  unsigned maxw=job->owner?368:1024,maxh=job->owner?368:600,scale=0;
-  while(scale<3 && ((width>>scale)>maxw || (height>>scale)>maxh))scale++;
+  unsigned maxw=job->owner?512:1024,maxh=job->owner?512:600,scale=0;
+  unsigned targetw=job->owner?368:maxw,targeth=job->owner?368:maxh;
+  while(scale<3 && ((width>>scale)>targetw || (height>>scale)>targeth))scale++;
   out.width=width>>scale;out.height=height>>scale;
   if(!out.width || !out.height || out.width>maxw || out.height>maxh){out.error=-E2BIG;goto done;}
   if(image_cancelled(job)){out.error=-ECANCELED;goto done;}
@@ -69,6 +78,12 @@ static void *photo_worker(void *arg)
   if(!out.pixels || !decoder){out.error=-ENOMEM;goto done;}
   out.error=qpk_mjpeg_decode(decoder,job->input,job->used,job->used+512,out.pixels,out.width,out.height,width,height);
 done:
+  if(out.error&&job->cached&&!image_cancelled(job)){
+    qpk_mjpeg_destroy(decoder);decoder=NULL;free(job->input);job->input=NULL;free(out.pixels);
+    out=(struct glass_lock_photo){0};job->used=job->capacity=0;job->cached=false;job->skip_cache=true;goto retry;
+  }
+  if(!out.error&&job->owner&&!job->cached&&!image_cancelled(job)&&qpk_mjpeg_frame_size(decoder)==job->used)
+    music_cache_write('c',job->url,job->input,job->used,COVER_JPEG_MAX);
   qpk_mjpeg_destroy(decoder);free(job->input);
   if(out.error){free(out.pixels);out.pixels=NULL;}
   pthread_mutex_lock(&photo_lock);busy=false;

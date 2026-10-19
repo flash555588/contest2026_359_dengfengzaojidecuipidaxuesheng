@@ -55,6 +55,8 @@ static const struct glass_board_home *g_board_home;
 void glass_agent_set_board_home(const struct glass_board_home *home){g_board_home=home;}
 static const struct glass_board_home *g_board_music;
 void glass_agent_set_board_music(const struct glass_board_home *music){g_board_music=music;}
+static const struct glass_board_home *g_board_assistant;
+void glass_agent_set_board_assistant(const struct glass_board_home *assistant){g_board_assistant=assistant;}
 static bool skill_id(const char *id)
 {size_t n=strlen(id);if(!n||n>31)return false;for(size_t i=0;i<n;i++)if(!isalnum((unsigned char)id[i])&&id[i]!='-'&&id[i]!='_')return false;return true;}
 static bool safe_directory(const char *root)
@@ -242,6 +244,27 @@ static void add_tool(cJSON *array,const char *name,const char *description,const
   cJSON_AddItemToObject(schema,"required",cJSON_Parse(required));cJSON_AddBoolToObject(schema,"additionalProperties",false);
   cJSON_AddItemToObject(fn,"parameters",schema);cJSON_AddItemToObject(tool,"function",fn);cJSON_AddItemToArray(array,tool);
 }
+/* Local providers already supply exact schemas. Advertise them on the first
+ * request so common home/music actions need no separate discovery round. */
+static void add_local_tools(cJSON *array,const struct glass_board_home *provider)
+{
+  if(!provider||!provider->catalog||!provider->call)return;
+  size_t size=strlen(provider->catalog)+3;
+  char *text=malloc(size);if(!text)return;
+  snprintf(text,size,"[%s]",provider->catalog);
+  cJSON *catalog=cJSON_Parse(text);free(text);
+  for(const cJSON *entry=catalog?catalog->child:NULL;entry;entry=entry->next){
+    const char *name=jstring(entry,"name"),*description=jstring(entry,"description");
+    const cJSON *schema=cJSON_GetObjectItemCaseSensitive(entry,"inputSchema");
+    if(!name[0]||!cJSON_IsObject(schema))continue;
+    cJSON *tool=cJSON_CreateObject(),*fn=cJSON_CreateObject(),*parameters=cJSON_Duplicate(schema,true);
+    if(!tool||!fn||!parameters){cJSON_Delete(tool);cJSON_Delete(fn);cJSON_Delete(parameters);break;}
+    cJSON_AddStringToObject(tool,"type","function");cJSON_AddStringToObject(fn,"name",name);
+    cJSON_AddStringToObject(fn,"description",description);cJSON_AddItemToObject(fn,"parameters",parameters);
+    cJSON_AddItemToObject(tool,"function",fn);cJSON_AddItemToArray(array,tool);
+  }
+  cJSON_Delete(catalog);
+}
 char *glass_agent_tools(struct glass_agent *a,const char *existing)
 {
   cJSON *array=cJSON_Parse(a&&a->mode==AGENT_MODE_CREATE?existing:"[]");if(!cJSON_IsArray(array)){cJSON_Delete(array);return NULL;}
@@ -254,6 +277,7 @@ char *glass_agent_tools(struct glass_agent *a,const char *existing)
     add_tool(array,"mcp_list_tools","Discover one configured MCP server's tools and inputSchema. Follow nextCursor if present.","{\"server\":{\"type\":\"string\"},\"cursor\":{\"type\":\"string\"}}","[\"server\"]");
     add_tool(array,"mcp_call_tool","Invoke a discovered, user-allowed tool on a configured MCP server. Use its exact inputSchema.","{\"server\":{\"type\":\"string\"},\"tool\":{\"type\":\"string\"},\"arguments\":{\"type\":\"object\"}}","[\"server\",\"tool\",\"arguments\"]");
   }
+  if(a&&a->mode==AGENT_MODE_ASSISTANT){add_local_tools(array,g_board_home);add_local_tools(array,g_board_music);add_local_tools(array,g_board_assistant);}
   char *text=cJSON_PrintUnformatted(array);cJSON_Delete(array);return text;
 }
 static bool allowed_tool(const char *list,const char *name)
@@ -272,13 +296,47 @@ static bool arguments_only(const cJSON *args,const char *keys)
 }
 #include "glass_board_agent.inc"
 
+static char *board_catalog_page(const cJSON *args)
+{
+  const cJSON *cursor=cJSON_GetObjectItemCaseSensitive(args,"cursor");unsigned offset=0;
+  if(cursor){
+    if(!cJSON_IsString(cursor)||!cursor->valuestring[0]||strlen(cursor->valuestring)>6)return error_result("invalid_cursor");
+    for(const char *p=cursor->valuestring;*p;p++){if(*p<'0'||*p>'9')return error_result("invalid_cursor");offset=offset*10+(unsigned)(*p-'0');}
+  }
+  cJSON *all=cJSON_Parse(board_tool_catalog);if(!all)return NULL;
+  cJSON *tools=cJSON_GetObjectItemCaseSensitive(all,"tools");
+  const struct glass_board_home *providers[]={g_board_home,g_board_music,g_board_assistant};
+  for(unsigned i=0;i<3;i++)if(providers[i]&&providers[i]->catalog){
+    size_t size=strlen(providers[i]->catalog)+3;char *text=malloc(size);if(!text){cJSON_Delete(all);return NULL;}
+    snprintf(text,size,"[%s]",providers[i]->catalog);cJSON *extra=cJSON_Parse(text);free(text);
+    if(!cJSON_IsArray(extra)){cJSON_Delete(extra);cJSON_Delete(all);return error_result("invalid_board_catalog");}
+    while(extra->child)cJSON_AddItemToArray(tools,cJSON_DetachItemFromArray(extra,0));cJSON_Delete(extra);
+  }
+  unsigned total=cJSON_GetArraySize(tools);if(offset>total){cJSON_Delete(all);return error_result("invalid_cursor");}
+  cJSON *page=cJSON_CreateObject(),*items=cJSON_AddArrayToObject(page,"tools");
+  unsigned next=offset;
+  for(;next<total;next++){
+    cJSON_AddItemToArray(items,cJSON_Duplicate(cJSON_GetArrayItem(tools,next),true));
+    char *text=cJSON_PrintUnformatted(page);size_t size=text?strlen(text):AGENT_TOOL_BYTES;free(text);
+    if(size>AGENT_TOOL_BYTES-64){cJSON_DeleteItemFromArray(items,cJSON_GetArraySize(items)-1);break;}
+  }
+  if(next<total){char text[16];snprintf(text,sizeof(text),"%u",next);cJSON_AddStringToObject(page,"nextCursor",text);}
+  char *out=cJSON_PrintUnformatted(page);cJSON_Delete(page);cJSON_Delete(all);return out;
+}
+
 int glass_agent_call(struct glass_agent *a,const char *name,const cJSON *args,char **out)
 {
   bool skill=!strcmp(name,"skill_list")||!strcmp(name,"skill_read");
   bool mcp=!strcmp(name,"mcp_list_tools")||!strcmp(name,"mcp_call_tool");
-  if(!skill&&!mcp)return 0;*out=NULL;
+  bool local=!strncmp(name,"home_",5)||!strncmp(name,"music_",6)||!strncmp(name,"assistant_",10);
+  if(!skill&&!mcp&&!local)return 0;*out=NULL;
   if(!a||cancelled(a)){*out=error_result("cancelled_or_unavailable");return *out?1:-ENOMEM;}
-  if(a->mode==AGENT_MODE_CHAT||(mcp&&a->mode!=AGENT_MODE_ASSISTANT)){*out=error_result("mode_denied");return *out?1:-ENOMEM;}
+  if(a->mode==AGENT_MODE_CHAT||((mcp||local)&&a->mode!=AGENT_MODE_ASSISTANT)){*out=error_result("mode_denied");return *out?1:-ENOMEM;}
+  if(local){
+    *out=board_call(a,name,args);
+    if(*out&&strlen(*out)>AGENT_TOOL_BYTES){free(*out);*out=error_result("board_result_too_large");}
+    return *out?1:-ENOMEM;
+  }
   if(skill){
     if(!a->skills_enabled){*out=error_result("skills_disabled");return *out?1:-ENOMEM;}
     if(!strcmp(name,"skill_list")&&cJSON_GetArraySize(args)==0){cJSON *list=skill_list(a);*out=cJSON_PrintUnformatted(list);cJSON_Delete(list);}
@@ -294,16 +352,10 @@ int glass_agent_call(struct glass_agent *a,const char *name,const cJSON *args,ch
   }
   bool call=!strcmp(name,"mcp_call_tool");const char *server=jstring(args,"server");
   if(!strcmp(server,"board")){
-    if(!arguments_only(args,call?",server,,tool,,arguments,":",server,")) *out=error_result("invalid_arguments");
+    if(!arguments_only(args,call?",server,,tool,,arguments,":",server,,cursor,")) *out=error_result("invalid_arguments");
     else if(!call){
-      const char *extra=g_board_home?g_board_home->catalog:"";
-      const char *music=g_board_music?g_board_music->catalog:"";
-      if(!extra)extra="";if(!music)music="";
-      size_t size=strlen(board_tool_catalog),capacity=size+strlen(extra)+strlen(music)+3;
-      *out=malloc(capacity);
-      if(*out)snprintf(*out,capacity,"%.*s%s%s%s%s]}",(int)(size-2),board_tool_catalog,
-        extra[0]?",":"",extra,music[0]?",":"",music);
-      if(*out)a->board_discovered=true;
+      *out=board_catalog_page(args);
+      if(*out){cJSON *page=cJSON_Parse(*out);if(cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(page,"tools")))a->board_discovered=true;cJSON_Delete(page);}
     }
     else if(!a->board_discovered)*out=error_result("discover_tool_with_mcp_list_tools_first");
     else *out=board_call(a,jstring(args,"tool"),cJSON_GetObjectItemCaseSensitive(args,"arguments"));

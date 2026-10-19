@@ -1,0 +1,159 @@
+{
+  "reference_repository": "https://github.com/open-vela/nuttx",
+  "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+  "reference_tree": "a5805b585d5c64b2377d78a915485da1790212b2",
+  "reference_tree_verified_against_github": true,
+  "reference_role": "Public comparison point, not automatically the original import ancestor.",
+  "public_lookup": [
+    {
+      "name": "openvela_reference",
+      "repository": "open-vela/nuttx",
+      "requested_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "http_status": 200,
+      "commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "tree": "a5805b585d5c64b2377d78a915485da1790212b2",
+      "parents": [
+        "1c99d835c289b562993c62912f0ef85f80167824"
+      ],
+      "url": "https://github.com/open-vela/nuttx/commit/dd92bcf425738734d1b8aed09c2bd4dbe3f2e438"
+    },
+    {
+      "name": "declared_nuttx_base",
+      "repository": "streetartist/esp32p4_nuttx",
+      "requested_commit": "2f1387d56eb04ad2599baca58a3fa2380cdaaedb",
+      "http_status": 200,
+      "commit": "2f1387d56eb04ad2599baca58a3fa2380cdaaedb",
+      "tree": "516f857a6ec96c995d3579b4b19211d863734117",
+      "parents": [],
+      "url": "https://github.com/streetartist/esp32p4_nuttx/commit/2f1387d56eb04ad2599baca58a3fa2380cdaaedb"
+    },
+    {
+      "name": "declared_apps_base",
+      "repository": "streetartist/esp32p4_nuttx_apps",
+      "requested_commit": "88827afd368d4bbb4802b96ed44d9582f85b2f92",
+      "http_status": 200,
+      "commit": "88827afd368d4bbb4802b96ed44d9582f85b2f92",
+      "tree": "fdec56d68e404dfb0d742ab011521a4bfdaab6eb",
+      "parents": [],
+      "url": "https://github.com/streetartist/esp32p4_nuttx_apps/commit/88827afd368d4bbb4802b96ed44d9582f85b2f92"
+    },
+    {
+      "name": "legacy_team_nuttx",
+      "repository": "flash555588/esp32p4_nuttx",
+      "requested_commit": "cd61ccdd11498e22c058c3b2540828f88e23172e",
+      "http_status": 404,
+      "meaning": "Anonymous lookup unavailable; not proof of private status or nonexistent commit."
+    }
+  ],
+  "files": [
+    {
+      "group": "context",
+      "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_exception_common.S",
+      "reference_path": "arch/risc-v/src/common/riscv_exception_common.S",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": true,
+      "source_sha256": "15831a9e30340f724e8fbe2f43c1454d25895912d972c1797881e0d512207a28",
+      "reference_sha256": "1af5b4418ce315e3d4c4aff2efa26606911698ebbd9ecdc40a1f95345168c18a",
+      "declared_base_http_status": 200,
+      "declared_base_sha256": "c973a30492a0b48f3c5be952c2d136c475fc36c70c6f777bf607549eef5eade1",
+      "matches_declared_base_after_lf_normalization": false,
+      "declared_base_added_lines": 57,
+      "declared_base_removed_lines": 22
+    },
+    {
+      "group": "context",
+      "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_saveusercontext.S",
+      "reference_path": "arch/risc-v/src/common/riscv_saveusercontext.S",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": true,
+      "source_sha256": "0a6d6c8add37894b7cf5f27a8d95665386f61be080ad0c81328ef763cce92f12",
+      "reference_sha256": "cbdb75be8cb50cadc31ae2175a50b4666c0f876c396ff1bba5abb229091c78fa",
+      "declared_base_http_status": 200,
+      "declared_base_sha256": "1dc599b8546a2afdf91c8daeec9df9ed4487a65a86d021a9d2ee107917aed396",
+      "matches_declared_base_after_lf_normalization": false,
+      "declared_base_added_lines": 1,
+      "declared_base_removed_lines": 2
+    },
+    {
+      "group": "context",
+      "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/riscv_extctx.S",
+      "reference_path": "arch/risc-v/src/esp32p4/riscv_extctx.S",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": false,
+      "source_sha256": "c58d62d99287c9dcea8a241d9f30e3d0a545d8c811848e22c43b5e9554595849",
+      "reference_sha256": null,
+      "declared_base_http_status": 404,
+      "declared_base_added_lines": 123,
+      "declared_base_removed_lines": 0
+    },
+    {
+      "group": "context",
+      "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_extctx.c",
+      "reference_path": "arch/risc-v/src/esp32p4/esp32p4_extctx.c",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": false,
+      "source_sha256": "3174371ef627f95410d347a491f953ccf57bdf5b69eba067e39143e0630c37a5",
+      "reference_sha256": null,
+      "declared_base_http_status": 404,
+      "declared_base_added_lines": 11,
+      "declared_base_removed_lines": 0
+    },
+    {
+      "group": "startup",
+      "source": "chip/esp32p4/common-espressif/esp_start.c",
+      "reference_path": "arch/risc-v/src/common/espressif/esp_start.c",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": true,
+      "source_sha256": "90a72b50c4ff06a863ec5234d0135211eb9b6a6f3a36789e59d72a1dd6cb8680",
+      "reference_sha256": "6448e51a446aac2bf6b06caaabf287e2bab3f1c8e74cb45fc2d5756cc1cc187a",
+      "declared_base_http_status": 200,
+      "declared_base_sha256": "9216c9b072371ad1d998c0b18e20fcb6504ede9a151cd09dda4bea23ca55adfd",
+      "matches_declared_base_after_lf_normalization": false,
+      "declared_base_added_lines": 150,
+      "declared_base_removed_lines": 231
+    },
+    {
+      "group": "startup",
+      "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/espressif/esp_spiflash.c",
+      "reference_path": "arch/risc-v/src/common/espressif/esp_spiflash.c",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": true,
+      "source_sha256": "4fe9b3330371d3e40ba4c1d6dd97c33594b8256bcfcbb7ad147303e7ebca44f0",
+      "reference_sha256": "817b913176af233c83fbcd653b2bb99a5cf015fc147380027af46884aa4ebffe",
+      "declared_base_http_status": 200,
+      "declared_base_sha256": "c81da4e6116e42bc86cb72b5612c70a134920a720b0cfc64b8a54c5b24059e64",
+      "matches_declared_base_after_lf_normalization": false,
+      "declared_base_added_lines": 83,
+      "declared_base_removed_lines": 4
+    },
+    {
+      "group": "display",
+      "source": "chip/esp32p4/common-espressif/esp_mipi_dsi.c",
+      "reference_path": "arch/risc-v/src/common/espressif/esp_mipi_dsi.c",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": false,
+      "source_sha256": "c46f75ce72b15c3a98b59b28b789df98cf4bddefbfe5e0e9a5d42bf182944526",
+      "reference_sha256": null,
+      "declared_base_http_status": 200,
+      "declared_base_sha256": "861bb1e6dc4381a9ed0e710f6640f78ed344c1232875727b8b2e71c2d621b9fc",
+      "matches_declared_base_after_lf_normalization": false,
+      "declared_base_added_lines": 260,
+      "declared_base_removed_lines": 18
+    },
+    {
+      "group": "ppa",
+      "source": "app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_ppa.c",
+      "reference_path": "arch/risc-v/src/esp32p4/esp32p4_ppa.c",
+      "reference_commit": "dd92bcf425738734d1b8aed09c2bd4dbe3f2e438",
+      "reference_file_exists": false,
+      "source_sha256": "b16e79a15a935a036a532f3e081747a46a9ef07d54ec9380596ddd1316257b72",
+      "reference_sha256": null,
+      "declared_base_http_status": 404,
+      "declared_base_added_lines": 373,
+      "declared_base_removed_lines": 0
+    }
+  ],
+  "attribution_limit": "New relative to this reference does not mean independently authored. Exact historical import ancestry remains separate.",
+  "patch_line_endings": "LF normalized for comparison; raw byte hashes retained.",
+  "declared_base_patch_role": "Differences from the anonymously accessible declared 2f1387d base; absent path does not establish independent authorship."
+}

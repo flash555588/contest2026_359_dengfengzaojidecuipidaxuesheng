@@ -1,0 +1,41 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "date": "2026-10-18",
+  "external_reference_images": [],
+  "transparent_background": false,
+  "artworks": [
+    {
+      "file": "clear-draft.png",
+      "mode": "generate",
+      "prompt": "Create a wholly original premium digital matte painting for a small embedded weather card. Landscape 3:2, high quality realistic atmospheric rendering, refined natural lighting, smooth colour transitions. This is original artwork, no referenced photographs or app assets, not a screenshot. Keep the left 45 percent spacious and quiet for white city and temperature text, put the light source in the upper right, keep the lower 20 percent calm and a little darker for metrics. Absolutely no text, numerals, icons, logos, UI, outlines, geometric cartoon shapes, borders, mountains, land, trees, buildings, or horizon. CLEAR SUNNY DAY: a completely cloudless, pristine saturated azure blue sky. Absolutely zero clouds, mist, haze bands, or cloud texture anywhere. A brilliant bright sun in the upper right at roughly 82 percent x and 23 percent y, glowing white core with subtle warm pale golden halo and naturally diffused light, recognizable luminous sun. Clear sky should feel expansive, serene and bright, with smooth deep blue at left transitioning subtly to lighter blue near the sun. Not a hard vector circle, not a sunset, no orange sky, no scattered clouds."
+    },
+    {
+      "file": "overcast-original.png",
+      "mode": "generate",
+      "prompt": "Create a wholly original premium digital matte painting for a small embedded weather card. Landscape 3:2, high quality realistic atmospheric rendering, refined natural lighting, smooth colour transitions. This is original artwork, no referenced photographs or app assets, not a screenshot. Keep the left 45 percent spacious and quiet for white city and temperature text, put the light source in the upper right, keep the lower 20 percent calm and a little darker for metrics. Absolutely no text, numerals, icons, logos, UI, outlines, geometric cartoon shapes, borders, mountains, land, trees, buildings, or horizon. FULLY OVERCAST DAY: continuous thick blanket of soft stratiform grey and slate blue clouds covering the entire sky. Absolutely NO visible sun or moon, NO sun disc, NO golden glow, NO sunbeams, NO bright break in the clouds, NO patches of blue sky. Restrained gently varying grey-blue cloud masses, realistic soft volumetric shading and layered depth, subdued flat natural daylight. Moody but not apocalyptic, sophisticated and calm. The entire image must immediately read as an overcast grey day."
+    },
+    {
+      "file": "clear-night-original.png",
+      "mode": "generate",
+      "prompt": "Create a wholly original premium digital matte painting for a small embedded weather card. Landscape 3:2, high quality realistic atmospheric rendering, refined natural lighting, smooth colour transitions. This is original artwork, no referenced photographs or app assets, not a screenshot. Keep the left 45 percent spacious and quiet for white city and temperature text, put the light source in the upper right, keep the lower 20 percent calm and a little darker for metrics. Absolutely no text, numerals, icons, logos, UI, outlines, geometric cartoon shapes, borders, mountains, land, trees, buildings, or horizon. CLEAR CLOUDLESS NIGHT: completely cloudless deep midnight and navy blue sky, a small softly glowing slender crescent moon in the upper right at roughly 82 percent x and 23 percent y, sparse very subtle tiny stars. Absolutely zero clouds, mist, nebula, milky way or cloudy texture anywhere. Quiet premium atmospheric sky painting, smooth natural blue tonal depth. No huge moon, no drawn glow rings."
+    },
+    {
+      "file": "cloudy-original.png",
+      "mode": "generate",
+      "prompt": "Create a wholly original premium digital matte painting to serve as a weather-card background on a small embedded touchscreen. This is original artwork, not a photograph, screenshot, copied wallpaper, or recreation of any app asset. Landscape 3:2 image. Exceptionally convincing volumetric cloud forms, atmospheric depth, soft cinematic light, subtle natural texture; restrained and elegant, not cartoon, not icons, not geometric circles, no outlines. Compose the left 45 percent as a quiet dark enough area of sky for white temperature and city text. Place the light source and most visual detail in the upper right quadrant. The lower 20 percent should be darker and calm for white metrics. Image only: absolutely no text, numbers, symbols, logos, borders, UI, buildings, trees or horizon. Daytime, rich deep azure blue sky, soft luminous white cumulus clouds concentrated on the right and lower right, natural sunlight softly glowing behind a thin veil of cloud in the upper right. Beautiful airy cloud lighting with fine soft edges, realistic scattering and layered cloud depth. Avoid a hard sun disk or strong starburst. Sophisticated luminous sky painting."
+    },
+    {
+      "file": "cloudy-night-original.png",
+      "mode": "generate",
+      "prompt": "Create a wholly original premium digital matte painting to serve as a weather-card background on a small embedded touchscreen. This is original artwork, not a photograph, screenshot, copied wallpaper, or recreation of any app asset. Landscape 3:2 image. Exceptionally convincing volumetric cloud forms, atmospheric depth, soft cinematic light, subtle natural texture; restrained and elegant, not cartoon, not icons, not geometric circles, no outlines. Compose the left 45 percent as a quiet dark enough area of sky for white temperature and city text. Place the light source and most visual detail in the upper right quadrant. The lower 20 percent should be darker and calm for white metrics. Image only: absolutely no text, numbers, symbols, logos, borders, UI, buildings, trees or horizon. Nighttime, deep midnight blue sky, a softly glowing small crescent moon in the upper right, subtle layers of softly illuminated silver blue cloud drifting through the right half. Sparse very faint stars only, peaceful natural lighting, gentle atmospheric haze, clouds are realistic soft volumes. The left half remains spacious midnight blue. Not a space illustration, no giant moon, no nebula."
+    },
+    {
+      "file": "clear-original.png",
+      "mode": "edit",
+      "reference_images": [
+        "clear-draft.png"
+      ],
+      "prompt": "Edit this original generated weather-card background to make the CLEAR SUNNY DAY much more physically convincing, with the realism of a well-exposed clear-sky photograph, while remaining an original digitally rendered sky. Preserve the landscape 3:2 aspect ratio, the completely cloudless scene and the upper-right sun position. Replace the oversized diffuse glow and stylized radial spokes with a smaller brilliant white-hot solar core, about 3 percent of image width, a restrained soft circumsolar halo, and very subtle irregular glare. Avoid a flat yellow disk or vector circle. Remove the electric cyan and over-saturated blue; use natural deep atmospheric azure fading gently toward the sun, with subtle physically based Rayleigh scattering and very fine natural tonal texture. Do not add clouds, fog, mountains, land, horizons, objects, people or text. Keep left 45 percent quiet and comfortably dark blue for white UI text. No graphic starburst, no symmetrical ray pattern, no painted streaks, no artificial rings or bloom covering half the frame. The effect should look like looking into a real clear blue sky on a clean sunny day."
+    }
+  ]
+}

@@ -161,6 +161,8 @@ void review_chat_card_fixture(unsigned count)
   review_dialogue_state.revision++;
 }
 void review_speech_level_fixture(unsigned level){review_speech.level=level;}
+void review_chat_verified_fixture(bool verified)
+{review_chat_card_fixture(1);review_dialogue_state.turns[review_dialogue_state.count-1].cards[0].action=true;review_dialogue_state.turns[review_dialogue_state.count-1].cards[0].verified=verified;review_dialogue_state.revision++;}
 void review_chat_music_card_fixture(bool playing)
 {
   assert(review_dialogue_state.count);
@@ -176,7 +178,11 @@ void review_voice_phase_fixture(enum glass_voice_phase phase){review_dialogue_vo
 void review_voice_error_fixture(void){review_dialogue_voice.active=false;review_dialogue_voice.phase=GLASS_VOICE_ERROR;review_dialogue_voice.error=GLASS_VOICE_ERROR_EMPTY;}
 void review_voice_network_error_fixture(void){review_dialogue_voice.active=false;review_dialogue_voice.phase=GLASS_VOICE_ERROR;review_dialogue_voice.error=GLASS_VOICE_ERROR_NETWORK;}
 void glass_chat_activity_get(struct chat_activity_snapshot *out){if(review_dialogue){memset(out,0,sizeof(*out));out->loaded=out->configured=true;out->phase=review_dialogue_state.phase;if(review_dialogue_state.count){const struct chat_turn *t=&review_dialogue_state.turns[review_dialogue_state.count-1];out->turn_id=t->id;out->state=t->state;out->activity=review_dialogue_activity;}return;}memset(out,0,sizeof(*out));out->loaded=true;out->configured=true;out->phase=CHAT_IDLE;out->state=CHAT_DONE;if(review_chat_mode)out->turn_id=1;if(review_grok_mode>0&&review_grok_mode<4){out->phase=CHAT_REQUESTING;out->state=CHAT_WAITING;out->activity=review_grok_mode==1?CHAT_ACTIVITY_THINK:review_grok_mode==2?CHAT_ACTIVITY_REPLY:CHAT_ACTIVITY_TOOL;}else if(review_grok_mode==5)out->state=CHAT_FAILED;else if(review_grok_mode==6)out->state=CHAT_CANCELLED;else if(review_grok_mode==7)out->turn_id=0;}
-void review_weather_fixture(int mode){review_weather_mode=mode;}
+static bool review_weather_custom;
+static struct glass_weather_snapshot review_weather_sample;
+void review_weather_snapshot_fixture(const struct glass_weather_snapshot *s)
+{review_weather_custom=s!=NULL;if(s)review_weather_sample=*s;}
+void review_weather_fixture(int mode){review_weather_mode=mode;review_weather_custom=false;}
 void review_ble_fixture(int mode){review_ble_mode=mode;}
 static void review_music_library(struct music_snapshot *out){memset(out,0,sizeof(*out));out->initialized=true;out->volume=40;out->revision=review_music_revision;if(review_music_mode){out->favorite_count=3;const char *names[]={"午后的小调","城市与晚风","熟悉的旋律"};for(unsigned i=0;i<3;i++){snprintf(out->favorites[i].name,sizeof(out->favorites[i].name),"%s",names[i]);strcpy(out->favorites[i].artist,"审核示例歌手");strcpy(out->favorites[i].album,"离线示例专辑");}out->current=out->result=out->favorites[0];out->has_result=true;out->search_revision=1;out->state=review_music_mode==2?MUSIC_PLAYING:MUSIC_IDLE;out->position_ms=review_music_position;out->duration_ms=review_music_duration;}}
 bool glass_chat_get(struct chat_snapshot *out){if(review_dialogue){if(out->revision==review_dialogue_state.revision)return false;*out=review_dialogue_state;return true;}memset(out,0,sizeof(*out));out->loaded=true;out->phase=CHAT_IDLE;out->configured=true;out->revision=review_chat_mode+1;strcpy(out->model,"离线审核 · 服务示例");if(review_chat_mode){out->count=1;out->turns[0].id=1;out->turns[0].state=CHAT_DONE;strcpy(out->turns[0].prompt,"帮我安排今天的学习计划。");strcpy(out->turns[0].reply,"可以先完成一项最重要的任务，再留出时间整理笔记。\n\n上午：专注学习与练习。\n下午：回顾进度，补充问题。\n晚上：整理收获，为明天留下一条清晰的待办。\n\n以上内容仅用于离线页面审核。");out->turns[0].clipped=true;strcpy(out->turns[0].archive,"review-response");}review_grok_chat(out);return true;}
@@ -186,7 +192,7 @@ int glass_chat_page_request(const char *name,unsigned page)
 {(void)name;if(page>=review_archive_total)return -EINVAL;review_archive_page=page;review_archive_revision++;return 0;}
 bool glass_chat_page_get(struct chat_page *out){memset(out,0,sizeof(*out));out->revision=review_archive_revision;out->page=review_archive_page;out->pages=review_archive_total;strcpy(out->text,"完整回复（离线审核示例）\n\n1. 选择今天最重要的一件事。\n2. 在一个专注时段里完成它。\n3. 安排短休息，再检查进度。\n4. 保存笔记，整理明天的待办。\n\n这个页面沿用原有分页与返回操作。");return true;}
 size_t glass_chat_copy_utf8(char *out,size_t cap,const char *text){size_t n=strlen(text);if(n>=cap)n=cap-1;while(n&&(text[n]&0xc0)==0x80)n--;memcpy(out,text,n);out[n]=0;return n;}
-void glass_weather_get(struct glass_weather_snapshot *out){memset(out,0,sizeof(*out));out->state=WEATHER_WAIT_NET;if(review_weather_mode){out->valid=true;out->state=WEATHER_READY;out->revision=2;out->data.temperature=24;out->data.humidity=48;out->data.aqi=32;out->data.level=1;out->data.pm25=12;strcpy(out->data.condition,"多云");strcpy(out->data.category,"良好");strcpy(out->data.location,"当地天气");strcpy(out->data.report_time,"2026-10-13 14:00 · 审核示例");}}
+void glass_weather_get(struct glass_weather_snapshot *out){if(review_weather_custom){*out=review_weather_sample;return;}memset(out,0,sizeof(*out));out->state=WEATHER_WAIT_NET;if(review_weather_mode){out->valid=true;out->state=WEATHER_READY;out->revision=2;out->data.temperature=24;out->data.humidity=48;out->data.aqi=32;out->data.level=1;out->data.pm25=12;strcpy(out->data.condition,"多云");strcpy(out->data.category,"良好");strcpy(out->data.location,"当地天气");strcpy(out->data.report_time,"2026-10-13 14:00 · 审核示例");}}
 void glass_ble_read(struct glass_ble_state *out){memset(out,0,sizeof(*out));out->started=true;out->ready=true;if(review_ble_mode){out->count=2;strcpy(out->devices[0].name,"蓝牙键盘 · 审核示例");strcpy(out->devices[1].name,"温湿度传感器 · 审核示例");for(unsigned i=0;i<2;i++){out->devices[i].rssi=-38-i*10;out->devices[i].address[0]=2;out->devices[i].address[5]=i+1;}}}
 static int review_battery_percent=-1;
 static bool review_battery_charging,review_bluetooth_connected;
@@ -194,14 +200,30 @@ void review_status_fixture(int percent,bool charging,bool bluetooth)
 {review_battery_percent=percent;review_battery_charging=charging;review_bluetooth_connected=bluetooth;}
 void glass_status_power_read(int *percent,bool *charging)
 {*percent=review_battery_percent;*charging=review_battery_charging;}
-void glass_ble_hid_read(struct glass_ble_hid_state *out){memset(out,0,sizeof(*out));out->connected=review_bluetooth_connected;}
+static bool review_hid_custom,review_wifi_custom;
+static struct glass_ble_hid_state review_hid_state;
+static struct c6_desktop_result review_wifi_result;
+static enum c6_desktop_operation review_wifi_operation;
+static char review_wifi_ssid[33],review_wifi_password[65];
+void review_hid_snapshot_fixture(const struct glass_ble_hid_state *state)
+{review_hid_custom=state!=NULL;if(state)review_hid_state=*state;}
+void review_wifi_snapshot_fixture(const struct c6_desktop_result *state)
+{review_wifi_custom=state!=NULL;if(state)review_wifi_result=*state;}
+void glass_ble_hid_read(struct glass_ble_hid_state *out){if(review_hid_custom){*out=review_hid_state;return;}memset(out,0,sizeof(*out));out->connected=review_bluetooth_connected;}
 int c6_desktop_worker_start(struct c6_desktop_worker *w,const struct c6_desktop_backend *b){memset(w,0,sizeof(*w));return 0;}
-int c6_desktop_worker_read(struct c6_desktop_worker *w,struct c6_desktop_result *out){memset(out,0,sizeof(*out));out->sequence=1;out->operation=C6_DESKTOP_STATUS;return 0;}
+int c6_desktop_worker_read(struct c6_desktop_worker *w,struct c6_desktop_result *out){if(review_wifi_custom){*out=review_wifi_result;return 0;}memset(out,0,sizeof(*out));out->sequence=1;out->operation=C6_DESKTOP_STATUS;return 0;}
+int c6_desktop_worker_submit(struct c6_desktop_worker *w,enum c6_desktop_operation operation,const char *ssid,const char *password)
+{review_wifi_operation=operation;snprintf(review_wifi_ssid,sizeof(review_wifi_ssid),"%s",ssid?ssid:"");snprintf(review_wifi_password,sizeof(review_wifi_password),"%s",password?password:"");return review_wifi_custom&&review_wifi_result.busy?-EBUSY:0;}
+bool review_wifi_request_matches(enum c6_desktop_operation operation,const char *ssid,const char *password)
+{return review_wifi_operation==operation&&!strcmp(review_wifi_ssid,ssid?ssid:"")&&!strcmp(review_wifi_password,password?password:"");}
 /* The keyboard/IME UI is production code; dictionary/voice backends stay offline. */
 static unsigned review_pinyin_count;
+static char review_pinyin_input[33];
 void review_pinyin_fixture(unsigned count){review_pinyin_count=count;}
-unsigned glass_pinyin_search(const char *input){return input&&input[0]?review_pinyin_count:0;}
+unsigned glass_pinyin_search(const char *input){snprintf(review_pinyin_input,sizeof(review_pinyin_input),"%s",input?input:"");return input&&input[0]?review_pinyin_count:0;}
 bool glass_pinyin_candidate(unsigned index,char *out,size_t capacity){if(index>=review_pinyin_count){if(capacity)out[0]=0;return false;}snprintf(out,capacity,"候选%u",index+1);return true;}
+bool glass_pinyin_choose(unsigned index,char *out,size_t capacity,unsigned *consumed)
+{if(!review_pinyin_input[0]||!glass_pinyin_candidate(index,out,capacity))return false;*consumed=strlen(review_pinyin_input);return true;}
 void glass_voice_get(struct glass_voice_snapshot *out){if(review_dialogue){*out=review_dialogue_voice;return;}memset(out,0,sizeof(*out));if(review_grok_mode==7){out->active=true;out->phase=GLASS_VOICE_LISTENING;}}
 const char *glass_voice_error_text(enum glass_voice_error error){(void)error;return "离线审核服务";}
 bool glass_qpk_removable(const char *path,const char *package){return path&&package&&!strcmp(package,"review.fixture");}
@@ -253,7 +275,6 @@ unsigned portal_session_seconds(void){return 240;}
 void glass_qpk_get(struct qpk_draft_info *out){memset(out,0,sizeof(*out));out->loaded=true;if(review_draft_source){out->revision=1;out->previewed_revision=review_previewed_revision;strcpy(out->name,"你好快应用（审核示例草稿）");strcpy(out->slug,"hello");}}
 const char *glass_qpk_error_text(int error){(void)error;return "离线审核服务";}
 const char *glass_chat_error_text(enum chat_error error){(void)error;return "离线审核服务";}
-void *qpk_mjpeg_create(void){return NULL;}
 struct glass_file_job {struct glass_file_result result;unsigned polls;int error;};
 static unsigned review_files_busy,review_files_polls,review_files_live,review_files_cancelled;
 static int review_files_error;
@@ -287,6 +308,36 @@ void glass_qpk_preview_result(uint32_t revision,const char *error){if(!error[0])
 /* Shared playback fixtures for native music/lock-screen lifecycle checks. */
 static bool review_now_override;
 static struct music_now_playing review_now;
+static unsigned review_lyric_total;
+static int review_lyric_current=-1;
+static const char *review_lyric_text;
+static const char *review_lyric_next;
+static const char *review_lyric_translation;
+void review_lyrics_translation_fixture(const char *text){review_lyric_translation=text;}
+void review_lyrics_next_fixture(const char *text){review_lyric_next=text;}
+void review_lyrics_text_fixture(const char *text){review_lyric_text=text;}
+void review_lyrics_fixture(unsigned total,int current)
+{review_lyric_total=total;review_lyric_current=current;}
+void glass_music_lyrics_read(unsigned first,struct music_lyrics_window *out)
+{
+ memset(out,0,sizeof(*out));out->current=-1;
+ if(!review_now_override)return;
+ out->track_id=review_now.track_id;out->state=review_now.lyrics_state;
+ if(out->state!=MUSIC_LYRICS_READY)return;
+ out->total=review_lyric_total;out->current=review_lyric_current;
+ unsigned last=out->total>MUSIC_LYRICS_WINDOW?out->total-MUSIC_LYRICS_WINDOW:0;
+ out->first=first>last?last:first;
+ for(unsigned i=out->first;i<out->total&&out->count<MUSIC_LYRICS_WINDOW;i++){
+  out->start_ms[out->count]=i*4000;out->end_ms[out->count]=(i+1)*4000;
+  snprintf(out->lines[out->count++],MUSIC_LYRIC_TEXT_MAX,"第 %u 行 · 原创歌词用于界面验证",i+1);
+ }
+ if(out->current>=0&&(unsigned)out->current>=out->first&&(unsigned)out->current<out->first+out->count)
+   snprintf(out->lines[out->current-out->first],MUSIC_LYRIC_TEXT_MAX,"%s",review_lyric_text?review_lyric_text:"把今天交给温柔的晚风");
+ if(review_lyric_next&&out->current>=0&&(unsigned)(out->current+1)>=out->first&&(unsigned)(out->current+1)<out->first+out->count)
+   snprintf(out->lines[out->current+1-out->first],MUSIC_LYRIC_TEXT_MAX,"%s",review_lyric_next);
+ if(review_lyric_translation&&out->current>=0&&(unsigned)out->current>=out->first&&(unsigned)out->current<out->first+out->count)
+   snprintf(out->translations[out->current-out->first],MUSIC_LYRIC_TEXT_MAX,"%s",review_lyric_translation);
+}
 static unsigned review_music_toggles,review_music_skips;
 void review_music_now_fixture(const struct music_now_playing *value)
 {review_now_override=value!=NULL;if(value)review_now=*value;}
@@ -314,7 +365,7 @@ int glass_music_skip(int direction)
  if(direction!=-1&&direction!=1)return -EINVAL;
  review_music_skips++;if(!review_now_override||!review_now.can_skip)return -ENOENT;
  strcpy(review_now.name,direction>0?"下一首示例":"上一首示例");memset(review_now.lyrics,0,sizeof(review_now.lyrics));
- review_now.lyrics_state=MUSIC_LYRICS_LOADING;review_now.position_ms=0;review_now.revision++;return 0;
+ review_now.lyrics_state=MUSIC_LYRICS_LOADING;review_now.track_id++;review_now.position_ms=0;review_now.revision++;return 0;
 }
 
 /* Only the photo I/O boundary is mocked; LVGL canvas ownership is production. */
@@ -432,3 +483,7 @@ int hass_control_checked(uint32_t c,const char *e,bool on,int b,uint32_t revisio
 {return revision&&revision==hass_configuration_revision()?hass_control(c,e,on,b):-ESTALE;}
 int hass_call_service_checked(uint32_t c,const char *e,const char *service,const char *body,uint32_t revision)
 {return revision&&revision==hass_configuration_revision()?hass_call_service(c,e,service,body):-ESTALE;}
+
+int glass_voice_start_request(uint32_t *request){int ret=glass_voice_start();if(!ret){if(!++review_dialogue_voice.request)review_dialogue_voice.request=1;if(request)*request=review_dialogue_voice.request;}return ret;}
+void glass_voice_stop_request(uint32_t request){if(request&&request==review_dialogue_voice.request)glass_voice_stop();}
+void glass_voice_cancel(void){glass_voice_stop();review_dialogue_voice.active=false;review_dialogue_voice.text[0]=0;review_dialogue_voice.phase=GLASS_VOICE_IDLE;review_dialogue_voice.request++;}

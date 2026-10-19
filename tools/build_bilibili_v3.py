@@ -34,13 +34,26 @@ def main():
     p.add_argument('--l2-kb',type=int,choices=[256,512],default=256,help='P4 L2 cache experiment; 512 KiB uses 128-byte lines')
     p.add_argument('--speech-runtime',type=Path,help='Prepared, verified speech runtime directory (SD models, no flash fallback)')
     p.add_argument('--esp-tts-prepared',type=Path,help='Pinned ESP-TTS libraries/voice; use as the normal Chinese speech backend')
+    p.add_argument('--tts-backend',choices=['esp-tts','sanotts'],default='esp-tts',help='Chinese speech backend when --speech-runtime is enabled (default: official esp-tts)')
+    p.add_argument('--offline-inputs',action='store_true',help='Do not download missing official ESP-TTS inputs')
+    p.add_argument('--esp-tts-storage',choices=['sd','flash'],default='sd',help='Official voice storage (default: verified SD asset, preserving the 12 MB firmware / 4 MB data layout)')
     p.add_argument('--source-revision',help='Explicit 40-hex source revision for Windows-mounted Git worktrees')
     a=p.parse_args();repo=Path(__file__).resolve().parent.parent
     if a.esp_tts_prepared and not a.speech_runtime:p.error('--esp-tts-prepared requires --speech-runtime')
+    if a.esp_tts_prepared and a.tts_backend!='esp-tts':p.error('--esp-tts-prepared conflicts with --tts-backend sanotts')
     base=a.baseline.resolve();root=a.workspace.resolve();out=a.output.resolve()
     if root==base or base in root.parents: p.error('Use an isolated workspace outside baseline')
     if not (base/'tls-build-espdl/library/libmbedtls.a').exists():p.error('Prepared v3 TLS libraries required')
+    if a.speech_runtime and a.tts_backend=='esp-tts':
+        from esp_tts_inputs import verify_prepared
+        if not a.esp_tts_prepared:
+            from prepare_esp_tts import prepare
+            a.esp_tts_prepared=out/'esp-tts-inputs'
+            prepare(a.esp_tts_prepared,offline=a.offline_inputs)
+        verify_prepared(a.esp_tts_prepared)
     env=os.environ.copy();env['PATH']=str(a.toolchain.resolve())+':'+str(Path.home()/'.local/bin')+':'+env['PATH']
+    for program in ['make','python3','kconfig-conf','riscv32-esp-elf-gcc','riscv32-esp-elf-g++','riscv32-esp-elf-ar','riscv32-esp-elf-nm','riscv32-esp-elf-objcopy']:
+        if not shutil.which(program,path=env['PATH']):p.error('Required build tool not on PATH: '+program+'; load the prepared workspace environment first')
     def run(argv,**kw):subprocess.run(list(map(str,argv)),env=env,check=True,**kw)
     first=not root.exists()
     if first:run(['cp','-a','--reflink=auto',base,root])
@@ -72,11 +85,7 @@ def main():
     make=desktop_make.read_text()
     make=make.split('# BEGIN OPTIONAL LOCAL SPEECH')[0].rstrip()+'\n'
     if a.speech_runtime:
-        from build_speech_runtime import build as build_speech
         prepared=a.speech_runtime.resolve()
-        archive=build_speech(root/'apps',prepared/'vendor',out/'speech',a.toolchain.resolve(),
-            esp_tts_prepared=a.esp_tts_prepared.resolve() if a.esp_tts_prepared else None)
-        speech_libraries=[archive]+list((out/'speech/lib').glob('*.a'))
         make+='\n# BEGIN OPTIONAL LOCAL SPEECH\nCFLAGS += -DGLASS_LOCAL_SPEECH -DQPK_DL_SD_ONLY\n'
     desktop_make.write_text(make)
 
@@ -92,7 +101,9 @@ def main():
     # Live FLV needs more than the baseline's 3 KiB socket window. Keep the
     # pool bounded (48 KiB payload) and leave internal RAM for DMA/threads.
     for name,value in [('ESPRESSIF_STORAGE_MTD_OFFSET',hex(data_offset)),('ESPRESSIF_STORAGE_MTD_SIZE',hex(data_size)),('LIBM','y'),('LIBM_TOOLCHAIN','n'),('LIBM_NONE','n'),('NET_BROADCAST','y'),('SYSTEM_BILIBILI_LIVE','y'),('PTHREAD_MUTEX_TYPES','y'),('NSH_DISABLE_DATE','n'),
-                       ('NET_RECV_BUFSIZE','32768'),('NET_MAX_RECV_BUFSIZE','32768'),('NSH_NETINIT','n'),
+                       ('NET_RECV_BUFSIZE','32768'),('NET_MAX_RECV_BUFSIZE','32768'),('NSH_NETINIT','n'),('LV_USE_SNAPSHOT','y'),
+                       # A cancelled ASR must not sit behind 30s x 3 DNS retries.
+                       ('NETDB_DNSCLIENT_RECV_TIMEOUT','3'),('NETDB_DNSCLIENT_SEND_TIMEOUT','3'),('NETDB_DNSCLIENT_RETRIES','2'),
                        ('IOB_NBUFFERS','96'),('IOB_BUFSIZE','512'),('RR_INTERVAL','20'),('ESP32P4_PPA','y'),
                        ('ESPRESSIF_CACHE_L2_CACHE_128KB','n'),
                        ('ESPRESSIF_CACHE_L2_CACHE_256KB','y' if a.l2_kb==256 else 'n'),
@@ -111,7 +122,6 @@ def main():
     libs=[base/'espdl-build/libqpk_espdl.a',base/'espdl-build/libfbs_model_nuttx.a',
           base/'tls-build-espdl/library/libmbedtls.a',base/'tls-build-espdl/library/libmbedx509.a',
           base/'tls-build-espdl/tf-psa-crypto/core/libtfpsacrypto.a']
-    if speech_libraries:libs=['--start-group',*speech_libraries,*libs,'--end-group']
     for name in ['libstdc++.a','libsupc++.a','libgcc.a']:
         libs.append(Path(subprocess.check_output([str(tc/'riscv32-esp-elf-g++'),*abi,'-print-file-name='+name],text=True).strip()))
     run(['make','olddefconfig',cross],cwd=root/'nuttx')
@@ -122,10 +132,19 @@ def main():
                   f'CONFIG_ESPRESSIF_CACHE_L2_CACHE_LINE_SIZE={64 if a.l2_kb==256 else 128}']:
         if value not in config:raise RuntimeError('Unexpected v3 configuration: '+value)
     clean_stamp=root/'bilibili-clean.txt'
-    config_hash=hashlib.sha256((config+'\nspeech='+str(bool(a.speech_runtime))+'\nesp_tts='+str(bool(a.esp_tts_prepared))).encode()).hexdigest()
+    config_hash=hashlib.sha256((config+'\nspeech='+str(bool(a.speech_runtime))+'\nesp_tts='+str(bool(a.esp_tts_prepared))+'\nvoice_storage='+a.esp_tts_storage).encode()).hexdigest()
     if not clean_stamp.exists() or clean_stamp.read_text().strip()!=config_hash:
         run(['make','clean',cross],cwd=root/'nuttx');clean_stamp.write_text(config_hash+'\n')
     run(['make','context',cross,f'ESPCLAW_TLS_CFLAGS={includes}'],cwd=root/'nuttx')
+    # Compile speech using the final resolved configuration and generated
+    # headers, after olddefconfig/clean/context have completed.
+    if a.speech_runtime:
+        from build_speech_runtime import build as build_speech
+        archive=build_speech(root/'apps',prepared/'vendor',out/'speech',tc,
+            esp_tts_prepared=a.esp_tts_prepared.resolve() if a.esp_tts_prepared else None,esp_tts_storage=a.esp_tts_storage)
+        speech_compile=json.loads((out/'speech/compile.json').read_text())
+        speech_libraries=[archive]+[Path(path) for path in speech_compile['link_libraries']]
+        libs=['--start-group',*speech_libraries,*libs,'--end-group']
     run(['make',f'-j{a.jobs}',cross,f'ESPCLAW_TLS_CFLAGS={includes}','EXTRA_LIBS='+' '.join(map(str,libs))],cwd=root/'nuttx')
     program_limit=data_offset
     if 0x2000+(root/'nuttx/nuttx.bin').stat().st_size>program_limit:raise RuntimeError('Firmware overlaps reserved storage')
@@ -135,6 +154,12 @@ def main():
     nm=subprocess.check_output([str(tc/'riscv32-esp-elf-nm'),'-C',str(out/'nuttx.elf')],text=True)
     for symbol in ['bili_live_show','bili_flv_run','glass_https_tls_ops','WelsCreateDecoder']:
         if symbol not in nm:raise RuntimeError('Missing linked symbol '+symbol)
+    if a.esp_tts_prepared:
+        for symbol in ['glass_esp_synthesize','esp_tts_create','esp_tts_stream_play','glass_esp_tts_voice_load']:
+            if not re.search(r'\b'+symbol+r'$',nm,re.M):raise RuntimeError('Missing linked ESP-TTS symbol '+symbol)
+        if re.search(r'\bglass_sano_synthesize$',nm,re.M):raise RuntimeError('Unexpected legacy TTS backend in ESP-TTS image')
+    bss=re.search(r'^([0-9a-f]+) \w _ebss$',nm,re.M)
+    if not bss or int(bss.group(1),16)>0x4ffaefc0:raise RuntimeError('P4 early-boot BSS exceeds the prepared board boundary')
     revision=a.source_revision
     if revision:
         if not re.fullmatch('[0-9a-f]{40}',revision):p.error('source-revision must be 40-hex')
@@ -142,6 +167,8 @@ def main():
     metadata={'upstream':revision,
               'baseline':str(base),'baseline_config_sha256':sha(base/'nuttx/.config'),
               'workspace':str(root),'tls':'existing glass_https / mbedTLS',
+              'tts_backend':a.tts_backend if a.speech_runtime else None,'ebss':hex(int(bss.group(1),16)),
+              'esp_tts_voice_storage':a.esp_tts_storage if a.esp_tts_prepared else None,
               'compiler':subprocess.check_output([str(tc/'riscv32-esp-elf-gcc'),'--version'],text=True).splitlines()[0],
               'flash_offset':'0x2000','program_limit':hex(program_limit),'vision_models_sd_only':True,'data_offset':hex(data_offset),'data_size':hex(data_size),'flash_layout':f'{data_offset//0x100000}m-firmware-{data_size//0x100000}m-data','board_tested':False,'l2_cache_kb':a.l2_kb,
               'sha256':{name:sha(out/name) for name in ['nuttx.bin','nuttx.elf','resolved.config']},
@@ -152,7 +179,7 @@ def main():
         metadata['speech']={'lock_sha256':sha(repo/'app/espdl-quickapp/speech/upstream.lock.json'),
                            'sd_manifest_sha256':sha(prepared/'sdcard/speech/manifest.json'),
                            'compile':json.loads((out/'speech/compile.json').read_text()),
-                           'tools':{str(f.relative_to(repo)):sha(f) for f in [repo/'tools/build_bilibili_v3.py',repo/'tools/build_speech_runtime.py',repo/'tools/prepare_speech_runtime.py']}}
+                           'tools':{str(f.relative_to(repo)):sha(f) for f in [repo/'tools/build_bilibili_v3.py',repo/'tools/build_speech_runtime.py',repo/'tools/prepare_speech_runtime.py',repo/'tools/prepare_esp_tts.py',repo/'tools/esp_tts_inputs.py']}}
     (out/'BUILD-METADATA.json').write_text(json.dumps(metadata,indent=2)+'\n')
     print('Build verified:',out,metadata['sha256']['nuttx.bin'])
 if __name__=='__main__':main()

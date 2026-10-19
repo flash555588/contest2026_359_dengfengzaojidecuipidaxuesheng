@@ -7,6 +7,7 @@ static lv_obj_t *portal_page;
 static lv_event_cb_t portal_return;
 static bool portal_revoked;
 static void glass_portal_open(lv_event_t *e);
+static void glass_music(lv_event_t *e);
 static void glass_portal_show(lv_event_cb_t back);
 static void portal_refresh(lv_event_t *e)
 {
@@ -50,7 +51,7 @@ static void glass_portal_show(lv_event_cb_t back)
   /* panel_card adds its close button as child 1. Replace it with one return. */
   lv_obj_delete(lv_obj_get_child(card,1));
   const char *back_text=back==glass_settings?"返回设置":
-    back==glass_homeassistant?"返回家居":"返回聊天";
+    back==glass_homeassistant?"返回家居":back==glass_music?"返回音乐":"返回聊天";
   glass_button(card,back_text,760,14,160,theme_surface(),portal_go_back,NULL);
   struct in_addr address; char code[PORTAL_CODE_LENGTH+1],url[96],display[64],ip[INET_ADDRSTRLEN];
   if(netlib_get_ipv4addr(C6NET_IFNAME,&address)<0||!address.s_addr) {

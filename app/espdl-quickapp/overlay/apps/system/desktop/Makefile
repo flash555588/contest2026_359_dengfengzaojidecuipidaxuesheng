@@ -18,7 +18,7 @@ STACKSIZE = $(CONFIG_SYSTEM_DESKTOP_STACKSIZE)
 CFLAGS += -I$(APPDIR)/interpreters/quickjs/quickjs
 CFLAGS += -I$(APPDIR)/system/espclaw/include
 
-CSRCS   = desktop_font.c qpk_runtime.c qpk_homeassistant.c ouo_resource.c \
+CSRCS   = desktop_font.c qpk_runtime.c qpk_homeassistant.c \
           camera_resource.c recorder_resource.c
 MAINSRC = desktop_main.c
 
@@ -51,8 +51,11 @@ CSRCS += glass_pinyin_resource.c
 CSRCS += glass_portal_config.c glass_portal_files.c glass_portal_http.c glass_portal_resource.c
 CSRCS += glass_chat_service.c glass_chat_store.c glass_agent.c glass_agent_config.c glass_mcp_http.c
 CSRCS += glass_board_music.c
+CSRCS += glass_board_assistant.c glass_assistant_platform.c
+CSRCS += glass_claude.c
 CSRCS += glass_grok.c glass_grok_state.c
 CSRCS += glass_code_font.c
+CSRCS += glass_sd_font.c
 CSRCS += pet_engine.c pet_sprites.c qpk_pet.c pet_lvgl.c dafeiyu_resource.c
 CXXSRCS += glass_pinyin.cpp $(wildcard music_vendor/googlepinyin/src/*.cpp)
 CXXEXT = .cpp

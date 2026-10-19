@@ -1,0 +1,70 @@
+<!doctype html><meta charset="utf-8"><title>JIZURA 完整版验证</title>
+<style>body{background:#14171c;color:#eee;font:16px system-ui;margin:32px}button,a{display:inline-block;padding:12px;margin:6px;background:#343b48;color:white;border:0;border-radius:8px}canvas{max-width:640px;background:#222}pre{white-space:pre-wrap}</style>
+<h1>JIZURA 完整版验证</h1><p>调用未修改的原版引擎。使用原创歌词和合成音频。</p>
+<button id="start">运行全部验证</button><pre id="status">等待开始</pre><canvas id="preview" width="384" height="216"></canvas><div id="files"></div>
+<script src="vendor/mp4-muxer.min.js"></script><script src="dev/www/jizura.js"></script>
+<script>
+const result={counts:{},rendered:{},frames:0,errors:[],warnings:[],exports:{}};
+const status=document.querySelector('#status'),canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
+const check=(ok,message)=>{if(!ok)throw Error(message)};
+const download=(name,blob)=>{const a=document.createElement('a');a.textContent=name;a.download=name;a.href=URL.createObjectURL(blob);document.querySelector('#files').append(a)};
+function project(overrides={}){return Object.assign(J.defaultProject(),{extra:true,typo:true,kinetic:true,horror:true,
+  title:'慢下来的光',artist:'原创验证',lyrics:'[00:00.00]把喧嚣留在身后\n[00:02.00]Hello / light\n[00:04.00]让今天*闪闪发光*!',
+  aspect:'16:9',res:180,fps:24,seed:852},overrides)}
+document.querySelector('#start').onclick=async()=>{
+ document.querySelector('#start').disabled=true;let label='setup';
+ const warn=console.warn;console.warn=(...args)=>{result.warnings.push(label+' '+args.join(' '));warn(...args)};
+ try{
+  result.version='0.10.1';result.counts=Object.fromEntries(J.GROUP_KEYS.map(g=>[g,J.order(g).length]));result.styles=J.STYLE_ORDER.length;
+  result.total=Object.values(result.counts).reduce((a,b)=>a+b,0);
+  J.setLang('zh-Hans');await J.ensureFonts('把喧嚣留在身后让今天闪闪发光 Hello light',['gothic_black','mincho_bold','dela']);
+  result.loadedFonts=[...document.fonts].filter(font=>font.status==='loaded').map(font=>({family:font.family,weight:font.weight}));
+  const aspects=['16:9','9:16','4:3','3:4','1:1','4:5','21:9'];
+  for(const group of J.GROUP_KEYS){result.rendered[group]=0;
+   for(const key of J.order(group)){
+    label=group+'.'+key;
+    try{
+     const override=group==='fx'?{}:group==='decor'?{single:true,decor:[key]}:{single:true,[group]:key};
+     const p=project({aspect:aspects[result.rendered[group]%aspects.length],overrides:{0:override,1:override,2:override}});
+     const plan=J.plan(p,null),renderer=new J.Renderer();
+     const scale=0.2;canvas.width=Math.round(plan.W*scale);canvas.height=Math.round(plan.H*scale);
+     if(group==='fx')plan.events=[{t:0.3,dur:0.5,type:key,amp:0.8,seed:852}];
+     for(const t of group==='fx'?[0.31,0.45,0.65]:[0.03,0.45,1.2,3.9,4.3]){renderer.frame(ctx,plan,t,{scale});result.frames++}
+     result.rendered[group]++;
+    }catch(error){result.errors.push(label+': '+error.message)}
+    if(result.frames%25===0){status.textContent='验证 '+label+'\n已渲染 '+result.frames+' 帧';await pause()}
+   }
+  }
+  result.styleRenders=0;
+  for(const style of J.STYLE_ORDER){label='style.'+style;try{const p=project({style}),plan=J.plan(p,null);canvas.width=384;canvas.height=216;new J.Renderer().frame(ctx,plan,0.7,{scale:0.2});result.styleRenders++}catch(error){result.errors.push(label+': '+error.message)}await pause()}
+  label='audio';status.textContent='验证音频分析与导出…';
+  const buffer=new AudioBuffer({length:48000*12,sampleRate:48000,numberOfChannels:1}),samples=buffer.getChannelData(0);
+  for(let i=0;i<samples.length;i++){const time=i/48000,pulse=time%0.5;samples[i]=pulse<0.08?Math.sin(time*Math.PI*2*880)*Math.exp(-pulse*45)*0.6:0}
+  const wav=J.audioWav(buffer,12);const audio=await J.analyzeAudio(new File([wav],'synthetic-120bpm.wav',{type:'audio/wav'}));
+  check(audio.duration>11.9&&audio.beats.length&&audio.energy.length,'audio analysis');
+  result.audio={duration:audio.duration,bpm:audio.bpm,beats:audio.beats.length,energy:audio.energy.length};
+  const p=project(),plan=J.plan(p,audio),range={t0:0,t1:0.5},controller=new AbortController();
+  const lrc=J.lrcText(p,plan.lines);check(lrc.includes('[00:02.00]'),'LRC timestamps');result.exports.lrc=true;
+  download('original-engine.lrc',new Blob([lrc],{type:'text/plain'}));
+  const ae=J.planForAE(plan,p);check(ae&&ae.version,'AE JSON');result.exports.ae=true;
+  download('original-engine-ae.json',new Blob([JSON.stringify(ae,null,2)],{type:'application/json'}));
+  const json=JSON.stringify(p);check(JSON.parse(json).lyrics===p.lyrics,'project roundtrip');result.exports.project=true;
+  download('original-project.json',new Blob([json],{type:'application/json'}));
+  for(const [name,opts] of [['sequence',{}],['transparent',{transparent:true}],['layers',{layers:true}]]){
+   label='PNG '+name;const blob=await J.exportPNGZip({plan,project:p,range,every:6,signal:controller.signal,...opts});
+   const bytes=new Uint8Array(await blob.arrayBuffer());check(bytes[0]===80&&bytes[1]===75,'PNG ZIP');
+   result.exports[name]={bytes:blob.size};download(name+'.zip',blob)
+  }
+  label='MP4';status.textContent='验证 WebCodecs 视频与音频编码…';
+  try{
+   const movie=await J.exportMP4({plan,project:p,audio,range,signal:controller.signal,quality:'standard'});
+   check(movie.blob&&movie.size>1000,'MP4 bytes');
+   result.exports.mp4={bytes:movie.size,video:movie.codec,audio:movie.audio,width:movie.width,height:movie.height};
+   download('original-engine.mp4',movie.blob)
+  }catch(error){result.errors.push('MP4: '+error.message)}
+  result.pass=result.errors.length===0;
+ }catch(error){result.errors.push(label+': '+error.stack);result.pass=false}
+ finally{console.warn=warn;status.textContent=JSON.stringify(result,null,2);download('verification.json',new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));document.title=result.pass?'JIZURA_FULL_PASS':'JIZURA_FULL_REVIEW'}
+};
+</script>

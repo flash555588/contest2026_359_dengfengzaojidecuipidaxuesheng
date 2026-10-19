@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-17",
+  "firmware_sha256": "5905f6b0b96676860527c1725001acb5c0e14fdb72bbdb246271344d617108fc",
+  "deployed_retained": true,
+  "tts_backend": "esp-tts",
+  "official_voice": "xiaoxin_20221102",
+  "active_speed": 3,
+  "sample_rate": 16000,
+  "pcm_frames_per_buffer": 576,
+  "pcm_buffers": 4,
+  "phrase_prebuffer": true,
+  "codec_explicit_ioerr": true,
+  "playback_runs": [
+    {
+      "speed": 2,
+      "frames": 53817,
+      "expected_ms": 3363,
+      "actual_ms": 3380
+    },
+    {
+      "speed": 3,
+      "frames": 46908,
+      "expected_ms": 2931,
+      "actual_ms": 2960
+    },
+    {
+      "speed": 4,
+      "frames": 40382,
+      "expected_ms": 2523,
+      "actual_ms": 2540
+    },
+    {
+      "speed": 3,
+      "frames": 46908,
+      "expected_ms": 2931,
+      "actual_ms": 2950
+    }
+  ],
+  "listening_restored": true,
+  "downloaded_pcm_sha256_verified": true,
+  "samples": [
+    {
+      "case": 0,
+      "frames": 31003,
+      "speed": 3,
+      "rate": 16000,
+      "bits": 16,
+      "channels": 1,
+      "sha256": "178854751da1f71db1f790bccf94005d20388f9bf3e5c349782ed13afaf2134d",
+      "wav": "C:\\Users\\11937\\Documents\\ChatGPT\\vela\\output\\esp-tts-playback2-20261017\\esp-tts-speed3-case0.wav"
+    },
+    {
+      "case": 1,
+      "frames": 55719,
+      "speed": 3,
+      "rate": 16000,
+      "bits": 16,
+      "channels": 1,
+      "sha256": "9a7c991f4e1abeb450924759c2622a794d3696ebfb7297f1d01541846b8b3c34",
+      "wav": "C:\\Users\\11937\\Documents\\ChatGPT\\vela\\output\\esp-tts-playback2-20261017\\esp-tts-speed3-case1.wav"
+    },
+    {
+      "case": 2,
+      "frames": 60185,
+      "speed": 3,
+      "rate": 16000,
+      "bits": 16,
+      "channels": 1,
+      "sha256": "222e51d5466aa2fc002311cee743edda038fa34a2e218149fbf32e3eeaae8363",
+      "wav": "C:\\Users\\11937\\Documents\\ChatGPT\\vela\\output\\esp-tts-playback2-20261017\\esp-tts-speed3-case2.wav"
+    }
+  ],
+  "host_checks": [
+    "90 PCM framing cases, IOERR not counted, ASan/UBSan",
+    "Production codec return function: normal and multi-session callbacks, errors precede dequeue, refs and critical sections, ASan/UBSan",
+    "ESP adapter: speed 0..5, invalid range, phrase speed snapshot, lifecycle/error limits, ASan/UBSan"
+  ],
+  "human_continuity_passed": null,
+  "history": [
+    "Previous 1152-frame version exposed actual DMA ENOMEM and premature completion.",
+    "Initial nbytes validation incorrectly rejected normal dequeue; candidate was restored and corrected to explicit codec IOERR."
+  ],
+  "driver_change_review": {
+    "initialization": "unchanged",
+    "power_management": "unchanged",
+    "api": "standard AUDIO_CALLBACK_IOERR before DEQUEUE",
+    "critical_section": "callback remains outside critical section",
+    "runtime": "no new allocation or device globals; reference release preserved",
+    "style": "no findings on added lines; full-file check has existing style findings"
+  },
+  "limits": "Four playback runs and PCM hashes do not prove subjective naturalness or all memory-pressure scenarios."
+}

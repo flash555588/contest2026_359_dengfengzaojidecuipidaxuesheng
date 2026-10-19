@@ -1,0 +1,98 @@
+{
+  "repository": "espressif/esp-sr",
+  "tag": "v2.4.6",
+  "revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+  "sources": [
+    {
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/LICENSE",
+      "bytes": 1187,
+      "sha256": "7d916fb00bc0742c47cafb0d0144b67f826d76779730b1cb8796045ea6ba1b9a",
+      "git_blob_sha1": "8e206f3bc38f5fa84a4956f2d5030ca17daea0d7"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/esp32p4/libesp_tts_chinese.a",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp32p4/libesp_tts_chinese.a",
+      "bytes": 1964996,
+      "sha256": "ec8a5137aebf70b6af63750ca70b16b7b46d26e37c357157d689b2b2cfca84de",
+      "git_blob_sha1": "999d3fded081d560e7812f8fd2313fc8048b41f2"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/esp32p4/libvoice_set_xiaole.a",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp32p4/libvoice_set_xiaole.a",
+      "bytes": 4642308,
+      "sha256": "46e1b3a881ee2e8c2d453b0451991b1f2a8b0d9d79cb1fd6a05b148ece1150ca",
+      "git_blob_sha1": "37edb305f7d99d9abc0cdca77cde3a56288edca5"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaoxin_small.dat",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaoxin_small.dat",
+      "bytes": 2913777,
+      "sha256": "cc9a81fd716b3c07fae3ca2f802dc026081896f2e34db9b9db117d4de5a85c01",
+      "git_blob_sha1": "ed150c2b262a59dd0e255d7e724adfe20e9b4590"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts.h",
+      "bytes": 3948,
+      "sha256": "ef925074e8b8da7a7149a04f3a09cc14899a5415643a47a18dc80bbe270e3a4a",
+      "git_blob_sha1": "67f8f92e70e0da4c9728a892b73ae46ad4930ea7"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts_parser.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts_parser.h",
+      "bytes": 668,
+      "sha256": "9c5cbe71ee2c2a118e9a1e38c995b990c31315d292731657799b604fd5893447",
+      "git_blob_sha1": "334e507e6af865268c04d14740f312e59e6b1452"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts_player.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts_player.h",
+      "bytes": 1914,
+      "sha256": "5aa2ce687931f01cb5ba3788e8a9e37df6d6167d73abc108b9c4fc6a80b9112e",
+      "git_blob_sha1": "0f4948e8d8f925645f3058fa8b10606671041c93"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts_stretcher.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts_stretcher.h",
+      "bytes": 1952,
+      "sha256": "4b0551818004ab1941a7cd3eed80e55b4a15ab75fd6dbebb02f64179a5b139ff",
+      "git_blob_sha1": "b82af41b51ac6b631ffefb353aacdb2e5d3ddaf3"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts_voice.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts_voice.h",
+      "bytes": 915,
+      "sha256": "40496276b98bb25413d3abe015151806f40507ecf26b894e7558547a22eb496e",
+      "git_blob_sha1": "1bb3939b3114cf2996a3d8ab60298de4ae45c038"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts_voice_template.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts_voice_template.h",
+      "bytes": 90,
+      "sha256": "d3e6aebae238a76c55445de63ba93a5d592575e4c6bb5bd9969ddcdb1fcf3bcd",
+      "git_blob_sha1": "ce5f5b6f45559854a39924cbfcbfe828ef993e0e"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/include/esp_tts_voice_xiaole.h",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/include/esp_tts_voice_xiaole.h",
+      "bytes": 88,
+      "sha256": "b7b9610f9ba1beac20eb0d58ef6b942e3b9099ee8bedb0622b0d4bef5e77e4ae",
+      "git_blob_sha1": "f87866ae6cb93ec36e39cda448d0ee84b3cf350c"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaoxin.dat",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaoxin.dat",
+      "bytes": 3821311,
+      "sha256": "b0b9ad9fdaa4a560ee839ce6a4659f08af3fded7c72d0784d83186859a081e55",
+      "git_blob_sha1": "dbc7fb4f735900fde88d9a45a1c172ead27eeb9c"
+    },
+    {
+      "path": "esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaole.dat",
+      "url": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaole.dat",
+      "bytes": 2938039,
+      "sha256": "e4aaadc1566b984e3ffc47f654ff52ed3fb8f5af420ffb187bd8a8741706d382",
+      "git_blob_sha1": "a406c868d7c010b77345f13eeefbd808075d3441"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_chat.h"
+
 #include <cJSON.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -219,7 +220,9 @@ static cJSON *turns_json(const struct chat_snapshot *state)
              cJSON_AddStringToObject(entry, "name", card->name) &&
              cJSON_AddStringToObject(entry, "state", card->state) &&
              cJSON_AddNumberToObject(entry, "level", card->level) &&
-             cJSON_AddBoolToObject(entry, "on", card->on);
+             cJSON_AddBoolToObject(entry, "on", card->on)&&
+             cJSON_AddBoolToObject(entry,"action",card->action)&&
+             cJSON_AddBoolToObject(entry,"verified",card->verified);
         if (ok) cJSON_AddItemToArray(cards, entry);
         else cJSON_Delete(entry);
       }
@@ -349,18 +352,22 @@ static int load_file(const char *path, struct chat_snapshot *out, uint32_t *sequ
         cJSON *state = cJSON_GetObjectItemCaseSensitive(entry, "state");
         cJSON *level = cJSON_GetObjectItemCaseSensitive(entry, "level");
         cJSON *on = cJSON_GetObjectItemCaseSensitive(entry, "on");
+        cJSON *action=cJSON_GetObjectItemCaseSensitive(entry,"action");
+        cJSON *verified=cJSON_GetObjectItemCaseSensitive(entry,"verified");
         if (!cJSON_IsObject(entry) || !cJSON_IsString(kind) || !card_kind_ok(kind->valuestring) ||
             !cJSON_IsString(name) || !name->valuestring[0] ||
             !glass_chat_utf8(name->valuestring, sizeof(turn->cards[0].name) - 1, false) ||
             !cJSON_IsString(state) ||
             !glass_chat_utf8(state->valuestring, sizeof(turn->cards[0].state) - 1, false) ||
             !cJSON_IsNumber(level) || level->valuedouble < -1 || level->valuedouble > 100 ||
-            level->valuedouble != (int)level->valuedouble || !cJSON_IsBool(on)) goto done;
+            level->valuedouble != (int)level->valuedouble || !cJSON_IsBool(on)||
+            (action&&!cJSON_IsBool(action))||(verified&&!cJSON_IsBool(verified))) goto done;
         struct chat_card *card = &turn->cards[turn->card_count++];
         snprintf(card->entity, sizeof(card->entity), "%s", entity ? entity->valuestring : "");
         strcpy(card->kind, kind->valuestring); strcpy(card->name, name->valuestring);
         strcpy(card->state, state->valuestring);
         card->level = (int)level->valuedouble; card->on = cJSON_IsTrue(on);
+        card->action=cJSON_IsTrue(action);card->verified=card->action&&cJSON_IsTrue(verified);
       }
     }
     strcpy(turn->prompt, prompt->valuestring); strcpy(turn->reply, reply->valuestring);

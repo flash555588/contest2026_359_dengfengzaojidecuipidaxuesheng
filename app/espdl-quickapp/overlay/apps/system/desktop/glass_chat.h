@@ -11,7 +11,7 @@
 #define CHAT_CONTEXT_BYTES 12288
 #define CHAT_TOOL_TRACE 4
 #define CHAT_CARD_COUNT 4
-#define CHAT_CARD_TEXT 256
+#define CHAT_CARD_TEXT 384
 
 enum chat_turn_state { CHAT_WAITING, CHAT_DONE, CHAT_FAILED, CHAT_CANCELLED };
 enum chat_phase { CHAT_LOADING, CHAT_IDLE, CHAT_QUEUED, CHAT_REQUESTING,
@@ -31,6 +31,7 @@ struct chat_card {
   char state[64];
   int level;
   bool on;
+  bool action,verified;
 };
 
 struct chat_turn {
@@ -90,6 +91,16 @@ struct chat_activity_snapshot {
   bool loaded, configured;
 };
 void glass_chat_activity_get(struct chat_activity_snapshot *out);
+/* Bounded result projection; never copies history or performs I/O. */
+struct chat_result_snapshot {
+  uint32_t revision,turn_id,next_offset;
+  enum chat_phase phase;enum chat_turn_state state;enum chat_error error;
+  unsigned card_count;bool more;
+  char progress[96],reply[241];
+  struct chat_card cards[CHAT_CARD_COUNT];
+};
+bool glass_chat_result_get(struct chat_result_snapshot *out,uint32_t id,
+                          enum glass_agent_mode mode,size_t offset);
 const char *glass_chat_error_text(enum chat_error error);
 bool glass_chat_utf8(const char *text, size_t limit, bool multiline);
 size_t glass_chat_copy_utf8(char *out, size_t capacity, const char *text);

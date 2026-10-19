@@ -1,0 +1,168 @@
+{
+  "started_at_utc": "2026-10-19T07:49:58.299372+00:00",
+  "completed_at_utc": "2026-10-19T07:52:33.342005+00:00",
+  "candidate_sha256": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+  "board_written": true,
+  "boot_verified": true,
+  "restored": false,
+  "tests": [
+    {
+      "name": "data_partition_preserved",
+      "passed": true
+    },
+    {
+      "name": "initial_boot_and_storage",
+      "passed": true
+    },
+    {
+      "name": "navigation_settings",
+      "passed": true
+    },
+    {
+      "name": "return_home_settings",
+      "passed": true
+    },
+    {
+      "name": "navigation_wifi",
+      "passed": true
+    },
+    {
+      "name": "return_home_wifi",
+      "passed": true
+    },
+    {
+      "name": "navigation_bluetooth",
+      "passed": true
+    },
+    {
+      "name": "return_home_bluetooth",
+      "passed": true
+    },
+    {
+      "name": "navigation_files",
+      "passed": true
+    },
+    {
+      "name": "return_home_files",
+      "passed": true
+    },
+    {
+      "name": "navigation_resources",
+      "passed": true
+    },
+    {
+      "name": "return_home_resources",
+      "passed": true
+    },
+    {
+      "name": "navigation_music",
+      "passed": true
+    },
+    {
+      "name": "return_home_music",
+      "passed": true
+    },
+    {
+      "name": "navigation_chat",
+      "passed": true
+    },
+    {
+      "name": "return_home_chat",
+      "passed": true
+    },
+    {
+      "name": "chat_status",
+      "passed": true
+    },
+    {
+      "name": "music_status",
+      "passed": true
+    },
+    {
+      "name": "ten_settings_home_cycles",
+      "passed": false,
+      "heap_used_delta_bytes": 43368,
+      "limit_bytes": 32768,
+      "note": "Bounded observation with concurrent services; not a long-term leak proof."
+    }
+  ],
+  "memory_samples": [
+    {
+      "label": "warm_home",
+      "Umem": {
+        "total": 33554432,
+        "used": 6219680,
+        "free": 27334752,
+        "maxused": 6488032,
+        "maxfree": 27063808,
+        "nused": 8873,
+        "nfree": 146
+      },
+      "Kmem": {
+        "total": 66176,
+        "used": 55496,
+        "free": 10680,
+        "maxused": 56384,
+        "maxfree": 10056,
+        "nused": 211,
+        "nfree": 5
+      }
+    },
+    {
+      "label": "after_ten_navigation_cycles",
+      "Umem": {
+        "total": 33554432,
+        "used": 6263048,
+        "free": 27291384,
+        "maxused": 6488032,
+        "maxfree": 27063808,
+        "nused": 9043,
+        "nfree": 189
+      },
+      "Kmem": {
+        "total": 66176,
+        "used": 55248,
+        "free": 10928,
+        "maxused": 56384,
+        "maxfree": 10056,
+        "nused": 210,
+        "nfree": 6
+      }
+    }
+  ],
+  "program_offset": "0x2000",
+  "data_region_written_by_flasher": false,
+  "c6_firmware_written": false,
+  "model_files_written": false,
+  "sdcard_files_written_by_test": false,
+  "data_partition_readback_matches_backup": true,
+  "scope": "Current candidate only; console-observed basic acceptance, no physical power cycling or human UI/audio assessment.",
+  "error": "AssertionError('ten_settings_home_cycles')",
+  "chip": "ESP32-P4",
+  "revision": "3.2",
+  "flash_bytes": 16777216,
+  "candidate_bytes": 10296996,
+  "source_snapshot": {
+    "source_manifest_sha256": "2e6216f402b19a16c66fc4667f795dcf7d8db3f720b63082ee43a6f7a1541a10",
+    "source_archive_sha256": "df7283ebd4d975a42d10a710b653c7bfde00a0617dd234cf727881b0f32c45b7",
+    "files": 2647,
+    "source_bytes": 142680990,
+    "base_head": "79783795d4d3f576deec75b642e09a649f2a6d13",
+    "frozen_worktree": true,
+    "board_written": false
+  },
+  "build_sha256": {
+    "nuttx.bin": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+    "nuttx.elf": "85989e2b73dd7e1db790e8ec2f2ac0ba410db5f7d55fafe519daf481a499986e",
+    "resolved.config": "918b1baf123753d2e6b825071ab7d678eb7af3201970b49ab07666a34f754b73"
+  },
+  "backup_verified": true,
+  "write_end_aligned": "0x9d4000",
+  "data_partition_start": "0xc00000",
+  "data_partition_bytes": 4194304,
+  "reset_boots_passed": 5,
+  "power_off_cold_boots_performed": 0,
+  "basic_acceptance_passed": false,
+  "basic_acceptance_status": "partial_memory_threshold_and_model_fixture_failed",
+  "qualification": "Startup, mounts and navigation passed. First memory threshold and fixed-model inference failed and remain failed; later observations are separate evidence. Flasher preservation was verified before candidate boot; runtime services may subsequently update persisted state. UI checks observe software navigation state, not physical display/touch quality."
+}

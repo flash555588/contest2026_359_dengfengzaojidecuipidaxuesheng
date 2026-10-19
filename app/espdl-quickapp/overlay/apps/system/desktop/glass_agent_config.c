@@ -3,6 +3,15 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+static bool unique_fields(const cJSON *node)
+{
+  for(const cJSON *value=node?node->child:NULL;value;value=value->next){
+    if(cJSON_IsObject(node))for(const cJSON *next=value->next;next;next=next->next)
+      if(value->string&&next->string&&!strcmp(value->string,next->string))return false;
+    if(!unique_fields(value))return false;
+  }
+  return true;
+}
 cJSON *glass_agent_json(const char *text)
 {
   if(!text||strlen(text)>AGENT_TOOL_BYTES||strstr(text,"\\u0000"))return NULL;
@@ -14,7 +23,10 @@ cJSON *glass_agent_json(const char *text)
     if(!quoted&&(*p=='{'||*p=='[')&&++depth>16)return NULL;
     if(!quoted&&(*p=='}'||*p==']')){if(!depth)return NULL;depth--;}
   }
-  return quoted||depth?NULL:cJSON_ParseWithOpts(text,NULL,true);
+  if(quoted||depth)return NULL;
+  cJSON *root=cJSON_ParseWithOpts(text,NULL,true);
+  if(root&&!unique_fields(root)){cJSON_Delete(root);return NULL;}
+  return root;
 }
 bool glass_agent_field(const char *key,unsigned *limit,bool *secret,bool *number)
 {

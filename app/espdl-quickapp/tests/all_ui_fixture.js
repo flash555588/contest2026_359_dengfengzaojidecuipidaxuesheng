@@ -18,7 +18,10 @@ globalThis.__cameraRecording={status:0,revision:0,video:false,path:''};
 globalThis.system={
  yield:()=>({then:resolve=>__reviewDeferred.push(resolve)}),
  storage:{get:()=>null,set(){},delete(){}},
- camera:{devices:()=>__devices,status:()=>__cameraState,frames:()=>0,
+ camera:{style:()=>globalThis.__cameraStyle||0,setStyle:value=>{globalThis.__cameraStyle=value;return true;},
+   takeAction:()=>{if(__cameraState.busy)return 0;const action=globalThis.__cameraAction||0;globalThis.__cameraAction=0;return action;},
+   openAlbum:()=>{globalThis.__cameraAlbumRequested=true;return true;},devices:()=>__devices,status:()=>__cameraState,frames:()=>0,
+   zoom:()=>globalThis.__cameraZoom||100,setZoom:percent=>{globalThis.__cameraZoom=percent;return true;},
    recordStatus:()=>__cameraRecording,setVideoMode:video=>{__cameraRecording.video=video;return true;},
    modes:()=>[{width:640,height:480,format:'MJPEG',fourcc:1196444237,intervals:[666666,1000000],defaultInterval:666666,continuous:false}],
    start(){__cameraState={busy:true,running:true,error:0};return 0;},stop(){__cameraState={busy:false,running:false,error:0};return 0;},photo:()=>({status:0,path:''}),preview:__nativePreview},

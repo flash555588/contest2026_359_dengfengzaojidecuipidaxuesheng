@@ -217,6 +217,82 @@ static void desktop_ui_probe_service(void)
     desktop_ui_probe_print("pet source=%s bytes=%lu open=%d\n",
       pet_lvgl_uses_sd_sprites() ? "sd" : "fallback",
       (unsigned long)pet_lvgl_sprite_bytes(), pet_lvgl_is_open());
+  else if (!strcmp(command,"music-pv-demo"))
+    {
+      struct music_song song={0};
+      snprintf(song.name,sizeof(song.name),"慢下来的光");snprintf(song.artist,sizeof(song.artist),"原创演示");
+      snprintf(song.url,sizeof(song.url),"/sdcard/music/jizura-demo.mp3");
+      desktop_ui_probe_print("music-pv-demo accepted=%d\n",glass_music_play(&song)==0);
+    }
+  else if (!strcmp(command,"music-language-demo"))
+    {
+      struct music_song song={0};strcpy(song.name,"Language Demo");strcpy(song.artist,"Vela");
+      strcpy(song.url,"/sdcard/music/jizura-demo.mp3");
+      desktop_ui_probe_print("music-language-demo accepted=%d\n",glass_music_play(&song)==0);
+    }
+  else if (!strcmp(command,"music-lyrics-status"))
+    {
+      struct music_lyrics_window *window=malloc(sizeof(*window));
+      unsigned translated=0,total=0;
+      if(window){
+        for(unsigned first=0;first<192;first+=MUSIC_LYRICS_WINDOW){
+          glass_music_lyrics_read(first,window);total=window->total;
+          for(unsigned i=0;i<window->count;i++) {
+            if(window->first+i>=first&&window->translations[i][0])translated++;
+          }
+          if(first+MUSIC_LYRICS_WINDOW>=total)break;
+        }
+        free(window);
+      }
+      desktop_ui_probe_print("music-lyrics lines=%u translated=%u bilingual=%d\n",total,translated,!g_glass.music_original_only);
+    }
+  else if (!strcmp(command,"font-status"))
+    {
+      int state,error;glass_sd_font_status(&state,&error);
+      unsigned missing=0;
+      static const uint32_t traditional[]={0x524e,0x537b,0x5f9e,0x611b,0x61f7,
+        0x6703,0x68c4,0x6c92,0x7aa9,0x7e31,0x7f88,0x8207,0x88e1,0x898a,
+        0x89ba,0x8ab0,0x8ad2,0x8b8a,0x8d95,0x8e64,0x9019,0x904e,0x9060,
+        0x95ca,0x9727,0x98a8,0x98c4};
+      for(unsigned i=0;i<sizeof(traditional)/sizeof(traditional[0]);i++) {
+        lv_font_glyph_dsc_t glyph={0};
+        if(!lv_font_get_glyph_dsc(zh_font(28),&glyph,traditional[i],0)||glyph.is_placeholder)missing++;
+      }
+      static const uint32_t languages[]={0x3042,0x3086,0x30a2,0x30f3,0x65e5,
+        0xac00,0xd7a3,0xd55c,0xae00,0xc548,0xb155,0x1ebf,0x1ef9,0x03ac,0x0457};
+      unsigned language_missing=0;
+      for(unsigned i=0;i<sizeof(languages)/sizeof(languages[0]);i++) {
+        lv_font_glyph_dsc_t glyph={0};
+        if(!lv_font_get_glyph_dsc(zh_font(28),&glyph,languages[i],0)||glyph.is_placeholder)language_missing++;
+      }
+      desktop_ui_probe_print("font state=%d error=%d source=sd-stream unicode=%u sample=27 missing=%u language_sample=15 language_missing=%u lyric72=%d\n",
+        state,error,SD_FONT_UNICODE,missing,language_missing,g_glass.music_font72!=NULL);
+      static const uint32_t symbols[]={0x2705,0x274c,0x2611,0x2714,0x2715,0x274e,
+        0x26a0,0xfe0f,0x1f4a1,0x1f50a,0x1f509,0x1f507,0x1f3b5,0x1f3b6,
+        0x1f50d,0x1f50e,0x23f0,0x1f514,0x1f4f7,0x1f3a4,0x1f3a7,0x2728,0x1f4ac,0x3000};
+      unsigned symbol_missing=0;
+      const unsigned sizes[]={16,20,28};
+      for(unsigned s=0;s<3;s++)for(unsigned i=0;i<sizeof(symbols)/sizeof(symbols[0]);i++){
+        lv_font_glyph_dsc_t glyph={0};
+        if(!lv_font_get_glyph_dsc(zh_font(sizes[s]),&glyph,symbols[i],0)||glyph.is_placeholder)symbol_missing++;
+      }
+      desktop_ui_probe_print("font ai_symbol_samples=72 ai_symbol_missing=%u\n",symbol_missing);
+    }
+  else if (!strcmp(command,"music-pv-status"))
+    {
+      struct music_pv_ui *p=g_music_ui.full?&g_music_ui.full->pv:NULL;
+      desktop_ui_probe_print("music-pv active=%d native=1 style=%u line=%d position_ms=%u plans=%u plan_max_ms=%u updates=%u buffers=0\n",
+        p&&p->visible&&p->valid,p?p->style_index:0,p?p->current:-1,p?p->last_position:0,
+        p?p->plans:0,p?p->plan_max_ms:0,p?p->updates:0);
+    }
+  else if (!strcmp(command, "music-metadata-status"))
+    {
+      struct music_now_playing now;struct music_lyrics_window window;
+      glass_music_now_playing(&now);glass_music_lyrics_read(0,&window);
+      desktop_ui_probe_print("music-metadata lyrics=%d lines=%u artwork=%d cover_ready=%d full_cover_ready=%d\n",
+        now.lyrics_state,window.total,now.cover_url[0]!=0,g_music_ui.cover.canvas!=NULL,
+        g_music_ui.full&&g_music_ui.full->cover.canvas!=NULL);
+    }
   else if (!strcmp(command, "music-status"))
     {
       struct music_snapshot *s = malloc(sizeof(*s));
@@ -368,16 +444,10 @@ static void desktop_ui_probe_service(void)
 #ifdef GLASS_LOCAL_SPEECH
       else if(!strcmp(command,"speech"))glass_speech_open(NULL);
       else if(!strcmp(command,"speech-listen"))desktop_ui_probe_print("speech listen result=%d\n",glass_speech_listen());
-      else if(!strcmp(command,"speech-start")){if(g_speech_ui.root){desktop_ui_probe_click(g_speech_ui.root,"开始离线聆听");}}
-      else if(!strcmp(command,"speech-stop")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"停止");}
-      else if(!strcmp(command,"speech-bind-light")||!strcmp(command,"speech-bind-cover")||!strcmp(command,"speech-bind-fan")){
-        unsigned role=!strcmp(command,"speech-bind-light")?0:!strcmp(command,"speech-bind-cover")?1:2;
-        if(g_speech_ui.binding[role])lv_obj_send_event(lv_obj_get_parent(g_speech_ui.binding[role]),LV_EVENT_CLICKED,NULL);
-      }
-      else if(!strcmp(command,"speech-bind-back"))local_voice_picker_close(NULL);
-      else if(!strcmp(command,"speech-status"))desktop_ui_probe_print("LOCAL_VOICE page=%u owner=%lu stage=%u choices=%u list_ok=%u bound=%u\n",
-        g_speech_ui.root!=NULL,(unsigned long)g_speech_ui.owner,g_speech_ui.stage,g_speech_ui.choice_count,g_speech_ui.list_ok,
-        !!g_speech_ui.bound[0].entity[0]+!!g_speech_ui.bound[1].entity[0]+!!g_speech_ui.bound[2].entity[0]);
+      else if(!strcmp(command,"speech-start")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"开始联网语音");}
+      else if(!strcmp(command,"speech-stop")){if(g_speech_ui.root)desktop_ui_probe_click(g_speech_ui.root,"结束输入");else glass_voice_stop();}
+      else if(!strcmp(command,"speech-status"))desktop_ui_probe_print("VOICE_SERVICE page=%u owner=%lu recording=%u turn=%lu\n",
+        g_speech_ui.root!=NULL,(unsigned long)g_speech_ui.owner,g_speech_ui.recording,(unsigned long)g_speech_ui.turn);
       else if(!strcmp(command,"speech-probe"))desktop_ui_probe_print("speech probe result=%d\n",glass_speech_probe());
       else if(!strcmp(command,"speech-nano-scalar"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(0));
       else if(!strcmp(command,"speech-nano-pie"))desktop_ui_probe_print("speech nano result=%d\n",glass_speech_nano(1));
@@ -413,16 +483,35 @@ static void desktop_ui_probe_service(void)
       else if (!strcmp(command, "portal")) glass_portal_open(NULL);
       else if (!strcmp(command, "portal-status")) portal_debug_status();
       else if (!strcmp(command, "grok-status")) glass_grok_debug_status();
+      else if (!strcmp(command,"wake-mini-status")){
+        desktop_ui_probe_print("WAKE_MINI visible=%u event=%lu age_ms=%lu request=%lu capture=%u\n",
+          g_wake_mini.visible,(unsigned long)g_wake_mini.event,
+          (unsigned long)(g_wake_mini.visible?lv_tick_get()-g_wake_mini.shown_at:0),
+          (unsigned long)g_wake_mini.request,g_wake_mini.voice_owned);
+#ifdef GLASS_LOCAL_SPEECH
+        struct speech_snapshot speech;glass_speech_get(&speech);
+        struct glass_voice_snapshot voice;glass_voice_get(&voice);
+        const char *monitor=speech.active&&speech.background_wake?"background":
+          voice.active?voice.wake_observing?"shared-asr":"asr-start-or-finish":speech.active?
+          speech.phase==SPEECH_WAKE||speech.phase==SPEECH_COMMAND?"local-voice":"foreground-speech":
+          music_pcm_session_active()?"audio-busy":"arming";
+        desktop_ui_probe_print("WAKE_MONITOR source=%s speech_request=%lu error=%d\n",monitor,(unsigned long)speech.request,speech.error);
+        desktop_ui_probe_print("WAKE_EVENT retained=%lu stamp_ms=%lu now_ms=%lu local_page=%u local_accepting=%u\n",
+          (unsigned long)speech.wake_event,(unsigned long)speech.wake_ms,(unsigned long)wake_mini_clock(),g_speech_ui.root!=NULL,g_speech_ui.recording);
+        desktop_ui_probe_print("WAKE_PRESENTATION target=%s\n",chat_ball_is_present()?"large-ball":"mini-float");
+        desktop_ui_probe_print("WAKE_IDLE elapsed_ms=%lu busy=%u timeout_ms=6000\n",
+          (unsigned long)(g_wake_mini.visible?lv_tick_get()-g_wake_mini.idle_at:0),g_wake_mini.visible&&g_wake_mini.busy);
+#endif
+      }
       else if (!strcmp(command, "chat")) glass_chat_open(NULL);
       else if (!strcmp(command,"voice"))glass_chat_ball_open(NULL);
-      else if (!strcmp(command,"voice-wake")){if(g_chat_ui.ball_mode)chat_ball_wake_toggle(NULL);}
       else if (!strcmp(command,"voice-tap")){if(g_chat_ui.ball_mode)chat_ball_tap(NULL);}
       else if (!strcmp(command,"voice-end")){if(g_chat_ui.ball_mode)chat_ball_end(NULL);}
       else if (!strcmp(command,"voice-status")){
-        desktop_ui_probe_print("VOICE_STATUS page=%u session=%u wake=%u phase=%u request=%lu\n",
-          g_chat_ui.ball_mode,g_chat_ui.voice_session,g_chat_ui.voice_wake_mode,g_chat_ui.voice_phase,(unsigned long)g_chat_ui.voice_wake_request);
+        desktop_ui_probe_print("VOICE_STATUS page=%u session=%u phase=%u from_wake=%u\n",
+          g_chat_ui.ball_mode,g_chat_ui.voice_session,g_chat_ui.voice_phase,g_chat_ui.voice_from_wake);
         struct glass_voice_snapshot voice;glass_voice_get(&voice);
-        desktop_ui_probe_print("VOICE_CAPTURE active=%u phase=%u error=%u level=%u\n",voice.active,voice.phase,voice.error,voice.level);
+          desktop_ui_probe_print("VOICE_CAPTURE active=%u phase=%u error=%u level=%u wake_observer=%u request=%lu\n",voice.active,voice.phase,voice.error,voice.level,voice.wake_observing,(unsigned long)voice.request);
 #ifdef GLASS_LOCAL_SPEECH
         struct speech_snapshot speech;glass_speech_get(&speech);
         desktop_ui_probe_print("VOICE_PLAY active=%u phase=%u error=%d backend=%s\n",speech.active,speech.phase,speech.error,glass_speech_backend());
@@ -487,11 +576,11 @@ static int desktop_ui_probe_request(const char *command)
     "speech-esp-tts", "speech-esp-tts-play", "speech-esp-tts-export",
     "speech-p4tts-scalar", "speech-p4tts-pie", "speech-p4tts-dual",
     "speech-zh-q8", "speech-zh-q8-play", "speech-zh-q8-pie", "speech-zh-q8-dual",
-    "music", "music-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
+    "music", "music-status", "music-metadata-status", "music-pv-demo", "music-pv-status", "font-status", "music-language-demo", "music-lyrics-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
     "files-new", "light", "dark", "audit", "frame", "frame-free", "wifi-scan", "ble-scan", "dialog",
     "ha-settings", "ha-address", "ha-status", "render-metrics", "render-metrics-reset", "toast", "camera-start", "camera-photo", "camera-mode",
-    "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo", "speech", "speech-listen", "speech-probe", "speech-nano-scalar", "speech-nano-pie", "speech-nano-play", "speech-start", "speech-stop", "speech-status", "speech-bind-light", "speech-bind-cover", "speech-bind-fan", "speech-bind-back",
-    "voice", "voice-wake", "voice-tap", "voice-end", "voice-status",
+    "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo", "speech", "speech-listen", "speech-probe", "speech-nano-scalar", "speech-nano-pie", "speech-nano-play", "speech-start", "speech-stop", "speech-status",
+    "voice", "voice-tap", "voice-end", "voice-status", "wake-mini-status",
     "navigation-status", "app-back", "edge-back", "portal", "portal-status",
     "chat", "chat-input", "chat-send", "chat-cancel", "chat-new", "chat-settings", "chat-status",
     "qpk-draft-status", "qpk-preview", "qpk-save", "qpk-capacity", "qpk-capacity-status", "chat-scroll-up", "chat-scroll-down", "recorder", "dafeiyu", "pet", "pet-status"};

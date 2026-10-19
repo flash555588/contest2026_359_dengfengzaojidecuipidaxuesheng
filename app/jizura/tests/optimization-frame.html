@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Engine sandbox</title>
+<script src="vendor/mp4-muxer.min.js"></script>
+<script>
+function resetRandom(seed=852) { let s=seed;Math.random=()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296}; }
+resetRandom();
+const engines={reference:'reference-engine.js',stage1:'stage1-engine.js',stage2:'stage2-engine.js',optimized:'optimized-engine.js'};
+document.write('<script src="'+(engines[new URLSearchParams(location.search).get('engine')]||engines.optimized)+'"><\/script>');
+</script>

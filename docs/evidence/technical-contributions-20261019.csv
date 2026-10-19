@@ -1,0 +1,61 @@
+﻿id,title,kind,sources,evidence,attribution_boundary
+T01,ESP32-P4 板级启动和显示适配,existing_board_adaptation,"chip/esp32p4/common-espressif/esp_start.c
+chip/esp32p4/common-espressif/esp_mipi_dsi.c
+board/esp32p4-function-ev-board/src/esp32p4_display.c","project/REPRODUCIBILITY_REPORT_2026-08-27.md
+project/firmware/v3/esp32p4-application-v3-20260919.md
+output/flash-20261018/deployment.json",芯片 glue、HAL 与寄存器表来自上游；团队增量为具体板级兼容、启动调试和集成，不能将整个芯片目录声明为独立原创。
+T02,PIE FPU 和硬件循环抢占上下文,kernel_and_inference_port,"app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/riscv_extctx.S
+app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_extctx.c
+app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/riscv_exception_common.S
+app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/context_verify.S
+app/espdl-quickapp/overlay/apps/system/desktop/espdl_port/inference_backend.cpp","project/app/espdl-quickapp/evidence/face-preprocess-10.json
+project/app/espdl-quickapp/evidence/face-simd-9.json
+project/app/espdl-quickapp/evidence/host-validation.json
+output/media-v3-ppa-irq/BUILD-METADATA.json",ESP-DL 算子和模型属于 Espressif；可主张的是 NuttX 上下文、ABI、内存与推理运行时适配，不是原创人脸模型。
+T03,PSRAM 栈下 Flash 缓存恢复故障修复,linker_and_storage_adaptation,"app/espdl-quickapp/overlay/nuttx/boards/risc-v/esp32p4/common/scripts/esp32p4_sections.rev3.ld
+app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/common/espressif/esp_spiflash.c","project/app/espdl-quickapp/CHAT-STABILITY.md
+project/app/espdl-quickapp/evidence/chat-cache-iram-stress-1.json
+project/app/espdl-quickapp/evidence/chat-cache-iram-live-stress-1.json
+project/app/espdl-quickapp/evidence/chat-cache-iram-scroll-1.json
+project/app/espdl-quickapp/evidence/firmware-validation.json",缓存和存储框架来自上游；贡献是定位失效取指链、修订链接段与内部栈调用路径。
+T04,PPA DMA2D 图像转换驱动和播放器集成,hardware_acceleration_adaptation,"app/espdl-quickapp/overlay/nuttx/arch/risc-v/src/esp32p4/esp32p4_ppa.c
+app/espdl-quickapp/overlay/nuttx/include/nuttx/video/p4_ppa.h
+app/bilibili_live/bili_ppa.c","output/media-v3-ppa-irq/COMPARISON.json
+output/media-v3-ppa-irq/paired848.log
+output/media-v3-ppa-irq/selftest.log
+output/media-v3-ppa-irq/BUILD-METADATA.json",使用 Espressif HAL 和现有 PPA 硬件；新增 NuttX ioctl、DMA 完成同步、超时复位及 I420 到 UYVY 桥接与回退。
+T05,H264 热点布局和媒体线程亲和性,decoder_port_and_scheduling,"app/bilibili_live/bili_cpu.c
+app/bilibili_live/bili_decoder.cpp
+tools/install_bilibili_live.py","output/media-v3-decode-affinity-scoped/COMPARISON.json
+output/media-v3-decode-affinity-scoped/play848.log
+output/media-v3-decode-affinity-scoped/cpu-status.log
+output/media-v3-decode-affinity-scoped/BUILD-METADATA.json",H264/AAC 算法来自 OpenH264/Helix；可主张 RV32 移植、热点放置、线程所有权和调度优化。
+T06,QuickJS 编译缓存与有界家居视口,runtime_and_ui_architecture,"app/espdl-quickapp/overlay/apps/system/desktop/qpk_compile_cache.h
+app/espdl-quickapp/overlay/apps/system/desktop/qpk_viewport.inc
+app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c
+app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js","output/mijia-waterfall/validation.json
+output/mijia-waterfall/board-verification/cache-baseline.log
+output/mijia-waterfall/board-verification/script-optimized.log
+output/runtime-performance-20261016/deployment.json",QuickJS 字节码序列化和 LVGL 滚动来自上游；团队实现来源绑定、全新 context、进程内缓存及卡片复用窗口。
+T07,共享 HA 服务与 MCP 家居音乐工具,service_and_agent_integration,"app/espdl-quickapp/overlay/apps/system/desktop/glass_board_home.c
+app/espdl-quickapp/overlay/apps/system/desktop/glass_board_music.c
+app/espdl-quickapp/overlay/apps/system/hass/hass_service.c","output/home-mcp-review/verification.json
+output/music-mcp-review/verification.json
+output/flash-20261018/deployment.json",Home Assistant、MCP 和 ESPClaw 基础属于各自上游；贡献是共享服务、类型和权限约束、状态读回及原生工具结果接入。
+T08,官方英语 Nano 模型的精确 INT8 PIE 内核,validated_local_diagnostic,"app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_pie.S
+app/espdl-quickapp/overlay/apps/system/desktop/glass_nano_probe.c
+tools/build_speech_runtime.py","project/docs/evidence/official-nano-pie-20261017.json
+output/official-tts-q8-20261017/verification.json
+output/official-tts-q8-20261017/review.json
+output/official-tts-q8-20261017/deployment.json
+output/official-tts-q8-20261017/provenance.json
+output/official-tts-q8-20261017/board-short-tx.log",模型和权重来自 sanoTTS 官方；贡献是板端 INT8 点积内核和 NuttX 诊断运行适配。源码有未提交项，不能称已发布中文 TTS。
+T09,指定唤醒词的流式 MFCC DTW 运行时,custom_wake_runtime,"app/espdl-quickapp/overlay/apps/system/desktop/glass_custom_wake.c
+app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_features.c
+app/espdl-quickapp/overlay/apps/system/desktop/glass_wake_model.h","output/speech-wake-v3-20261016/verification.json
+output/voice-wake-chat-v2-20261016/verification.json",MFCC/DTW 属已有方法；贡献是指定词模板、流式端点、噪声门限和资源交接实现；训练评测以合成为主。
+T10,相机视频和音轨的有界异步录制,camera_media_integration,"app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_video.inc
+app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc
+app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_avi.h","output/mijia-waterfall/validation.json
+output/mijia-waterfall/board-verification/camera-video-board.log
+output/flash-20261018/deployment.json",UVC、AVI 和 PCM 属已有协议；贡献为预览、录制、退出保存、音视频工作线程与存储边界集成。

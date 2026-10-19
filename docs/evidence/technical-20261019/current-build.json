@@ -1,0 +1,88 @@
+{
+  "linked": true,
+  "exit_code": 0,
+  "completed_at_utc": "2026-10-19T07:18:30Z",
+  "sha256": {
+    "nuttx.bin": "ae92d3c2115d5b6bc0078f2489e3357b5b8dc056505ea7379076307e76a29b6e",
+    "nuttx.elf": "85989e2b73dd7e1db790e8ec2f2ac0ba410db5f7d55fafe519daf481a499986e",
+    "resolved.config": "918b1baf123753d2e6b825071ab7d678eb7af3201970b49ab07666a34f754b73"
+  },
+  "firmware_bytes": 10296996,
+  "ebss": "0x4ffae92c",
+  "startup_ram_within_limit": true,
+  "program_limit": "0xc00000",
+  "build_passed_limits": true,
+  "board_written": false,
+  "source_snapshot": {
+    "source_manifest_sha256": "2e6216f402b19a16c66fc4667f795dcf7d8db3f720b63082ee43a6f7a1541a10",
+    "source_archive_sha256": "df7283ebd4d975a42d10a710b653c7bfde00a0617dd234cf727881b0f32c45b7",
+    "files": 2647,
+    "source_bytes": 142680990,
+    "base_head": "79783795d4d3f576deec75b642e09a649f2a6d13",
+    "frozen_worktree": true,
+    "board_written": false
+  },
+  "compiler": "riscv32-esp-elf-gcc (crosstool-NG esp-14.2.0_20251107) 14.2.0",
+  "reused_libraries": [
+    {
+      "name": "libspeech_nuttx.a",
+      "sha256": "bad6a8d036736be12e0afd4bd2894edb0c178a4614de3a3d41e01978aebcfbc5"
+    },
+    {
+      "name": "libc_speech_features.a",
+      "sha256": "98d9d765657e2b9f9492f908bc57f2a2cdee80ea68bcde659da8cdfcc55f6c8b"
+    },
+    {
+      "name": "libdl_lib.a",
+      "sha256": "3d801f1eb8ab0ce06e060af745d37f5157934d9ba10e870bc3d7322778f34b35"
+    },
+    {
+      "name": "libfst.a",
+      "sha256": "8569d4ec25162880fee0831f446ba9fdd7e97bc29288c719c4cf975e3b726e92"
+    },
+    {
+      "name": "libhufzip.a",
+      "sha256": "3b6e054495292d09ed2f47776c7308086be5b65a800637c7a987b0ca1d8981c4"
+    },
+    {
+      "name": "libmultinet.a",
+      "sha256": "79fc76c2acc786329a197cc6a165a4395b47d0bae0891c038295db2ebf9ed28b"
+    },
+    {
+      "name": "libwakenet.a",
+      "sha256": "db8e73f91e113e06d21499532cacfcc84b47e3fd68c6b8156f4c613d6a86e87a"
+    },
+    {
+      "name": "libqpk_espdl.a",
+      "sha256": "3e5029d753474107098420983cffda9a0c85fac597f16dd70ddd42d9b7087ce3"
+    },
+    {
+      "name": "libfbs_model_nuttx.a",
+      "sha256": "4f9b992f023fd3115e40b6f009b1069fe8353e591bc49d9538e0f69751eb69d8"
+    },
+    {
+      "name": "libmbedtls.a",
+      "sha256": "5a0712bc3e4485d8830e31cb38f52c2ceec5bef9312534a0233a5dd1ea5f8378"
+    },
+    {
+      "name": "libmbedx509.a",
+      "sha256": "8c5dfa2a7c9b6019a2bedbadc9b95447445a3e00c021da3e493d4b1821a00e6f"
+    },
+    {
+      "name": "libtfpsacrypto.a",
+      "sha256": "60338b41acf05b381dd551df34cf089baf487d43dea55d503ddf589fd0739e11"
+    },
+    {
+      "name": "libstdc++.a",
+      "sha256": "93d41e98d0e88071d47ab190a9b016f547d6435a4e8ec5094256a37b122782e1"
+    },
+    {
+      "name": "libsupc++.a",
+      "sha256": "29b7b79bbb3062629005ba69ac532d578c390d9f0d0b07648bd39f357c87f83e"
+    },
+    {
+      "name": "libgcc.a",
+      "sha256": "730b36ba601de97a4885d8d78ab7acb8fc603a97212fe51c386fb99d0c86ed6c"
+    }
+  ]
+}

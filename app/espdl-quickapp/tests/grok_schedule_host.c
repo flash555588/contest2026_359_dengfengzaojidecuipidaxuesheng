@@ -82,6 +82,12 @@ int main(int argc,char **argv)
   }
   printf("METRIC {\"duration_ms\":10000,\"frames\":%u,\"callbacks\":%u,\"seeks\":%u}\n",
          b->displayed-before,callbacks-start_callbacks,seeks-start_seeks);
+  lv_obj_t *overlay=lv_obj_create(root);glass_grok_set_obscured_by(b,overlay);
+  pump(b,50);before=b->displayed;start_callbacks=callbacks;pump(b,1000);
+  assert(b->displayed==before);
+  printf("HIDDEN_METRIC {\"duration_ms\":1000,\"callbacks\":%u}\n",callbacks-start_callbacks);
+  lv_obj_add_flag(overlay,LV_OBJ_FLAG_HIDDEN);next_frames(b,1);
+  glass_grok_set_obscured_by(b,NULL);lv_obj_delete(overlay);
   lv_obj_delete(b->root);
   /* Compare all palettes and states byte-for-byte at multiple animation phases. */
   for(unsigned style=0;style<5;style++){
