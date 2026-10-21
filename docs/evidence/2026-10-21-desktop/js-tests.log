@@ -1,0 +1,1045 @@
+✔ camera controls fit compact and board viewports in both themes, including paged devices (13.29ms)
+✔ video mode preserves mic notice and prevents restart until saving completes (1.5248ms)
+✔ camera discovery is throttled while idle and suspended during preview; disconnect clears start (1.405ms)
+✔ camera chooses a supported device and rejects modes without valid frame intervals (1.1776ms)
+✔ reference camera menu selects and dismisses without opening hardware, preserving the chosen generation (4.9728ms)
+✔ vertical zoom gestures change real digital zoom, clamp both ends, support taps and ignore other regions (1.2193ms)
+✔ annotated controls select real colour styles, request album and resume a selected live camera (1.5756ms)
+✔ device picker owns toolbar actions and cancels an unfinished zoom gesture (2.782ms)
+✔ minimal idle view keeps saving failures visible and follows discovery (1.3541ms)
+✔ closing the device menu with its toggle resumes a live session exactly once (1.4292ms)
+✔ shutter availability follows the actual start action through menus, saving and disconnect (1.1737ms)
+✔ outside taps dismiss without passing through; drags, cancellation and inside taps keep the menu (1.2487ms)
+✔ single-camera and empty menus use only icons in the right control area (1.0872ms)
+✔ icon quality controls preserve resolution and interval selection without starting hardware (2.4777ms)
+✔ the large shutter remains available in settings and starts the selected camera once (0.9837ms)
+✔ filter cards open without applying, own pointer gestures, and dismiss without changing colour (0.9602ms)
+✔ filter card choice applies once and the large shutter can start preview from the picker (0.9922ms)
+✔ six colour cards fit the widget budget and each applies its matching style (0.9489ms)
+✔ viewfinder geometry follows the selected camera, resolution and zoom immediately (1.0154ms)
+✔ aspect control cycles four ratios, works in settings and is isolated from filter and recording menus (0.9985ms)
+✔ starts in wander with a visible pet (2.9343ms)
+✔ poke and feed change bubble and meters (1.0195ms)
+✔ chat uses local lexicon (0.8022ms)
+✔ uses native system.pet when hosted (1.1324ms)
+✔ navigation keeps every control usable and reflects mode, size and visibility (1.8421ms)
+✔ theme and bounds 640x400 light=true (1.8588ms)
+✔ theme and bounds 640x400 light=false (3.0538ms)
+✔ theme and bounds 800x450 light=true (1.8388ms)
+✔ theme and bounds 800x450 light=false (1.0753ms)
+✔ theme and bounds 1024x504 light=true (1.0724ms)
+✔ theme and bounds 1024x504 light=false (0.9703ms)
+✔ theme and bounds 1024x600 light=true (0.8198ms)
+✔ theme and bounds 1024x600 light=false (1.3309ms)
+✔ unchanged hosted ticks do not rewrite widgets, allocate controls or repeat toast (4.241ms)
+✔ maid loading reports actual success and preserves an already loaded appearance on failure (1.3886ms)
+✔ generated standalone script and firmware resource match the canonical sources (7.8799ms)
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://124.223.30.246:8123 canControl=true jsUrl=http://124.223.30.246:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://124.223.30.246:8123 canControl=true jsUrl=http://124.223.30.246:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=false jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=false jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.21:8123 canControl=true jsUrl=http://192.168.1.21:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=false jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://203.0.113.20:8123 canControl=true jsUrl=http://203.0.113.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+TEXT_METRICS_CALLS {"before":32,"after":3}
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+DEVICE_DESCRIPTOR_CALLS {"canControl":true,"before":233,"after":135}
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=false jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=false jsUrl=http://192.168.1.20:8123 managed=true settings=false
+DEVICE_DESCRIPTOR_CALLS {"canControl":false,"before":233,"after":135}
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+WATERFALL_Y_READS {"before":181339,"after":47377}
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+ha-probe service=yes api=1 ready=true configured=true nativeUrl=http://192.168.1.20:8123 canControl=true jsUrl=http://192.168.1.20:8123 managed=true settings=false
+✔ covered frontend completes requests without painting and catches up after reveal (22.8788ms)
+✔ covered frontend defers construction but continues its connection (17.4589ms)
+✔ large reading snapshots avoid repeated full-list scans and follow committed states (98.6366ms)
+✔ frontend uses the reviewed native service and completes a state sync (4.9192ms)
+✔ a real-home sized state response exceeding 64 KiB still synchronizes (8.2233ms)
+✔ HA scheduling follows monotonic time across wall-clock changes (5.374ms)
+✔ frontend keeps its fixed controls inside supported displays (3.9441ms)
+✔ More opens details while only the separate power icon toggles the entity (21.688ms)
+✔ detail power control toggles while read-only details never send control (10.4967ms)
+✔ detail brightness controls keep using brightness_pct through the native service (5.7606ms)
+✔ a configured native session is adopted even on a public endpoint (3.8555ms)
+✔ remote configuration updates the open home address and restores controls (6.2323ms)
+✔ remote token replacement discards an in-flight request even at the same address (4.5617ms)
+✔ clearing remote configuration removes the old home and opens settings (4.2391ms)
+✔ dashboard preserves domain metadata and pages through every synced entity (5.8668ms)
+✔ Mi quick cards keep the More and power targets separate in both themes (10.2232ms)
+✔ offline, unknown and read-only quick cards never send control requests (8.7969ms)
+✔ quick-card registry covers the published category catalog (4.352ms)
+✔ every published property combination resolves to its registered reference layout (577.7904ms)
+✔ quick-card variants depend on real properties and retain read-only domains (68.3293ms)
+✔ unified small readings retain their values, units and readable text boxes (6.7104ms)
+✔ small lamp directly opens the detailed card and commits brightness through the original service (6.7234ms)
+✔ mixed-board brightness drag owns the gesture and previews before one release commit (6.2995ms)
+✔ switching from More to overview does not leave mixed brightness input blocked (8.8836ms)
+✔ cancelled, editing and invalidated brightness gestures never submit (11.786ms)
+✔ registry device IDs group functions while identical names do not merge devices (10.344ms)
+✔ grouped device More exposes every member and keeps read-only sensors separate from controls (6.3686ms)
+✔ device association failure falls back to state sync without guessed grouping (5.0355ms)
+✔ registered product model prevents camera indicators and lock settings from replacing the main device (4.9665ms)
+✔ camera without its primary power entity cannot toggle its indicator as device power (3.9294ms)
+✔ all 127 registered variants survive grouping instead of collapsing into a generic card (837.9713ms)
+✔ real HA device models bind to their registered card categories (18.3877ms)
+✔ a device with more than 128 entities keeps its full function list and stable size (14.0198ms)
+✔ reference lamp small tile tracks every pointer move without repainting the rest of the page (35.6514ms)
+✔ brightness preview stays responsive during background sync and commits once after it finishes (8.0908ms)
+✔ an unsubmitted brightness intent never survives a remote home change (7.7263ms)
+✔ low brightness retains a rounded cap and the three-pixel inset handle agrees with the touch axis (3.7631ms)
+✔ a failed refresh or removed lamp during a drag cannot leave a stuck unsubmitted target (8.7937ms)
+✔ slider gestures never page the board when disabled or on read-only color temperature (4.6004ms)
+✔ left bulb is a passive indicator while the separate right switch controls power (5.8801ms)
+✔ an unchanged refresh reuses grouped cards but changed readings still reach the UI (4.3143ms)
+✔ an in-flight control keeps navigation and other sliders interactive and serializes device commands (10.0651ms)
+✔ switching the home discards pending device intents without replaying them (8.1777ms)
+✔ frequently used small devices precede unused large cards on the home page (5.1522ms)
+✔ usage is recorded per device, batched in storage and applied only on a home visit (9.4884ms)
+✔ an unconfirmed write drops queued controls and still allows card editing (7.0662ms)
+✔ registry changes update grouped cards even when all state values are unchanged (4.5132ms)
+✔ native busy admission keeps the latest unsent level and does not invalidate the whole home (9.3015ms)
+✔ color temperature uses device bounds, follows gestures, and verifies its own attribute (15.6208ms)
+✔ More groups typed number, option and button actions while sensors stay read-only (12.8387ms)
+✔ brightness and temperature intents on one lamp do not replace each other (7.8469ms)
+✔ all eleven common profiles are registered and match grouped physical devices without replacing the 127 references (19.1115ms)
+✔ common small and large ranges own gestures and send exact typed parameters through the existing service (31.9534ms)
+✔ advertised feature limits hide unsupported media actions and cover controls (9.2512ms)
+✔ long option lists choose an exact raw value without cycling or leaking input to the page (7.9114ms)
+✔ climate power turns off an active HVAC mode while a temperature intent is pending (4.432ms)
+✔ every common small card opens the unified detailed page without the intermediate quick card (49.1427ms)
+✔ one back action from direct details restores the same board page and saved card combination (9.3113ms)
+✔ all 59 device types have a unique profile and the additional 42 render both card sizes and direct details (565.7368ms)
+✔ air monitor preserves zero, small decimals, source units and grouped sensor readings without duplicates (8.796ms)
+✔ alarms distinguish triggered, untriggered and unavailable without fabricating normal readings (38.2ms)
+✔ heater binds existing temperature controls and camera details remain explicit about unavailable video (11.0966ms)
+✔ a declared read-only sensor never acquires a power button from a switch-shaped entity (4.6687ms)
+✔ unified firmware ignores historical wide sizes and only More opens all 59 categories (286.1621ms)
+✔ temperature small-card stepper uses advertised steps and never opens More (6.178ms)
+✔ scene and log navigation replace environment/system and retain sensors under devices (4.7873ms)
+✔ session logs stay bounded and do not repeat unchanged periodic synchronization (18.2876ms)
+✔ capsule indicators jump directly, track swipes and stay centered without overlapping footer text (41.8202ms)
+✔ bounded capsule slots reach every page, survive detail pooling and clamp after device removal (213.4328ms)
+✔ scene grids share capsule navigation without executing a scene (9.1889ms)
+✔ HA scene sync independently discovers scenes beyond 512 devices and refreshes renamed/removed presets (36.7439ms)
+✔ HA scenes remain discoverable with favorite-only device sync and bounded to 128 entries (6.4839ms)
+✔ HA scene/script execution targets one preset, coalesces repeat taps and acknowledges acceptance without on-state verification (14.1157ms)
+✔ scene sync failure retains stale rows, recovers and clears the independent catalog on a home change (8.7279ms)
+✔ scene action is absent without HA control grants or the advertised turn_on service (10.4574ms)
+✔ a failed scene submission is never replayed automatically (8.2105ms)
+✔ bedside controls fit the real 504px content height with auxiliary functions (16.4947ms)
+✔ lamp detail has real color presets, an effect selector, and bounded native controls (8.3707ms)
+✔ native color disc previews locally, cancels safely and applies only on release (5.5902ms)
+✔ color disc drag performs bounded native writes and never touches the HA transport before release (6.1164ms)
+✔ background refresh preserves a live color preview until cancellation restores the latest server color (7.7427ms)
+✔ a color gesture cannot survive settings navigation or loss of color capability (12.8862ms)
+✔ lamp detail drag updates a fixed value and thumb locally then sends one release request (5.1367ms)
+✔ white-only lamps expose actual kelvin presets while color/effect controls remain capability gated (6.4971ms)
+✔ device detail sliders follow approved preview geometry and repaint only their live value and handle (53.2275ms)
+✔ cover and speaker actions share a row and retain their exact HA services (19.0418ms)
+✔ climate detail uses bounded steppers while mode buttons preserve raw HA values (8.9928ms)
+✔ secondary modes and actual readings appear without adding missing measurements (10.2525ms)
+✔ long profile mode lists remain paged and send the original option after switching pages (7.4707ms)
+✔ purifier reads real MIoT PM2.5 and filter values, including zero (5.0647ms)
+✔ switching device details reuses bounded widgets and hides every previous detail decoration (51.517ms)
+✔ firmware layout dimensions and field order come from the unchanged approved HTML (6.0532ms)
+✔ boolean controls use the preview switch and cover position presets reuse the existing service (15.0085ms)
+✔ the preview slider uses one clipped gradient track and keeps its value right aligned at both endpoints (8.0404ms)
+✔ lamp effects switch directly with one tap and keep their exact case-sensitive HA values (12.2558ms)
+✔ rapid effect changes keep the most recent choice while the HA request is pending (10.1079ms)
+✔ long effect lists still choose an exact option and reflow without leaking or overlapping buttons (12.7127ms)
+✔ all dimmable light profiles use exact 0/1/50/100 percent on small and detail cards with both service bridges (177.0577ms)
+✔ off lamps show zero even when HA retains brightness or omits it and can be started at one percent (31.1087ms)
+✔ zero and positive brightness intents coalesce together without replaying an obsolete power state (48.4013ms)
+✔ canceling a zero brightness preview does not switch off a lamp and raw HA brightness one remains positive (5.955ms)
+✔ interactive preview shares zero-off and positive-on brightness semantics for every light alias (1.6724ms)
+✔ grouped auxiliary lighting uses the same range and controls only its own light entity (9.2847ms)
+✔ zero percent has no accent-colored gradient endpoint and leaving zero restores the fill (32.5423ms)
+✔ camera cards retain a readable preview placeholder above its background and align real reading baselines (19.0957ms)
+✔ HA software entities stay out of device boards while real sensors, helpers and grouped auxiliary controls remain accessible (7.6709ms)
+✔ desktop uses manual device pins before usage, deduplicates physical devices and bounds shortcuts to two (3.8317ms)
+✔ pin and unpin persist physical identities without changing the approved card geometry (9.8946ms)
+✔ a third pin preserves both existing pins and unavailable devices remain identifiable (5.0751ms)
+✔ desktop deep links defer until sync, open the physical detail and reject stale endpoint navigation (5.6762ms)
+✔ pins and usage from another HA endpoint or removed device cannot create ghost desktop cards (4.0026ms)
+✔ confirmed removal releases a manual desktop pin without pruning during a partial sync (6.2686ms)
+✔ desktop state labels are bounded independently of unusually long HA sensor state strings (4.1563ms)
+✔ desktop navigation accepts the exact endpoint already approved by the native HA service (4.2794ms)
+✔ opening and returning from a card never adds an upward presentation or sends commands (6.4153ms)
+✔ lamp motion smooths presets but keeps both wheel and slider drags direct (8.5554ms)
+✔ sidebar cursor follows a drag, snaps once on release and rejects stale, canceled or outside releases (9.1987ms)
+✔ sidebar geometry matches native navigation across supported display sizes (13.3244ms)
+✔ sidebar uses shared dimensions and updates its retained selection without floating (5.2988ms)
+✔ HA pagination changes pages without floating the content (6.2073ms)
+✔ mode faces fade after a choice and purifier meters interpolate real values with an empty zero endpoint (11.5119ms)
+✔ Mijia reuses one constant-width sliding pill through left, middle and right pages in both themes (26.5748ms)
+✔ option picker also preserves its sliding pill across repeated page renders without requesting device actions (6.476ms)
+✔ device discovery combines room, member search and favorites without device requests (13.7072ms)
+✔ room picker stays bounded and exclusive at minimum resolution and does not create devices per room (11.6079ms)
+✔ filter panel completely hides and locks the underlying waterfall and shrinks to its content (6.167ms)
+✔ empty and filtered states offer a recovery action and the header has separate 44px touch targets (9.9969ms)
+✔ device detail provides a local follow shortcut used by discovery (8.4701ms)
+✔ profile detail keeps primary controls while extra member fields expand and collapse locally (7.3684ms)
+✔ following a grouped device removes an existing secondary-entity follow rather than adding a conflicting primary follow (5.3822ms)
+✔ native-capable Mi boards use one continuous shortest-column waterfall with a bounded card pool (129.9846ms)
+✔ native scrolling within the retained window avoids JS repaints and prioritizes newly visible cards (14.2413ms)
+✔ a held waterfall button cannot control a different entity after card recycling (10.3527ms)
+✔ waterfall input teardown immediately unlocks scrolling and rejects late releases (57.129ms)
+✔ weak-network brightness repeats coalesce while reversal preserves the newest target (12.964ms)
+✔ weak-network same mode selection is deduplicated until completion then may be selected again (11.3824ms)
+✔ slow admitted control reports waiting for the device without retrying or claiming success (10.0727ms)
+✔ waterfall refresh anchors the visible device when earlier cards disappear (24.8316ms)
+✔ card readings reduce type size before truncating a long numeric value (3.9702ms)
+✔ card control feedback separates pending, confirmed and unconfirmed results and expires (16.2568ms)
+✔ waterfall scroll does not issue commands and a scrolled slider owns only its release gesture (10.3063ms)
+✔ waterfall slider distinguishes vertical scrolling, horizontal adjustment and a deliberate tap (13.1967ms)
+✔ waterfall preserves the scrolled reading position across device details and scene controls stay explicit (23.0232ms)
+✔ bounded text metrics cache avoids repeated native measurements without changing camera metric layout (40.194ms)
+✔ large device function ordering computes descriptors once per member and preserves permissions and order (55.482ms)
+✔ waterfall indexed window matches full-scan selection at every scroll depth and after layout replacement (125.0384ms)
+✔ device internal functions preserve actual capability flags and expose missing controls (14.4762ms)
+✔ device internal function operations send exact keys and verify corresponding readback (13.9244ms)
+✔ device internal stateless buttons report acceptance rather than confirmed completion (6.0729ms)
+✔ builtin and standalone scripts come from the same current sources (9.4349ms)
+✔ privileged identity is checked before runtime state is changed (1.6051ms)
+✔ runtime releases generations and exposes pet diagnostic commands (1.6714ms)
+✔ visible configuration form stays paired through more than 15 minutes of editing (42.9378ms)
+✔ transient read failures recover with bounded retries and keep drafts (1.4118ms)
+✔ reconnect verifies the existing session without overwriting edited forms (2.4689ms)
+✔ a lost save reply is reported as uncertain and the POST is sent only once (1.3087ms)
+✔ expired or revoked authorization is not retried and clears the local session (1.8898ms)
+✔ heartbeat skips hidden pages and active requests, then resumes without reloading forms (4.1287ms)
+✔ late responses cannot reconnect a page after an explicit disconnect (1.2685ms)
+✔ a lost code-exchange reply is retried using the same pairing code (1.2953ms)
+✔ a saved configuration remains reported as saved if its follow-up read fails (2.9537ms)
+✔ a failed save keeps password drafts and re-enables the save button (1.5535ms)
+✔ HA slash-port input is rejected before POST and preserves the token draft (1.227ms)
+✔ HA colon-port save trims copied credentials and a blank token preserves the stored one (1.7731ms)
+✔ installer submits selected internal volume independently of package metadata (2.1517ms)
+✔ installer submits selected sdcard volume independently of package metadata (0.9302ms)
+✔ failed SD installation aborts staging and never retries on internal storage (1.9553ms)
+✔ compiled portal assets match the current installer files byte for byte (4.2285ms)
+✔ Agent save keeps blank MCP secrets, converts switches and sends explicit token clear (3.0029ms)
+✔ Agent reports saved MCP tokens accurately when later slots are empty (1.2096ms)
+✔ recorder shared theme and controls 640x400 light=true (3.3123ms)
+✔ espdl shared theme and controls 640x400 light=true (1.4235ms)
+✔ hello shared theme and controls 640x400 light=true (1.1638ms)
+✔ game shared theme and controls 640x400 light=true (1.1894ms)
+✔ recorder shared theme and controls 640x400 light=false (1.7827ms)
+✔ espdl shared theme and controls 640x400 light=false (1.2616ms)
+✔ hello shared theme and controls 640x400 light=false (0.6612ms)
+✔ game shared theme and controls 640x400 light=false (0.7587ms)
+✔ recorder shared theme and controls 800x450 light=true (1.203ms)
+✔ espdl shared theme and controls 800x450 light=true (0.8676ms)
+✔ hello shared theme and controls 800x450 light=true (0.5893ms)
+✔ game shared theme and controls 800x450 light=true (0.6186ms)
+✔ recorder shared theme and controls 800x450 light=false (0.9028ms)
+✔ espdl shared theme and controls 800x450 light=false (0.8167ms)
+✔ hello shared theme and controls 800x450 light=false (0.5995ms)
+✔ game shared theme and controls 800x450 light=false (0.6411ms)
+✔ recorder shared theme and controls 1024x504 light=true (0.9133ms)
+✔ espdl shared theme and controls 1024x504 light=true (1.1197ms)
+✔ hello shared theme and controls 1024x504 light=true (0.8432ms)
+✔ game shared theme and controls 1024x504 light=true (0.787ms)
+✔ recorder shared theme and controls 1024x504 light=false (1.1593ms)
+✔ espdl shared theme and controls 1024x504 light=false (0.7046ms)
+✔ hello shared theme and controls 1024x504 light=false (1.6027ms)
+✔ game shared theme and controls 1024x504 light=false (0.986ms)
+✔ recorder shared theme and controls 1024x568 light=true (0.9521ms)
+✔ espdl shared theme and controls 1024x568 light=true (0.8067ms)
+✔ hello shared theme and controls 1024x568 light=true (0.6178ms)
+✔ game shared theme and controls 1024x568 light=true (0.6646ms)
+✔ recorder shared theme and controls 1024x568 light=false (0.9649ms)
+✔ espdl shared theme and controls 1024x568 light=false (1.1887ms)
+✔ hello shared theme and controls 1024x568 light=false (0.8477ms)
+✔ game shared theme and controls 1024x568 light=false (0.7194ms)
+ℹ tests 238
+ℹ suites 0
+ℹ pass 238
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5122.7787

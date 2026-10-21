@@ -1,0 +1,6 @@
+[display-owner] camera start queued source=usb
+[display-owner] camera start boundary result=0
+[display-owner] camera start queued source=usb
+[display-owner] camera start queued source=usb
+[display-owner] camera start boundary result=-19
+CAMERA_BOUNDARY_OK: actual queue/service, same-pass exclusion, pending duplicate, cleanup redraw gate, cancel and async failure

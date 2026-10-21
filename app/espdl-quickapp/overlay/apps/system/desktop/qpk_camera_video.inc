@@ -2,6 +2,7 @@
 #include "qpk_camera_avi.h"
 #include "qpk_camera_scale.h"
 #include "camera_color.h"
+#include "camera_frame.h"
 #include "qpk_hardware.h"
 #include "qpk_volume.h"
 #include <sys/statvfs.h>
@@ -23,9 +24,19 @@ struct qpk_video_job {
   bool ready,producing,have_last;
   uint64_t started,next_frame;
   unsigned slot_state[3],slot_sequence[3];
-  uint16_t frames[3][QPK_VIDEO_W*QPK_VIDEO_H],last[QPK_VIDEO_W*QPK_VIDEO_H];
+  unsigned width,height,aspect,frame_bytes;
+  uint16_t *frames[3],*last;
   char path[128];
 };
+static struct qpk_video_job *qpk_video_allocate(unsigned aspect)
+{
+  unsigned height=aspect?camera_aspect_height(QPK_VIDEO_W,aspect):QPK_VIDEO_H;
+  size_t bytes=QPK_VIDEO_W*height*2;
+  struct qpk_video_job *j=calloc(1,sizeof(*j)+bytes*4);if(!j)return NULL;
+  j->width=QPK_VIDEO_W;j->height=height;j->aspect=aspect;j->frame_bytes=bytes;
+  for(unsigned i=0;i<3;i++)j->frames[i]=(uint16_t *)((uint8_t *)(j+1)+i*bytes);
+  j->last=(uint16_t *)((uint8_t *)(j+1)+3*bytes);return j;
+}
 static pthread_mutex_t g_video_lock=PTHREAD_MUTEX_INITIALIZER;
 static struct qpk_video_job *g_video_job;
 static bool g_video_authorized;
@@ -64,7 +75,8 @@ static int qpk_video_status(unsigned *elapsed)
 
 /* Capture only copies into a reserved slot. Storage and codec waits never run
  * here; a detached writer owns its copies and can finalize after preview exits. */
-static void qpk_video_frame(const uint16_t *source,unsigned w,unsigned h,unsigned stride)
+static void qpk_video_frame_region(const uint16_t *source,unsigned w,unsigned h,unsigned stride,
+                                    unsigned image_width,unsigned image_height)
 {
   if(pthread_mutex_trylock(&g_video_lock))return;
   struct qpk_video_job *j=g_video_job;uint64_t now=qpk_now_ms();int slot=-1;
@@ -76,13 +88,14 @@ static void qpk_video_frame(const uint16_t *source,unsigned w,unsigned h,unsigne
   }
   pthread_mutex_unlock(&g_video_lock);if(slot<0)return;
   unsigned zoom=qpk_camera_zoom_percent();
-  unsigned crop_w=w*100/zoom,crop_h=h*100/zoom;
-  qpk_video_scale(j->frames[slot],source+((h-crop_h)/2)*stride+(w-crop_w)/2,
-                  crop_w,crop_h,stride);
+  struct camera_reference_rect crop=camera_frame_crop(w,h,image_width,image_height,zoom,j->aspect);
+  qpk_video_scale_rect(j->frames[slot],j->width,j->height,source+crop.y*stride+crop.x,crop.w,crop.h,stride);
   unsigned style=qpk_camera_style();
-  if(style)for(unsigned i=0;i<QPK_VIDEO_W*QPK_VIDEO_H;i++)j->frames[slot][i]=camera_color_pixel(j->frames[slot][i],style);
+  if(style)for(unsigned i=0;i<j->frame_bytes/2;i++)j->frames[slot][i]=camera_color_pixel(j->frames[slot][i],style);
   pthread_mutex_lock(&g_video_lock);j->slot_state[slot]=j->ready?2:0;j->producing=false;pthread_mutex_unlock(&g_video_lock);
 }
+static void qpk_video_frame(const uint16_t *source,unsigned w,unsigned h,unsigned stride)
+{qpk_video_frame_region(source,w,h,stride,w,h);}
 static bool qpk_video_take_frame(struct qpk_video_job *j,unsigned sequence)
 {
   int chosen=-1;
@@ -97,7 +110,7 @@ static bool qpk_video_take_frame(struct qpk_video_job *j,unsigned sequence)
   }
   pthread_mutex_unlock(&g_video_lock);
   if(chosen<0)return j->have_last;
-  memcpy(j->last,j->frames[chosen],QPK_VIDEO_BYTES);j->have_last=true;
+  memcpy(j->last,j->frames[chosen],j->frame_bytes);j->have_last=true;
   pthread_mutex_lock(&g_video_lock);j->slot_state[chosen]=0;pthread_mutex_unlock(&g_video_lock);return true;
 }
 static int qpk_video_pcm(void *cookie,const uint8_t *pcm,size_t bytes)
@@ -110,7 +123,7 @@ static int qpk_video_pcm(void *cookie,const uint8_t *pcm,size_t bytes)
   if(ret==-EFBIG){atomic_store(&j->progress.finish,true);return 0;}if(ret)return ret;
   unsigned wanted=(uint64_t)(j->avi.audio_bytes/2)*QPK_VIDEO_FPS/QPK_VIDEO_RATE;
   while(j->avi.frames<wanted&&qpk_video_take_frame(j,j->avi.frames)){
-    ret=qpk_avi_chunk(&j->avi,j->last,QPK_VIDEO_BYTES,true);if(ret)break;
+    ret=qpk_avi_chunk(&j->avi,j->last,j->frame_bytes,true);if(ret)break;
   }
   pthread_mutex_lock(&g_video_lock);g_video.elapsed_ms=(uint64_t)j->avi.audio_bytes*1000/(QPK_VIDEO_RATE*2);pthread_mutex_unlock(&g_video_lock);
   if(ret==-EFBIG){atomic_store(&j->progress.finish,true);return 0;}
@@ -129,7 +142,7 @@ static void *qpk_video_worker(void *argument)
   }
   if(!ret&&fd<0)ret=-EEXIST;
   if(!ret){file=fdopen(fd,"w+b");if(!file){ret=-errno;close(fd);fd=-1;}}
-  if(!ret)ret=qpk_avi_begin(&j->avi,file,QPK_VIDEO_W,QPK_VIDEO_H,QPK_VIDEO_FPS,QPK_VIDEO_RATE);
+  if(!ret)ret=qpk_avi_begin(&j->avi,file,j->width,j->height,QPK_VIDEO_FPS,QPK_VIDEO_RATE);
   if(!ret)ret=qpk_audio_capture_pcm(qpk_video_pcm,j,&j->progress);
   pthread_mutex_lock(&g_video_lock);j->ready=false;g_video.status=3;pthread_mutex_unlock(&g_video_lock);
   for(;;){pthread_mutex_lock(&g_video_lock);bool producing=j->producing;pthread_mutex_unlock(&g_video_lock);if(!producing)break;usleep(1000);}
@@ -150,7 +163,7 @@ static int qpk_video_start(void)
 {
   if(!qpk_video_allowed())return -EPERM;
   pthread_mutex_lock(&g_video_lock);bool busy=g_video_job!=NULL;pthread_mutex_unlock(&g_video_lock);if(busy)return -EBUSY;
-  struct qpk_video_job *j=calloc(1,sizeof(*j));if(!j)return -ENOMEM;
+  struct qpk_video_job *j=qpk_video_allocate(qpk_camera_aspect());if(!j)return -ENOMEM;
   atomic_init(&j->progress.cancel,false);atomic_init(&j->progress.finish,false);
   atomic_init(&j->progress.bytes,0);atomic_init(&j->progress.elapsed_ms,0);atomic_init(&j->progress.peak,0);
   pthread_mutex_lock(&g_video_lock);

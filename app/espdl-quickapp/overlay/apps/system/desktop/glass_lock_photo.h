@@ -10,6 +10,7 @@ bool glass_lock_photo_take(struct glass_lock_photo *out);
 
 #define GLASS_COVER_MUSIC 1u
 #define GLASS_COVER_LOCK 2u
+#define GLASS_COVER_HOME 3u
 int glass_lock_cover_request(unsigned owner,const char *url);
 void glass_lock_cover_cancel(unsigned owner);
 bool glass_lock_cover_take(unsigned owner,struct glass_lock_photo *out);

@@ -5,6 +5,7 @@
 #include "bili_ppa.h"
 #include "bili_perf.h"
 #include "glass_music.h"
+#include "glass_app_controls.h"
 #include "glass_music_pcm.h"
 #include <dirent.h>
 #include <errno.h>
@@ -372,8 +373,7 @@ static lv_obj_t *video_view_button(lv_obj_t *parent,const char *text,int x,int y
                                   lv_event_cb_t cb,uint32_t soft,uint32_t ink)
 {
   lv_obj_t *b=button(parent,text,x,y,cb);
-  lv_obj_set_style_bg_color(b,lv_color_hex(soft),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
-  lv_obj_set_style_border_width(b,0,0);lv_obj_set_style_shadow_width(b,0,0);lv_obj_set_style_radius(b,10,0);
+  glass_app_control_style(b,soft,soft);
   lv_obj_t *l=lv_obj_get_child(b,0);lv_obj_set_style_text_color(l,lv_color_hex(ink),0);
   if(font)lv_obj_set_style_text_font(l,font,0);
   return b;
@@ -386,7 +386,10 @@ void local_video_view(lv_obj_t *parent,const lv_font_t *zh,const char *path,lv_e
   lv_obj_set_style_pad_all(parent,0,0);lv_obj_remove_flag(parent,LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_update_layout(parent);int width=lv_obj_get_width(parent),height=lv_obj_get_height(parent);
   bool light=lv_color_brightness(lv_obj_get_style_bg_color(parent,0))>128;
-  uint32_t ink=light?0x292734:0xefedf5,soft=light?0xeeecf2:0x2c2a35;
+  struct glass_app_palette palette=glass_app_palette(light);
+  uint32_t ink=palette.ink,soft=palette.soft;
+  lv_obj_set_style_bg_color(parent,lv_color_hex(palette.canvas),0);
+  lv_obj_set_style_text_color(parent,lv_color_hex(ink),0);
   video_view_button(parent,"返回相册",16,10,back,soft,ink);
   video_view_button(parent,"全屏",width-106,10,fullscreen_clicked,soft,ink);
   const char *name=strrchr(path,'/');path_label=lv_label_create(parent);

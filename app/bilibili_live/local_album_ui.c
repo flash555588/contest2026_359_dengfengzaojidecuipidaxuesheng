@@ -4,6 +4,7 @@
 #include "local_video_ui.h"
 #include "glass_icons.h"
 #include "glass_pager.h"
+#include "glass_app_controls.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,7 +78,8 @@ static void album_photo_pager(unsigned index)
 static void album_video_back(lv_event_t *e) {(void)e;album_queue(-1);}
 static lv_obj_t *album_button(lv_obj_t *parent,const char *text,int x,int y,int w,int action,bool selected)
 {
-  lv_obj_t *button=album_box(parent,x,y,w,40,selected?album_ui.paper:album_ui.background,12);
+  lv_obj_t *button=album_box(parent,x,y,w,GLASS_APP_CONTROL_HEIGHT,selected?album_ui.soft:album_ui.background,GLASS_APP_CONTROL_RADIUS);
+  glass_app_control_style(button,selected?album_ui.soft:album_ui.background,glass_app_palette(album_ui.light).line);
   lv_obj_add_flag(button,LV_OBJ_FLAG_CLICKABLE);lv_obj_remove_flag(button,LV_OBJ_FLAG_EVENT_BUBBLE);
   lv_obj_add_event_cb(button,album_clicked,LV_EVENT_CLICKED,(void *)(intptr_t)action);
   lv_obj_set_style_bg_color(button,lv_color_hex(album_ui.soft),LV_STATE_PRESSED);
@@ -343,10 +345,10 @@ static void album_create(lv_obj_t *parent,const lv_font_t *font,bool browse)
   lv_obj_update_layout(parent);int width=lv_obj_get_width(parent),height=lv_obj_get_height(parent);
   lv_obj_t *root=lv_obj_create(parent);lv_obj_remove_style_all(root);lv_obj_set_size(root,width,height);
   memset(&album_ui,0,sizeof(album_ui));album_ui.root=root;album_ui.font=font;
-  album_ui.light=lv_color_brightness(lv_obj_get_style_bg_color(parent,0))>128;
-  album_ui.background=album_ui.light?0xf8f7fa:0x15131d;album_ui.paper=album_ui.light?0xffffff:0x24222c;
-  album_ui.soft=album_ui.light?0xeeecf2:0x2c2a35;album_ui.ink=album_ui.light?0x292734:0xefedf5;
-  album_ui.muted=album_ui.light?0x85818e:0xa19ba9;
+  album_ui.light=glass_app_object_light(parent);
+  struct glass_app_palette palette=glass_app_palette(album_ui.light);
+  album_ui.background=palette.canvas;album_ui.paper=palette.paper;
+  album_ui.soft=palette.soft;album_ui.ink=palette.ink;album_ui.muted=palette.muted;
   lv_obj_set_style_bg_color(root,lv_color_hex(album_ui.background),0);lv_obj_set_style_bg_opa(root,LV_OPA_COVER,0);
   lv_obj_remove_flag(root,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);lv_obj_add_event_cb(root,album_deleted,LV_EVENT_DELETE,NULL);
   lv_obj_add_event_cb(root,album_gesture,LV_EVENT_GESTURE,NULL);

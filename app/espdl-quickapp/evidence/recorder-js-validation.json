@@ -1,5 +1,5 @@
 {
   "result": "PASS: explicit recording, real progress, stop/cancel completion, playback, confirmed deletion, durable paging, list-failure recovery and full-storage errors",
-  "source_sha256": "cbc0e23428b48bb37acf5f39382efe39b26578ca337cdf03e5333822207b20c4",
+  "source_sha256": "6ffd563d9f33d0fa73646b83e3632633749ce35f1ea23a008f3ab7a314170d28",
   "physical_io": "mocked"
 }

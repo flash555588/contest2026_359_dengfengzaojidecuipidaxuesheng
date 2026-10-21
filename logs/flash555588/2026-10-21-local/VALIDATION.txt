@@ -1,0 +1,6 @@
+=== contest-log-upload validation ===
+Logs dir:       C:\Users\11937\Documents\ChatGPT\vela\project\logs
+Files checked:  47
+Events checked: 35065
+
+✅ ALL OK

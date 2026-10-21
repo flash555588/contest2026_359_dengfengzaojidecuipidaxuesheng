@@ -1,0 +1,168 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+#define main all_ui_reference_main
+#include "render_all_ui.c"
+#undef main
+#include <unistd.h>
+extern void review_ble_snapshot_fixture(const struct glass_ble_state *);
+extern void review_ble_error_fixture(int);
+extern unsigned review_ble_call_count(unsigned);
+extern void review_ble_hold_fixture(unsigned);
+extern bool review_ble_hold_arrived(void);
+extern void review_hid_snapshot_fixture(const struct glass_ble_hid_state *);
+
+static unsigned object_count(lv_obj_t *root)
+{unsigned count=1;for(unsigned i=0;i<lv_obj_get_child_count(root);i++)count+=object_count(lv_obj_get_child(root,i));return count;}
+static bool job_busy(void)
+{pthread_mutex_lock(&g_ble_list_lock);bool busy=g_ble_list_jobs.busy;pthread_mutex_unlock(&g_ble_list_lock);return busy;}
+static void wait_job(void)
+{
+  for(unsigned i=0;i<5000&&job_busy();i++)usleep(1000);
+  assert(!job_busy());glass_ble_list_refresh(NULL);
+}
+static void wait_held(void)
+{for(unsigned i=0;i<5000&&!review_ble_hold_arrived();i++)usleep(1000);assert(review_ble_hold_arrived());glass_ble_list_refresh(NULL);}
+static void fixture(struct glass_ble_state *state)
+{review_ble_snapshot_fixture(state);glass_ble_list_refresh(NULL);}
+static void click(lv_obj_t *button)
+{lv_obj_send_event(button,LV_EVENT_CLICKED,NULL);}
+static void fill_devices(struct glass_ble_state *state,unsigned count)
+{
+  state->count=count;
+  for(unsigned i=0;i<count;i++){
+    struct glass_ble_device *peer=&state->devices[i];memset(peer,0,sizeof(*peer));
+    peer->type=i%2;peer->address[0]=i+1;peer->address[5]=0xc2;peer->rssi=-40-(int)i;
+    snprintf(peer->name,sizeof(peer->name),"设备 %02u · 蓝牙连接示例",i+1);
+  }
+}
+int main(int argc,char **argv)
+{
+  assert(argc==3);review_out=argv[2];
+  FILE *file=fopen(argv[1],"rb");assert(file);fseek(file,0,SEEK_END);size_t size=ftell(file);rewind(file);
+  void *font=malloc(size);assert(font&&fread(font,1,size,file)==size);fclose(file);
+  lv_init();lv_display_t *display=lv_display_create(1024,600);
+  lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
+  lv_display_set_buffers(display,review_fb,NULL,sizeof(review_fb),LV_DISPLAY_RENDER_MODE_FULL);
+  lv_display_set_flush_cb(display,review_flush);
+  g_desktop.font16=lv_tiny_ttf_create_data(font,size,16);
+  g_desktop.font20=lv_tiny_ttf_create_data(font,size,20);
+  g_desktop.font28=lv_tiny_ttf_create_data(font,size,28);
+  g_desktop.font16->fallback=glass_icon_font(16);g_desktop.font20->fallback=glass_icon_font(20);g_desktop.font28->fallback=glass_icon_font(24);
+  g_glass.font48=lv_tiny_ttf_create_data(font,size,48);glass_home_fonts_init(font,size);g_glass.reduced_motion=true;
+  g_desktop.screen=glass_box(lv_screen_active(),0,32,1024,568,0,0);
+  g_desktop.panel=glass_box(g_desktop.screen,0,0,1024,568,0,0);lv_obj_add_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN);
+  glass_status_create();
+  char path[1024];snprintf(path,sizeof(path),"%s/screens.json",review_out);
+  review_manifest=fopen(path,"w");assert(review_manifest);fputs("[\n",review_manifest);
+  for(unsigned theme=0;theme<2;theme++){
+    g_desktop.light_theme=theme!=0;
+    struct glass_ble_state state={.started=true,.ready=true,.scan_generation=7,.generation=10};
+    struct glass_ble_hid_state hid={.host_ready=true};review_hid_snapshot_fixture(&hid);
+    review_ble_snapshot_fixture(&state);unsigned scans=review_ble_call_count(1);
+    glass_bluetooth_page(NULL);assert(g_ble_list&&review_ble_call_count(1)==scans);
+    unsigned objects=object_count(g_ble_list->root);
+    const unsigned char *arrow=(const unsigned char *)LV_SYMBOL_RIGHT;
+    uint32_t arrow_code=((arrow[0]&15)<<12)|((arrow[1]&63)<<6)|(arrow[2]&63);
+    lv_font_glyph_dsc_t glyph={0};
+    assert(lv_font_get_glyph_dsc(lv_obj_get_style_text_font(g_ble_list->rows[0].arrow,0),&glyph,arrow_code,0)&&!glyph.is_placeholder);
+    assert(!lv_obj_has_flag(g_ble_list->empty,LV_OBJ_FLAG_HIDDEN));
+    review_capture(display,"bluetooth-empty","蓝牙 · 设备连接入口");
+    click(g_ble_list->scan);wait_job();glass_ble_read(&state);
+    assert(state.scanning&&state.scan_generation==8&&review_ble_call_count(1)==scans+1);
+    review_capture(display,"bluetooth-scanning","蓝牙 · 正在搜索");
+    fill_devices(&state,4);state.devices[0].name[0]=0;state.devices[0].rssi=-91;
+    strcpy(state.devices[1].name,"无线键盘");strcpy(state.devices[2].name,"无线键盘");
+    snprintf(state.devices[3].name,sizeof(state.devices[3].name),"Studio device with a deliberately long advertised device name");
+    state.devices[3].rssi=127;fixture(&state);
+    assert(!strcmp(lv_label_get_text(g_ble_list->rows[0].name),"未命名设备"));
+    assert(strcmp(lv_label_get_text(g_ble_list->rows[1].address),lv_label_get_text(g_ble_list->rows[2].address)));
+    assert(!strcmp(lv_label_get_text(g_ble_list->rows[3].signal),"信号未知"));
+    review_capture(display,"bluetooth-discovered","蓝牙 · 名称、地址与信号");
+    unsigned cancelled=review_ble_call_count(3),connected=review_ble_call_count(2);
+    click(g_ble_list->rows[1].root);wait_job();glass_ble_read(&state);
+    assert(!state.scanning&&state.connecting&&state.peer_valid&&state.peer.address[0]==2);
+    assert(review_ble_call_count(3)==cancelled+1&&review_ble_call_count(2)==connected+1);
+    assert(g_ble_list->rows[0].binding.index==1);
+    review_capture(display,"bluetooth-connecting","蓝牙 · 正在连接选中设备");
+    state.connecting=false;state.connected=true;state.encrypted=state.bonded=true;state.generation++;
+    fixture(&state);assert(strstr(lv_label_get_text(g_ble_list->status),"无线键盘"));
+    glass_status_tick();assert(!strcmp(lv_label_get_text(g_status_ui.ble_count),"1"));
+    assert(strstr(lv_label_get_text(g_ble_list->detail),"已配对"));
+    assert(lv_obj_has_state(g_ble_list->scan,LV_STATE_DISABLED));
+    review_capture(display,"bluetooth-connected","蓝牙 · 当前连接与配对状态");
+    review_click("无线触摸板");assert(!g_ble_list&&g_mouse_status&&lv_obj_has_state(g_mouse_start,LV_STATE_DISABLED));
+    assert(strstr(lv_label_get_text(g_mouse_detail),"设备连接"));
+    review_click("设备连接");assert(g_ble_list&&!g_mouse_status);
+    review_ble_error_fixture(-EBUSY);click(g_ble_list->control);wait_job();glass_ble_read(&state);
+    assert(state.connected&&!state.disconnecting&&!lv_obj_has_state(g_ble_list->control,LV_STATE_DISABLED));
+    review_ble_error_fixture(0);
+    click(g_ble_list->control);wait_job();glass_ble_read(&state);
+    assert(state.connected&&state.disconnecting&&strstr(lv_label_get_text(g_ble_list->status),"正在断开"));
+    state.connected=state.disconnecting=state.peer_valid=state.encrypted=state.bonded=false;state.generation++;
+    fixture(&state);click(g_ble_list->rows[0].root);wait_job();glass_ble_read(&state);
+    state.connecting=state.peer_valid=false;state.error=-ETIMEDOUT;fixture(&state);
+    assert(strstr(lv_label_get_text(g_ble_list->detail),"超时"));
+    review_capture(display,"bluetooth-failed","蓝牙 · 连接失败反馈");
+    /* The display still references the previous scan. A worker must refuse
+     * the changed generation rather than connecting the replacement peer. */
+    connected=review_ble_call_count(2);state.error=0;state.scan_generation++;state.devices[0].address[0]=99;
+    review_ble_snapshot_fixture(&state);click(g_ble_list->rows[0].root);wait_job();
+    assert(review_ble_call_count(2)==connected&&strstr(lv_label_get_text(g_ble_list->detail),"列表已更新"));
+    lv_obj_send_event(g_ble_list->rows[0].root,LV_EVENT_PRESSED,NULL);
+    state.scan_generation++;state.devices[0].address[0]=98;fixture(&state);
+    click(g_ble_list->rows[0].root);assert(!job_busy()&&review_ble_call_count(2)==connected);
+    fill_devices(&state,GLASS_BLE_LIMIT);state.scan_generation++;fixture(&state);
+    lv_obj_update_layout(g_ble_list->root);
+    for(unsigned i=0;i<GLASS_BLE_LIMIT;i++)assert(!lv_obj_has_flag(g_ble_list->rows[i].root,LV_OBJ_FLAG_HIDDEN));
+    lv_obj_scroll_to_y(g_ble_list->list,25*80,LV_ANIM_OFF);
+    assert(lv_obj_get_scroll_y(g_ble_list->list)>0&&object_count(g_ble_list->root)==objects);
+    review_capture(display,"bluetooth-full-list","蓝牙 · 32 台设备滚动列表");
+    const char *name=lv_label_get_text(g_ble_list->rows[0].name);
+    for(unsigned i=0;i<30;i++)glass_ble_list_refresh(NULL);
+    assert(name==lv_label_get_text(g_ble_list->rows[0].name)&&object_count(g_ble_list->root)==objects);
+    state.scan_generation++;state.count=0;state.scanning=true;fixture(&state);
+    assert(lv_obj_get_scroll_y(g_ble_list->list)==0);
+    state.scanning=false;fixture(&state);
+    hid.enabled=hid.connected=true;hid.advertising=false;state.connected=true;
+    review_hid_snapshot_fixture(&hid);fixture(&state);
+    assert(g_ble_list->action==BLE_LIST_MOUSE);
+    scans=review_ble_call_count(1);click(g_ble_list->scan);assert(!job_busy()&&review_ble_call_count(1)==scans);
+    review_capture(display,"bluetooth-hid-busy","蓝牙 · 触摸板占用提示");
+    review_click("无线触摸板");assert(!g_ble_list&&g_mouse_status);
+    review_capture(display,"bluetooth-touchpad","蓝牙 · 原有触摸板入口");
+    review_click("设备连接");assert(g_ble_list&&!g_mouse_timer&&!g_mouse_status);
+    hid.enabled=hid.advertising=hid.connected=false;state.connected=false;review_hid_snapshot_fixture(&hid);
+    /* Initialization can be cancelled while the controller is not ready;
+     * it never blocks the LVGL caller or launches a late scan after cancel. */
+    state.ready=false;fixture(&state);click(g_ble_list->scan);assert(job_busy());
+    click(g_ble_list->control);wait_job();assert(review_ble_call_count(1)==scans);
+    assert(strstr(lv_label_get_text(g_ble_list->detail),"取消"));
+    state.ready=true;fixture(&state);review_ble_hold_fixture(1);
+    click(g_ble_list->scan);wait_held();click(g_ble_list->control);
+    review_ble_hold_fixture(0);wait_job();glass_ble_read(&state);
+    assert(!state.scanning&&g_ble_list_jobs.result==-ECANCELED);
+    /* A new connection owner published while the old connect completes must
+     * survive cancellation of the older UI request. */
+    fill_devices(&state,2);state.scan_generation++;fixture(&state);
+    unsigned disconnects=review_ble_call_count(4);review_ble_hold_fixture(2);
+    click(g_ble_list->rows[0].root);wait_held();click(g_ble_list->control);
+    glass_ble_read(&state);state.connecting=false;state.connected=state.peer_valid=true;
+    state.peer=state.devices[1];state.generation+=2;fixture(&state);
+    review_ble_hold_fixture(0);wait_job();glass_ble_read(&state);
+    assert(state.connected&&state.peer.address[0]==2&&review_ble_call_count(4)==disconnects);
+    state.connected=state.peer_valid=false;state.generation++;fixture(&state);
+    state.ready=true;fixture(&state);review_ble_error_fixture(-EIO);
+    click(g_ble_list->scan);wait_job();assert(strstr(lv_label_get_text(g_ble_list->detail),"失败"));
+    review_ble_error_fixture(0);
+    /* Accepted work owns no GUI pointers: finish after deleting the page. */
+    state.ready=false;fixture(&state);click(g_ble_list->scan);panel_hide(NULL);assert(!g_ble_list);
+    state.ready=true;review_ble_snapshot_fixture(&state);wait_job();
+    glass_bluetooth_page(NULL);glass_ble_read(&state);assert(state.scanning);
+    click(g_ble_list->control);wait_job();panel_hide(NULL);assert(!g_ble_list);
+    for(unsigned i=0;i<30;i++){
+      glass_bluetooth_page(NULL);assert(g_ble_list);panel_hide(NULL);assert(!g_ble_list);
+    }
+  }
+  fputs("\n]\n",review_manifest);fclose(review_manifest);
+  puts("BLUETOOTH_LIST_OK: both themes; named/unnamed/duplicate names; addresses/RSSI/icons; stop-scan/connect; peer identity and status bar; asynchronous disconnect and failed-disconnect retry; timeout; stale generation and pressed-row guards; 32 retained rows; HID exclusion/navigation; initialization and late cancellation; newer connection owner preserved; page deletion during work; 60 reopen cycles; all BLE commands off UI thread");
+  return 0;
+}

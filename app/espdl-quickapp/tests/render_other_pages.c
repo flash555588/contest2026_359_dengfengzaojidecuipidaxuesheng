@@ -3,6 +3,37 @@
 #include "render_all_ui.c"
 #undef main
 
+static void assert_app_grid(void)
+{
+  lv_obj_update_layout(g_apps_card);
+  assert(lv_obj_get_style_bg_opa(g_apps_grid,0)==LV_OPA_TRANSP);
+  assert(abs(2*lv_obj_get_x(g_apps_grid)+lv_obj_get_width(g_apps_grid)-lv_obj_get_width(g_apps_card))<=1);
+  int top=10000,bottom=0;
+  for(unsigned i=0;i<9;i++){
+    lv_obj_t *tile=g_apps_slots[i].tile;
+    if(!tile||lv_obj_has_flag(tile,LV_OBJ_FLAG_HIDDEN))continue;
+    int y=lv_obj_get_y(tile),left=10000,right=0;
+    top=LV_MIN(top,y);bottom=LV_MAX(bottom,y+lv_obj_get_height(tile));
+    for(unsigned j=0;j<9;j++){
+      lv_obj_t *other=g_apps_slots[j].tile;
+      if(!other||lv_obj_has_flag(other,LV_OBJ_FLAG_HIDDEN)||lv_obj_get_y(other)!=y)continue;
+      left=LV_MIN(left,lv_obj_get_x(other));right=LV_MAX(right,lv_obj_get_x(other)+lv_obj_get_width(other));
+    }
+    assert(abs(left+right-lv_obj_get_width(g_apps_grid))<=1);
+    assert(lv_obj_get_style_shadow_width(tile,0)==0);
+  }
+  assert(abs(top+bottom-lv_obj_get_height(g_apps_grid))<=1);
+}
+
+static void assert_media_theme(void)
+{
+  lv_obj_update_layout(g_files_auxiliary);
+  assert(lv_obj_get_style_bg_opa(g_files_auxiliary,0)==LV_OPA_TRANSP);
+  assert(glass_app_object_light(g_files_auxiliary)==g_desktop.light_theme);
+  lv_obj_t *viewer=lv_obj_get_child(g_files_auxiliary,0);assert(viewer);
+  assert((lv_color_brightness(lv_obj_get_style_bg_color(viewer,0))>128)==g_desktop.light_theme);
+}
+
 static lv_point_t sidebar_pointer_point;
 static lv_indev_state_t sidebar_pointer_state;
 static unsigned sidebar_actions[2];
@@ -42,7 +73,7 @@ static void test_sidebar_drag(lv_display_t *display)
   lv_indev_delete(input);
   puts("SIDEBAR_NATIVE_POINTER_OK: follow, nearest release once, tap, outside, deletion during drag/navigation");
 }
-static void assert_sidebar(lv_obj_t *parent)
+static void assert_sidebar(lv_obj_t *parent,uint32_t paper)
 {
   lv_obj_t *sidebar=NULL;
   for(unsigned i=0;i<lv_obj_get_child_count(parent);i++){
@@ -50,7 +81,7 @@ static void assert_sidebar(lv_obj_t *parent)
     if(lv_obj_get_style_x(child,0)==0&&lv_obj_get_style_y(child,0)==0&&lv_obj_get_style_width(child,0)==GLASS_SIDEBAR_WIDTH){sidebar=child;break;}
   }
   assert(sidebar);
-  assert(lv_color_to_u32(lv_obj_get_style_bg_color(sidebar,0))==lv_color_to_u32(lv_color_hex(detail_paper())));
+  assert(lv_color_to_u32(lv_obj_get_style_bg_color(sidebar,0))==lv_color_to_u32(lv_color_hex(paper)));
   for(unsigned i=0;i<lv_obj_get_child_count(sidebar);i++){
     lv_obj_t *child=lv_obj_get_child(sidebar,i);
     if(!lv_obj_check_type(child,&lv_button_class))continue;
@@ -86,7 +117,7 @@ int main(int argc,char **argv)
     panel_hide(NULL);g_desktop.light_theme=theme==0;glass_rebuild();
     review_navigation_entries();test_sidebar_drag(display);review_capture(display,"home","首页");
     SHOT("settings","控制面板",glass_settings(NULL));
-    assert_sidebar(g_control_card);
+    assert_sidebar(g_control_card,detail_paper());
     lv_obj_t *value=review_label_find(g_control_card,"100%");assert(value);
     lv_slider_set_value(g_glass.brightness_slider,63,LV_ANIM_OFF);
     lv_obj_send_event(g_glass.brightness_slider,LV_EVENT_VALUE_CHANGED,NULL);
@@ -94,6 +125,7 @@ int main(int argc,char **argv)
     lv_obj_send_event(g_glass.brightness_slider,LV_EVENT_PRESS_LOST,NULL);
     assert(lv_slider_get_value(g_glass.brightness_slider)==100&&!strcmp(lv_label_get_text(value),"100%"));
     SHOT("apps","全部应用",glass_apps(NULL));
+    assert_app_grid();
     lv_obj_t *tiles[9];for(unsigned i=0;i<9;i++)tiles[i]=g_apps_slots[i].tile;
     assert(lv_obj_get_child_count(g_apps_grid)==9);
     lv_obj_send_event(tiles[0],LV_EVENT_PRESSED,NULL);
@@ -101,6 +133,7 @@ int main(int argc,char **argv)
     assert(g_desktop.current_card==g_apps_card);
     for(unsigned round=0;round<30;round++){
       glass_apps_page(NULL,round%2);
+      assert_app_grid();
       assert(lv_obj_get_child_count(g_apps_grid)==9);
       for(unsigned i=0;i<9;i++)assert(g_apps_slots[i].tile==tiles[i]);
     }
@@ -133,8 +166,14 @@ int main(int argc,char **argv)
     SHOT("wifi","Wi-Fi 网络",glass_wifi_page(NULL));
     SHOT("resources","系统性能",glass_resources_page(NULL));
     SHOT("album","相册",launch_local_video(NULL));
-    SHOT("music","音乐",glass_music(NULL));assert_sidebar(g_music_ui.root);
-    SHOT("chat-sidebar","AI 助手侧栏",glass_chat_open(NULL));assert_sidebar(g_chat_ui.root);
+    glass_storage_page(NULL);glass_files_tick(NULL);
+    strcpy(g_files_selected,"/offline-fixtures/review.jpg");glass_files_image(NULL);
+    assert_media_theme();review_capture(display,"files-image-error","图片查看 · 错误状态");
+    strcpy(g_files_selected,"/data/review.jpg");glass_files_image(NULL);
+    for(unsigned tick=0;tick<5;tick++){lv_tick_inc(120);lv_timer_handler();}
+    assert_media_theme();review_capture(display,"files-image-loaded","图片查看 · 示例图片");
+    SHOT("music","音乐",glass_music(NULL));assert_sidebar(g_music_ui.root,detail_paper());
+    SHOT("chat-sidebar","AI 助手侧栏",glass_chat_open(NULL));assert_sidebar(g_chat_ui.root,detail_paper());
     panel_hide(NULL);assert(!g_apps_card&&!g_apps_slots[0].tile);
     puts("OTHER_PAGES_OK: 30 retained app flips; stale launch/remove blocked; brightness preview/cancel; refreshed file short/long press safety; light/dark");
   }

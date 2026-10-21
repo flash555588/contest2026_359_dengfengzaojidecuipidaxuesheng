@@ -31,3 +31,12 @@ int qpk_mjpeg_decode_view(void *decoder, uint8_t *input, size_t size, size_t cap
                          uint16_t *output, unsigned width, unsigned height, unsigned stride,
                          unsigned expected_width, unsigned expected_height,
                          unsigned view_width, unsigned view_height);
+struct qpk_mjpeg_view {
+  unsigned canvas_width,canvas_height,stride,width,height;
+  unsigned crop_x,crop_y,crop_width,crop_height,style;
+};
+/* Fused reduced decode, canvas crop and colour transform. Writes only the
+ * requested live view; still/region decoding keeps its original quality. */
+int qpk_mjpeg_decode_preview(void *decoder,uint8_t *input,size_t size,size_t capacity,
+                             uint16_t *output,unsigned expected_width,unsigned expected_height,
+                             const struct qpk_mjpeg_view *view);

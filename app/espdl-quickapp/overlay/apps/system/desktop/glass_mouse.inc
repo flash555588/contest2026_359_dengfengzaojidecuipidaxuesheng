@@ -50,7 +50,7 @@ static bool g_mouse_view_valid;
 struct glass_mouse_view
 {
   bool enabled, advertising, connected, encrypted, mouse_notify;
-  bool suspended, boot_mode, host_ready, busy;
+  bool suspended, boot_mode, host_ready, busy, central_busy;
   int command, result, error, ble_error;
 };
 static struct glass_mouse_view g_mouse_view;
@@ -260,6 +260,8 @@ static void glass_mouse_refresh(lv_timer_t *timer)
    * thread. The next timer tick refreshes the connection state after release. */
   if (g_mouse_touching) return;
   glass_ble_hid_read(&state);
+  struct glass_ble_state central;glass_ble_read(&central);
+  bool central_busy=central.scanning||central.connecting||(central.connected&&central.peer_valid)||central.disconnecting;
   pthread_mutex_lock(&g_mouse_ui_lock);
   busy = g_mouse_ui.busy;
   command = g_mouse_ui.command;
@@ -278,6 +280,7 @@ static void glass_mouse_refresh(lv_timer_t *timer)
     .boot_mode = state.boot_mode,
     .host_ready = state.host_ready,
     .busy = busy,
+    .central_busy = central_busy,
     .command = command,
     .result = result,
     .error = state.error,
@@ -293,6 +296,7 @@ static void glass_mouse_refresh(lv_timer_t *timer)
                       view.boot_mode != g_mouse_view.boot_mode ||
                       view.host_ready != g_mouse_view.host_ready ||
                       view.busy != g_mouse_view.busy ||
+                      view.central_busy != g_mouse_view.central_busy ||
                       view.command != g_mouse_view.command ||
                       view.result != g_mouse_view.result ||
                       view.error != g_mouse_view.error ||
@@ -318,6 +322,8 @@ static void glass_mouse_refresh(lv_timer_t *timer)
     lv_label_set_text(g_mouse_status, "正在完成安全连接");
   else if (state.advertising)
     lv_label_set_text(g_mouse_status, "等待电脑配对");
+  else if (central_busy)
+    lv_label_set_text(g_mouse_status, "设备连接正在使用蓝牙");
   else if (state.host_ready)
     lv_label_set_text(g_mouse_status, "已就绪，等待开始");
   else
@@ -328,7 +334,9 @@ static void glass_mouse_refresh(lv_timer_t *timer)
   glass_mouse_status_value(2, state.encrypted, "已加密", "等待加密");
   glass_mouse_status_value(3, state.mouse_notify, "已订阅", "等待订阅");
 
-  if (!busy && result)
+  if (central_busy && !state.enabled)
+    snprintf(text, sizeof(text), "请返回设备连接，停止搜索或断开后再启动触摸板");
+  else if (!busy && result)
     snprintf(text, sizeof(text), "操作失败 (%d)", result);
   else if (state.error)
     snprintf(text, sizeof(text), "鼠标服务错误 (%d)，BLE %d", state.error,
@@ -345,7 +353,7 @@ static void glass_mouse_refresh(lv_timer_t *timer)
   g_mouse_input_ready = input_ready;
 
   glass_mouse_button_enabled(g_mouse_start,
-                             !busy && !state.advertising && !state.connected);
+                             !busy && !central_busy && !state.advertising && !state.connected);
   glass_mouse_button_enabled(g_mouse_stop,
                              !busy && (state.enabled || state.advertising ||
                                        state.connected));
@@ -381,8 +389,10 @@ static void glass_mouse_page(lv_obj_t *card)
 
   detail_page(card);
   detail_sidebar(card, "蓝牙", LV_SYMBOL_BLUETOOTH, panel_hide);
-  lv_obj_t *selected = detail_nav(card, "蓝牙设备", LV_SYMBOL_BLUETOOTH,
-                                  104, 140, NULL, NULL);
+  lv_obj_t *devices = detail_nav(card,"设备连接",LV_SYMBOL_BLUETOOTH,104,140,glass_ble_devices_open,NULL);
+  glass_sidebar_item(devices,false);
+  lv_obj_t *selected = detail_nav(card, "无线触摸板", LV_SYMBOL_GPS,
+                                  156, 140, NULL, NULL);
   glass_sidebar_item(selected, true);
   detail_text(card, "蓝牙与鼠标", 216, 26, 500, 28, detail_ink());
   detail_text(card, "与电脑配对，将屏幕用作无线触摸板", 216, 66, 720, 14, detail_muted());
@@ -459,7 +469,9 @@ static void glass_mouse_page(lv_obj_t *card)
   glass_mouse_refresh(NULL);
   struct glass_ble_hid_state state;
   glass_ble_hid_read(&state);
-  if (!state.enabled && !state.connected)
+  struct glass_ble_state central;glass_ble_read(&central);
+  if (!state.enabled && !state.connected && !central.scanning &&
+      !central.connecting && !(central.connected && central.peer_valid) && !central.disconnecting)
     (void)glass_mouse_submit(GLASS_MOUSE_START, 0, 0, 0);
 }
 

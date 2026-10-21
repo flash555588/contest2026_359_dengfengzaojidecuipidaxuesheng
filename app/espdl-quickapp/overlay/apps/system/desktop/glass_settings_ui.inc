@@ -1,4 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
+static void glass_lyric_font_control_deleted(lv_event_t *event)
+{
+  if(g_glass.lyric_font_dropdown==lv_event_get_target(event))g_glass.lyric_font_dropdown=NULL;
+}
+
 static void glass_settings(lv_event_t *e)
 {
   LV_UNUSED(e);glass_preferences_update();
@@ -60,42 +65,42 @@ static void glass_settings(lv_event_t *e)
   lv_obj_t *appearance=detail_tile(card,216,300,444,266);
   home_icon(appearance,GLASS_ICON_SPARKLES,24,22,24,detail_accent());
   detail_text(appearance,"个性化",60,22,280,20,detail_ink());
-  detail_text(appearance,"浅色外观",24,70,260,16,detail_ink());
+  detail_text(appearance,"浅色外观",24,60,260,16,detail_ink());
   lv_obj_t *sw=lv_switch_create(appearance);g_glass.settings_switch=sw;
   glass_control_switch_style(sw);
-  lv_obj_set_pos(sw,366,66);lv_obj_set_size(sw,52,28);
+  lv_obj_set_pos(sw,366,56);lv_obj_set_size(sw,52,28);
   lv_obj_set_ext_click_area(sw,8);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_MAIN);
   lv_obj_set_style_bg_color(sw,lv_color_hex(detail_accent()),LV_PART_INDICATOR|LV_STATE_CHECKED);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_INDICATOR|LV_STATE_CHECKED);
   if(g_desktop.light_theme)lv_obj_add_state(sw,LV_STATE_CHECKED);
   lv_obj_add_event_cb(sw,theme_changed,LV_EVENT_VALUE_CHANGED,NULL);
-  detail_text(appearance,"减少动效",24,114,260,16,detail_ink());
+  detail_text(appearance,"减少动效",24,100,260,16,detail_ink());
   sw=lv_switch_create(appearance);g_glass.motion_switch=sw;
   glass_control_switch_style(sw);
-  lv_obj_set_pos(sw,366,110);lv_obj_set_size(sw,52,28);
+  lv_obj_set_pos(sw,366,96);lv_obj_set_size(sw,52,28);
   lv_obj_set_ext_click_area(sw,8);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_MAIN);
   lv_obj_set_style_bg_color(sw,lv_color_hex(detail_accent()),LV_PART_INDICATOR|LV_STATE_CHECKED);
   lv_obj_set_style_bg_opa(sw,LV_OPA_COVER,LV_PART_INDICATOR|LV_STATE_CHECKED);
   if(g_glass.reduced_motion)lv_obj_add_state(sw,LV_STATE_CHECKED);
   lv_obj_add_event_cb(sw,glass_motion_changed,LV_EVENT_VALUE_CHANGED,NULL);
-  glass_box(appearance,24,151,396,1,detail_line(),0);
-  detail_text(appearance,"主视觉配色",24,174,120,14,detail_muted());
+  glass_box(appearance,24,128,396,1,detail_line(),0);
+  detail_text(appearance,"主视觉配色",24,143,120,14,detail_muted());
   const uint32_t colors[]={0x77658f,0xb77860,0x498d82};
   for(unsigned i=0;i<3;i++){
-    lv_obj_t *choice=glass_button(appearance,"",150+i*62,164,52,colors[i],glass_palette_select,(void *)(uintptr_t)i);
-    lv_obj_set_size(choice,52,36);lv_obj_set_style_radius(choice,10,0);
+    lv_obj_t *choice=glass_button(appearance,"",150+i*62,134,52,colors[i],glass_palette_select,(void *)(uintptr_t)i);
+    lv_obj_set_size(choice,52,32);lv_obj_set_style_radius(choice,10,0);
     lv_obj_set_style_border_width(choice,g_glass.palette==i?2:0,0);
     lv_obj_set_style_border_color(choice,lv_color_hex(g_desktop.light_theme?0xffffff:0xe0d7ee),0);
     lv_obj_set_style_border_opa(choice,LV_OPA_COVER,0);
     if(g_glass.palette==i){lv_obj_t *check=home_icon(choice,LV_SYMBOL_OK,0,0,20,0xffffff);lv_obj_center(check);}
   }
-  detail_text(appearance,"桌面小组件",24,228,120,14,detail_muted());
+  detail_text(appearance,"桌面小组件",24,181,120,14,detail_muted());
   lv_obj_t *dropdown=lv_dropdown_create(appearance);g_glass.widget_dropdown=dropdown;
   lv_dropdown_set_options(dropdown,"空气质量\n环境湿度\n系统运行");
   lv_dropdown_set_selected(dropdown,g_glass.widget);
-  lv_obj_set_pos(dropdown,150,216);lv_obj_set_size(dropdown,268,36);
+  lv_obj_set_pos(dropdown,150,172);lv_obj_set_size(dropdown,268,36);
   glass_input_style(dropdown);
   lv_obj_set_style_text_font(dropdown,home_font(14),LV_PART_MAIN);
   lv_obj_set_style_text_color(dropdown,lv_color_hex(detail_ink()),LV_PART_MAIN);
@@ -109,6 +114,31 @@ static void glass_settings(lv_event_t *e)
   lv_obj_set_style_bg_color(list,lv_color_hex(detail_paper()),0);
   lv_obj_set_style_radius(list,12,0);
   lv_obj_add_event_cb(dropdown,glass_widget_select,LV_EVENT_VALUE_CHANGED,NULL);
+
+  detail_text(appearance,"歌词字体",24,225,120,14,detail_muted());
+  dropdown=lv_dropdown_create(appearance);g_glass.lyric_font_dropdown=dropdown;
+  lv_dropdown_clear_options(dropdown);
+  for(unsigned i=0;i<glass_lyric_font_count();i++)lv_dropdown_add_option(dropdown,glass_lyric_font_name(i),LV_DROPDOWN_POS_LAST);
+  lv_dropdown_set_selected(dropdown,music_font_requested);
+  lv_dropdown_set_text(dropdown,music_font_requested!=music_font_selected?"字体加载中…":glass_lyric_font_name(music_font_selected));
+  lv_obj_set_pos(dropdown,150,216);lv_obj_set_size(dropdown,268,36);
+  lv_obj_set_ext_click_area(dropdown,4);glass_input_style(dropdown);
+  lv_obj_set_style_text_font(dropdown,home_font(14),LV_PART_MAIN);
+  lv_obj_set_style_text_color(dropdown,lv_color_hex(detail_ink()),LV_PART_MAIN);
+  lv_obj_set_style_bg_color(dropdown,lv_color_hex(detail_soft()),0);
+  lv_obj_set_style_border_color(dropdown,lv_color_hex(detail_line()),0);
+  lv_obj_set_style_border_opa(dropdown,LV_OPA_COVER,0);
+  lv_obj_set_style_text_font(dropdown,glass_icon_font(16),LV_PART_INDICATOR);
+  list=lv_dropdown_get_list(dropdown);
+  lv_obj_set_style_text_font(list,home_font(16),0);
+  lv_obj_set_style_text_color(list,lv_color_hex(detail_ink()),0);
+  lv_obj_set_style_bg_color(list,lv_color_hex(detail_paper()),0);
+  lv_obj_set_style_radius(list,12,0);lv_obj_set_style_max_height(list,320,0);
+  lv_obj_set_style_bg_color(list,lv_color_hex(detail_accent()),LV_PART_SELECTED|LV_STATE_CHECKED);
+  lv_obj_set_style_bg_opa(list,LV_OPA_20,LV_PART_SELECTED|LV_STATE_CHECKED);
+  lv_obj_set_style_text_color(list,lv_color_hex(detail_ink()),LV_PART_SELECTED|LV_STATE_CHECKED);
+  lv_obj_add_event_cb(dropdown,music_full_font_selected,LV_EVENT_VALUE_CHANGED,NULL);
+  lv_obj_add_event_cb(dropdown,glass_lyric_font_control_deleted,LV_EVENT_DELETE,NULL);
 
   lv_obj_t *system=detail_tile(card,676,300,324,266);
   home_icon(system,LV_SYMBOL_SETTINGS,24,22,24,detail_accent());

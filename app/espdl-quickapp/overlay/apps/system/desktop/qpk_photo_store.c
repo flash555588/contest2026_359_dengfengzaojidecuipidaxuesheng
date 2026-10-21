@@ -12,6 +12,7 @@
 #include "qpk_photo_store.h"
 #include "qpk_photo_storage.h"
 #include "camera_color.h"
+#include "camera_frame.h"
 #if defined(__NuttX__) && defined(CONFIG_ESPRESSIF_MIPI_DSI)
 #include <nuttx/video/camera_timing.h>
 #endif
@@ -56,6 +57,7 @@ static int write_photo(unsigned owner,const struct job *job,char *path)
   if(cancelled(owner,job->result.ticket))return -ECANCELED;
   unsigned width=in->format==QPK_PHOTO_BMP565?512:in->width;
   unsigned height=in->format==QPK_PHOTO_BMP565?in->height*512/in->width:in->height;
+  if(in->aspect)height=camera_aspect_height(width,in->aspect);
   size_t row_bytes=(width*(in->format==QPK_PHOTO_BMP24?3:2)+3)&~3u;
   size_t expected=in->format==QPK_PHOTO_JPEG?in->bytes:
     (in->format==QPK_PHOTO_BMP24?54:66)+row_bytes*height;
@@ -91,8 +93,9 @@ static int write_photo(unsigned owner,const struct job *job,char *path)
     little32(header+34,row_bytes*height);
     if(header_bytes==66){little32(header+30,3);little32(header+54,0xf800);little32(header+58,0x7e0);little32(header+62,0x1f);}
     if(fwrite(header,1,header_bytes,file)!=header_bytes)ret=-EIO;
-    unsigned cropw=in->width*100/in->zoom,croph=in->height*100/in->zoom;
-    unsigned cropx=(in->width-cropw)/2,cropy=(in->height-croph)/2;
+    struct camera_reference_rect crop=camera_frame_crop(in->width,in->height,
+      in->image_width,in->image_height,in->zoom,in->aspect);
+    unsigned cropw=crop.w,croph=crop.h,cropx=crop.x,cropy=crop.y;
     const uint16_t *pixels=job->owned;
     for(unsigned y=0;!ret&&y<height;y++){
       if(cancelled(owner,job->result.ticket)){ret=-ECANCELED;break;}
@@ -177,11 +180,13 @@ int qpk_photo_store_initialize(void)
 int qpk_photo_store_submit(enum qpk_photo_owner owner,const struct qpk_photo_input *in,uint32_t *ticket)
 {
   if((unsigned)owner>=QPK_PHOTO_OWNERS||!in||!ticket||!in->data||!in->bytes||
-     in->bytes>QPK_PHOTO_COPY_MAX||(unsigned)in->format>QPK_PHOTO_BMP24)return -EINVAL;
+     in->bytes>QPK_PHOTO_COPY_MAX||(unsigned)in->format>QPK_PHOTO_BMP24||
+     in->aspect>CAMERA_ASPECT_COUNT||(in->format==QPK_PHOTO_JPEG&&in->aspect)||
+     in->image_width>4096||in->image_height>4096||(!in->image_width!=!in->image_height))return -EINVAL;
   if(in->format!=QPK_PHOTO_JPEG &&
      (!in->width||in->width>512*8||!in->height||in->height>2048||in->stride<in->width||
       in->stride>4096||in->bytes!=(size_t)in->stride*in->height*2||
-      in->zoom<100||in->zoom>300||in->style>2||
+      in->zoom<100||in->zoom>300||in->style>=CAMERA_COLOR_STYLE_COUNT||
       (in->format==QPK_PHOTO_BMP24&&in->width>512)||
       (in->format==QPK_PHOTO_BMP565&&(! (in->height*512/in->width)||in->height*512/in->width>2048))))return -EINVAL;
   if(in->root_override&&strlen(in->root_override)>95)return -ENAMETOOLONG;

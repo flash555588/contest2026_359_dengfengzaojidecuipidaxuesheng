@@ -46,3 +46,7 @@
 ## 对应代码 PR
 
 依赖顺序：[媒体与 PPA #13](https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng/pull/13) → [网络续租 #14](https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng/pull/14) → [桌面、运行时与 Grok #15](https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng/pull/15) → [配置门户与 HA 服务 #16](https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng/pull/16) → [59 类卡片与场景 #17](https://github.com/open-vela/contest2026_359_dengfengzaojidecuipidaxuesheng/pull/17)。日志 PR 可独立审阅。
+
+## 2026-10-21 后续补交
+
+后续会话和格式修正见 [本次补交说明](../2026-10-21-local/README.md)。当前文件的计数和摘要已同步；本目录清单的 original_snapshot_sessions 保留10月15日原快照摘要，原 source_integrity 仍描述当时读取的源文件。

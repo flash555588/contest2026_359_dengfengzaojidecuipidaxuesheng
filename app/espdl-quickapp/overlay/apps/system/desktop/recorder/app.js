@@ -2,9 +2,13 @@
 'use strict';
 
 const size = ui.getSize(), W = size.width, H = size.height;
+const theme=ui.theme||{background:ui.surface,onAccent:0xffffff,danger:0xd95068,cardRadius:18};
 const left = 24, top = 24, leftWidth = Math.round((W - 68) * 0.41);
 const right = left + leftWidth + 20, rightWidth = W - right - 24;
-const red = 0xd95068;
+const tight=H<520, narrow=rightWidth<460;
+const LIST_ROWS=Math.min(4,Math.max(2,Math.floor((H-(narrow?236:200))/74)));
+const meterCenter=tight?200:279;
+const red = theme.danger;
 let task = 0, operation = '', stopping = false, pendingClip = '';
 let clips = [], selected = '', page = 0, nextNumber = 1, loaded = false;
 let preferred = '', afterList = '', confirmClip = '', confirmTicks = 0;
@@ -16,7 +20,7 @@ function text(value, x, y, width, height, font, color) {
 }
 function panel(x, y, width, height) {
   const id = ui.panel(x, y, width, height, ui.card);
-  ui.setStyle(id, {radius: 22, borderWidth: 0}); return id;
+  ui.setStyle(id, {radius: theme.cardRadius, borderWidth: 0}); return id;
 }
 function time(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -35,25 +39,26 @@ function errorText(error, kind) {
     12: '内存不足，请稍后重试'})[code] || '操作失败，请重试';
 }
 
-ui.background(ui.surface);
+ui.background(theme.background);
 panel(left, top, leftWidth, H - 48);
 panel(right, top, rightWidth, H - 48);
 text('新录音', left + 22, 44, leftWidth - 44, 32, 28);
-const status = text('正在读取录音…', left + 22, 88, leftWidth - 44, 48, 20, ui.secondary);
-const clock = ui.number('00:00', left + 22, 142, leftWidth - 44, 64, ui.primary);
+const status = text('正在读取录音…', left + 22, 88, leftWidth - 44, tight?20:48, tight?16:20, ui.secondary);
+const clock = ui.number('00:00', left + 22, tight?112:142, leftWidth - 44, tight?48:64, ui.primary);
 ui.setStyle(clock, {borderWidth: 0});
-text('输入音量', left + 22, 218, leftWidth - 44, 24, 16, ui.secondary);
+text('输入音量', left + 22, tight?164:218, leftWidth - 44, 24, 16, ui.secondary);
 const bars = [];
 const step = (leftWidth - 44) / history.length;
 for (let i = 0; i < history.length; i++) {
-  const bar = ui.rect(Math.round(left + 22 + i * step), 277, Math.max(3, Math.floor(step - 4)), 4, ui.surface);
+  const bar = ui.rect(Math.round(left + 22 + i * step), meterCenter-2, Math.max(3, Math.floor(step - 4)), 4, ui.surface);
   ui.setStyle(bar, {radius: 2, borderWidth: 0}); bars.push(bar);
 }
 
-const recordButton = ui.button('开始录音', left + 22, H - 202, leftWidth - 44, 56, record, red);
-const stopButton = ui.button('停止并保存', left + 22, H - 132, leftWidth - 188, 52, stop, ui.accent);
-const cancelButton = ui.button('放弃本次', left + leftWidth - 154, H - 132, 132, 52, cancel, ui.surface);
-text('返回将放弃尚未保存的录音', left + 22, H - 66, leftWidth - 44, 24, 16, ui.secondary);
+const recordButton = ui.button('开始录音', left + 22, H - (tight?174:202), leftWidth - 44, tight?44:56, record, red);
+const stopWidth=Math.floor((leftWidth-56)/2);
+const stopButton = ui.button('停止并保存', left + 22, H - (tight?116:132), stopWidth, 52, stop, ui.accent);
+const cancelButton = ui.button('放弃本次', left + 34 + stopWidth, H - (tight?116:132), stopWidth, 52, cancel, ui.surface);
+text('返回将放弃尚未保存的录音', left + 22, H - (tight?54:66), leftWidth - 44, 24, 14, ui.secondary);
 
 text('录音列表', right + 22, 44, 142, 32, 28);
 const countLabel = text('0 条', right + rightWidth - 110, 51, 88, 24, 16, ui.secondary);
@@ -61,15 +66,16 @@ ui.setStyle(countLabel, {center: 1});
 const empty = text('还没有录音\n点击左侧开始录音', right + 38, 206, rightWidth - 76, 100, 20, ui.secondary);
 ui.setStyle(empty, {center: 1, ellipsis: 0});
 const rows = [];
-for (let i = 0; i < 4; i++) {
+for (let i = 0; i < LIST_ROWS; i++) {
   const y = 94 + i * 74;
-  const button = ui.button('', right + 16, y, rightWidth - 32, 66, () => select(page * 4 + i), ui.surface);
+  const button = ui.button('', right + 16, y, rightWidth - 32, 66, () => select(page * LIST_ROWS + i), ui.surface);
   ui.setStyle(button, {radius: 12, borderWidth: 0});
   rows.push({button,
     name: text('', right + 32, y + 8, rightWidth - 64, 27, 20),
     detail: text('', right + 32, y + 39, rightWidth - 64, 22, 16, ui.secondary)});
 }
 const selectionHint = text('选择录音后可以播放或删除', right + 176, 52, rightWidth - 308, 24, 14, ui.secondary);
+ui.setHidden(selectionHint,rightWidth<460);
 const playButton = ui.button('播放', right + 16, H - 80, 154, 44, play, ui.accent);
 const deleteButton = ui.button('删除', right + rightWidth - 160, H - 80, 144, 44, remove, ui.surface);
 const pagerDark=ui.primary>0x888888,pagerColor=pagerDark?0x2e303d:0xf3f2f7;
@@ -83,8 +89,8 @@ const pagerSlots=Array.from({length:5},()=>{
 });
 if(typeof ui.front==='function'){ui.front(pagerFace);pagerSlots.forEach(slot=>ui.front(slot.mark));}
 function drawPager(){
-  const total=Math.max(1,Math.ceil(clips.length/4)),count=Math.min(5,total),first=Math.max(0,Math.min(page-Math.floor(count/2),total-count));
-  const width=16+count*24,x=Math.round(right+rightWidth/2-width/2),y=H-82,visible=total>1;
+  const total=Math.max(1,Math.ceil(clips.length/LIST_ROWS)),count=Math.min(5,total),first=Math.max(0,Math.min(page-Math.floor(count/2),total-count));
+  const width=16+count*24,x=Math.round(right+rightWidth/2-width/2),y=H-(narrow?134:82),visible=total>1;
   ui.setHidden(pagerFace,!visible);ui.setPos(pagerFace,x,y+6);ui.setSize(pagerFace,width,28);
   pagerSlots.forEach((slot,i)=>{
     const shown=visible&&i<count;slot.page=shown?first+i:-1;
@@ -97,7 +103,7 @@ function drawPager(){
 }
 
 function enable(button, enabled, color, bright) {
-  ui.setStyle(button, {enabled: !!enabled, textColor: enabled && bright ? 0xffffff : ui.secondary});
+  ui.setStyle(button, {enabled: !!enabled, textColor: enabled && bright ? theme.onAccent : ui.primary});
   ui.setColor(button, enabled ? color : ui.surface);
 }
 function current() { return clips.find(clip => clip.clip === selected); }
@@ -116,11 +122,11 @@ function controls() {
   for (let i = 0; i < rows.length; i++) ui.setStyle(rows[i].button, {enabled: !busy});
 }
 function drawList() {
-  page = Math.min(page, Math.max(0, Math.ceil(clips.length / 4) - 1));
+  page = Math.min(page, Math.max(0, Math.ceil(clips.length / LIST_ROWS) - 1));
   ui.setText(countLabel, clips.length + ' 条');
   ui.setHidden(empty, clips.length > 0);
   for (let i = 0; i < rows.length; i++) {
-    const entry = clips[page * 4 + i], row = rows[i];
+    const entry = clips[page * LIST_ROWS + i], row = rows[i];
     for (const key of ['button', 'name', 'detail']) ui.setHidden(row[key], !entry);
     if (!entry) continue;
     ui.setText(row.name, title(entry.clip));
@@ -135,8 +141,8 @@ function drawList() {
 function meter(peak) {
   history.shift(); history.push(Math.min(1, Math.max(0, Number(peak) / 32768 || 0)));
   for (let i = 0; i < bars.length; i++) {
-    const height = Math.max(4, Math.round(Math.sqrt(history[i]) * 56));
-    ui.setPos(bars[i], Math.round(left + 22 + i * step), 279 - Math.floor(height / 2));
+    const height = Math.max(4, Math.round(Math.sqrt(history[i]) * (tight?32:56)));
+    ui.setPos(bars[i], Math.round(left + 22 + i * step), meterCenter - Math.floor(height / 2));
     ui.setSize(bars[i], Math.max(3, Math.floor(step - 4)), height);
     ui.setColor(bars[i], history[i] > 0 ? red : ui.surface);
   }
@@ -181,7 +187,7 @@ function select(index) {
 }
 function turnPage(delta) {
   if (task) return;
-  page = Math.max(0, Math.min(Math.ceil(clips.length / 4) - 1, page + delta));
+  page = Math.max(0, Math.min(Math.ceil(clips.length / LIST_ROWS) - 1, page + delta));
   confirmClip = ''; drawList();
 }
 function play() {
@@ -224,7 +230,7 @@ function poll() {
     }
     if (preferred && clips.some(clip => clip.clip === preferred)) selected = preferred;
     if (!clips.some(clip => clip.clip === selected)) selected = clips.length ? clips[0].clip : '';
-    if (preferred) page = Math.max(0, Math.floor(clips.findIndex(clip => clip.clip === selected) / 4));
+    if (preferred) page = Math.max(0, Math.floor(clips.findIndex(clip => clip.clip === selected) / LIST_ROWS));
     ui.setText(status, afterList); drawList(); return;
   }
   if (finished === 'record') {

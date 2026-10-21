@@ -1,116 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>大肥鱼桌宠</title>
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: #0b0f10; color: #f4ead6;
-      font-family: "Microsoft YaHei UI", "Noto Sans SC", sans-serif; }
-    .stage { position: relative; width: 960px; height: 540px; margin: 24px auto;
-      background: #101618; border-radius: 16px; overflow: hidden; }
-    .panel { position: absolute; inset: 24px 24px 24px 24px; padding: 20px 28px;
-      background: #0b0f10; }
-    h1 { margin: 0; font-size: 22px; color: #8ec8ea; font-weight: 600; }
-    .sub { margin: 8px 0 18px; color: #8b989c; font-size: 14px; }
-    .status { font-size: 16px; }
-    .bubble { margin-top: 8px; min-height: 24px; color: #c5d0d3; }
-    .meters { margin: 10px 0 18px; color: #8b989c; font-size: 14px; }
-    .row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-    button { border: 0; border-radius: 8px; color: #fff; height: 44px;
-      min-width: 88px; padding: 0 14px; font-size: 15px; cursor: pointer; }
-    .api { margin-top: 18px; color: #6b787c; font-size: 13px; }
-    .pet { position: absolute; right: 48px; bottom: 36px; width: 96px; height: 124px;
-      pointer-events: none; transition: transform 0.2s ease; }
-    .body { position: absolute; left: 10px; top: 36px; width: 76px; height: 62px;
-      background: #3d9ad1; border-radius: 40px; }
-    .belly { position: absolute; left: 24px; top: 64px; width: 48px; height: 26px;
-      background: #f4ead6; border-radius: 20px; }
-    .eye { position: absolute; top: 50px; width: 11px; height: 11px; background: #fff;
-      border-radius: 50%; }
-    .eye.l { left: 30px; } .eye.r { left: 55px; }
-    .pupil { position: absolute; top: 53px; width: 4px; height: 4px; background: #243040;
-      border-radius: 50%; }
-    .pupil.l { left: 33px; } .pupil.r { left: 58px; }
-    .speech { position: absolute; left: -20px; top: 0; width: 140px; padding: 6px 8px;
-      background: #fff; color: #243040; border-radius: 10px; font-size: 12px;
-      text-align: center; }
-    .speech:empty { display: none; }
-  </style>
-</head>
-<body>
-  <div class="stage">
-    <div class="panel">
-      <h1>大肥鱼桌宠</h1>
-      <div class="sub">本地宠物 · 其他快应用可调用 system.pet</div>
-      <div class="status" id="status">自由散步</div>
-      <div class="bubble" id="bubble">戳我一下，或者让别的应用喊我</div>
-      <div class="meters" id="meters">心情 72  饥饿 28</div>
-      <div class="row">
-        <button style="background:#3d9ad1" data-act="wander">散步</button>
-        <button style="background:#2b6f9c" data-act="follow">跟随</button>
-        <button style="background:#1e272a" data-act="still">待着</button>
-      </div>
-      <div class="row">
-        <button style="background:#1fa97a" data-act="poke">戳一下</button>
-        <button style="background:#4f6fa8" data-act="talk">说句话</button>
-        <button style="background:#5686fe" data-act="chat">聊天</button>
-        <button style="background:#1e272a" data-act="toggle">显隐</button>
-      </div>
-      <div class="row">
-        <button style="background:#3d9ad1" data-feed="fish">小鱼干</button>
-        <button style="background:#e07a5f" data-feed="cake">蛋糕</button>
-        <button style="background:#d8a843" data-feed="candy">棒棒糖</button>
-        <button style="background:#e26d7f" data-feed="dango">团子</button>
-        <button style="background:#7aa2e3" data-feed="gem">钻石</button>
-      </div>
-      <div class="api">其他应用: system.pet.speak("番茄完成") / poke() / feed("fish")</div>
-    </div>
-    <div class="pet" id="pet">
-      <div class="speech" id="speech"></div>
-      <div class="body"></div>
-      <div class="belly"></div>
-      <div class="eye l"></div><div class="eye r"></div>
-      <div class="pupil l"></div><div class="pupil r"></div>
-    </div>
-  </div>
-  <script src="engine.js"></script>
-  <script>
-    const pet = createPet();
-    const status = document.getElementById('status');
-    const bubble = document.getElementById('bubble');
-    const meters = document.getElementById('meters');
-    const speech = document.getElementById('speech');
-    const petEl = document.getElementById('pet');
-    function modeLabel(mode) {
-      if (mode === 'follow') return '跟随指针';
-      if (mode === 'still') return '原地待着';
-      return '自由散步';
-    }
-    function render() {
-      const s = pet.getState();
-      status.textContent = modeLabel(s.mode) + (s.visible ? '' : ' · 已隐藏');
-      bubble.textContent = s.bubble || '（安静地呼吸）';
-      meters.textContent = '心情 ' + s.mood + '  饥饿 ' + s.hunger + '  朝向 ' + s.dir;
-      speech.textContent = s.bubble || '';
-      petEl.style.opacity = s.visible ? '1' : '0.2';
-      petEl.style.transform = s.jump > 0 ? 'translateY(-12px)' : 'none';
-    }
-    document.querySelector('.panel').addEventListener('click', function (e) {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      if (btn.dataset.act === 'wander') pet.setMode('wander');
-      if (btn.dataset.act === 'follow') pet.setMode('follow');
-      if (btn.dataset.act === 'still') pet.setMode('still');
-      if (btn.dataset.act === 'poke') pet.poke();
-      if (btn.dataset.act === 'talk') pet.say('梁白开，更适合国人的大硬鲸模型');
-      if (btn.dataset.act === 'chat') pet.chat('你好');
-      if (btn.dataset.act === 'toggle') pet.toggle();
-      if (btn.dataset.feed) pet.feed(btn.dataset.feed);
-      render();
-    });
-    render();
-  </script>
-</body>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大肥鱼 · 统一界面预览</title>
+<style>
+*{box-sizing:border-box}body{margin:24px;background:#e8e6ec;color:#292c38;font:14px "Microsoft YaHei",sans-serif}
+header{display:flex;align-items:center;gap:16px;margin-bottom:16px}a{color:inherit}
+main{display:flex;align-items:start;gap:24px;overflow:auto}#stage{position:relative;flex-shrink:0;overflow:hidden;border-radius:18px}
+#stage>*{position:absolute;margin:0;overflow:hidden}button{cursor:pointer;font:inherit;border:0;white-space:nowrap;padding:0 8px}
+button:active{filter:brightness(.93)}aside{min-width:220px;background:white;border-radius:18px;padding:20px}aside img{display:block;width:180px;margin:20px auto}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#303047;color:white;padding:12px 20px;border-radius:12px;z-index:10}
+</style>
+<header><strong>大肥鱼 · 浏览器预览</strong><a href="?theme=light">浅色</a><a href="?theme=dark">深色</a><span>与设备共用 app.js，交互使用本地状态</span></header>
+<main><div id="stage"></div><aside>女仆装素材预览<img src="preview-assets/maid-front.png" alt="蓝发鲸鱼娘女仆装正面">设备通过 SD 资源包加载完整三视图。</aside></main><div id="toast" hidden></div>
+<script>
+const query=new URLSearchParams(location.search),light=query.get('theme')!=='dark';
+const stage=document.getElementById('stage'),nodes=new Map();let nextId=1,toastTimer;
+const previewSize={width:Math.max(640,Math.min(1400,Number(query.get('width'))||1024)),height:Math.max(400,Math.min(900,Number(query.get('height'))||504))};
+stage.style.width=previewSize.width+'px';stage.style.height=previewSize.height+'px';
+function hex(color){return '#'+Number(color).toString(16).padStart(6,'0');}
+function node(tag,text,x,y,w,h,color){const el=document.createElement(tag);el.textContent=text;Object.assign(el.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px'});el.style[tag==='div'?'background':'color']=hex(color);stage.appendChild(el);const id=nextId++;nodes.set(id,el);return id;}
+globalThis.ui={primary:light?0x252d46:0xf4f2ff,getSize:()=>previewSize,isVisible:()=>!document.hidden,
+ background:color=>stage.style.background=hex(color),
+ text:(value,x,y,font,color)=>{const id=node('p',value,x,y,100,30,color);nodes.get(id).style.fontSize=font+'px';return id;},
+ panel:(x,y,w,h,color)=>node('div','',x,y,w,h,color),
+ button:(value,x,y,w,h,action,color)=>{const id=node('button',value,x,y,w,h,0);nodes.get(id).style.background=hex(color);nodes.get(id).onclick=action;return id;},
+ setText:(id,value)=>nodes.get(id).textContent=value,
+ setSize:(id,w,h)=>Object.assign(nodes.get(id).style,{width:w+'px',height:h+'px'}),
+ setHidden:(id,hidden)=>nodes.get(id).hidden=hidden,
+ setColor:(id,color)=>{const el=nodes.get(id);el.style[el.tagName==='P'?'color':'background']=hex(color);},
+ setStyle:(id,style)=>{const el=nodes.get(id),s=el.style;
+  if('radius'in style)s.borderRadius=style.radius+'px';if('borderWidth'in style)s.border=style.borderWidth+'px solid '+hex(style.borderColor||0);
+  if('textColor'in style)s.color=hex(style.textColor);if('fontSize'in style)s.fontSize=style.fontSize+'px';
+  if(style.rightAlign)s.textAlign='right';if(style.center)s.textAlign='center';
+  if('ellipsis'in style){s.whiteSpace=style.ellipsis?'nowrap':'normal';s.textOverflow=style.ellipsis?'ellipsis':'clip';s.lineHeight=style.ellipsis?'1.1':'1.4';}}
+};
+globalThis.system={storage:{get:key=>localStorage.getItem(key),set:(key,value)=>localStorage.setItem(key,value)}};
+const browserInput=window.prompt.bind(window);
+globalThis.prompt={input:(options,done)=>done(browserInput(options.title,'')),showToast:text=>{const el=document.getElementById('toast');el.textContent=text;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,1800);}};
+</script>
+<script src="engine.js"></script><script src="app.js"></script>
 </html>

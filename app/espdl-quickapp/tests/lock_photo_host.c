@@ -57,6 +57,22 @@ int main(int argc,char **argv)
   assert(!glass_lock_cover_request(GLASS_COVER_LOCK,"https://fixture/cover"));quiet();
   assert(glass_lock_cover_take(GLASS_COVER_LOCK,&out)&&!out.error&&out.pixels);free(out.pixels);
   assert(atomic_load(&downloads)==fetched+1);
+  /* The desktop owns a separate result/generation, with one bounded decoder
+   * worker shared by all views. Cancelling another view cannot steal its art. */
+  assert(glass_lock_cover_request(GLASS_COVER_HOME+1,"https://fixture/cover")==-EINVAL);
+  assert(glass_lock_cover_request(0,"https://fixture/cover")==-EINVAL);
+  assert(!glass_lock_cover_request(GLASS_COVER_HOME,"https://fixture/cover"));quiet();
+  glass_lock_cover_cancel(GLASS_COVER_MUSIC);
+  assert(!glass_lock_cover_take(GLASS_COVER_MUSIC,&out));
+  assert(glass_lock_cover_take(GLASS_COVER_HOME,&out)&&!out.error&&out.pixels);free(out.pixels);
+  atomic_store(&cover_entered,false);atomic_store(&hold_cover,true);
+  assert(!glass_lock_cover_request(GLASS_COVER_HOME,"https://fixture/hold-home"));
+  while(!atomic_load(&cover_entered))usleep(1000);
+  assert(glass_lock_cover_request(GLASS_COVER_MUSIC,"https://fixture/cover")==-EBUSY);
+  glass_lock_cover_cancel(GLASS_COVER_HOME);atomic_store(&hold_cover,false);quiet();
+  assert(!glass_lock_cover_take(GLASS_COVER_HOME,&out));
+  assert(!glass_lock_cover_request(GLASS_COVER_MUSIC,"https://fixture/cover"));quiet();
+  assert(glass_lock_cover_take(GLASS_COVER_MUSIC,&out)&&!out.error&&out.pixels);free(out.pixels);
   for(unsigned i=0;i<20;i++){assert(!glass_lock_photo_request());glass_lock_photo_cancel();quiet();assert(!glass_lock_photo_take(&out));}
   assert(!unlink(GLASS_LOCK_PHOTO_PATH));assert(!glass_lock_photo_request());out=take();assert(out.error==-ENOENT && !out.pixels);
   FILE *f=fopen(GLASS_LOCK_PHOTO_PATH,"wb");assert(f);fputs("not a JPEG",f);fclose(f);
@@ -64,5 +80,5 @@ int main(int argc,char **argv)
   f=fopen(GLASS_LOCK_PHOTO_PATH,"wb");assert(f);assert(!fseek(f,LOCK_JPEG_MAX,SEEK_SET));fputc(0,f);fclose(f);
   assert(!glass_lock_photo_request());out=take();assert(out.error==-E2BIG && !out.pixels);
   glass_lock_photo_cancel();usleep(10000);
-  puts("LOCK_PHOTO_SERVICE_OK: real baseline JPEG decoder, RGB565 frame, 20 cancellation cycles, missing/corrupt/oversized SD file and ownership cleanup");return 0;
+  puts("LOCK_PHOTO_SERVICE_OK: real baseline JPEG decoder, RGB565 frame, independent home/music/lock owners, single-worker busy/cancel/retry, 20 cancellation cycles, missing/corrupt/oversized SD file and ownership cleanup");return 0;
 }

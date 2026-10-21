@@ -5,10 +5,11 @@ const names = ['物体分类', '人脸跟随'];
 // desktop uses, so the app follows the current theme without hardcoding it.
 const light = ((ui.card >> 16) & 255) + ((ui.card >> 8) & 255) + (ui.card & 255) > 384;
 const colors = {
-  background: ui.card, card: ui.surface, inset: ui.card, primary: ui.primary,
-  secondary: ui.secondary, accent: ui.accent, onAccent: light ? 0xffffff : 0x252d46,
-  border: light ? 0xcbd0e6 : 0x505975,
-  good: light ? 0x237f73 : 0x7bd8bb, error: light ? 0xa53949 : 0xffa4af
+  background: ui.theme ? ui.theme.background : ui.card, card: ui.card, inset: ui.surface, primary: ui.primary,
+  secondary: ui.secondary, accent: ui.accent, onAccent: ui.theme ? ui.theme.onAccent : light ? 0xffffff : 0x252d46,
+  border: ui.theme ? ui.theme.border : light ? 0xcbd0e6 : 0x505975,
+  good: ui.theme ? ui.theme.success : light ? 0x237f73 : 0x7bd8bb,
+  error: ui.theme ? ui.theme.danger : light ? 0xa53949 : 0xffa4af
 };
 let mode = 1, request = 0, frame = 0, devices = [], deviceIndex = 0, switching = false;
 let afterStop = '', lastDeviceCheck = 0, fpsStart = 0, fpsFrame = 0, fps = '--';
@@ -22,7 +23,7 @@ function label(value, x, y, w, h, font = 16, color = colors.primary, center = fa
   ui.setSize(id, w, h); ui.setStyle(id, {center, ellipsis: true});
   labels.set(id, value); return id;
 }
-function card(x, y, w, h, fill = colors.card, radius = 24) {
+function card(x, y, w, h, fill = colors.card, radius = 18) {
   const id = ui.panel(x, y, w, h, fill);
   ui.setStyle(id, {radius, borderColor: colors.border, borderWidth: 1, borderOpacity: 100});
   return id;
@@ -45,6 +46,7 @@ const buttons = [];
 const modeHint = label('选择模式后点击开始', 364, 18, 260, 24, 16, colors.secondary);
 card(size.width - 188, 8, 164, 36, colors.card, 18);
 label('本地识别 · 无需联网', size.width - 184, 14, 156, 24, 16, colors.accent, true);
+ui.setHidden(modeHint,size.width<900);
 
 const bodyY = 64, footerY = size.height - 64, bodyH = footerY - bodyY - 16;
 const leftW = Math.min(512, Math.floor((size.width - 64) * 0.54));
@@ -72,25 +74,26 @@ function showPreview(show) {
   ui.setHidden(preview, !show); placeholder.forEach(id => ui.setHidden(id, show));
 }
 
-const resultH = bodyH - 116;
+const compact=size.height<504,deviceH=compact?72:100;
+const resultH = bodyH - deviceH - 16;
 card(rightX, bodyY, rightW, resultH);
-const section = label('跟随状态', rightX + 24, bodyY + 16, rightW - 48, 24, 16, colors.secondary);
-const title = label('', rightX + 24, bodyY + 48, rightW - 48, 40, 28);
-const detail = label('', rightX + 24, bodyY + 92, rightW - 48, 40, 16, colors.secondary);
+const section = label('跟随状态', rightX + 24, bodyY + (compact?8:16), rightW - 48, 24, compact?14:16, colors.secondary);
+const title = label('', rightX + 24, bodyY + (compact?32:48), rightW - 48, compact?28:40, compact?20:28);
+const detail = label('', rightX + 24, bodyY + (compact?60:92), rightW - 48, compact?22:40, compact?14:16, colors.secondary);
 const rows = [];
 for (let i = 0; i < 3; i++) {
-  const y = bodyY + 140 + i * 36;
-  const name = label('', rightX + 24, y, rightW - 146, 28);
-  const value = label('--', rightX + rightW - 114, y, 90, 28, 16, colors.accent);
-  const line = ui.rect(rightX + 24, y + 30, rightW - 48, 2, colors.border);
-  const bar = ui.rect(rightX + 24, y + 30, 1, 2, colors.accent);
+  const y = bodyY + (compact?86:140) + i * (compact?24:36);
+  const name = label('', rightX + 24, y, rightW - 146, compact?20:28,compact?14:16);
+  const value = label('--', rightX + rightW - 114, y, 90, compact?20:28, compact?14:16, colors.accent);
+  const line = ui.rect(rightX + 24, y + (compact?21:30), rightW - 48, 2, colors.border);
+  const bar = ui.rect(rightX + 24, y + (compact?21:30), 1, 2, colors.accent);
   ui.setHidden(bar, true);
   rows.push({name, value, line, bar});
 }
 const deviceY = bodyY + resultH + 16;
-card(rightX, deviceY, rightW, 100);
-label('当前相机', rightX + 20, deviceY + 12, rightW - 40, 24, 16, colors.secondary);
-const source = button('检测相机', rightX + 16, deviceY + 42, rightW - 32, cycleDevice, false, 44);
+card(rightX, deviceY, rightW, deviceH);
+label('当前相机', rightX + 20, deviceY + (compact?4:12), rightW - 40, compact?20:24, compact?14:16, colors.secondary);
+const source = button('检测相机', rightX + 16, deviceY + (compact?24:42), rightW - 32, cycleDevice, false, 44);
 const status = label('请选择相机后开始', 24, footerY + 4, leftW, 44, 16, colors.secondary);
 const startButton = button('开始跟随', rightX, footerY, rightW - 116, start, true);
 const stopButton = button('停止', rightX + rightW - 104, footerY, 104, cancel);

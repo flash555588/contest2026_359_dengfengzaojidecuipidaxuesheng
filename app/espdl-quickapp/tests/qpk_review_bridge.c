@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <quickjs.h>
 #include "qpk_runtime.h"
+#include "glass_app_controls.h"
+#include "qpk_app_theme.h"
 #include "glass_icons.h"
 #include "glass_ime.h"
 #define QPK_EVENT_BUDGET 80
@@ -151,8 +153,9 @@ int qpk_runtime_launch(lv_obj_t *root,const char *name,const char *package,const
   qpk_runtime_stop();snprintf(g_qpk.package,sizeof(g_qpk.package),"%s",package);review_error[0]=0;g_qpk.root=root;g_qpk.font_cb=font;g_qpk.toast_cb=toast;g_qpk.dialog_cb=dialog;
   uint32_t background=lv_color_to_u32(lv_obj_get_style_bg_color(root,0));
   bool light=((background>>16)&255)+((background>>8)&255)+(background&255)>384;
-  g_qpk.primary_color=light?0x252d46:0xf4f2ff;g_qpk.secondary_color=light?0x616981:0xabb3cd;
-  g_qpk.surface_color=light?0xe9eafa:0x303752;g_qpk.accent_color=light?0x5860bf:0xb4a6ff;g_qpk.card_color=background;
+  struct glass_app_palette palette=glass_app_palette(light);
+  g_qpk.primary_color=palette.ink;g_qpk.secondary_color=palette.muted;
+  g_qpk.surface_color=palette.soft;g_qpk.accent_color=palette.accent;g_qpk.card_color=palette.paper;
   g_qpk.runtime=JS_NewRuntime();g_qpk.context=JS_NewContext(g_qpk.runtime);g_qpk.input_callback=JS_UNDEFINED;
   lv_obj_add_event_cb(root,qpk_event_touched,LV_EVENT_PRESSED,NULL);
   lv_obj_add_event_cb(root,qpk_event_touched,LV_EVENT_PRESSING,NULL);
@@ -167,6 +170,7 @@ int qpk_runtime_launch(lv_obj_t *root,const char *name,const char *package,const
   JS_SetPropertyStr(c,ui,"onSwipe",JS_NewCFunctionMagic(c,review_pointer,"onSwipe",1,JS_CFUNC_generic_magic,1));
   JS_SetPropertyStr(c,ui,"primary",JS_NewUint32(c,g_qpk.primary_color));JS_SetPropertyStr(c,ui,"secondary",JS_NewUint32(c,g_qpk.secondary_color));
   JS_SetPropertyStr(c,ui,"surface",JS_NewUint32(c,g_qpk.surface_color));JS_SetPropertyStr(c,ui,"card",JS_NewUint32(c,g_qpk.card_color));JS_SetPropertyStr(c,ui,"accent",JS_NewUint32(c,g_qpk.accent_color));
+  qpk_app_theme_bind(c,ui,light);
   JS_SetPropertyStr(c,global,"ui",ui);
   JS_SetPropertyStr(c,global,"__nativePreview",JS_NewCFunction(c,review_preview,"preview",3));
   JS_SetPropertyStr(c,global,"__nativeInput",JS_NewCFunction(c,js_prompt_input,"input",2));

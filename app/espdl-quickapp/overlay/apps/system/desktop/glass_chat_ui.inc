@@ -895,22 +895,11 @@ static void glass_chat_show_mode(bool from_apps,bool ball_mode)
   chat_display_expand();
   g_desktop.chat_page = true; g_desktop.chat_return_apps = from_apps;
   bool light = g_desktop.light_theme;
-  g_chat_ui.background = light ? 0xf5f7f7 : 0x151b21;
-  g_chat_ui.surface = light ? 0xffffff : 0x242d35;
-  g_chat_ui.sidebar = light ? 0xe9efed : 0x1b252b;
-  g_chat_ui.primary = light ? 0x1c3433 : 0xe7f0ee;
-  g_chat_ui.secondary = light ? 0x647d79 : 0x98afa9;
-  g_chat_ui.accent = light ? 0x18796c : 0x246f64;
-  g_chat_ui.on_accent = 0xffffff;
-  if(!ball_mode){
-    g_chat_ui.background=light?0xfaf9f6:0x1c1c1a;
-    g_chat_ui.surface=light?0xffffff:0x272725;
-    g_chat_ui.sidebar=light?0xf0efeb:0x161615;
-    g_chat_ui.primary=light?0x272724:0xecebe6;
-    g_chat_ui.secondary=light?0x83837b:0x99998f;
-    g_chat_ui.accent=light?0x292925:0xecebe6;
-    g_chat_ui.on_accent=light?0xffffff:0x1c1c1a;
-  }
+  struct glass_app_palette palette=glass_app_palette(light);
+  g_chat_ui.background=palette.canvas;g_chat_ui.surface=palette.paper;
+  g_chat_ui.sidebar=palette.paper;g_chat_ui.primary=palette.ink;
+  g_chat_ui.secondary=palette.muted;g_chat_ui.accent=palette.accent;
+  g_chat_ui.on_accent=palette.on_accent;
   lv_obj_set_pos(card, 0, 0); lv_obj_set_size(card, 1024, CHAT_CONTENT_HEIGHT);
   lv_obj_set_style_radius(card, 0, 0); lv_obj_set_style_border_width(card, 0, 0);
   lv_obj_set_style_bg_color(card, lv_color_hex(g_chat_ui.background), 0);

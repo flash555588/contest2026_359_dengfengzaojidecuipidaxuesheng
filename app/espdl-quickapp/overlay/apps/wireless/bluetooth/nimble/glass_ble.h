@@ -21,6 +21,8 @@ struct glass_ble_state
   uint32_t generation,scan_generation;
   uint16_t mtu;
   bool encrypted,bonded;
+  bool peer_valid,disconnecting;
+  struct glass_ble_device peer;
 };
 struct glass_ble_hid_state
 {

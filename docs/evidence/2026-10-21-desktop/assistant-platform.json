@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "scope": "Production adapters and real ESP-DL worker; camera hardware/model, weather provider and audio are fixtures.",
+  "markers": [
+    "ASSISTANT_PLATFORM_WEATHER_OK: real snapshot formatting, freshness, missing data, refresh receipt, spoken cache labels, busy audio, speech identity and unavailable diagnostics",
+    "ASSISTANT_ACTIONS_OK: shared HA schema, RGB bounds, extra-target/lock rejection and fresh execution-time permission boundary",
+    "ASSISTANT_PHOTO_ASYNC_OK: owned receipt survives replaced inference; fsync cancellation remains pending until cleanup and never reports success",
+    "ASSISTANT_PLATFORM_CAMERA_OK: real snapshot/classifier workers, no model for plain capture, saved BMP, stable photo receipt, recognition results, cancellation, ownership and preview receipt mapping"
+  ]
+}

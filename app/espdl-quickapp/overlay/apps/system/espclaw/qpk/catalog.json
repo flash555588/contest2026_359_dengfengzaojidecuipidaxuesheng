@@ -10,7 +10,7 @@
         "manifest.json",
         "app.js"
       ],
-      "source_sha256": "5afb533340f6a57f8b27af13177d326f6497e62ab8fbde904793a0b7f87db16b",
+      "source_sha256": "7eb178114b03495c95c416b33674ad8201dc849c3dd221fae67f742fb4eef066",
       "origin": "desktop_main.c: g_hello_qpk_js",
       "verification": "ui-layout-fix/evidence/review-light/light-hello.json 与 review-dark/dark-hello.json；espdl-quickapp/evidence/ui-before-13/light-hello.json 保留了后续版页面记录。这些是对应旧固件的界面验证，不能代替新应用验收。"
     },
@@ -24,7 +24,7 @@
         "manifest.json",
         "app.js"
       ],
-      "source_sha256": "aef46fb6f70d4160a843a0e2a890c8b40b337dfbf3c3e9061c74e84d5bb8b2f8",
+      "source_sha256": "62b52ce69407c72afd8bfea6a16937216aaf5b41aefdfe85b406b0216d89b6eb",
       "origin": "desktop_main.c: g_2048_qpk_js",
       "verification": "ui-layout-fix/evidence/review-light/light-2048.json 和 review-dark/dark-2048.json 是已有页面审计。游戏边界和连续操作由本次宿主测试另行验证，不能将页面截图当作全部玩法通过。"
     },

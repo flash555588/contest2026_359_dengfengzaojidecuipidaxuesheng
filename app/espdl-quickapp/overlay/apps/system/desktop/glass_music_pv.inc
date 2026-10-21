@@ -29,10 +29,7 @@ static unsigned music_pv_glyphs(const char *s)
 
 static const lv_font_t *music_pv_font(unsigned size)
 {
-  if(size==72&&g_glass.music_font72)return g_glass.music_font72;
-  if(size==72&&g_glass.font72)return g_glass.font72;
-  if(size>=48&&g_glass.font48)return g_glass.font48;
-  return zh_font(size>=28?28:20);
+  return music_lyric_font(size);
 }
 
 static bool music_pv_punctuation(const char *s)
@@ -74,6 +71,7 @@ static void music_pv_plan(struct music_pv_ui *p,const char *text,const char *tra
   for(unsigned i=0;i<5;i++)lv_obj_set_style_text_color(secondary[i],lv_color_hex(p->secondary),0);
   bool bilingual=translation[0]!=0;
   music_pv_text(p->translation,translation);
+  lv_obj_set_style_text_font(p->translation,music_lyric_font(20),0);
   if(bilingual)lv_obj_remove_flag(p->translation,LV_OBJ_FLAG_HIDDEN);
   else lv_obj_add_flag(p->translation,LV_OBJ_FLAG_HIDDEN);
   lv_obj_set_style_bg_color(p->rule,lv_color_hex(p->secondary),0);

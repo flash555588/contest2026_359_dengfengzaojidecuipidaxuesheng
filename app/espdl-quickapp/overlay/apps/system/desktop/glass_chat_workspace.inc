@@ -3,7 +3,7 @@
 static void chat_workspace_border(lv_obj_t *object)
 {
   lv_obj_set_style_border_width(object,1,0);
-  lv_obj_set_style_border_color(object,lv_color_hex(g_desktop.light_theme?0xe1dfd9:0x383834),0);
+  lv_obj_set_style_border_color(object,lv_color_hex(detail_line()),0);
 }
 static void chat_workspace_voice(lv_event_t *event)
 {

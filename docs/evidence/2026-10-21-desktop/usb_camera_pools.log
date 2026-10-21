@@ -1,0 +1,3 @@
+USB_BUS_POOL_OK: allocation failure, restart reuses metadata, DMA buffers retain 64-byte alignment
+USB_HUB_POOL_OK: allocation failure, bounded slots, disconnect/reconnect reuse and one lifetime allocation
+USB_HUB_LIFECYCLE_OK: 100 restarts, controller exits before join, exactly one queue/sem release

@@ -1,0 +1,247 @@
+{
+  "date": "2026-10-21",
+  "javascript": {
+    "passed": 238,
+    "failed": 0
+  },
+  "host_checks": [
+    {
+      "name": "ble_central",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_ble_central.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/ble_central"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "photo_storage",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_photo_storage.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/photo_storage"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "photo_store",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_photo_store.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/photo_store"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "usb_camera_pools",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_usb_camera_pools.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/usb_camera_pools"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "usb_interfaces",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_usb_interfaces.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/usb_interfaces"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "camera_sync",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_camera_sync.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/camera_sync"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "camera_boundary",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_camera_boundary.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/camera_boundary"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "interface_protocols",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_interface_protocols.py",
+        "--output",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/uncommitted-20261021/validation/interface_protocols",
+        "--apps",
+        "/home/flash/vela-p4/bot-agent-20261021/apps"
+      ],
+      "returncode": 0,
+      "initial_returncode": 1,
+      "rerun": "Short isolated mount fixture; same nested output directory. INTERFACE_PROTOCOLS_OK."
+    },
+    {
+      "name": "lock_photo",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/tools/test_lock_photo.py"
+      ],
+      "returncode": 0
+    },
+    {
+      "name": "sd_pack",
+      "command": [
+        "python3",
+        "/mnt/c/Users/11937/Documents/ChatGPT/vela/project/app/espdl-quickapp/assets/sd-pack/assemble.py",
+        "--verify"
+      ],
+      "returncode": 0
+    }
+  ],
+  "assistant_platform": "passed; offline hardware/model/audio/network boundaries",
+  "pet_appearance": "passed; 12 images; 60 replacements; late/hidden/corrupt/missing cases; QuickJS binding compile",
+  "music_native": "passed in current conversation; both themes; pixel bounds; 60 rebuild/open cycles; ASan/UBSan",
+  "music_icon_padding": {
+    "pause": {
+      "top": 17,
+      "bottom": 17
+    },
+    "play": {
+      "top": 18,
+      "bottom": 18
+    }
+  },
+  "source_whitespace_check": "passed",
+  "credential_pattern_scan": {
+    "findings": 0,
+    "completeness_guaranteed": false
+  },
+  "historical_materials_uploaded": false,
+  "historical_materials_excluded_by_user": true,
+  "full_firmware_linked_this_batch": false,
+  "flashed_this_batch": false,
+  "source_sha256": {
+    "app/bilibili_live/bili_live.c": "4dd125c4141483a9b79ccf845047c4b4578930ddf025366a3269597f856b53aa",
+    "app/bilibili_live/local_album_ui.c": "61645e7b9a554dbde794963f76bdcb6f1aca25e6fb56b9ab35aaea8173f47944",
+    "app/bilibili_live/local_video_ui.c": "d57e1105555771abdaa7cc1a30e8d82f45c0146f13ba2ad95bb965b7c1c63968",
+    "app/espdl-quickapp/UNIFIED-UI.md": "2d57e2dc79fceae9d08712aa1f1a7a842636bd8e39cb7833d42f490b86e0210d",
+    "app/espdl-quickapp/assets/lyric-fonts.lock.json": "9b67f00482ef5e8efaf7d1591780ef6b9a78d3b741b1327c2e10c7f896958a10",
+    "app/espdl-quickapp/evidence/recorder-js-validation.json": "f380070ae400e08ec6e700b85a8dbdd1a8005f690793cf5fe335b7c4fc5b830e",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera/app.js": "d5851377d678f875bac81581edc09623c2fc85b0ea10a617765c08727dc665ef",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_color.h": "feb2e6ab041944a470f6b5b4cdc7fcc1ab577b6f7c9973d806d9964dd31d0d85",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_frame.h": "ccb57c57cb3a9f21149542efce90677de4aa72d724b2d4ddf70cd06f80c39ac9",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_reference_controls.h": "73ed4332b2a090a910f1db83e81ce5949edefba066f23498e95e39c7cf944ff9",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_reference_layout.h": "41724fc30434207172fcabc622c818867f7516cab6219d0cee689165211f257c",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_reference_pixels.h": "ed76f9e6921e0253be7cc0d2647834ad12b609abdfd92df5df59db25a2b1adb9",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_reference_ui.h": "7fca012878245e80b9b51eba96f10670825078a36ad0272bea57726b29cd5b50",
+    "app/espdl-quickapp/overlay/apps/system/desktop/camera_resource.c": "b707bb1bdad1136459c283ffe3b4e430d34f4b1dcc31166976e54e3ecb962ea2",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/README.md": "f47fe77b7f43993c3ecac3a2256071128e6d045cf002101c64a5d1005282a3cb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/app.js": "d6604c31b994584da321b2247bda421f5e5613126aa82851efd538caa0547ce6",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/preview-assets/maid-front.png": "d2960fb24e13222b64467cd82e594bbe755bde15121677fcbd873f48bb0e0812",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/preview-assets/sources.json": "318800d6a5605fb80ec7292da887ca41368f08fbcbd07b6b59d0d6853f451e13",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/preview.html": "37ebfe3f06470faee8b0320010429e575efa9b45f99b1c307938ecc8b1133d87",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu/qpk/app.js": "f59244dba06716ba3efa6ad7f5311044615bba975ff192f34e2436e2b8f0fd41",
+    "app/espdl-quickapp/overlay/apps/system/desktop/dafeiyu_resource.c": "60d8001118f39d6055ac9ac6f3fa48146890d0addd3a9c28ac49a63fd78a3ab9",
+    "app/espdl-quickapp/overlay/apps/system/desktop/desktop_main.c": "011ef88f3891d0eefd4a34ced91d053db2b2793e3cf4f2166da857591883515d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/espdl/app.js": "932a29dae619ce0dad82f348dd19649f70779e6f4b2bba830cfe0e5820e8b8bb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/espdl_resource.c": "5f2a66411c07d04a3dd4e1761c92de24433c2a1474488d507a1ddcf48122c021",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_app_controls.h": "885116c77e1c9d85b2367658403d460eeb0e929530aaf9de4d79314056fec733",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_app_theme.h": "9e4883b5812a3f1cb7f7d5ff08201f5d832eb63102ba14815ce0f213b299400e",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_ble.h": "39b679e896d71625793be9e6924ac916e3f4ad3b4bd2a02767862e207c202553",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_bluetooth.inc": "c37a4ff4f7c973ffe1b3ce2472617ca7513a13c1305da43e7655530b76506ea0",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_chat_ui.inc": "bae73d172afbc1ac744fa25d7fb90fc5bf1e6f3d151a232cbfbfda84b65b5b48",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_chat_workspace.inc": "ca9229f7ed0606006214d83f3efdb4bb1aed3627f54e3dee6b78ac6eacfbccc5",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_detail_ui.inc": "0cce3ef66c61f1886481f64699d7f385f4f24fc9cd0da11b076fa5cee08a2f36",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_home_ui.inc": "8a58dfc35001a586cb6f43ca61df7d4739f4545d602e3101aec7c3571a3d7deb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_ime.c": "50564a658095edb82a219187534a94c264b7c36282f4fb48043391b9f710247c",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lock_photo.c": "541d5184ee468d336415329aa70b093a96faf1a3100c433799c6f42818e30064",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lock_photo.h": "df07b36602b64570c0dc42371c44632ff7aeae2a6af6de18f6cb80a3222de62d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lockscreen.inc": "5e9ceaa599ff4ea6368525ef74244582cf397484dfbe59dd9cac0e1144f42069",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lyric_font_assets.h": "edbc92a0bea4a3af206cdcd68118cebf37764f07079982834cf354fa8c35978a",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lyric_fonts.inc": "50e7a4ad765f7761cc9c2a7d1056b132e965bab3eb40885d248ede7478ede45a",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_mouse.inc": "bbd4f9795c0001bfa7725a20131c4cc46ca1649ddfca5096ba6ce77f0afed426",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_cover_ui.inc": "b9ae223f3baf1463555f9b4241c436f2f2084f8167629f4bb9c5f44308632f5a",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_full.inc": "8792b3fc556378f5ba2bcb6dd78d03b12e3a9f1e9a9c41ab8aefeb06e9504eaa",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_pv.inc": "2fc676014a1b5a26786ec01dd86f8904a6a6c83912351e65782db669103d8cd4",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_ui.inc": "2ad716996869da8cc3227e30454a0479e4814bc0c9c431bfb393258b4751b2cf",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_portal_resource.c": "9b5780763b8eef67d05ec15c9c0d76d9c7207185c22cbcdf664be1de3c6578f9",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_qpk_assets.inc": "b505e09b4bd608b464da2e12d72995b784fe6dc0c844fd57678cee3d3f1b3aab",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_sd_font.c": "6df5f55681c866ada8c76b1d9aad7f1b51b6c075fee3a9e1c2ff8ed95d4aed6b",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_sd_font.h": "473ca842f738f1ec283fb03862cd2a37b0b0392f6a5977bad2cdf3c99e93dfa6",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_settings_ui.inc": "a2cdacfd13f553a98c19ca70fb8dbce955ec7a0807cb90aa5962c0627da589f9",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_sidebar.h": "435d9f991da27aa128db377b9cc03e3eec6548ada75ac788ad84297f7855e694",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_speech_ui.inc": "ddfd5b66b5a619dbc2eab3c8da70e843f928632b347bc7db85246056e84e71a3",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_status_ui.inc": "72f1b1bfc8337a0d9133d01591ad0a9b2fab06eeaa957c928c5b7fa64fc61087",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_ui.inc": "d84306557e1d7a0c8014cd00fbe9c0183c1f88a04d63898d19b14d2f5e0181d4",
+    "app/espdl-quickapp/overlay/apps/system/desktop/hass_ui_auth.h": "47c39bfe36e97d737d7adec92080865a06eeadfeb5099b60590d8fa213a187b5",
+    "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant/app.js": "128daff49e91a6cbb934e5fbd693eec487fb38085a2f62f793338b64309c91dd",
+    "app/espdl-quickapp/overlay/apps/system/desktop/homeassistant_resource.c": "1229e89deebdff6dab2934dfa995de0f7948ef605c0f3c95650515f35a770e8f",
+    "app/espdl-quickapp/overlay/apps/system/desktop/pet_lvgl.c": "e3aa95e3a8b04c4c9078957c21a2f8c7465037e2c028a4f54de4d48a237956e3",
+    "app/espdl-quickapp/overlay/apps/system/desktop/pet_lvgl.h": "3dbc22a506fa924dc36f608abe9733e72215a23772a43b563947c55ea2302ace",
+    "app/espdl-quickapp/overlay/apps/system/desktop/portal/style.css": "9dbefe185b052f9b09c91ed738ea759a910b9621da0c3df8f79f7f4df6459feb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_app_theme.h": "a85b1e9ab8c566e6f0597fba5183543468f1b152c0d01666a9d9aa14c08de3fc",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_scale.h": "fb7830e3237c82935a787fd6c6c55389316d9632aced22c481900690d724441d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_usb.inc": "7000239ecd6565c987b985f3d483d4f64309e9fd3b3d0575f11356b0870aca5d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_camera_video.inc": "c5453ad0cc7d98f4a7a4476d4c72354229d7e3a6daed36ee4c953cd2ea205792",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_mjpeg.c": "af1a55c2589054408df1a31c89ad02bfd06818a298f2066e5ec421fa9db05fa8",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_mjpeg.h": "4f73f8d48975721050353e23a1e768f87d0e3cdd9e580723f3c350bebbd773c1",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_pet.c": "e98c9258899391bad89e72f9751ead5828221a96266beac32e813775c8196589",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_photo_store.c": "590f8361ac252b5588558568168b8ee7635f42da5bee89a3912676e1252f83eb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_photo_store.h": "f8422a2bcb6327374f50f90e3491c6d0313ce08c5391792ede552be74fa5b76b",
+    "app/espdl-quickapp/overlay/apps/system/desktop/qpk_runtime.c": "96749c1b2809556b28ce27b7d73c1f2c4230ecd8332a673e74188d707cf943d6",
+    "app/espdl-quickapp/overlay/apps/system/desktop/recorder/app.js": "6ffd563d9f33d0fa73646b83e3632633749ce35f1ea23a008f3ab7a314170d28",
+    "app/espdl-quickapp/overlay/apps/system/desktop/recorder_resource.c": "49a6a3e3c1c7f9863e9953146d620d95ee17623783040ed8542548cc940885b5",
+    "app/espdl-quickapp/overlay/apps/system/espclaw/qpk/catalog.json": "c0014579088acef0f055da8f01710cadc262c38e63365faa7f5e562510658728",
+    "app/espdl-quickapp/overlay/apps/system/espclaw/qpk/game2048/app.js": "397960b3fde494f90bb890592ef28eb61b590f9a75f7e4fe2c6a549e9ae0c0be",
+    "app/espdl-quickapp/overlay/apps/system/espclaw/qpk/hello/app.js": "7da0093a2f7c95b9adc2f1e3fe9692e9a5d501772ced301bd7750c93779faf45",
+    "app/espdl-quickapp/overlay/apps/wireless/bluetooth/nimble/glass_ble.h": "022b0868be83ae4cb2ef31af3eae47361245a7f6b5526e4298f98b3deda5ab81",
+    "app/espdl-quickapp/overlay/apps/wireless/bluetooth/nimble/glass_ble_central.c": "d4b6590972ea7c57213d7e6f15183bff144fa3f7f606aa30e4ac4e1e677fc9be",
+    "app/espdl-quickapp/tests/README.md": "42be96be28facd234234dcfee77554b7be86c05e2e2a0df921b6b3702ae4fcdf",
+    "app/espdl-quickapp/tests/all_ui_fixture.js": "bf4fa6217f632eaa19a38e7714b252c7dd237fd3de2b6f059e1d2b762d2bd1ab",
+    "app/espdl-quickapp/tests/all_ui_services.c": "36ff82b66832d8aaa7d65e9c485fae235fac60d5120bc7f9a032098d6ffd6994",
+    "app/espdl-quickapp/tests/ble_central_host.c": "c75d82fdbe60283a58d01cfb3d183f24eee02fcb5c8e5c0a4dd19e914edb15b0",
+    "app/espdl-quickapp/tests/camera_upgrade.test.cjs": "a1088c1598331f9ca58f85b79f65bd5e30f91cc0c6ab2f8e864b121ac1682caa",
+    "app/espdl-quickapp/tests/dafeiyu.test.cjs": "b965879c5816ec3e756562894b46e91fa1bfb111d8677f91ff8cdb3016e12d6b",
+    "app/espdl-quickapp/tests/lock_photo_host.c": "d1c2123e778f379332b0d01f7fe105abe55296ccb32442e06b368e603c433734",
+    "app/espdl-quickapp/tests/pet_appearance_host.c": "2fd82f4942173b34243e298b2ac6be85bec159dd2ad88f0c0456b85ab53ce316",
+    "app/espdl-quickapp/tests/photo_store_host.c": "b6c208f02a96cc294030aa9a887a06b65eb2735f7f64bf796c3d84cdb0e6d83e",
+    "app/espdl-quickapp/tests/qpk_review_bridge.c": "6b8f50263e1c18e02257f67dfeb3e4b34d1c67c158184f650458d892fd4b74e9",
+    "app/espdl-quickapp/tests/render_all_page_lifetime.c": "b68674d60d05777e5e0d17f0e38201952979d4998b1a3972b2fccbfef7fecc0c",
+    "app/espdl-quickapp/tests/render_bluetooth_list.c": "d5562cdb1047f735016b0fc08ef2daaef74083f0680a1c78c828b1132e1ae750",
+    "app/espdl-quickapp/tests/render_camera_upgrade.c": "2e0d9afeed2343e86ed9f53d3c0e2676f31660d9d7f9fa24a91e3d935fbb348e",
+    "app/espdl-quickapp/tests/render_dafeiyu.c": "d548742b7c7b6928c4670759b09e9f5fd67df42ea1f689a3bc9022eee9e01af5",
+    "app/espdl-quickapp/tests/render_lyric_fonts.c": "5e12f88787b81f6ca08776234074c05ab2878fdc7021a3b03af1be4a4bcdcb30",
+    "app/espdl-quickapp/tests/render_music_app.c": "00dd2db67e0dc3ac25b8a8959f357602016fa9c677c34a20e530b4d1b2dd0528",
+    "app/espdl-quickapp/tests/render_music_full.c": "a57ca00ed023d1f0b25fc6a11205a314aa45901e9ad65823e10be4369d8127d9",
+    "app/espdl-quickapp/tests/render_other_pages.c": "11069391c29948ca46da7fdebc4e2b6863976d343f385dea369df00408ff3053",
+    "app/espdl-quickapp/tests/render_wireless_ui.c": "c5d8beba1f863dbdb1ec30fb3d5af1dc359ba1ca08f05b1396bb5a04c7d4e954",
+    "app/espdl-quickapp/tests/run_camera_controls.py": "0be2fbd3cb504ea41e14ebeef8c360172b60c21a998875def8e92e1e21d1616e",
+    "app/espdl-quickapp/tests/run_camera_photo_zoom.py": "7833d469443216ac6c83b6fb8af6d917579b7e2cac24d9a2bd20f2b2f9213449",
+    "app/espdl-quickapp/tests/run_camera_video.py": "92fe3ec5ca4fe207232ae568c4d56367023e1c0dfacca608ab14c330f474934a",
+    "app/espdl-quickapp/tests/test_camera_app.js": "7bedb0ba8b987414fc9b2ae54e8d056da53210966405936cb6bc9e7dfd0f10a7",
+    "app/espdl-quickapp/tests/test_mjpeg_preview.c": "0144827c3b22b643cde5dc5ecc1d27dd90ee2842a1154f81684d48d5c4e9e167",
+    "app/espdl-quickapp/tests/unified_ui.test.cjs": "b981eff48beaf1a59a46a1c2eb8631bc9593804066ac30e954113231ec567002",
+    "app/homeassistant/homeassistant_resource.c": "1229e89deebdff6dab2934dfa995de0f7948ef605c0f3c95650515f35a770e8f",
+    "app/homeassistant_resource.c": "1229e89deebdff6dab2934dfa995de0f7948ef605c0f3c95650515f35a770e8f",
+    "quickapp/camera/app.js": "d5851377d678f875bac81581edc09623c2fc85b0ea10a617765c08727dc665ef",
+    "quickapp/homeassistant/app.js": "128daff49e91a6cbb934e5fbd693eec487fb38085a2f62f793338b64309c91dd",
+    "tools/build_board_mcp.py": "899a6d2b1276777ac0e81a45e32b91c81b6cb7a32d04310ce9c23292c61018a2",
+    "tools/build_jizura_device.py": "5a80293f9558bdefd86b8f15b53b65058ecbb5f51a070426ffee66d1ec227438",
+    "tools/generate_app_ui.py": "e39f7a0a038ff12bdba703121388004594c97c9bcd2676f53de1af5c6e91906d",
+    "tools/generate_camera_reference.py": "3fc9ee8c8e45c8b384e04cc0754cae577bddd5a12cd278204aa416778f4fe0d0",
+    "tools/prepare_lyric_fonts.py": "7beaee3371383c030b66fbb269322dfdde0befa3dfbb904897090f70e8a35268",
+    "tools/render_all_ui.py": "cb981e84783e764d0dae25b8c338d0693dc26c5c77e0972b48f3269eb39e34fb",
+    "tools/test_interface_protocols.py": "24cb3f3f29e099a479d3b743b132e870e77609e5efd7669c5c06228650d2d0bb",
+    "tools/test_lyric_font_failures.py": "8d7a671eda32ba10581af45c574d5d06e4587a3c0b3d2e60764e112f2573b437",
+    "tools/test_pet_appearance.py": "961ca36d05f90d17860a5020e8b0c2af041f077f91dadcc9afded3d3afe96d8d"
+  }
+}

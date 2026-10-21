@@ -3,13 +3,13 @@
 static const lv_font_t *home_font(int size);
 static lv_obj_t *home_text(lv_obj_t *,const char *,int,int,int,int,uint32_t);
 static lv_obj_t *home_icon(lv_obj_t *,const char *,int,int,int,uint32_t);
-static uint32_t detail_canvas(void){return g_desktop.light_theme?0xf4f5f8:0x15171e;}
-static uint32_t detail_paper(void){return g_desktop.light_theme?0xffffff:0x22252f;}
-static uint32_t detail_soft(void){return g_desktop.light_theme?0xf3f2f7:0x2e303d;}
-static uint32_t detail_line(void){return g_desktop.light_theme?0xe8e9ef:0x383b48;}
-static uint32_t detail_ink(void){return g_desktop.light_theme?0x292c38:0xeeeef5;}
-static uint32_t detail_muted(void){return g_desktop.light_theme?0x808491:0xa2a7b7;}
-static uint32_t detail_accent(void){return g_desktop.light_theme?0x77658f:0xc1aedb;}
+static uint32_t detail_canvas(void){return glass_app_palette(g_desktop.light_theme).canvas;}
+static uint32_t detail_paper(void){return glass_app_palette(g_desktop.light_theme).paper;}
+static uint32_t detail_soft(void){return glass_app_palette(g_desktop.light_theme).soft;}
+static uint32_t detail_line(void){return glass_app_palette(g_desktop.light_theme).line;}
+static uint32_t detail_ink(void){return glass_app_palette(g_desktop.light_theme).ink;}
+static uint32_t detail_muted(void){return glass_app_palette(g_desktop.light_theme).muted;}
+static uint32_t detail_accent(void){return glass_app_palette(g_desktop.light_theme).accent;}
 #include "glass_sidebar.h"
 static void detail_page(lv_obj_t *card)
 {
@@ -21,13 +21,8 @@ static void detail_page(lv_obj_t *card)
 }
 static lv_obj_t *detail_tile(lv_obj_t *parent,int x,int y,int w,int h)
 {
-  lv_obj_t *tile=glass_box(parent,x,y,w,h,detail_paper(),18);
-  lv_obj_set_style_border_width(tile,1,0);
-  lv_obj_set_style_border_color(tile,lv_color_hex(detail_line()),0);
-  lv_obj_set_style_shadow_width(tile,12,0);
-  lv_obj_set_style_shadow_ofs_y(tile,4,0);
-  lv_obj_set_style_shadow_opa(tile,g_desktop.light_theme?8:0,0);
-  lv_obj_set_style_shadow_color(tile,lv_color_hex(0x18243c),0);
+  lv_obj_t *tile=glass_box(parent,x,y,w,h,detail_paper(),GLASS_APP_CARD_RADIUS);
+  glass_app_panel_style(tile,detail_paper(),detail_line());
   return tile;
 }
 static lv_obj_t *detail_text(lv_obj_t *parent,const char *text,int x,int y,int w,int size,uint32_t color)

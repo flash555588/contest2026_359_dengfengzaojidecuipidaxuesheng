@@ -19,8 +19,8 @@
     {
       "file_path": "logs/flash555588/2026-10-12/codex__01a13068-e466-7580-9273-24720cdd2ff0.jsonl",
       "events": 2207,
-      "bytes": 5808244,
-      "sha256": "493062b1227a69f15014a3ff3dc68f1fa5a19aa83abeb324f5f730975f8d05da",
+      "bytes": 5882900,
+      "sha256": "061d3d9db59269d5fcdf2ec099fd828b3824a301af0af7da99454eee5eb6e61b",
       "source_integrity": [
         {
           "source_file": "rollout-2026-10-12T21-59-03-01a13068-e466-7580-9273-24720cdd2ff0.jsonl",
@@ -42,8 +42,8 @@
     {
       "file_path": "logs/flash555588/2026-10-13/codex__01a13476-90fb-7e90-919f-cb755ae031b5.jsonl",
       "events": 3460,
-      "bytes": 13766279,
-      "sha256": "d6a10c935c4e17880b424f2b7a28286848b05631f029bcb95024d662771ca8ef",
+      "bytes": 13884277,
+      "sha256": "2e235c62b0e68f43014a0082ef3d86092731f2284c68ae87f790bce75c100135",
       "source_integrity": [
         {
           "source_file": "rollout-2026-10-13T16-52-28-01a13476-90fb-7e90-919f-cb755ae031b5.jsonl",
@@ -79,9 +79,9 @@
     },
     {
       "file_path": "logs/flash555588/2026-10-14/codex__01a13cd3-24e8-7e43-9e21-885adf415700.jsonl",
-      "events": 830,
-      "bytes": 4088773,
-      "sha256": "43b33637849f67a1c3895f06d53369fcb6f1f721cf914a677d418a30004078c9",
+      "events": 3753,
+      "bytes": 15959040,
+      "sha256": "3a98927c8c5343db4ac21dc91a4017470ecec34bbd21e963dd13673d9a91bc9a",
       "source_integrity": [
         {
           "source_file": "rollout-2026-10-15T07-50-33-01a13cd3-24e8-7e43-9e21-885adf415700.jsonl",
@@ -274,5 +274,27 @@
       "export_sha256": "ae84278e4a60439bc1c857f7a4e01b97f8132156ac5bc3511800c1ff13eb2e08",
       "bytes": 189772
     }
-  ]
+  ],
+  "current_files_reconciled_at": "2026-10-21T05:42:02.965934+00:00",
+  "original_snapshot_sessions": [
+    {
+      "file_path": "logs/flash555588/2026-10-12/codex__01a13068-e466-7580-9273-24720cdd2ff0.jsonl",
+      "events": 2207,
+      "bytes": 5808244,
+      "sha256": "493062b1227a69f15014a3ff3dc68f1fa5a19aa83abeb324f5f730975f8d05da"
+    },
+    {
+      "file_path": "logs/flash555588/2026-10-13/codex__01a13476-90fb-7e90-919f-cb755ae031b5.jsonl",
+      "events": 3460,
+      "bytes": 13766279,
+      "sha256": "d6a10c935c4e17880b424f2b7a28286848b05631f029bcb95024d662771ca8ef"
+    },
+    {
+      "file_path": "logs/flash555588/2026-10-14/codex__01a13cd3-24e8-7e43-9e21-885adf415700.jsonl",
+      "events": 830,
+      "bytes": 4088773,
+      "sha256": "43b33637849f67a1c3895f06d53369fcb6f1f721cf914a677d418a30004078c9"
+    }
+  ],
+  "reconciliation_note": "The sessions list describes current files after the 2026-10-21 backfill/schema repair. original_snapshot_sessions preserves the earlier export checksums; its original source_integrity records remain historical."
 }

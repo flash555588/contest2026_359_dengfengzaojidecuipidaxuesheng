@@ -35,12 +35,17 @@ names = ['desktop_main.c', 'glass_agent.c', 'glass_agent_profiles.h', 'glass_boa
          'glass_chat.h', 'glass_chat_service.c', 'glass_chat_store.c', 'glass_chat_ui.inc',
          'glass_chat_trace.inc', 'glass_chat_cards.inc', 'glass_icons.h', 'glass_icons.c']
 names += ['glass_sd_font.c','glass_sd_font.h','glass_sd_font_asset.h',
+          'glass_music_cover_ui.inc','glass_lock_photo.h',
+          'glass_lyric_fonts.inc','glass_lyric_font_assets.h',
+          'glass_bluetooth.inc','glass_mouse.inc','glass_ble.h','glass_ble_central.h',
           'glass_music_hans.h','glass_music_hans_table.h','glass_lock_pages.inc',
           'glass_settings_ui.inc','glass_about_ui.inc']
 names += ['glass_assistant.h','glass_board_assistant.c','glass_assistant_platform.c','glass_assistant_tools.h',
           'qpk_storage.c','qpk_storage.h','qpk_runtime.c','qpk_runtime.h','qpk_espdl.h','qpk_espdl_service.c',
           'glass_speech.c','glass_speech.h']
 sources = [Path('apps/system/desktop') / name for name in names]
+sources += [Path('apps/wireless/bluetooth/nimble')/name for name in
+            ['glass_ble.h','glass_ble.c','glass_ble_central.h','glass_ble_central.c']]
 sources += [Path('apps/system/espclaw/port') / name for name in ['espclaw_main.c', 'espclaw_qpk.c']]
 sources += [Path('apps/system/espclaw/include/claw_stream.h')]
 sources += [Path('apps/system/c6probe')/name for name in ['status_rssi.h','status_rssi.inc']]

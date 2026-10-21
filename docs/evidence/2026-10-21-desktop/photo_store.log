@@ -1,0 +1,10 @@
+[photo-io] begin owner=1 ticket=1 bytes=230454 directory=/tmp/photo-writer-0nw8tbhb/photos
+[photo-io] done owner=1 ticket=1 error=0 copy_us=175 write_us=909
+[photo-io] done owner=0 ticket=2 error=-125 copy_us=57 write_us=0
+[photo-io] begin owner=0 ticket=3 bytes=4 directory=/tmp/photo-writer-0nw8tbhb/photos
+[photo-io] done owner=0 ticket=3 error=-125 copy_us=14 write_us=89
+[photo-io] begin owner=0 ticket=4 bytes=4 directory=/tmp/photo-writer-0nw8tbhb/photos
+[photo-io] done owner=0 ticket=4 error=0 copy_us=9 write_us=38
+[photo-io] begin owner=0 ticket=5 bytes=393282 directory=/tmp/photo-writer-0nw8tbhb/photos
+[photo-io] done owner=0 ticket=5 error=0 copy_us=147 write_us=1299
+PHOTO_ASYNC_OK: slow fsync off producer, independent copied payload, two bounded owners, duplicate rejection, stale ID, queued/fsync cancellation, JPEG/BMP565/BMP24, allocation error and clean shutdown

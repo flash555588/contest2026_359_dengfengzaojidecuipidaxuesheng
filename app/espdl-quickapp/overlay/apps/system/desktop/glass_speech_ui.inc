@@ -60,16 +60,20 @@ static void glass_speech_open(lv_event_t *event)
 {
   (void)event;lv_obj_t *card=panel_card("语音服务");if(!card)return;g_speech_ui.root=card;
   lv_obj_add_event_cb(card,speech_ui_delete,LV_EVENT_DELETE,NULL);
+  detail_page(card);detail_sidebar(card,"语音服务",LV_SYMBOL_AUDIO,panel_hide);
   uint32_t ink=theme_primary(),muted=theme_secondary();
-  glass_text(card,"本地唤醒 · 联网识别与 AI",28,74,900,28,ink);
-  glass_text(card,"唤醒词：" GLASS_WAKE_PHRASE " · 全局默认开启 · 中文播报保持本地",28,116,920,16,muted);
-  g_speech_ui.status=glass_text(card,"等待唤醒，也可以直接开始语音输入",28,158,920,22,ink);
-  g_speech_ui.result=glass_text(card,"",28,198,920,20,ink);lv_obj_set_height(g_speech_ui.result,72);
-  glass_button(card,"开始联网语音",28,284,240,theme_card(),speech_ui_action,(void *)0);
-  glass_button(card,"结束输入",288,284,180,theme_card(),speech_ui_action,(void *)2);
-  glass_button(card,"测试中文播报",488,284,220,theme_card(),speech_ui_action,(void *)1);
-  g_speech_ui.feedback=glass_text(card,"识别后交给联网 AI 处理；新语音请求会接管麦克风。",28,354,920,18,muted);
-  lv_obj_set_height(g_speech_ui.feedback,168);
+  detail_text(card,"本地唤醒 · 联网识别与 AI",196,28,804,28,ink);
+  detail_text(card,"唤醒词：" GLASS_WAKE_PHRASE " · 全局默认开启 · 中文播报保持本地",196,72,804,16,muted);
+  lv_obj_t *input=detail_tile(card,196,116,804,180);
+  g_speech_ui.status=detail_text(input,"等待唤醒，也可以直接开始语音输入",20,18,764,20,ink);
+  g_speech_ui.result=detail_text(input,"",20,60,764,20,ink);lv_obj_set_height(g_speech_ui.result,96);
+  lv_label_set_long_mode(g_speech_ui.result,LV_LABEL_LONG_WRAP);
+  detail_button(card,"开始联网语音",196,316,252,speech_ui_action,(void *)0);
+  detail_button(card,"结束输入",460,316,252,speech_ui_action,(void *)2);
+  detail_button(card,"测试中文播报",724,316,252,speech_ui_action,(void *)1);
+  lv_obj_t *reply=detail_tile(card,196,380,804,168);
+  g_speech_ui.feedback=detail_text(reply,"识别后交给联网 AI 处理；新语音请求会接管麦克风。",20,18,764,18,muted);
+  lv_obj_set_height(g_speech_ui.feedback,132);lv_label_set_long_mode(g_speech_ui.feedback,LV_LABEL_LONG_WRAP);
   g_speech_ui.timer=lv_timer_create(speech_ui_update,120,NULL);
 }
 #endif
