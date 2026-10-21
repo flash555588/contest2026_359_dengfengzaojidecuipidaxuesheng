@@ -7,6 +7,7 @@ function widget(label = '') { widgets.push(label); properties.push({}); return w
 const ui = {getSize:()=>({width:1022,height:536}), primary:0x252d46, secondary:0x616981,
   surface:0xe9eafa, card:0xf5f6fd, accent:0x5860bf, background(){},cameraReference(){},cameraReferenceZoom(){},cameraReferenceControls(){},onTouch(){},setOpacity(){},
   setSize:(id,w,h)=>Object.assign(properties[id],{w,h}),
+  setPos:(id,x,y)=>Object.assign(properties[id],{x,y}),
   setStyle:(id,style)=>Object.assign(properties[id],style),
   setHidden:(id,hidden)=>properties[id].hidden=hidden, setColor(){},
   panel:()=>widget(), rect:()=>widget(), text:widget, button:widget, setText:(id,s)=>widgets[id]=s};
@@ -24,12 +25,12 @@ const ctx = {ui, system, Date, Math, Array, Object, String, setInterval:fn=>{tim
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(process.argv[2], 'utf8'), ctx);
 const app = ctx.CameraPreview;
-assert(widgets.length <= 64, 'The camera page must fit the widget budget');
+assert(widgets.length + 1 <= 64, 'The camera page and native scene must fit the widget budget');
 const startButton = widgets.indexOf('开始预览');
 assert(startButton > 0 && !widgets.includes('停止'));
 // A detected device is selected automatically and renames the row.
 assert(widgets.some(text => text.includes('HD Web Camera')), widgets.join('|'));
-assert(widgets.some(text => text.includes('MJPEG')), 'The mode button must report the MJPEG mode');
+assert(widgets.some(text => text === '640 x 480'), 'The selected resolution must be reported');
 assert.equal(properties[startButton].enabled, true);
 // Selecting and starting keeps the existing single-device lifecycle.
 app.start();
@@ -58,5 +59,5 @@ app.refresh();
 assert(widgets.some(text => text.includes('未检测到摄像头')) || widgets.some(text => text.includes('未连接摄像头')));
 assert.equal(properties[startButton].enabled, false);
 app.stop();
-assert(widgets.some(text => text.includes('未检测到')));
+assert(widgets.some(text => text.includes('未连接摄像头')));
 console.log('PASS: camera device list, MJPEG mode, start/stop lifecycle and disconnect');

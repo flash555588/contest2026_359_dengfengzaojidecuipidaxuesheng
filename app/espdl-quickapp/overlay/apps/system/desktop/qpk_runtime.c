@@ -35,6 +35,8 @@
 #include <quickjs.h>
 
 #include "qpk_runtime.h"
+#include "glass_app_controls.h"
+#include "qpk_app_theme.h"
 #include "qpk_security.h"
 #include "qpk_cli_origin.h"
 #include "qpk_error_text.h"
@@ -277,6 +279,7 @@ static uint64_t g_photo_status_ms;
 static uint64_t qpk_now_ms(void);
 static unsigned qpk_camera_zoom_percent(void);
 static unsigned qpk_camera_style(void);
+static unsigned qpk_camera_aspect(void);
 #include "camera_color.h"
 #include "qpk_camera_video.inc"
 
@@ -342,14 +345,17 @@ static void qpk_camera_stage_photo(const struct qpk_photo_input *input)
   pthread_mutex_unlock(&g_camera_lock);
 }
 
-static void qpk_camera_save(const uint16_t *pixels,unsigned source_width)
+static void qpk_camera_save_region(const uint16_t *pixels,unsigned source_width,unsigned image_width,unsigned image_height)
 {
   struct qpk_photo_input input={.format=QPK_PHOTO_BMP565,.data=pixels,
     .bytes=QPK_CAMERA_FRAME_SIZE,.width=source_width,.height=QPK_CAMERA_RAW_HEIGHT,
     .stride=QPK_CAMERA_RAW_WIDTH,.zoom=qpk_camera_zoom_percent(),
-    .style=qpk_camera_style(),.root_override=QPK_PHOTO_DIR};
+    .style=qpk_camera_style(),.aspect=qpk_camera_aspect(),
+    .image_width=image_width,.image_height=image_height,.root_override=QPK_PHOTO_DIR};
   qpk_camera_stage_photo(&input);
 }
+static void qpk_camera_save(const uint16_t *pixels,unsigned source_width)
+{qpk_camera_save_region(pixels,source_width,source_width,600);}
 
 bool qpk_runtime_camera_capture_request(uint32_t *request)
 {
@@ -389,11 +395,42 @@ int qpk_runtime_camera_photo_status(uint32_t request,char *path,size_t cap)
 #include "camera_reference_layout.h"
 static unsigned g_camera_zoom_percent=100;
 static unsigned g_camera_style;
+static unsigned g_camera_aspect;
+struct qpk_camera_view_state {unsigned zoom,style,aspect;};
+static struct qpk_camera_view_state qpk_camera_view_state(void)
+{
+  pthread_mutex_lock(&g_camera_lock);
+  struct qpk_camera_view_state state={g_camera_zoom_percent,g_camera_style,g_camera_aspect};
+  pthread_mutex_unlock(&g_camera_lock);return state;
+}
+static unsigned qpk_camera_aspect(void)
+{pthread_mutex_lock(&g_camera_lock);unsigned value=g_camera_aspect;pthread_mutex_unlock(&g_camera_lock);return value;}
+static bool qpk_camera_aspect_set(unsigned value)
+{
+  if(value>CAMERA_ASPECT_COUNT)return false;
+  int recording=qpk_video_status(NULL);if(recording>=1&&recording<=3)return false;
+  pthread_mutex_lock(&g_camera_lock);g_camera_aspect=value;pthread_mutex_unlock(&g_camera_lock);return true;
+}
 static unsigned g_camera_ui_action;
+static bool g_camera_filters_open;
 static unsigned qpk_camera_style(void)
 {pthread_mutex_lock(&g_camera_lock);unsigned value=g_camera_style;pthread_mutex_unlock(&g_camera_lock);return value;}
 static bool qpk_camera_style_set(unsigned value)
-{if(value>2)return false;pthread_mutex_lock(&g_camera_lock);g_camera_style=value;pthread_mutex_unlock(&g_camera_lock);return true;}
+{if(value>=CAMERA_COLOR_STYLE_COUNT)return false;pthread_mutex_lock(&g_camera_lock);g_camera_style=value;pthread_mutex_unlock(&g_camera_lock);return true;}
+static bool qpk_camera_filters_open(void)
+{pthread_mutex_lock(&g_camera_lock);bool open=g_camera_filters_open;pthread_mutex_unlock(&g_camera_lock);return open;}
+static void qpk_camera_filters_set(bool open)
+{pthread_mutex_lock(&g_camera_lock);g_camera_filters_open=open;pthread_mutex_unlock(&g_camera_lock);}
+static bool qpk_camera_filter_action(int action)
+{
+  if(action==6){qpk_camera_filters_set(!qpk_camera_filters_open());return true;}
+  if(action==16){qpk_camera_aspect_set(qpk_camera_aspect()%CAMERA_ASPECT_COUNT+1);return true;}
+  if(action>=8&&action<8+CAMERA_COLOR_STYLE_COUNT){qpk_camera_style_set(action-8);qpk_camera_filters_set(false);return true;}
+  if(action==CAMERA_FILTER_DISMISS){qpk_camera_filters_set(false);return true;}
+  if(action==CAMERA_FILTER_GAP)return true;
+  if(action==1||action==2||action==3||action==7)qpk_camera_filters_set(false);
+  return false;
+}
 static unsigned qpk_camera_zoom_percent(void)
 {
   pthread_mutex_lock(&g_camera_lock);unsigned value=g_camera_zoom_percent;
@@ -458,6 +495,17 @@ static void qpk_camera_pill(uint16_t *pixels, int x, int y, int width,
 
 /* A finished capture keeps its colour for a short moment and then the shutter
  * returns to the idle accent, so the button cannot stay green forever. */
+static void qpk_camera_filters_blit(uint16_t *pixels,unsigned selected)
+{
+  for(unsigned i=0;i<CAMERA_COLOR_STYLE_COUNT;i++){
+    int x=camera_reference_filter_x(i),y=camera_reference_filter_y(i);
+    uint16_t edge=qpk_camera_rgb565(i==selected?0xf13c2e:0x2b2e33);
+    int border=i==selected?2:1;
+    uint16_t color=qpk_camera_rgb565(camera_reference_filter_colors[i]);
+    qpk_camera_pill(pixels,x,y,40,40,6,edge,edge);
+    qpk_camera_pill(pixels,x+border,y+border,40-border*2,40-border*2,6-border,color,color);
+  }
+}
 static int qpk_camera_bar_status(void)
 {
   int status;
@@ -501,14 +549,14 @@ static void qpk_camera_digit(uint16_t *pixels,int x,int y,unsigned digit,uint16_
  * second frame. Downsample forward into the origin, then move bottom-up into
  * place: unread source pixels are never overwritten. Saved photos/video use
  * the original frame before this display-only operation. */
-static void qpk_camera_reference_prepare_view(uint16_t *pixels,unsigned source_width,unsigned zoom)
+static void qpk_camera_reference_prepare_frame(uint16_t *pixels,unsigned source_width,unsigned zoom,
+                                                unsigned image_width,unsigned image_height,unsigned aspect)
 {
   unsigned style=qpk_camera_style();
-  const unsigned width=CAMERA_REFERENCE_VIEW_RIGHT-CAMERA_REFERENCE_VIEW_LEFT;
-  unsigned height=600*width/source_width;
-  unsigned top=22+(556-height)/2;
-  unsigned crop_width=source_width*100/zoom,crop_height=600*100/zoom;
-  unsigned crop_x=(source_width-crop_width)/2,crop_y=(600-crop_height)/2;
+  struct camera_reference_rect view=camera_reference_output(source_width,aspect);
+  const unsigned width=view.w,height=view.h,top=view.y;
+  struct camera_reference_rect crop=camera_frame_crop(source_width,600,image_width,image_height,zoom,aspect);
+  unsigned crop_width=crop.w,crop_height=crop.h,crop_x=crop.x,crop_y=crop.y;
   for(unsigned y=0;y<crop_height;y++)
     memmove(pixels+y*1024,pixels+(crop_y+y)*1024+crop_x,crop_width*sizeof(uint16_t));
   /* A bounded 1140-byte map removes division from the per-pixel loop. */
@@ -528,35 +576,43 @@ static void qpk_camera_reference_prepare_view(uint16_t *pixels,unsigned source_w
     }
   }
   for(int y=(int)height-1;y>=0;y--)
-    memmove(pixels+(top+y)*1024+CAMERA_REFERENCE_VIEW_LEFT,
+    memmove(pixels+(top+y)*1024+view.x,
              pixels+y*1024,width*sizeof(uint16_t));
   memset(pixels,0,top*1024*sizeof(uint16_t));
   memset(pixels+(top+height)*1024,0,(600-top-height)*1024*sizeof(uint16_t));
 }
+static void qpk_camera_reference_prepare_view(uint16_t *pixels,unsigned source_width,unsigned zoom)
+{qpk_camera_reference_prepare_frame(pixels,source_width,zoom,source_width,600,0);}
 
 /* The atlas is shared with the LVGL entry screen: no alternate icon family. */
-static int qpk_camera_bar_draw(uint16_t *pixels,unsigned source_width,bool prepared)
+static int qpk_camera_bar_draw(uint16_t *pixels,unsigned source_width,const struct qpk_camera_view_state *prepared,
+                               unsigned image_width,unsigned image_height)
 {
-  unsigned zoom=qpk_camera_zoom_percent();
-  unsigned style=qpk_camera_style();
+  /* Keep the decoded image, style and frame together across control changes. */
+  struct qpk_camera_view_state state=prepared?*prepared:qpk_camera_view_state();
+  unsigned zoom=state.zoom,style=state.style;
   bool selected_video=qpk_video_selected();
   int zoom_index=camera_reference_zoom_index(zoom);
-  if (!prepared) qpk_camera_reference_prepare_view(pixels,source_width,zoom);
+  bool filters=qpk_camera_filters_open();
+  unsigned aspect=state.aspect;
+  struct camera_reference_rect output=camera_reference_output(source_width,aspect);
+  if (!prepared) qpk_camera_reference_prepare_frame(pixels,source_width,zoom,image_width,image_height,aspect);
   else {
-    unsigned width=CAMERA_REFERENCE_VIEW_RIGHT-CAMERA_REFERENCE_VIEW_LEFT;
-    unsigned height=600*width/source_width,top=22+(556-height)/2;
+    struct camera_reference_rect view=output;
+    unsigned width=view.w,height=view.h,top=view.y;
     for(unsigned y=0;y<600;y++)if(y<top||y>=top+height)
       memset(pixels+y*1024+CAMERA_REFERENCE_VIEW_LEFT,0,width*sizeof(*pixels));
   }
   int status=qpk_camera_bar_status();
   for(int y=0;y<600;y++){
     if(y<22||y>=578){memset(pixels+y*1024,0,1024*sizeof(uint16_t));continue;}
-    memset(pixels+y*1024,0,CAMERA_REFERENCE_VIEW_LEFT*sizeof(uint16_t));
-    memset(pixels+y*1024+CAMERA_REFERENCE_VIEW_RIGHT,0,(1024-CAMERA_REFERENCE_VIEW_RIGHT)*sizeof(uint16_t));
+    memset(pixels+y*1024,0,output.x*sizeof(uint16_t));
+    memset(pixels+y*1024+output.x+output.w,0,(1024-output.x-output.w)*sizeof(uint16_t));
   }
   uint16_t line=qpk_camera_rgb565(0x676268);
-  for(unsigned i=0;i<sizeof(camera_reference_guides)/sizeof(camera_reference_guides[0]);i++){
-    const int *r=camera_reference_guides[i];
+  struct camera_reference_rect frame=camera_reference_frame(source_width,image_width,image_height,zoom,aspect);
+  for(unsigned i=0;i<CAMERA_REFERENCE_GUIDE_COUNT;i++){
+    int r[4];camera_reference_guide(frame,i,r);
     for(int y=r[1];y<r[1]+r[3];y++)
       for(int x=r[0];x<r[0]+r[2];x++)pixels[y*1024+x]=line;
   }
@@ -566,7 +622,7 @@ static int qpk_camera_bar_draw(uint16_t *pixels,unsigned source_width,bool prepa
     for(int y=0;y<t->h;y++)memcpy(pixels+(t->y+y)*1024+t->x,
                                   data+y*t->w,t->w*sizeof(uint16_t));
   }
-  for(int row=0;row<4;row++){
+  for(int row=0;!filters&&row<4;row++){
     const uint16_t *tile=camera_reference_zoom_pixels[3-row==zoom_index][3-row];
     for(int y=0;y<48;y++)memcpy(pixels+(180+row*64+y)*1024+708,tile+y*48,96);
   }
@@ -588,11 +644,20 @@ static int qpk_camera_bar_draw(uint16_t *pixels,unsigned source_width,bool prepa
   if(status==1)qpk_camera_capture_ring(pixels,0xffff);
   else if(status)qpk_camera_disc(pixels,892,364,4,
                qpk_camera_rgb565(status<0?0xe34f4f:0x2fbf8f));
+  if(filters)qpk_camera_filters_blit(pixels,style);
+  if(!filters){
+    unsigned ah=aspect?camera_aspect_height(32,aspect):20;
+    uint16_t gray=qpk_camera_rgb565(0x9ba0a8);
+    qpk_camera_pill(pixels,812,534-ah/2,32,ah,2,gray,gray);
+    qpk_camera_pill(pixels,813,535-ah/2,30,ah-2,1,0,0);
+    for(unsigned i=0;i<4;i++)qpk_camera_disc(pixels,812+i*10,566,2,
+      qpk_camera_rgb565(aspect==i+1?0xf13c2e:0x2b2e33));
+  }
   return status;
 }
 
 static int qpk_camera_bar_blit(uint16_t *pixels,unsigned source_width)
-{ return qpk_camera_bar_draw(pixels,source_width,false); }
+{ return qpk_camera_bar_draw(pixels,source_width,NULL,source_width,600); }
 
 static uint64_t qpk_now_ms(void)
 {
@@ -1691,11 +1756,23 @@ static JSValue js_ui_camera_reference_controls(JSContext *context,JSValueConst s
 {
   (void)self;int handle=qpk_arg_int(context,argc,argv,0,0);
   int style=qpk_arg_int(context,argc,argv,1,0);bool video=argc>2&&JS_ToBool(context,argv[2]);
-  if(strcmp(g_qpk.package,"com.openvela.camera.preview")||style<0||style>2||
+  bool ready=argc<4||JS_ToBool(context,argv[3]);
+  bool menu=argc>4&&JS_ToBool(context,argv[4]);
+  bool filters=argc>5&&JS_ToBool(context,argv[5]);
+  int width=qpk_arg_int(context,argc,argv,6,1024),height=qpk_arg_int(context,argc,argv,7,600);
+  int canvas=qpk_arg_int(context,argc,argv,8,1024),zoom=qpk_arg_int(context,argc,argv,9,100);
+  int aspect=qpk_arg_int(context,argc,argv,10,0);
+  if(strcmp(g_qpk.package,"com.openvela.camera.preview")||style<0||style>=CAMERA_COLOR_STYLE_COUNT||
+     width<=0||width>4096||height<=0||height>4096||(canvas!=896&&canvas!=1024)||
+     camera_reference_zoom_index(zoom)<0||aspect<0||aspect>CAMERA_ASPECT_COUNT||
      handle<=0||handle>g_qpk.widget_capacity||!g_qpk.widgets[handle-1])
     return JS_ThrowRangeError(context,"invalid camera controls");
-  return JS_NewBool(context,camera_reference_ui_controls(g_qpk.widgets[handle-1],style,video));
+  return JS_NewBool(context,camera_reference_ui_controls(g_qpk.widgets[handle-1],style,video,ready,menu,filters,width,height,canvas,zoom,aspect));
 }
+static JSValue js_camera_aspect(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{(void)self;(void)argc;(void)argv;return JS_NewUint32(context,qpk_camera_aspect());}
+static JSValue js_camera_set_aspect(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
+{(void)self;return JS_NewBool(context,qpk_camera_aspect_set(qpk_arg_int(context,argc,argv,0,0)));}
 static JSValue js_camera_style(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
 {(void)self;(void)argc;(void)argv;return JS_NewInt32(context,qpk_camera_style());}
 static JSValue js_camera_set_style(JSContext *context,JSValueConst self,int argc,JSValueConst *argv)
@@ -1719,13 +1796,11 @@ static JSValue js_ui_panel(JSContext *context, JSValueConst this_value,
                  qpk_arg_int(context, argc, argv, 1, 0));
   lv_obj_set_size(panel, qpk_arg_int(context, argc, argv, 2, 100),
                   qpk_arg_int(context, argc, argv, 3, 100));
-  lv_obj_set_style_bg_color(panel,
-      lv_color_hex(qpk_arg_color(context, argc, argv, 4, 0xffffff)), 0);
+  struct glass_app_palette palette=glass_app_palette(g_qpk.primary_color<0x888888);
+  glass_app_panel_style(panel,qpk_arg_color(context,argc,argv,4,palette.paper),palette.line);
   opacity = qpk_arg_int(context, argc, argv, 6, LV_OPA_COVER);
   lv_obj_set_style_bg_opa(panel, opacity, 0);
-  lv_obj_set_style_border_width(panel, 1, 0);
-  lv_obj_set_style_border_color(panel, lv_color_hex(0x344144), 0);
-  lv_obj_set_style_radius(panel, 8, 0);
+  lv_obj_set_style_radius(panel,qpk_arg_int(context,argc,argv,5,GLASS_APP_CARD_RADIUS),0);
   lv_obj_set_style_pad_all(panel, 0, 0);
   lv_obj_remove_flag(panel, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
   handle = qpk_add_widget(panel, QPK_WIDGET_PANEL);
@@ -2469,14 +2544,14 @@ static JSValue js_ui_button(JSContext *context, JSValueConst this_value,
                  qpk_arg_int(context, argc, argv, 2, 160));
   lv_obj_set_size(button, qpk_arg_int(context, argc, argv, 3, 300),
                   qpk_arg_int(context, argc, argv, 4, 54));
-  button_color = qpk_arg_color(context, argc, argv, 6, 0x6677f5);
+  struct glass_app_palette palette=glass_app_palette(g_qpk.primary_color<0x888888);
+  button_color = qpk_arg_color(context, argc, argv, 6, palette.soft);
   brightness = ((button_color >> 16) & 0xff) +
                ((button_color >> 8) & 0xff) + (button_color & 0xff);
-  text_color = brightness > 510 ? 0x172033 : 0xffffff;
-  lv_obj_set_style_bg_color(button, lv_color_hex(button_color), 0);
-  lv_obj_set_style_radius(button, 8, 0);
-  lv_obj_set_style_transform_width(button, 0, LV_STATE_PRESSED);
-  lv_obj_set_style_transform_height(button, 0, LV_STATE_PRESSED);
+  text_color = button_color==palette.accent?palette.on_accent:
+               button_color==palette.soft||button_color==palette.paper?palette.ink:
+               brightness>510?0x172033:0xffffff;
+  glass_app_control_style(button,button_color,palette.line);
   if(desktop_motion_button)desktop_motion_button(button);
   label = lv_label_create(button);
   if (label == NULL)
@@ -4183,7 +4258,7 @@ static void qpk_install_api(JSContext *context)
   JS_SetPropertyStr(context, object, "nowMs",
                     JS_NewCFunction(context, js_ui_now_ms, "nowMs", 0));
   JS_SetPropertyStr(context, object, "cameraReferenceControls",
-                    JS_NewCFunction(context, js_ui_camera_reference_controls, "cameraReferenceControls", 3));
+                    JS_NewCFunction(context, js_ui_camera_reference_controls, "cameraReferenceControls", 11));
   JS_SetPropertyStr(context, object, "cameraReferenceZoom",
                     JS_NewCFunction(context, js_ui_camera_reference_zoom, "cameraReferenceZoom", 2));
   JS_SetPropertyStr(context, object, "cameraReference",
@@ -4253,6 +4328,7 @@ static void qpk_install_api(JSContext *context)
                     JS_NewUint32(context, g_qpk.card_color));
   JS_SetPropertyStr(context, object, "accent",
                     JS_NewUint32(context, g_qpk.accent_color));
+  qpk_app_theme_bind(context,object,g_qpk.primary_color<0x888888);
   JS_SetPropertyStr(context, global, "ui", object);
 
   object = JS_NewObject(context);
@@ -4304,6 +4380,8 @@ static void qpk_install_api(JSContext *context)
     }
     JS_SetPropertyStr(context,camera,"style",JS_NewCFunction(context,js_camera_style,"style",0));
     JS_SetPropertyStr(context,camera,"setStyle",JS_NewCFunction(context,js_camera_set_style,"setStyle",1));
+    JS_SetPropertyStr(context,camera,"aspect",JS_NewCFunction(context,js_camera_aspect,"aspect",0));
+    JS_SetPropertyStr(context,camera,"setAspect",JS_NewCFunction(context,js_camera_set_aspect,"setAspect",1));
     JS_SetPropertyStr(context,camera,"openAlbum",JS_NewCFunction(context,js_camera_open_album,"openAlbum",0));
     JS_SetPropertyStr(context,camera,"takeAction",JS_NewCFunction(context,js_camera_take_action,"takeAction",0));
     JS_SetPropertyStr(context,camera,"zoom",JS_NewCFunction(context,js_camera_zoom,"zoom",0));
@@ -4420,21 +4498,12 @@ int qpk_runtime_launch(lv_obj_t *root, const char *name,
                                                           LV_PART_MAIN));
   brightness = ((background >> 16) & 0xff) +
                ((background >> 8) & 0xff) + (background & 0xff);
-  if (brightness > 384)
-    {
-      g_qpk.primary_color = 0x252d46;
-      g_qpk.secondary_color = 0x616981;
-      g_qpk.surface_color = 0xe9eafa;
-      g_qpk.accent_color = 0x5860bf;
-    }
-  else
-    {
-      g_qpk.primary_color = 0xf4f2ff;
-      g_qpk.secondary_color = 0xabb3cd;
-      g_qpk.surface_color = 0x303752;
-      g_qpk.accent_color = 0xb4a6ff;
-    }
-  g_qpk.card_color = background;
+  struct glass_app_palette palette=glass_app_palette(brightness>384);
+  g_qpk.primary_color=palette.ink;
+  g_qpk.secondary_color=palette.muted;
+  g_qpk.surface_color=palette.soft;
+  g_qpk.accent_color=palette.accent;
+  g_qpk.card_color=palette.paper;
   strlcpy(g_qpk.name, name ? name : "Quick App", sizeof(g_qpk.name));
   g_qpk.volume=qpk_volume_from_filename(filename);
   strlcpy(g_qpk.package, package ? package : "", sizeof(g_qpk.package));
@@ -4691,6 +4760,7 @@ bool qpk_runtime_camera_poll(void)
    * Require release after entry and cancel drags outside the original target. */
   if (!qpk_runtime_camera_active())
     {
+      qpk_camera_filters_set(false);
       armed = false;
       pressed = 0;
     }
@@ -4708,7 +4778,7 @@ bool qpk_runtime_camera_poll(void)
               data.point = point;
               read_cb(indev, &data);
               point = data.point;
-              int hit = camera_reference_hit(point.x,point.y);
+              int hit = camera_reference_control_hit(point.x,point.y,qpk_camera_filters_open());
               if (!armed)
                 {
                   if (data.state == LV_INDEV_STATE_RELEASED) armed = true;
@@ -4735,7 +4805,7 @@ bool qpk_runtime_camera_poll(void)
                   }
                   pressed = 0;
                   if(action==4)qpk_video_mode(!qpk_video_selected());
-                  if(action==6)qpk_camera_style_set((qpk_camera_style()+1)%3);
+                  if(qpk_camera_filter_action(action))action=0;
                   if(action==3||action==7){
                     pthread_mutex_lock(&g_camera_lock);if(!g_camera_ui_action)g_camera_ui_action=action;pthread_mutex_unlock(&g_camera_lock);
                   }

@@ -70,6 +70,12 @@ int main(void)
   result=wait_result(QPK_PHOTO_PREVIEW,other);assert(!result.error);
   file=fopen(result.path,"rb");assert(file);unsigned char saved[4];assert(fread(saved,1,4,file)==4&&!memcmp(saved,jpeg,4));fclose(file);
   rgb.format=QPK_PHOTO_BMP565;rgb.style=2;
+  rgb.style=CAMERA_COLOR_STYLE_COUNT;
+  assert(qpk_photo_store_submit(QPK_PHOTO_PREVIEW,&rgb,&other)==-EINVAL);
+  rgb.style=2;
+  rgb.aspect=CAMERA_ASPECT_COUNT+1;
+  assert(qpk_photo_store_submit(QPK_PHOTO_PREVIEW,&rgb,&other)==-EINVAL);
+  rgb.aspect=0;
   assert(qpk_photo_store_submit(QPK_PHOTO_PREVIEW,&rgb,&other)==0);
   result=wait_result(QPK_PHOTO_PREVIEW,other);assert(!result.error);
   file=fopen(result.path,"rb");assert(file);assert(fread(header,1,54,file)==54&&header[28]==16);fclose(file);

@@ -988,3 +988,39 @@ size_t pet_lvgl_sprite_bytes(void)
 {
   return g_ui.sprites.storage_size;
 }
+
+/* Called on the GUI thread, including after a card is inserted. Keep the
+ * current image alive until the entire replacement has passed validation. */
+int pet_lvgl_reload_sprites(void)
+{
+  struct pet_sprite_bundle_s next = {0};
+  char error[96];
+  int ret;
+
+  if (!pet_lvgl_is_open())
+    {
+      return -ENODEV;
+    }
+
+  ret = pet_sprites_load(PET_SPRITE_PATH, &next, error, sizeof(error));
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Detach LVGL and its cache before releasing the old pixel storage. */
+  lv_image_set_src(g_ui.sprite, NULL);
+  if (g_ui.sprite_dsc.data != NULL)
+    {
+      lv_image_cache_drop(&g_ui.sprite_dsc);
+    }
+
+  memset(&g_ui.sprite_dsc, 0, sizeof(g_ui.sprite_dsc));
+  pet_sprites_unload(&g_ui.sprites);
+  g_ui.sprites = next;
+  g_ui.sprite_view = -1;
+  g_ui.sprite_size = -1;
+  g_ui.rendered_valid = false;
+  pet_lvgl_sync();
+  return 0;
+}

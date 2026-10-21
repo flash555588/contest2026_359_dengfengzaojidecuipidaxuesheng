@@ -1,0 +1,12 @@
+[E/usbh_msc] cbw transfer error: -12
+[E/usbh_msc] msc data transfer error: -12
+[E/usbh_msc] csw transfer error: -12
+[E/usbh_msc] csw signature error
+[E/usbh_msc] csw signature error
+[E/usbh_msc] csw bStatus 1
+USB_MSC_OK: shared CBW/CSW identity, short CBW/data/CSW, residue and command failure
+[I/usbh_hid] Unregister HID Class:/dev/input0
+USB_HID_OK: malformed descriptor cleanup, bounded endpoint, nonzero interface controls
+USB_UAC_OK: PCM16 descriptor, truncated input, 100000 malformed descriptor walks
+USB_STATE_OK: disk lifetime, stale generations, owner isolation, busy role changes, CDC transfers, FS/display guard and init failure
+USB_DEVICE_OK: allocation failure, aligned lifetime pool, repeated role initialization, malformed CDC class requests

@@ -205,3 +205,5 @@ void glass_sd_font_status(int *state,int *error)
     *state=sd_fonts->state;*error=sd_fonts->error;
     pthread_mutex_unlock(&sd_fonts->lock);}
 }
+
+#include "glass_lyric_fonts.inc"

@@ -13,14 +13,15 @@ static struct {
   struct music_snapshot snapshot;
   struct music_cover_view cover;
   unsigned search_revision, favorite_count;
-  bool favorites, valid;
+  bool favorites, valid, return_apps;
   uint32_t primary, secondary, surface, accent, background;
 } g_music_ui;
 
 static void music_ui_refresh(lv_timer_t *timer);
 static void music_ui_list(void);
+static bool music_config_return_apps;
 static void music_ui_configure(lv_event_t *e)
-{LV_UNUSED(e);glass_portal_show(glass_music);}
+{LV_UNUSED(e);music_config_return_apps=g_music_ui.return_apps;glass_portal_show(glass_music);}
 static void music_full_close(lv_event_t *e);
 static void music_full_refresh(const struct music_now_playing *now);
 
@@ -43,10 +44,8 @@ static void music_ui_nav_style(lv_obj_t *button, bool selected)
 {
   glass_sidebar_item(button,selected);
   lv_obj_set_style_radius(button,12,0);
-  lv_obj_set_style_bg_color(button,lv_color_hex(selected?
-    (g_desktop.light_theme?0xeee2e3:0x30262f):
-    (g_desktop.light_theme?0xf0ece9:0x19191f)),0);
-  lv_obj_set_style_bg_color(button,lv_color_hex(g_desktop.light_theme?0xeee2e3:0x30262f),LV_STATE_PRESSED);
+  lv_obj_set_style_bg_color(button,lv_color_hex(selected?detail_soft():detail_paper()),0);
+  lv_obj_set_style_bg_color(button,lv_color_hex(detail_soft()),LV_STATE_PRESSED);
   lv_obj_set_style_border_width(button,0,0);
   lv_obj_t *label=lv_obj_get_child(button,0);
   lv_obj_set_style_text_color(label,lv_color_hex(selected?g_music_ui.primary:g_music_ui.secondary),0);
@@ -278,6 +277,7 @@ static void music_ui_refresh(lv_timer_t *timer)
   LV_UNUSED(timer);
   if (!g_music_ui.root) return;
   if(!g_music_ui.full&&!glass_ui_can_paint(g_music_ui.root)){g_music_ui.valid=false;return;}
+  music_full_fonts_poll();
   unsigned previous_revision=g_music_ui.snapshot.revision;
   unsigned previous_search=g_music_ui.snapshot.search_revision;
   unsigned previous_count=g_music_ui.snapshot.favorite_count;
@@ -333,24 +333,32 @@ static void music_ui_deleted(lv_event_t *e)
   memset(&g_music_ui,0,sizeof(g_music_ui));
 }
 
-static void glass_music_app(lv_obj_t *card)
+static void music_ui_back(lv_event_t *event)
+{
+  LV_UNUSED(event);
+  if(g_music_ui.return_apps)glass_apps(NULL);
+  else panel_hide(NULL);
+}
+
+static void glass_music_app(lv_obj_t *card,bool return_apps)
 {
   lv_obj_clean(card);
   memset(&g_music_ui,0,sizeof(g_music_ui));
   g_music_ui.root=card;
+  g_music_ui.return_apps=return_apps;
   bool light=g_desktop.light_theme;
-  g_music_ui.primary=light?0x30282d:0xf4eced;
-  g_music_ui.secondary=light?0x756b73:0xaba0ac;
-  g_music_ui.background=light?0xf8f4f0:0x131217;
-  g_music_ui.surface=light?0xf0e8e5:0x29252e;
-  g_music_ui.accent=light?0xb74462:0xebb1bd;
+  g_music_ui.primary=detail_ink();
+  g_music_ui.secondary=detail_muted();
+  g_music_ui.background=detail_canvas();
+  g_music_ui.surface=detail_soft();
+  g_music_ui.accent=detail_accent();
   lv_obj_set_size(card,1024,GLASS_CONTENT_HEIGHT); lv_obj_set_pos(card,0,0);
   lv_obj_set_style_radius(card,0,0); lv_obj_set_style_border_width(card,0,0);
   lv_obj_set_style_bg_color(card,lv_color_hex(g_music_ui.background),0);
   lv_obj_add_event_cb(card,music_ui_deleted,LV_EVENT_DELETE,NULL);
   lv_obj_t *sidebar=glass_box(card,0,0,GLASS_SIDEBAR_WIDTH,GLASS_CONTENT_HEIGHT-84,detail_paper(),0);
   glass_sidebar_surface(sidebar);
-  lv_obj_set_style_bg_color(sidebar,lv_color_hex(light?0xf0ece9:0x19191f),0);
+  lv_obj_set_style_bg_color(sidebar,lv_color_hex(detail_paper()),0);
   music_ui_edge(sidebar,LV_OPA_10);
   lv_obj_set_style_border_side(sidebar,LV_BORDER_SIDE_RIGHT,0);
   lv_obj_t *brand=glass_box(sidebar,24,28,30,30,g_music_ui.accent,10);
@@ -368,7 +376,7 @@ static void glass_music_app(lv_obj_t *card)
   music_ui_sidebar_button(sidebar,"锁屏播放",GLASS_ICON_RADIO,336,glass_lock_open,NULL);
   lv_obj_t *return_divider=glass_box(sidebar,24,412,116,1,g_music_ui.surface,0);
   lv_obj_remove_flag(return_divider,LV_OBJ_FLAG_CLICKABLE);
-  music_ui_sidebar_button(sidebar,"返回桌面",GLASS_ICON_ARROW_NE,428,panel_hide,NULL);
+  music_ui_sidebar_button(sidebar,return_apps?"返回应用":"返回桌面",GLASS_ICON_ARROW_NE,428,music_ui_back,NULL);
   lv_obj_t *kicker=music_ui_text(card,"MUSIC / FOR YOU",196,24,490,16,g_music_ui.accent);
   lv_obj_set_style_text_letter_space(kicker,2,0);
   g_music_ui.heading=music_ui_text(card,"听见好时光",196,52,494,48,g_music_ui.primary);
@@ -412,7 +420,7 @@ static void glass_music_app(lv_obj_t *card)
   glass_clickable(g_music_ui.lyric,music_full_open,NULL);
   lv_obj_t *bar=glass_box(card,12,GLASS_CONTENT_HEIGHT-80,1000,68,light?0xfffbf8:0x201c24,20);
   music_ui_edge(bar,LV_OPA_20);
-  music_ui_sleeve(bar,12,12,44,10);
+  g_music_ui.cover.thumbnail_host=music_ui_sleeve(bar,12,12,44,10);
   g_music_ui.bottom_title=music_ui_text(bar,"还没有播放音乐",70,10,148,20,g_music_ui.primary);
   g_music_ui.bottom_artist=music_ui_text(bar,"让好音乐，陪伴此刻",70,39,148,14,g_music_ui.secondary);
   music_ui_button(bar,LV_SYMBOL_PREV,280,12,44,44,g_music_ui.surface,music_ui_skip,(void *)-1,true);
@@ -445,5 +453,6 @@ static void glass_music_app(lv_obj_t *card)
   lv_obj_add_event_cb(g_music_ui.volume,music_ui_volume,LV_EVENT_VALUE_CHANGED,NULL);
   glass_music_start();
   g_music_ui.timer=lv_timer_create(music_ui_refresh,250,NULL);
+  lv_obj_update_layout(card);
   music_ui_refresh(NULL);
 }

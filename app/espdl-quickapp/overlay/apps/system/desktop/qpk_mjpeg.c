@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qpk_mjpeg.h"
+#include "camera_color.h"
 #include "qpk_tjpgd.h"
 #include "qpk_mjpeg_dht.h"
 #include <errno.h>
@@ -109,7 +110,7 @@ int qpk_mjpeg_probe(const uint8_t *input, size_t size, unsigned *width,
 static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
                               uint16_t *output, unsigned width, unsigned height, unsigned stride,
                               unsigned expected_width, unsigned expected_height,
-                              unsigned view_width, unsigned view_height)
+                              unsigned view_width, unsigned view_height,const struct qpk_mjpeg_view *view)
 {
   struct mjpeg_decoder *d = decoder;
   if (!d || !input || !output || !width || !height || stride < width ||
@@ -149,6 +150,7 @@ static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
   if (result != JDR_OK) {
     d->pixels = NULL; return -EBADMSG;
   }
+  if(view&&view->style)for(size_t i=0;i<pixels;i++)d->pixels[i]=camera_color_pixel(d->pixels[i],view->style);
   if (direct) { d->pixels = NULL; return 0; }
   if (twice) {
     /* Expand backwards in the caller's frame: no temporary allocation or
@@ -175,12 +177,12 @@ static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
     /* Fuse the existing contain-to-canvas and canvas-to-view sampling. This
      * preserves both integer rounding steps without materializing the canvas. */
     for (unsigned x = 0; x < view_width; x++) {
-      unsigned cx = x * width / view_width;
+      unsigned cx = view?view->crop_x+x*view->crop_width/view_width:x*width/view_width;
       d->columns[x] = cx < ox || cx >= ox + dw ? UINT16_MAX : (cx - ox) * d->width / dw;
     }
     unsigned previous = UINT32_MAX;
     for (unsigned y = 0; y < view_height; y++) {
-      unsigned cy = y * height / view_height;
+      unsigned cy = view?view->crop_y+y*view->crop_height/view_height:y*height/view_height;
       uint16_t *dst = output + (size_t)y * stride;
       if (cy < oy || cy >= oy + dh) { memset(dst, 0, view_width * 2); previous = UINT32_MAX; continue; }
       unsigned sy = (cy - oy) * d->height / dh;
@@ -217,13 +219,13 @@ static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
 int qpk_mjpeg_decode_still(void *decoder, const uint8_t *input, size_t size,
                            uint16_t *output, unsigned width, unsigned height)
 {
-  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,width,height,0,0);
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,width,height,0,0,NULL);
 }
 
 int qpk_mjpeg_decode_still_fit(void *decoder, const uint8_t *input, size_t size,
                                uint16_t *output, unsigned width, unsigned height)
 {
-  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,0,0,0,0);
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,0,0,0,0,NULL);
 }
 
 int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t capacity,
@@ -234,7 +236,7 @@ int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t c
       stride > 4096 || height > 4096 || size > capacity) return -EINVAL;
   int ret = jpeg_tables(input,&size,capacity);
   if (ret < 0) return ret;
-  return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,expected_width,expected_height,0,0);
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,expected_width,expected_height,0,0,NULL);
 }
 
 int qpk_mjpeg_decode_view(void *decoder, uint8_t *input, size_t size, size_t capacity,
@@ -248,7 +250,19 @@ int qpk_mjpeg_decode_view(void *decoder, uint8_t *input, size_t size, size_t cap
   int ret = jpeg_tables(input,&size,capacity);
   if (ret < 0) return ret;
   return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,
-                            expected_width,expected_height,view_width,view_height);
+                            expected_width,expected_height,view_width,view_height,NULL);
+}
+int qpk_mjpeg_decode_preview(void *decoder,uint8_t *input,size_t size,size_t capacity,
+                             uint16_t *output,unsigned expected_width,unsigned expected_height,
+                             const struct qpk_mjpeg_view *view)
+{
+  if(!view||!view->crop_width||!view->crop_height||view->crop_x>view->canvas_width||
+     view->crop_y>view->canvas_height||view->crop_width>view->canvas_width-view->crop_x||
+     view->crop_height>view->canvas_height-view->crop_y||view->style>=CAMERA_COLOR_STYLE_COUNT||
+     !view->width||!view->height||size>capacity||!decoder||!input)return -EINVAL;
+  int ret=jpeg_tables(input,&size,capacity);if(ret<0)return ret;
+  return jpeg_decode_pixels(decoder,input,size,output,view->canvas_width,view->canvas_height,view->stride,
+    expected_width,expected_height,view->width,view->height,view);
 }
 
 int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity,

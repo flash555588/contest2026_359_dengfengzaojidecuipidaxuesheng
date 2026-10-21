@@ -50,6 +50,9 @@
     orange: dark ? 0xff9800 : 0xf07d1a,
     purple: dark ? 0x9a7ad0 : 0x8a63c4
   };
+  if(ui.theme)Object.assign(colors,{background:ui.theme.background,surface:ui.theme.card,
+    detail:ui.theme.surface,text:ui.theme.primary,muted:ui.theme.secondary,border:ui.theme.border,
+    track:ui.theme.surface,good:ui.theme.success,warning:ui.theme.warning});
   const styles = {
     icon: { radius: 18, borderWidth: 0 },
     tab: { radius: 16, borderWidth: 0, fontSize: 15 },
@@ -1338,6 +1341,9 @@
   // ------------------------------------------------------------------
   const SIDEBAR_W = 164, HEADER_H = 64, FOOTER_H = 54;
   const sidebarStyle={pad:12,itemWidth:140,itemHeight:44,gap:8,radius:12,paper:dark?0x22252f:0xffffff,selected:dark?0x2e303d:0xf3f2f7,accent:dark?0xc1aedb:0x77658f,ink:dark?0xeeeef5:0x292c38};
+  if(ui.theme)Object.assign(sidebarStyle,{paper:ui.theme.card,selected:ui.theme.surface,
+    accent:ui.theme.accent,ink:ui.theme.primary,pad:ui.theme.sidebarPad,itemWidth:ui.theme.sidebarItemWidth,
+    itemHeight:ui.theme.sidebarItemHeight,gap:ui.theme.sidebarGap,radius:ui.theme.controlRadius});
   const GRID_X = SIDEBAR_W, GRID_Y = HEADER_H;
   const GRID_W = W - SIDEBAR_W;
   const MAIN_X = SIDEBAR_W + 14, MAIN_Y = HEADER_H + 16;

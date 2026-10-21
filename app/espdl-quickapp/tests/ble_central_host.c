@@ -9,6 +9,7 @@
 #include "glass_ble_central.h"
 #include "host/ble_hs.h"
 static unsigned role,calls,terminations;static bool stall,encrypted;
+static int termination_error;
 static _Thread_local bool host_context;
 static atomic_bool stop_host;
 extern void glass_ble_central_poll(void);
@@ -32,7 +33,7 @@ int ble_gap_conn_cancel(void){struct ble_gap_event e={.type=BLE_GAP_EVENT_CONNEC
 int ble_gap_connect(uint8_t own,const ble_addr_t *peer,int32_t timeout,const void *params,int(*cb)(struct ble_gap_event *,void *),void *arg)
 {(void)own;(void)peer;(void)timeout;(void)params;gap_arg=arg;calls++;gap_cb=cb;return 0;}
 int ble_gap_terminate(uint16_t c,uint8_t why)
-{(void)why;terminations++;struct ble_gap_event e={.type=BLE_GAP_EVENT_DISCONNECT};e.disconnect.conn.conn_handle=c;gap_cb(&e,gap_arg);return 0;}
+{(void)why;terminations++;if(termination_error)return termination_error;struct ble_gap_event e={.type=BLE_GAP_EVENT_DISCONNECT};e.disconnect.conn.conn_handle=c;gap_cb(&e,gap_arg);return 0;}
 int ble_gap_conn_find(uint16_t c,struct ble_gap_conn_desc *d)
 {d->conn_handle=c;d->sec_state.encrypted=encrypted;d->sec_state.bonded=encrypted;return 0;}
 int ble_gap_security_initiate(uint16_t c)
@@ -68,7 +69,12 @@ int main(void)
   gap_cb(&late,old_scan_arg);glass_ble_central_read(&state);assert(state.scanning&&role==1);
   gap_cb(&e,gap_arg);assert(!glass_ble_central_cancel());glass_ble_central_read(&state);
   assert(glass_ble_central_connect(0,state.scan_generation+1)==-ESTALE);
-  assert(!glass_ble_central_connect(0,state.scan_generation));connected();glass_ble_central_read(&state);assert(state.connected&&state.generation&&role==1);
+  assert(!glass_ble_central_connect(0,state.scan_generation));
+  glass_ble_central_read(&state);assert(state.connecting&&state.peer_valid&&!strcmp(state.peer.name,"Test")&&state.peer.address[0]==1);
+  connected();glass_ble_central_read(&state);assert(state.connected&&state.peer_valid&&!state.disconnecting&&state.generation&&role==1);
+  termination_error=BLE_HS_EBUSY;assert(glass_ble_central_disconnect()==-EBUSY);
+  glass_ble_central_read(&state);assert(state.connected&&state.peer_valid&&!state.disconnecting);
+  termination_error=0;
   struct glass_gatt_request r={.generation=state.generation,.operation=GLASS_GATT_SERVICES};struct glass_gatt_result out;
   atomic_bool cancel=false;assert(!glass_ble_gatt(&r,&out,&cancel));assert(out.count==32&&out.truncated);
   r.operation=GLASS_GATT_CHARACTERISTICS;r.start=1;r.end=20;assert(!glass_ble_gatt(&r,&out,&cancel)&&out.items[0].value==3);
@@ -83,7 +89,9 @@ int main(void)
   r.operation=GLASS_GATT_PAIR;assert(!glass_ble_gatt(&r,&out,&cancel));glass_ble_central_read(&state);assert(state.encrypted&&state.bonded);
   r.operation=GLASS_GATT_MTU;assert(!glass_ble_gatt(&r,&out,&cancel)&&out.mtu==100);
   r.operation=GLASS_GATT_READ;r.handle=3;stall=true;cancel_now=&cancel;
-  assert(glass_ble_gatt(&r,&out,&cancel)==-ECANCELED&&terminations==1);glass_ble_central_read(&state);assert(!state.connected&&!role);
+  unsigned previous_terminations=terminations;
+  assert(glass_ble_gatt(&r,&out,&cancel)==-ECANCELED&&terminations==previous_terminations+1);glass_ble_central_read(&state);assert(!state.connected&&!role);
+  assert(!state.peer_valid&&!state.disconnecting);
   assert(glass_ble_notification(r.generation,&out)==-ENOTCONN);
   atomic_store(&stop_host,true);pthread_join(host,NULL);
   puts("BLE_CENTRAL_OK: real scan/connect/GATT state, role conflict, stale generation, bounded discovery/notify, pairing, MTU and cancellation cleanup");

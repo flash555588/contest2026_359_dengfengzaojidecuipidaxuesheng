@@ -105,11 +105,12 @@ static void glass_status_tick(void)
     }
     g_status_ui.signal_bars=bars;g_status_ui.signal_level=level;
   }
-  /* This board's HID backend reports one live peer; scan results are not connections. */
+  /* The controller has one active role. Discoveries never count as peers. */
   struct glass_ble_hid_state ble={0};glass_ble_hid_read(&ble);
-  unsigned bluetooth_count=ble.connected?1:0;
+  struct glass_ble_state central={0};glass_ble_read(&central);
+  unsigned bluetooth_count=ble.connected||central.connected?1:0;
   if(first||bluetooth_count!=g_status_ui.bluetooth_count)
-    lv_obj_set_style_opa(g_status_ui.bluetooth,ble.connected?LV_OPA_COVER:LV_OPA_40,0);
+    lv_obj_set_style_opa(g_status_ui.bluetooth,bluetooth_count?LV_OPA_COVER:LV_OPA_40,0);
   g_status_ui.bluetooth_count=bluetooth_count;
   char count[8];snprintf(count,sizeof(count),"%u",g_status_ui.bluetooth_count);
   if(strcmp(lv_label_get_text(g_status_ui.ble_count),count))lv_label_set_text(g_status_ui.ble_count,count);

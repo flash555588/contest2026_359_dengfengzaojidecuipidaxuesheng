@@ -199,7 +199,80 @@ int glass_chat_page_request(const char *name,unsigned page)
 bool glass_chat_page_get(struct chat_page *out){memset(out,0,sizeof(*out));out->revision=review_archive_revision;out->page=review_archive_page;out->pages=review_archive_total;strcpy(out->text,"完整回复（离线审核示例）\n\n1. 选择今天最重要的一件事。\n2. 在一个专注时段里完成它。\n3. 安排短休息，再检查进度。\n4. 保存笔记，整理明天的待办。\n\n这个页面沿用原有分页与返回操作。");return true;}
 size_t glass_chat_copy_utf8(char *out,size_t cap,const char *text){size_t n=strlen(text);if(n>=cap)n=cap-1;while(n&&(text[n]&0xc0)==0x80)n--;memcpy(out,text,n);out[n]=0;return n;}
 void glass_weather_get(struct glass_weather_snapshot *out){if(review_weather_custom){*out=review_weather_sample;return;}memset(out,0,sizeof(*out));out->state=WEATHER_WAIT_NET;if(review_weather_mode){out->valid=true;out->state=WEATHER_READY;out->revision=2;out->data.temperature=24;out->data.humidity=48;out->data.aqi=32;out->data.level=1;out->data.pm25=12;strcpy(out->data.condition,"多云");strcpy(out->data.category,"良好");strcpy(out->data.location,"当地天气");strcpy(out->data.report_time,"2026-10-13 14:00 · 审核示例");}}
-void glass_ble_read(struct glass_ble_state *out){memset(out,0,sizeof(*out));out->started=true;out->ready=true;if(review_ble_mode){out->count=2;strcpy(out->devices[0].name,"蓝牙键盘 · 审核示例");strcpy(out->devices[1].name,"温湿度传感器 · 审核示例");for(unsigned i=0;i<2;i++){out->devices[i].rssi=-38-i*10;out->devices[i].address[0]=2;out->devices[i].address[5]=i+1;}}}
+#include <assert.h>
+#include <pthread.h>
+static pthread_mutex_t review_ble_lock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t review_ble_gate=PTHREAD_COND_INITIALIZER;
+static unsigned review_ble_hold_operation;
+static bool review_ble_held;
+static bool review_ble_custom;
+static struct glass_ble_state review_ble_state;
+static pthread_t review_ble_ui_thread;
+static int review_ble_error;
+static unsigned review_ble_calls[5];
+void review_ble_snapshot_fixture(const struct glass_ble_state *state)
+{
+  pthread_mutex_lock(&review_ble_lock);review_ble_custom=state!=NULL;
+  if(state)review_ble_state=*state;review_ble_ui_thread=pthread_self();
+  pthread_mutex_unlock(&review_ble_lock);
+}
+void review_ble_error_fixture(int error)
+{pthread_mutex_lock(&review_ble_lock);review_ble_error=error;pthread_mutex_unlock(&review_ble_lock);}
+unsigned review_ble_call_count(unsigned operation)
+{pthread_mutex_lock(&review_ble_lock);unsigned n=operation<5?review_ble_calls[operation]:0;pthread_mutex_unlock(&review_ble_lock);return n;}
+void review_ble_hold_fixture(unsigned operation)
+{pthread_mutex_lock(&review_ble_lock);review_ble_hold_operation=operation;pthread_cond_broadcast(&review_ble_gate);pthread_mutex_unlock(&review_ble_lock);}
+bool review_ble_hold_arrived(void)
+{pthread_mutex_lock(&review_ble_lock);bool held=review_ble_held;pthread_mutex_unlock(&review_ble_lock);return held;}
+static void review_ble_hold_locked(unsigned operation)
+{
+  if(review_ble_custom&&review_ble_hold_operation==operation){
+    review_ble_held=true;
+    while(review_ble_hold_operation==operation)pthread_cond_wait(&review_ble_gate,&review_ble_lock);
+    review_ble_held=false;
+  }
+}
+void glass_ble_read(struct glass_ble_state *out)
+{
+  pthread_mutex_lock(&review_ble_lock);
+  if(review_ble_custom){*out=review_ble_state;pthread_mutex_unlock(&review_ble_lock);return;}
+  pthread_mutex_unlock(&review_ble_lock);
+  memset(out,0,sizeof(*out));out->started=true;out->ready=true;
+  if(review_ble_mode){out->count=2;strcpy(out->devices[0].name,"蓝牙键盘 · 审核示例");strcpy(out->devices[1].name,"温湿度传感器 · 审核示例");for(unsigned i=0;i<2;i++){out->devices[i].rssi=-38-i*10;out->devices[i].address[0]=2;out->devices[i].address[5]=i+1;}}
+}
+int glass_ble_start(void)
+{pthread_mutex_lock(&review_ble_lock);if(review_ble_custom)assert(!pthread_equal(pthread_self(),review_ble_ui_thread));int ret=review_ble_error;pthread_mutex_unlock(&review_ble_lock);return ret;}
+int glass_ble_scan(void)
+{
+  pthread_mutex_lock(&review_ble_lock);review_ble_calls[1]++;int ret=review_ble_error;
+  if(review_ble_custom){assert(!pthread_equal(pthread_self(),review_ble_ui_thread));if(!ret){review_ble_state.scanning=true;review_ble_state.count=0;review_ble_state.scan_generation++;review_ble_state.error=0;}}
+  if(!ret)review_ble_hold_locked(1);
+  pthread_mutex_unlock(&review_ble_lock);return ret;
+}
+int glass_ble_central_connect(unsigned index,uint32_t generation)
+{
+  pthread_mutex_lock(&review_ble_lock);review_ble_calls[2]++;int ret=review_ble_error;
+  if(review_ble_custom){
+    assert(!pthread_equal(pthread_self(),review_ble_ui_thread));
+    if(!ret&&(generation!=review_ble_state.scan_generation||index>=review_ble_state.count))ret=-ESTALE;
+    if(!ret&&review_ble_state.scanning)ret=-EBUSY;
+    if(!ret){review_ble_state.connecting=true;review_ble_state.peer_valid=true;review_ble_state.peer=review_ble_state.devices[index];review_ble_state.error=0;}
+  }
+  if(!ret)review_ble_hold_locked(2);
+  pthread_mutex_unlock(&review_ble_lock);return ret;
+}
+int glass_ble_cancel(void)
+{
+  pthread_mutex_lock(&review_ble_lock);review_ble_calls[3]++;
+  if(review_ble_custom){assert(!pthread_equal(pthread_self(),review_ble_ui_thread));review_ble_state.scanning=false;review_ble_state.connecting=false;if(!review_ble_state.connected)review_ble_state.peer_valid=false;}
+  pthread_mutex_unlock(&review_ble_lock);return 0;
+}
+int glass_ble_disconnect(void)
+{
+  pthread_mutex_lock(&review_ble_lock);review_ble_calls[4]++;int ret=review_ble_error;
+  if(review_ble_custom){assert(!pthread_equal(pthread_self(),review_ble_ui_thread));if(!ret)review_ble_state.disconnecting=review_ble_state.connected;}
+  pthread_mutex_unlock(&review_ble_lock);return ret;
+}
 static int review_battery_percent=-1;
 static bool review_battery_charging,review_bluetooth_connected;
 void review_status_fixture(int percent,bool charging,bool bluetooth)
@@ -396,14 +469,14 @@ bool glass_lock_photo_take(struct glass_lock_photo *out)
 }
 
 static const char *review_cover_raw;
-static bool review_cover_pending[3];
+static bool review_cover_pending[GLASS_COVER_HOME+1];
 void review_cover_fixture(const char *path){review_cover_raw=path;}
 int glass_lock_cover_request(unsigned owner,const char *url)
-{if(owner<1||owner>2||!url)return -EINVAL;review_cover_pending[owner]=true;return 0;}
-void glass_lock_cover_cancel(unsigned owner){if(owner<3)review_cover_pending[owner]=false;}
+{if(owner<1||owner>GLASS_COVER_HOME||!url)return -EINVAL;review_cover_pending[owner]=true;return 0;}
+void glass_lock_cover_cancel(unsigned owner){if(owner<=GLASS_COVER_HOME)review_cover_pending[owner]=false;}
 bool glass_lock_cover_take(unsigned owner,struct glass_lock_photo *out)
 {
- if(owner<1||owner>2||!review_cover_pending[owner]||!review_cover_raw)return false;
+ if(owner<1||owner>GLASS_COVER_HOME||!review_cover_pending[owner]||!review_cover_raw)return false;
  review_cover_pending[owner]=false;memset(out,0,sizeof(*out));FILE *f=fopen(review_cover_raw,"rb");assert(f);
  uint32_t size[2];assert(fread(size,4,2,f)==2);out->width=size[0];out->height=size[1];out->pixels=malloc(size[0]*size[1]*2);assert(out->pixels);
  assert(fread(out->pixels,2,size[0]*size[1],f)==size[0]*size[1]);fclose(f);return true;

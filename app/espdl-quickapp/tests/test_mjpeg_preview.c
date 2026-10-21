@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qpk_mjpeg.h"
+#include "camera_frame.h"
+#include "camera_color.h"
+#include <errno.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,10 +31,26 @@ int main(int argc,char **argv)
       assert(view[y*w+x]==expected);
     }
     for(unsigned i=0;i<16;i++)assert(view[count+i]==0xa55a);
+    for(unsigned aspect=0;aspect<=4;aspect++)for(unsigned style=0;style<CAMERA_COLOR_STYLE_COUNT;style++){
+      struct camera_reference_rect crop=camera_frame_crop(w,h,w,h,100,aspect);
+      struct qpk_mjpeg_view options={.canvas_width=w,.canvas_height=h,.stride=w,.width=w,.height=h,
+        .crop_x=crop.x,.crop_y=crop.y,.crop_width=crop.w,.crop_height=crop.h,.style=style};
+      assert(!qpk_mjpeg_decode_preview(decoder,input,size,size+512,view,w,h,&options));
+      for(unsigned y=0;y<h;y++)for(unsigned x=0;x<w;x++){
+        unsigned cx=crop.x+x*crop.w/w,cy=crop.y+y*crop.h/h;
+        uint16_t expected=0;
+        if(cx>=ox&&cx<ox+dw&&cy>=oy&&cy<oy+dh)
+          expected=camera_color_pixel(full[(((cy-oy)*sh/dh)<<scale)*w+(((cx-ox)*sw/dw)<<scale)],style);
+        assert(view[y*w+x]==expected);
+      }
+      for(unsigned i=0;i<16;i++)assert(view[count+i]==0xa55a);
+      options.crop_width=w+1;
+      assert(qpk_mjpeg_decode_preview(decoder,input,size,size+512,view,w,h,&options)==-EINVAL);
+    }
     assert(qpk_mjpeg_decode_view(decoder,input,size/2,size+512,view,w,h,w,w,h,w,h)<0);
     assert(!qpk_mjpeg_decode_region(decoder,input,size,size+512,view,w,h,w,w,h));
     assert(!memcmp(view,full,count*2));
   }
   qpk_mjpeg_destroy(decoder);free(view);free(full);free(input);
-  puts("MJPEG_PREVIEW_OK: reduced RGB sampling, clipped MCU edges, photo isolation and truncation");
+  puts("MJPEG_PREVIEW_OK: fused six colours/five aspects across three scales, crop bounds, clipped MCU edges, full-quality photo isolation and truncation");
 }

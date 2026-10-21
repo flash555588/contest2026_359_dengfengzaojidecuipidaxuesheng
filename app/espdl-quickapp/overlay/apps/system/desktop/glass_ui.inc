@@ -13,7 +13,6 @@ static void glass_status_visibility(bool locked);
 #define GLASS_CLOCK_OFFSET_SECONDS (8 * 3600)
 #include <limits.h>
 #include "glass_wallpaper.h"
-#include "glass_music_assets.inc"
 #include "glass_settings_store.h"
 #include "glass_settings_service.h"
 #include "glass_weather.h"
@@ -91,6 +90,7 @@ static struct
   lv_obj_t *chart_hint;
   lv_obj_t *settings_switch;
   lv_obj_t *widget_dropdown;
+  lv_obj_t *lyric_font_dropdown;
   lv_obj_t *home_cards[GLASS_HOME_CARD_COUNT];
   lv_obj_t *motion_switch;
   lv_obj_t *brightness_slider;
@@ -112,6 +112,12 @@ static struct
   unsigned int palette;
   unsigned int widget;
 } g_glass;
+
+static unsigned music_font_selected,music_font_requested;
+static void home_music_refresh(void);
+static void home_music_obscure(void);
+static void music_full_fonts_poll(void);
+static void music_full_font_selected(lv_event_t *event);
 
 /* Cache display semantics, never lv_label_get_text(): LONG_DOT modifies that
  * buffer in place. No per-tick allocation or retained label text pointers.
@@ -443,11 +449,13 @@ static void glass_update(lv_timer_t *timer)
   /* Keep service polling and status alive, but do not repaint or decode a
    * fully covered home. Its cached image stays ready for the back gesture. */
   if(glass_page_covers_home()||!glass_ui_can_paint(g_glass.home)){
+    home_music_obscure();
     g_weather_home.deferred=true;
     glass_weather_detail_update(&weather,weather_stale);
     return;
   }
   glass_home_devices_paint();
+  home_music_refresh();
   uint32_t sync_seconds = lv_tick_elaps(g_glass.received) / 1000;
   struct glass_display_s display =
     {
@@ -733,14 +741,15 @@ static void glass_settings(lv_event_t *e);
  * LVGL's Latin-only theme font. Keep keyboard symbols in Montserrat. */
 static void glass_input_style(lv_obj_t *input)
 {
+  glass_app_input_style(input,glass_app_palette(g_desktop.light_theme));
   lv_obj_set_style_text_font(input, zh_font(20), LV_PART_MAIN);
   lv_obj_set_style_text_font(input, zh_font(20), LV_PART_TEXTAREA_PLACEHOLDER);
   lv_obj_set_style_text_color(input, lv_color_hex(theme_primary()), LV_PART_MAIN);
   lv_obj_set_style_text_color(input, lv_color_hex(theme_secondary()), LV_PART_TEXTAREA_PLACEHOLDER);
   lv_obj_set_style_bg_color(input, lv_color_hex(theme_surface()), 0);
   lv_obj_set_style_bg_opa(input, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_color(input, lv_color_hex(theme_secondary()), 0);
-  lv_obj_set_style_border_opa(input, 55, 0);
+  lv_obj_set_style_border_color(input, lv_color_hex(detail_line()), 0);
+  lv_obj_set_style_border_opa(input, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(input, 1, 0);
   lv_obj_set_style_border_color(input, lv_color_hex(theme_accent()), LV_STATE_FOCUSED);
   lv_obj_set_style_border_opa(input, LV_OPA_COVER, LV_STATE_FOCUSED);
@@ -778,7 +787,9 @@ static void glass_storage_page(void *unused)
 }
 
 #ifdef CONFIG_SYSTEM_GLASS_BLE
+static void glass_ble_devices_open(lv_event_t *event);
 #include "glass_mouse.inc"
+#include "glass_bluetooth.inc"
 #endif
 
 static void glass_bluetooth_page(void *unused)
@@ -787,7 +798,7 @@ static void glass_bluetooth_page(void *unused)
   lv_obj_t *card = panel_card("蓝牙");
   if (card == NULL) return;
 #ifdef CONFIG_SYSTEM_GLASS_BLE
-  glass_mouse_page(card);
+  glass_ble_devices_page(card);
 #else
   detail_page(card);
   detail_sidebar(card, "蓝牙", LV_SYMBOL_BLUETOOTH, panel_hide);
@@ -848,8 +859,11 @@ static void glass_homeassistant(lv_event_t *e)
 static void glass_music(lv_event_t *e)
 {
   LV_UNUSED(e);
+  home_music_obscure();
+  bool return_apps=g_desktop.apps_page || (g_music_ui.root&&g_music_ui.return_apps) ||
+    (portal_page&&portal_page==g_desktop.current_card&&portal_return==glass_music&&music_config_return_apps);
   lv_obj_t *card = panel_card("音乐空间");
-  if (card) glass_music_app(card);
+  if (card) glass_music_app(card,return_apps);
 }
 
 static void glass_widget_open(lv_event_t *e)
@@ -970,8 +984,10 @@ static void glass_apps_render(void)
   g_desktop.apps_page=true;
   if(!reuse){
     g_apps_card=card;lv_obj_add_event_cb(card,glass_apps_deleted,LV_EVENT_DELETE,NULL);
-    g_apps_grid=glass_box(card,20,80,880,336,theme_card(),0);
-    g_apps_count=glass_text(card,"",40,450,380,16,theme_secondary());
+    g_apps_grid=glass_box(card,78,0,868,330,theme_card(),0);
+    lv_obj_set_style_bg_opa(g_apps_grid,LV_OPA_TRANSP,0);
+    g_apps_count=glass_text(card,"",0,0,868,16,theme_secondary());
+    lv_obj_set_style_text_align(g_apps_count,LV_TEXT_ALIGN_CENTER,0);
     g_apps_pager=glass_pager_create(card,theme_surface(),theme_primary(),theme_secondary(),glass_apps_page,NULL);
     if(g_apps_pager)lv_obj_align(g_apps_pager,LV_ALIGN_BOTTOM_MID,0,-14);
   }
@@ -981,18 +997,18 @@ static void glass_apps_render(void)
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 "网络直播", "相册",
 #endif
-"ESPClaw AI 助手", "相机", "录音机", "智能家居", "蓝牙鼠标", "Grok Ball", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
+"ESPClaw AI 助手", "相机", "音乐", "录音机", "智能家居", "蓝牙鼠标", "Grok Ball", "2048", "你好快应用", "ESP-DL 离线识别", "大肥鱼桌宠"};
   const char *symbols[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 LV_SYMBOL_VIDEO, LV_SYMBOL_IMAGE,
 #endif
-LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_GPS,
+LV_SYMBOL_EDIT, LV_SYMBOL_IMAGE, GLASS_ICON_HEADPHONES, LV_SYMBOL_AUDIO, LV_SYMBOL_HOME, LV_SYMBOL_GPS,
                            LV_SYMBOL_EYE_OPEN, LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, LV_SYMBOL_PLAY};
   lv_event_cb_t callbacks[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 launch_bilibili, launch_local_video,
 #endif
-glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass_homeassistant,
+glass_chat_open, launch_builtin_camera_qapp, glass_music, launch_builtin_recorder_qapp, glass_homeassistant,
     glass_mouse_open, launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp, launch_builtin_dafeiyu_qapp};
   const int builtin_count=sizeof(names)/sizeof(names[0]);
   const int total = builtin_count + g_desktop.nqpk;
@@ -1000,6 +1016,14 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
   if (g_apps_page_index < 0) g_apps_page_index = 0;
   if (g_apps_page_index >= pages) g_apps_page_index = pages - 1;
   const int first = g_apps_page_index * 9;
+  lv_obj_update_layout(card);
+  const int card_width=lv_obj_get_width(card),card_height=lv_obj_get_height(card);
+  lv_obj_set_pos(grid,(card_width-868)/2,(80+card_height-96-330)/2);
+  lv_obj_set_pos(g_apps_count,(card_width-868)/2,card_height-82);
+  const int visible=LV_MIN(9,total-first);
+  const int columns=visible<=2?visible:visible==4?2:3;
+  const int rows=(visible+columns-1)/columns;
+  const int row_top=(330-(rows*98+(rows-1)*18))/2;
   for(unsigned i=0;i<9;i++){
     struct glass_app_slot *slot=&g_apps_slots[i];slot->revision++;
     if(slot->tile)lv_obj_add_flag(slot->tile,LV_OBJ_FLAG_HIDDEN);
@@ -1009,8 +1033,8 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
       int index = i - first;
       struct glass_app_slot *slot=&g_apps_slots[index];
       if(!slot->tile){
-      slot->tile = glass_card(grid, (index % 3) * 292 + 4, (index / 3) * 112 + 4,
-                                   276, 98, theme_surface());
+      slot->tile = glass_box(grid,0,0,276,98,theme_card(),GLASS_APP_CARD_RADIUS);
+      glass_app_panel_style(slot->tile,theme_card(),glass_app_palette(g_desktop.light_theme).line);
       slot->icon=glass_symbol(slot->tile, "", 20, 20, theme_accent());
       slot->name=glass_text(slot->tile, "",
                  62, 18, 198, 20, theme_primary());
@@ -1025,6 +1049,10 @@ glass_chat_open, launch_builtin_camera_qapp, launch_builtin_recorder_qapp, glass
       lv_obj_add_event_cb(slot->remove,glass_apps_press_guard,LV_EVENT_ALL,slot);
       }
       lv_obj_t *tile=slot->tile;
+      const int row=index/columns,column=index%columns;
+      const int row_count=LV_MIN(columns,visible-row*columns);
+      lv_obj_set_pos(tile,(868-(row_count*276+(row_count-1)*20))/2+column*296,
+                    row_top+row*116);
       lv_label_set_text(slot->icon,i<builtin_count?symbols[i]:LV_SYMBOL_FILE);
       lv_label_set_text(slot->name,i<builtin_count?names[i]:g_desktop.qpk[i-builtin_count].name);
       lv_label_set_text(slot->source,i<builtin_count?"内置应用":g_desktop.qpk[i-builtin_count].volume==QPK_VOLUME_SD?"SD 卡应用":"内置存储");
@@ -1096,6 +1124,7 @@ static void glass_edge_back_async(void *data)
       if (g_desktop.chat_page) glass_chat_back(NULL);
       else if (portal_page == g_desktop.current_card) portal_go_back(NULL);
       else if (g_desktop.qapp_page) qapp_back(NULL);
+      else if (g_music_ui.root==g_desktop.current_card) music_ui_back(NULL);
       else panel_hide(NULL);
     }
 }

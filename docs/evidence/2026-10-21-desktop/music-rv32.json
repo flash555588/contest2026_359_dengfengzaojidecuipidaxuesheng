@@ -1,0 +1,15 @@
+{
+  "object_compile_only": true,
+  "firmware_linked": false,
+  "flashed": false,
+  "sources": {
+    "app/espdl-quickapp/overlay/apps/system/desktop/desktop_main.c": "011ef88f3891d0eefd4a34ced91d053db2b2793e3cf4f2166da857591883515d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_ui.inc": "d84306557e1d7a0c8014cd00fbe9c0183c1f88a04d63898d19b14d2f5e0181d4",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_home_ui.inc": "8a58dfc35001a586cb6f43ca61df7d4739f4545d602e3101aec7c3571a3d7deb",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_ui.inc": "2ad716996869da8cc3227e30454a0479e4814bc0c9c431bfb393258b4751b2cf",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_cover_ui.inc": "b9ae223f3baf1463555f9b4241c436f2f2084f8167629f4bb9c5f44308632f5a",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lock_photo.c": "541d5184ee468d336415329aa70b093a96faf1a3100c433799c6f42818e30064",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lock_photo.h": "df07b36602b64570c0dc42371c44632ff7aeae2a6af6de18f6cb80a3222de62d",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lockscreen.inc": "5e9ceaa599ff4ea6368525ef74244582cf397484dfbe59dd9cac0e1144f42069"
+  }
+}

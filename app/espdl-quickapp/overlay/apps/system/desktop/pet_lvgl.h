@@ -16,4 +16,5 @@ void pet_lvgl_sync(void);
 void pet_lvgl_destroy(void);
 bool pet_lvgl_is_open(void);
 bool pet_lvgl_uses_sd_sprites(void);
+int pet_lvgl_reload_sprites(void);
 size_t pet_lvgl_sprite_bytes(void);

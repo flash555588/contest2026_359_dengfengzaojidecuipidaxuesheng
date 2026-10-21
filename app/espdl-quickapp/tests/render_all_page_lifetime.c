@@ -185,6 +185,9 @@ int main(int argc,char **argv)
   g_desktop.panel=glass_box(g_desktop.screen,0,0,1024,568,0,0);
   lv_obj_add_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN);glass_status_create();
   occlusion_checks();
+  review_out=argv[2];
+  char manifest_path[1024];snprintf(manifest_path,sizeof(manifest_path),"%s/screens.json",review_out);
+  review_manifest=fopen(manifest_path,"w");assert(review_manifest);fputs("[\n",review_manifest);
   char path[1024];snprintf(path,sizeof(path),"%s/lifetime.jsonl",argv[2]);FILE *report=fopen(path,"w");assert(report);
   unsigned cycles=0;
   for(unsigned theme=0;theme<2;theme++){
@@ -195,6 +198,22 @@ int main(int argc,char **argv)
     for(unsigned round=0;round<3;round++)for(unsigned i=0;i<sizeof(cases)/sizeof(cases[0]);i++){
       cases[i].open();settle();
       if(qpk_runtime_running())assert(!qpk_review_eval("for(let i=0;i<20;i++)__reviewTick()"));
+      if(round==0){
+        review_capture(display,cases[i].name,cases[i].name);
+        if(!strcmp(cases[i].name,"apps")){
+          lv_area_t title,close,status,next_title,next_close;
+          lv_obj_get_coords(lv_obj_get_child(g_apps_card,0),&title);
+          lv_obj_get_coords(lv_obj_get_child(g_apps_card,1),&close);
+          lv_obj_get_coords(g_status_ui.bar,&status);
+          assert(title.y1>status.y2&&close.y1>status.y2);
+          glass_apps_page(NULL,1);settle();
+          lv_obj_get_coords(lv_obj_get_child(g_apps_card,0),&next_title);
+          lv_obj_get_coords(lv_obj_get_child(g_apps_card,1),&next_close);
+          assert(!memcmp(&title,&next_title,sizeof(title))&&!memcmp(&close,&next_close,sizeof(close)));
+          review_capture(display,"apps-page2","应用第二页");
+          glass_apps_page(NULL,0);settle();
+        }
+      }
       unsigned live_objects=objects(lv_screen_active())+objects(lv_layer_top()),live_timers=timers();
       /* An opaque overlay retains a page; removing it must restore that page. */
       lv_obj_t *owner=g_desktop.current_card;g_lock_page=(i+round)%4;
@@ -208,7 +227,7 @@ int main(int argc,char **argv)
       cycles++;
     }
   }
-  fclose(report);snprintf(path,sizeof(path),"%s/screens.json",argv[2]);file=fopen(path,"w");assert(file);fputs("[]\n",file);fclose(file);
+  fclose(report);fputs("\n]\n",review_manifest);fclose(review_manifest);
   printf("ALL_PAGE_LIFETIME_OK pages=%zu themes=2 cycles=%u reduced_motion=%d; no retained page nodes/timers/animations\n",sizeof(cases)/sizeof(cases[0]),cycles,g_glass.reduced_motion);
   return 0;
 }

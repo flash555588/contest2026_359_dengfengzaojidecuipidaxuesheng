@@ -1,0 +1,23 @@
+{
+  "commit": "5b0e01856116bd2bae82df1f43c32faa5f056196",
+  "files": [
+    {
+      "file": "正面.png",
+      "url": "https://raw.githubusercontent.com/1190fasheqi/dafeiyu-pet/5b0e01856116bd2bae82df1f43c32faa5f056196/sprites/%E6%AD%A3%E9%9D%A2.png",
+      "bytes": 152590,
+      "sha256": "d2960fb24e13222b64467cd82e594bbe755bde15121677fcbd873f48bb0e0812"
+    },
+    {
+      "file": "背面.png",
+      "url": "https://raw.githubusercontent.com/1190fasheqi/dafeiyu-pet/5b0e01856116bd2bae82df1f43c32faa5f056196/sprites/%E8%83%8C%E9%9D%A2.png",
+      "bytes": 123394,
+      "sha256": "cad4d2394df308333e36f71648e5f4daaa8d083d19d2ae0880bb1f5b42d818a4"
+    },
+    {
+      "file": "侧面.png",
+      "url": "https://raw.githubusercontent.com/1190fasheqi/dafeiyu-pet/5b0e01856116bd2bae82df1f43c32faa5f056196/sprites/%E4%BE%A7%E9%9D%A2.png",
+      "bytes": 119771,
+      "sha256": "956e49e1a24fcf7d899667fe18f29d63a0e6e56bd72a3306f7ba3569132fd695"
+    }
+  ]
+}

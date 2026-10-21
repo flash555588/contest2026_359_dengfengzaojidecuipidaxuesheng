@@ -21,6 +21,8 @@ struct central {
   uint32_t generation,scan_generation,sequence,token,gap_token;
   unsigned count,head,queued,dropped;
   struct glass_ble_device devices[GLASS_BLE_LIMIT];
+  struct glass_ble_device peer;
+  bool peer_valid;
   struct glass_gatt_result reply;
   struct notification notifications[NOTIFICATIONS];
   struct glass_gatt_request command_request;
@@ -107,7 +109,7 @@ void glass_ble_central_reset(void)
 {
   pthread_mutex_lock(&lock);
   if(g){g->scanning=g->connecting=g->connected=g->encrypted=g->bonded=false;
-    g->closing=false;g->gap_token++;
+    g->closing=false;g->peer_valid=false;g->gap_token++;
     g->conn=BLE_HS_CONN_HANDLE_NONE;g->generation++;g->queued=0;g->error=-EIO;
     if(g->pending)complete_locked(-EIO);}
   pthread_mutex_unlock(&lock);glass_ble_role_release(CENTRAL_ROLE);
@@ -119,7 +121,8 @@ void glass_ble_central_read(struct glass_ble_state *s)
     if(!s->error)s->error=g->error;s->count=g->count;
     memcpy(s->devices,g->devices,sizeof(g->devices));
     s->generation=g->generation;s->scan_generation=g->scan_generation;
-    s->mtu=g->mtu;s->encrypted=g->encrypted;s->bonded=g->bonded;}
+    s->mtu=g->mtu;s->encrypted=g->encrypted;s->bonded=g->bonded;
+    s->peer_valid=g->peer_valid;s->peer=g->peer;s->disconnecting=g->closing;}
   pthread_mutex_unlock(&lock);
 }
 static int gap(struct ble_gap_event *event,void *arg)
@@ -146,7 +149,7 @@ static int gap(struct ble_gap_event *event,void *arg)
     g->scanning=false;release=!g->connecting&&!g->connected;break;
   case BLE_GAP_EVENT_CONNECT:
     g->connecting=false;
-    if(event->connect.status){g->error=posix_error(event->connect.status);release=true;}
+    if(event->connect.status){g->error=g->abandoned?-ECANCELED:posix_error(event->connect.status);g->peer_valid=false;release=true;}
     else if(g->abandoned){terminate=true;conn=event->connect.conn_handle;g->conn=conn;g->closing=true;}
     else {g->conn=event->connect.conn_handle;g->connected=true;g->generation++;
       g->encrypted=g->bonded=false;g->mtu=ble_att_mtu(g->conn);g->queued=g->head=g->dropped=0;g->error=0;}
@@ -155,6 +158,7 @@ static int gap(struct ble_gap_event *event,void *arg)
     if(event->disconnect.conn.conn_handle==g->conn){
       g->connecting=g->connected=g->encrypted=g->bonded=false;g->conn=BLE_HS_CONN_HANDLE_NONE;
       g->closing=false;
+      g->peer_valid=false;
       g->generation++;g->queued=0;if(g->pending)complete_locked(-ENOTCONN);release=true;}
     break;
   case BLE_GAP_EVENT_ENC_CHANGE:
@@ -210,11 +214,12 @@ int glass_ble_central_connect(unsigned index,uint32_t scan_generation)
   else if(index>=g->count)ret=-EINVAL;
   else if(scan_generation&&scan_generation!=g->scan_generation)ret=-ESTALE;
   else{peer.type=g->devices[index].type;memcpy(peer.val,g->devices[index].address,6);
+    g->peer=g->devices[index];g->peer_valid=true;
     g->connecting=true;g->abandoned=false;g->error=0;token=++g->gap_token;}
   bool busy=g&&(g->scanning||g->connecting||g->connected||g->closing);pthread_mutex_unlock(&lock);
   if(ret){if(!busy)glass_ble_role_release(CENTRAL_ROLE);goto out;}
   ret=dispatch(HOST_CONNECT,0,token,&peer,NULL);
-  if(ret){pthread_mutex_lock(&lock);g->connecting=false;g->error=posix_error(ret);pthread_mutex_unlock(&lock);glass_ble_role_release(CENTRAL_ROLE);ret=posix_error(ret);}
+  if(ret){pthread_mutex_lock(&lock);g->connecting=false;g->peer_valid=false;g->error=posix_error(ret);pthread_mutex_unlock(&lock);glass_ble_role_release(CENTRAL_ROLE);ret=posix_error(ret);}
 out:pthread_mutex_unlock(&api);return ret;
 }
 int glass_ble_central_cancel(void)
@@ -237,8 +242,15 @@ int glass_ble_central_disconnect(void)
 {
   glass_ble_central_cancel();pthread_mutex_lock(&lock);
   uint16_t conn=g&&!g->closing?g->conn:BLE_HS_CONN_HANDLE_NONE;
-  if(g&&conn!=BLE_HS_CONN_HANDLE_NONE)g->closing=true;pthread_mutex_unlock(&lock);
-  return conn==BLE_HS_CONN_HANDLE_NONE?0:posix_error(dispatch(HOST_TERMINATE,conn,0,NULL,NULL));
+  uint32_t generation=g?g->generation:0;
+  if(g&&conn!=BLE_HS_CONN_HANDLE_NONE){g->closing=true;g->error=0;}pthread_mutex_unlock(&lock);
+  int ret=conn==BLE_HS_CONN_HANDLE_NONE?0:posix_error(dispatch(HOST_TERMINATE,conn,0,NULL,NULL));
+  if(ret){
+    pthread_mutex_lock(&lock);
+    if(g&&g->conn==conn&&g->generation==generation){g->closing=false;g->error=ret;}
+    pthread_mutex_unlock(&lock);
+  }
+  return ret;
 }
 static bool callback_locked(uint16_t conn,void *arg)
 {return g&&g->pending&&g->connected&&g->conn==conn&&g->token==(uint32_t)(uintptr_t)arg&&g->reply.generation==g->generation;}

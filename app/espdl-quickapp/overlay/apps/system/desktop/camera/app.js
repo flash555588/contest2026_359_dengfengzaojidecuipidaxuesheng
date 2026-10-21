@@ -6,25 +6,40 @@ const sx = v => Math.round(v * view.width / 1024);
 const sy = v => Math.round(v * view.height / 600);
 const colors = {
   page: 0x000000, card: 0x202022,
-  primary: 0xf5f5f7, secondary: 0x9c9ca1,
+  primary: 0xf5f5f7, secondary: 0x9ba0a8,
   accent: 0xf13c2e, onAccent: 0xffffff,
-  border: 0x38383a, selected: 0x362321
+  border: 0x2b2e33, selected: 0x24272c, success: 0x74d5a0
 };
 const labels = new Map(), enabled = new Map();
+const hitTargets = new Set();
 let devices = [], selected = null, modes = [], modeIndex = 0, intervalIndex = 0;
 let pending = false, running = false, requestAt = 0, message = '请选择摄像头后开始预览';
 let signature = '', intervals = [], photoBaseline = '';
 let devicePage = 0, lastScan = -Infinity;
 let settingsOpen = false, resumeAfterSelect = false, colorStyle = 0;
+let filtersOpen=false;
+let aspectRatio=typeof system.camera.aspect==='function'?system.camera.aspect():0;
+const aspectNames=['原始','16:10','16:9','4:3','1:1'];
+const filterBounds={x:772,y:116,w:56,h:296};
+const filterNames=['原色','鲜艳','黑白','暖色','冷色','复古'];
+const filterWidgets=[];
+const menuBounds={x:800,y:24,w:176,h:552};
+let settingsTouch=null,dismissTap=false;
 let controlSignature = "";
+let shutterReady = false;
 let videoMode = false, recording = {status: 0, revision: 0};
+let statusVisible = false;
 const hasVideo = typeof system.camera.recordStatus === 'function' && typeof system.camera.setVideoMode === 'function';
 const settingsWidgets = [];
 function part(id) { settingsWidgets.push(id); ui.setHidden(id, true); return id; }
 function setSettingsOpen(open) {
+  if(open&&filtersOpen)setFiltersOpen(false);
   settingsOpen = !!open;
+  zoomGesture = null;
+  settingsTouch=null;dismissTap=false;
   settingsWidgets.forEach(id => ui.setHidden(id, !settingsOpen));
-  renderRows();
+  standbyWidgets.forEach(id => ui.setHidden(id, settingsOpen));
+  renderRows();renderMode();
 }
 
 function write(id, value) {
@@ -48,12 +63,15 @@ function button(value, x, y, w, h, action, primary) {
   labels.set(id, value); return id;
 }
 function enable(id, value) {
-  if (enabled.get(id) !== value) { ui.setStyle(id, {enabled: value}); enabled.set(id, value); }
+  if (enabled.get(id) !== value) {
+    ui.setStyle(id, {enabled: value});
+    if(!hitTargets.has(id))ui.setOpacity(id,value?255:100);
+    enabled.set(id, value);
+  }
 }
 
 ui.background(0x000000);
-// The native scene uses the user's unmodified screenshot as its sprite atlas.
-// It owns only small read-only tiles, never a second full-screen framebuffer.
+// Shared read-only tiles keep the idle page and native live toolbar consistent.
 const cameraScene=ui.cameraReference();
 const zoomValues=[100,150,200,300];
 let zoomPercent=100,zoomGesture=null;
@@ -62,14 +80,26 @@ function applyZoom(index){
   const percent=zoomValues[index];
   if(typeof system.camera.setZoom==='function'&&!system.camera.setZoom(percent))return;
   zoomPercent=percent;ui.cameraReferenceZoom(cameraScene,percent);
+  syncControls();
 }
 function syncZoom(){
   const percent=typeof system.camera.zoom==='function'?system.camera.zoom():zoomPercent;
-  if(zoomValues.includes(percent)&&percent!==zoomPercent){zoomPercent=percent;ui.cameraReferenceZoom(cameraScene,percent);}
+  if(zoomValues.includes(percent)&&percent!==zoomPercent){zoomPercent=percent;ui.cameraReferenceZoom(cameraScene,percent);syncControls();}
 }
 ui.onTouch((state,nx,ny)=>{
   const x=nx*1024,y=ny*600;
-  if(settingsOpen){zoomGesture=null;return;}
+  if(settingsOpen||filtersOpen){
+    zoomGesture=null;
+    if(state==='down'){
+      const b=filtersOpen?filterBounds:menuBounds;
+      settingsTouch={x,y,outside:x<b.x||x>=b.x+b.w||y<b.y||y>=b.y+b.h,moved:false};
+      dismissTap=false;
+    }
+    if(settingsTouch&&Math.hypot(x-settingsTouch.x,y-settingsTouch.y)>12)settingsTouch.moved=true;
+    if(state==='up'){dismissTap=!!settingsTouch&&settingsTouch.outside&&!settingsTouch.moved;settingsTouch=null;}
+    if(state==='cancel'){settingsTouch=null;dismissTap=false;}
+    return;
+  }
   if(state==='down'){
     zoomGesture=x>=700&&x<764&&y>=160&&y<440?{y,index:zoomValues.indexOf(zoomPercent)}:null;
     return;
@@ -86,75 +116,135 @@ ui.onTouch((state,nx,ny)=>{
 syncZoom();
 function hit(value,x,y,w,h,action) {
   const id=button(value,x,y,w,h,action,false);
-  ui.setOpacity(id,0);return id;
+  hitTargets.add(id);ui.setOpacity(id,0);return id;
 }
-function hiddenLabel(value) {
-  const id=label(value,156,30,500,22,14,colors.secondary);
-  ui.setHidden(id,true);return id;
-}
-const deviceName=hiddenLabel('尚未选择设备');
-const countLabel=hiddenLabel('正在检测摄像头');
-const previewTitle=hiddenLabel('连接摄像头');
-const status=label(message,140,550,544,18,12,colors.secondary);
-ui.setHidden(status,true);
+const deviceName=label('尚未选择设备',140,34,344,22,14,colors.secondary);
+const captureInfo=label('',488,36,196,20,12,colors.secondary);
+ui.setStyle(captureInfo,{rightAlign:true});
+const previewTitle=label('未连接摄像头',216,284,390,28,16,colors.secondary,true);
+const previewHint=label('连接 CSI / USB 摄像头',216,318,390,24,14,colors.secondary,true);
+const status=label(message,140,542,544,28,12,colors.secondary);
+const standbyWidgets=[deviceName,captureInfo,previewTitle,previewHint,status];
 function syncControls(){
   const next=typeof system.camera.style==='function'?system.camera.style():0;
-  if(Number.isInteger(next)&&next>=0&&next<=2)colorStyle=next;
-  const signature=colorStyle+':'+videoMode;
-  if(signature!==controlSignature){ui.cameraReferenceControls(cameraScene,colorStyle,videoMode);controlSignature=signature;}
+  if(Number.isInteger(next)&&next>=0&&next<filterNames.length)colorStyle=next;
+  const csi=!selected||selected.transport==='csi',mode=modes[modeIndex];
+  const width=csi?1024:mode?mode.width:896,height=csi?600:mode?mode.height:600,canvas=csi?1024:896;
+  if(typeof system.camera.aspect==='function')aspectRatio=system.camera.aspect();
+  const signature=[colorStyle,videoMode,shutterReady,settingsOpen,filtersOpen,width,height,canvas,zoomPercent,aspectRatio].join(':');
+  if(signature!==controlSignature){ui.cameraReferenceControls(cameraScene,colorStyle,videoMode,shutterReady,settingsOpen,filtersOpen,width,height,canvas,zoomPercent,aspectRatio);controlSignature=signature;}
 }
-const deviceButton=hit('切换相机',856,24,78,72,()=>setSettingsOpen(!settingsOpen));
-const colorButton=hit('色彩风格',700,28,64,72,()=>{
-  const next=(colorStyle+1)%3;
-  if(typeof system.camera.setStyle==='function'&&system.camera.setStyle(next)){
-    syncControls();setStatus('色彩：'+['原色','鲜艳','黑白'][colorStyle]);
-  }
-});
+const deviceButton=hit('切换相机',856,24,78,72,()=>settingsOpen?closeSettings():setSettingsOpen(true));
+const colorButton=hit('色彩风格',700,28,64,90,()=>setFiltersOpen(!filtersOpen));
 const albumButton=hit('预览相册',856,504,78,78,()=>{
   pending=false;running=false;resumeAfterSelect=false;setSettingsOpen(false);
   if(typeof system.camera.openAlbum!=='function'||!system.camera.openAlbum())setStatus('相册暂时无法打开');
 });
-const captureMode=hit('切换录制',856,128,78,74,toggleVideo);
+const captureMode=hit('切换录制',836,128,112,80,toggleVideo);
 const startButton=hit('开始预览',836,244,112,112,start);
 // The thin system-return edge is retained in the landscape translation.
 const returnEdge=ui.panel(sx(1007),sy(234),Math.max(2,sx(3)),sy(132),0x999999);
 ui.setStyle(returnEdge,{radius:2,borderWidth:0});
 
-// Expanded choices use the reference's black field and plain white/red type.
-// There are no desktop cards, outlined rows, or unrelated control colours.
-const choices=part(card(140,188,544,294,0,0x000000));
+// A transparent input shield dismisses on an outside tap without click-through.
+const shade=part(hit('收起设置',0,0,988,600,()=>{if(dismissTap)closeSettings();}));
+const choices=part(card(800,24,176,204,0,colors.page));
 ui.setStyle(choices,{borderWidth:0});
-part(label('摄像头',156,204,350,24,16,colors.secondary));
-const doneButton=part(button('完成',568,196,96,40,()=>closeSettings(),false));
-const rows=[];
-for(let i=0;i<rowCount;i++){
-  const row=part(button('',156,244+i*40,508,36,()=>{
-    if(select(devicePage*rowCount+i))closeSettings();
-  },false));
-  ui.setColor(row,0x000000);
-  ui.setStyle(row,{radius:0,borderWidth:0,fontSize:16,center:false,ellipsis:true});
-  rows.push(row);
+const icons={camera:'\ue002',usb:'\ue029',left:'\uf053',right:'\uf054',
+  frame:'\uf03e',rate:'\uf079',refresh:'\uf021'};
+function glyph(value,x,y,color=colors.secondary){
+  const id=part(label(value,x+12,y+10,24,30,24,color,true));
+  ui.setStyle(id,{icon:1});return id;
 }
-const empty=[];
-const emptyTitle=part(label('未检测到摄像头',156,254,508,26,16,colors.primary,true));
-const emptyHint=part(label('连接 CSI 或 USB 摄像头后刷新',156,288,508,22,12,colors.secondary,true));
-empty.push(emptyTitle,emptyHint);
-function showList(list){empty.forEach(id=>ui.setHidden(id,list||!settingsOpen));}
-const previousButton=part(button('上一页',156,372,112,36,()=>turnPage(-1),false));
-const nextButton=part(button('下一页',552,372,112,36,()=>turnPage(1),false));
-const pageLabel=part(label('',282,382,256,22,12,colors.secondary,true));
-const modeButton=part(button('分辨率',156,426,244,40,()=>{
+function iconAction(name,icon,x,y,action,w=48,h=48){
+  return {hit:part(hit(name,x,y,w,h,action)),icon:glyph(icon,x,y)};
+}
+function dots(x,y){
+  return Array.from({length:5},(_,i)=>{
+    const id=part(card(x+i*12,y,4,4,2,colors.border));
+    ui.setStyle(id,{borderWidth:0});return id;
+  });
+}
+function showDots(group,count,index,on){
+  const shown=Math.min(5,count),start=Math.max(0,Math.min(count-shown,index-2));
+  group.forEach((id,i)=>{
+    ui.setHidden(id,!on||i>=shown);
+    if(i<shown)ui.setColor(id,start+i===index?colors.accent:colors.border);
+  });
+}
+const done=iconAction('完成',icons.right,868,36,closeSettings);
+const doneButton=done.hit;
+const rows=[],rowMarkers=[],rowIcons=[],rowWells=[];
+for(let i=0;i<rowCount;i++){
+  const x=812+i*52;
+  const well=part(card(x+2,118,44,44,22,colors.selected));
+  ui.setStyle(well,{borderWidth:0});rowWells.push(well);
+  const row=part(hit('',x,116,48,56,()=>{
+    if(select(devicePage*rowCount+i))closeSettings();
+  }));
+  rows.push(row);
+  rowIcons.push(glyph(icons.camera,x,116,colors.primary));
+  const marker=part(card(x+22,170,4,4,2,colors.accent));
+  ui.setStyle(marker,{borderWidth:0});rowMarkers.push(marker);
+}
+const emptyIcon=rowIcons[0];
+const previous=iconAction('上一页',icons.left,812,184,()=>turnPage(-1));
+const next=iconAction('下一页',icons.right,916,184,()=>turnPage(1));
+const previousButton=previous.hit,nextButton=next.hit;
+const pageDots=dots(860,206);
+const resolution=iconAction('分辨率',icons.frame,820,384,()=>{
   if(pending||running||!modes.length)return;
   modeIndex=(modeIndex+1)%modes.length;chooseIntervals();
-},false));
-const fpsButton=part(button('帧率',404,426,120,40,()=>{
+},144,56);
+const rate=iconAction('帧率',icons.rate,820,448,()=>{
   if(pending||running||!intervals.length)return;
   intervalIndex=(intervalIndex+1)%intervals.length;renderMode();
-},false));
-const refreshButton=part(button('刷新设备',528,426,136,40,()=>refresh(true),false));
-const recordingHint=part(label('点选设备后收起',156,470,508,18,12,colors.secondary));
-for(const id of [previousButton,nextButton,modeButton,fpsButton,refreshButton,doneButton]){
-  ui.setColor(id,0x000000);ui.setStyle(id,{radius:0,borderWidth:0,fontSize:14,textColor:colors.primary});
+},144,56);
+const modeButton=resolution.hit,fpsButton=rate.hit;
+const modeDots=dots(884,408),fpsDots=dots(884,472);
+const refreshControl=iconAction('刷新设备',icons.refresh,868,516,()=>refresh(true));
+const refreshButton=refreshControl.hit;
+const menuShutter=part(hit('菜单快门',836,244,112,112,()=>{
+  resumeAfterSelect=false;start();
+}));
+
+function filterPart(id){filterWidgets.push(id);ui.setHidden(id,true);return id;}
+filterPart(hit('收起滤镜',0,0,988,600,()=>{if(dismissTap)setFiltersOpen(false);}));
+filterPart(hit('滤镜开关',700,28,64,90,()=>setFiltersOpen(false)));
+const filterShutter=filterPart(hit('滤镜快门',836,244,112,112,()=>{setFiltersOpen(false);start();}));
+const filterChoices=filterNames.map((name,i)=>
+  filterPart(hit(name,780,124+i*48,40,40,()=>chooseFilter(i))));
+const aspectButton=hit('画幅比例',800,504,56,78,()=>{
+  const next=aspectRatio%4+1;
+  if(typeof system.camera.setAspect==='function'&&system.camera.setAspect(next)){
+    aspectRatio=next;syncControls();setStatus('画幅：'+aspectNames[next]);
+  }
+});
+
+function setFiltersOpen(open){
+  if(open&&(settingsOpen||pending||running||system.camera.status().busy||recordingBusy()))return;
+  filtersOpen=!!open;zoomGesture=null;settingsTouch=null;dismissTap=false;
+  filterWidgets.forEach(id=>ui.setHidden(id,!filtersOpen));
+  controls();
+}
+function chooseFilter(index){
+  if(typeof system.camera.setStyle==='function'&&system.camera.setStyle(index)){
+    colorStyle=index;setFiltersOpen(false);setStatus('色彩：'+filterNames[index]);
+  }else setStatus('滤镜暂时无法应用');
+}
+
+function qualityAvailable(){
+  return !!selected&&!!selected.previewSupported&&(selected.transport==='csi'||modes.length>0);
+}
+function layoutSettings(){
+  const paged=devices.length>rowCount;
+  for(const id of [previousButton,previous.icon])ui.setHidden(id,!settingsOpen||!paged||devicePage===0);
+  for(const id of [nextButton,next.icon])ui.setHidden(id,!settingsOpen||!paged||(devicePage+1)*rowCount>=devices.length);
+  showDots(pageDots,Math.ceil(devices.length/rowCount),devicePage,settingsOpen&&paged);
+  const quality=settingsOpen&&qualityAvailable();
+  for(const id of [resolution.icon,rate.icon])ui.setHidden(id,!quality);
+  showDots(modeDots,selected&&selected.transport==='csi'?1:modes.length,modeIndex,quality);
+  showDots(fpsDots,selected&&selected.transport==='csi'?1:intervals.length,intervalIndex,quality);
 }
 
 function closeSettings(){
@@ -169,7 +259,7 @@ function syncRecording() {
   recording = next;
   videoMode = !!next.video;
   syncControls();
-  write(recordingHint, videoMode ? '录像含麦克风声音，保存到 SD 卡' : '点选摄像头，按快门开始取景');
+  if(changed)renderMode();
 
   if (changed && next.status === 4 && next.path) setStatus('录像已保存 · ' + next.path);
   else if (changed && next.status === 3) setStatus('正在保存录像，请勿拔出 SD 卡');
@@ -180,7 +270,8 @@ function toggleVideo() {
   if (!hasVideo || pending || running || system.camera.status().busy || recordingBusy()) return;
   if (system.camera.setVideoMode(!videoMode)) {
     syncRecording();
-    setStatus(videoMode ? '视频 · 含麦克风声音，进入取景后轻触快门录制' : '照片 · 进入取景后轻触快门拍摄');
+    renderMode();
+    setStatus(videoMode ? '视频 · 麦克风开启 · 保存到 SD 卡' : '照片');
   }
 }
 
@@ -193,30 +284,54 @@ function turnPage(delta) {
 function key(d) { return d.id + ':' + d.generation; }
 function setStatus(value) {
   message=value;write(status,value);
-  ui.setHidden(status,!/失败|超时|断开|未检测|已保存|取消|色彩：|无法打开/.test(value));
+  const error=/失败|超时|断开|不足|需要可用|没有可用|无法|停止（/.test(value);
+  statusVisible=error||/已保存|取消|色彩：|视频 ·|正在/.test(value);
+  ui.setStyle(status,{textColor:error?0xff8178:/已保存/.test(value)?colors.success:colors.secondary});
+  ui.setHidden(status,settingsOpen||!statusVisible);
 }
 function controls(busy) {
   busy = busy || pending || running || system.camera.status().busy || recordingBusy();
   const ready = !!selected && !!selected.previewSupported && (selected.transport === 'csi' || (modes.length > 0 && intervals.length > 0));
-  enable(startButton, !busy && ready);
-  enable(deviceButton, !busy);
-  enable(captureMode, !busy && hasVideo);
+  shutterReady=!busy&&ready;
+  enable(startButton,shutterReady&&!settingsOpen&&!filtersOpen);
+  enable(menuShutter,shutterReady);syncControls();
+  enable(filterShutter,shutterReady);filterChoices.forEach(id=>enable(id,!busy));
+  enable(aspectButton,!busy&&!filtersOpen);ui.setHidden(aspectButton,filtersOpen);
+  enable(deviceButton, !busy&&!filtersOpen);
+  enable(captureMode, !busy && hasVideo && !settingsOpen&&!filtersOpen);
+  enable(colorButton, !busy && !settingsOpen);
+  enable(albumButton, !busy && !settingsOpen&&!filtersOpen);
   enable(refreshButton, !busy);
   enable(modeButton, !busy && modes.length > 1);
   enable(fpsButton, !busy && intervals.length > 1);
+  const quality=settingsOpen&&qualityAvailable();
+  ui.setHidden(modeButton,!quality);ui.setHidden(fpsButton,!quality);
+  ui.setOpacity(resolution.icon,!busy&&modes.length>1?255:150);
+  ui.setOpacity(rate.icon,!busy&&intervals.length>1?255:150);
   enable(previousButton, !busy && devicePage > 0);
   enable(nextButton, !busy && (devicePage + 1) * rowCount < devices.length);
   rows.forEach(row => enable(row, !busy));
 }
 function renderMode() {
-  write(deviceName, selected ? shortName(selected.name) : '尚未选择设备');
-  write(previewTitle, selected && selected.previewSupported ? '准备取景' : '连接摄像头');
+  const ready=selected&&selected.previewSupported;
+  const name=selected?shortName(selected.name):'';
+  const transport=selected&&selected.transport==='csi'?'CSI':'USB';
+  write(deviceName, selected ? name.toUpperCase().startsWith(transport)?name:transport+' · '+name : 'CAMERA');
+  write(previewTitle, ready ? '按快门开始取景' : selected?'设备不支持预览':'未连接摄像头');
+  ui.setHidden(previewHint,settingsOpen||!!ready);
+  ui.setHidden(status,settingsOpen||!statusVisible);
   const m = modes[modeIndex];
-  write(modeButton, selected && selected.transport === 'csi' ? '1024 x 600 · RGB565' :
-    m ? m.width + ' x ' + m.height + ' · MJPEG' : '没有可用的 MJPEG 模式');
+  write(modeButton, selected && selected.transport === 'csi' ? '1024 x 600' :
+    m ? m.width + ' x ' + m.height : '分辨率不可用');
   const interval = intervals[intervalIndex];
+  const csi=selected&&selected.transport==='csi';
+  const fps=csi?30:interval?10000000/interval:0;
+  write(captureInfo,csi?'1024 x 600 · 30 fps':m&&fps?
+    m.width+' x '+m.height+' · '+Number(fps.toFixed(1))+' fps':'');
   write(fpsButton, selected && selected.transport === 'csi' ? '30 fps' : interval ?
-    (10000000 / interval).toFixed(1) + ' fps' : '帧率不可用');
+    Number((10000000 / interval).toFixed(1)) + ' fps' : '帧率不可用');
+  layoutSettings();
+  syncControls();
 }
 function chooseIntervals() {
   intervals = []; intervalIndex = 0;
@@ -256,23 +371,27 @@ function shortName(name) {
   return (text.length > 28 ? text.slice(0, 27).join('') + '…' : text.join(''));
 }
 function renderRows() {
+  const slots=Math.min(rowCount,devices.length-devicePage*rowCount);
   for (let i = 0; i < rows.length; i++) {
     const d = devices[devicePage * rowCount + i];
     ui.setHidden(rows[i], !d || !settingsOpen);
+    const current = d&&selected&&key(d)===key(selected);
+    ui.setHidden(rowMarkers[i],!settingsOpen||!current);
+    ui.setHidden(rowIcons[i],!settingsOpen||!d);
+    ui.setHidden(rowWells[i],!settingsOpen||!current);
     if (!d) continue;
-    const current = selected && key(d) === key(selected);
-    ui.setColor(rows[i], 0x000000);
-    ui.setStyle(rows[i], {borderWidth: 0, textColor: current ? colors.accent : colors.primary});
+    const x=812+(3-slots)*26+i*52;
+    ui.setPos(rows[i],sx(x),sy(116));ui.setPos(rowWells[i],sx(x+2),sy(118));
+    ui.setPos(rowIcons[i],sx(x+12),sy(126));ui.setPos(rowMarkers[i],sx(x+22),sy(170));
+    write(rowIcons[i],d.transport==='csi'?icons.camera:icons.usb);
+    ui.setOpacity(rowIcons[i],d.previewSupported?255:70);
     write(rows[i], shortName(d.name) + (d.previewSupported ? '' : ' · 不支持'));
   }
-  showList(devices.length > 0);
-  write(pageLabel, devices.length ? (devicePage + 1) + ' / ' + Math.ceil(devices.length / rowCount) : '暂无设备');
-  ui.setHidden(previousButton, !settingsOpen || devices.length <= rowCount);
-  ui.setHidden(nextButton, !settingsOpen || devices.length <= rowCount);
-  const csi = devices.filter(d => d.transport === 'csi').length;
-  write(countLabel, devices.length ? '已连接 ' + devices.length + ' 个摄像头 · USB ' +
-    (devices.length - csi) + ' / CSI ' + csi : '未连接摄像头');
-  write(emptyTitle, '未检测到摄像头');
+  if(!devices.length){
+    write(emptyIcon,icons.camera);ui.setPos(emptyIcon,sx(880),sy(126));
+    ui.setOpacity(emptyIcon,110);ui.setHidden(emptyIcon,!settingsOpen);
+  }
+  layoutSettings();
   controls();
 }
 function refresh(force) {
@@ -301,6 +420,7 @@ function refresh(force) {
 function start() {
   syncRecording();
   if (pending || running || system.camera.status().busy || recordingBusy()) return;
+  if(filtersOpen)setFiltersOpen(false);
   setSettingsOpen(false);
   refresh(false);
   if (!selected || !selected.previewSupported) { setStatus('请选择可预览的摄像头'); return; }
@@ -362,4 +482,4 @@ function tick() {
 syncRecording();
 refresh(true);
 setInterval(tick, 500);
-globalThis.CameraPreview = { start, stop, refresh: () => refresh(true), frames: () => system.camera.frames(), zoom: () => zoomPercent, style: () => colorStyle, video: () => videoMode };
+globalThis.CameraPreview = { start, stop, refresh: () => refresh(true), frames: () => system.camera.frames(), zoom: () => zoomPercent, style: () => colorStyle, video: () => videoMode, settings: () => settingsOpen, filters: () => filtersOpen, page: () => devicePage };

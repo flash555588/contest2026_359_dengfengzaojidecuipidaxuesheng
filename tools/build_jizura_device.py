@@ -12,7 +12,10 @@ def main():
     names=['glass_sd_font.c','glass_sd_font.h','glass_sd_font_asset.h','glass_ui.inc','glass_lockscreen.inc','glass_lock_pages.inc','glass_music.h','glass_music_parse.c','glass_board_music.c','glass_agent_profiles.h','glass_portal_ui.inc','glass_music_service.c','glass_music_ui.inc','glass_music_full.inc','glass_music_pv.inc',
            'glass_music_lyrics.h','glass_music_hans.h','glass_music_hans_table.h','glass_music_cache.h','glass_lock_photo.c','glass_portal_resource.c','glass_music_sd.h','glass_music_track_key.h','glass_ui_probe.inc','desktop_main.c',
            'qpk_tjpgdcnf.h','qpk_tjpgd.c','qpk_mjpeg.c','qpk_mjpeg.h']
-    names += ['glass_settings_ui.inc', 'glass_about_ui.inc', 'glass_home_ui.inc']
+    names += ['glass_settings_ui.inc', 'glass_about_ui.inc', 'glass_home_ui.inc',
+              'glass_music_cover_ui.inc','glass_lock_photo.h',
+              'glass_lyric_fonts.inc','glass_lyric_font_assets.h',
+              'glass_bluetooth.inc','glass_mouse.inc','glass_ble.h','glass_ble_central.h','glass_status_ui.inc']
     records={}
     # Preserve the prepared tree's pinned optional build flags. Add only the
     # private streaming backend; do not replace its full integration Makefile.
@@ -24,6 +27,15 @@ def main():
         before=out/'before'/name;before.parent.mkdir(exist_ok=True)
         if (desktop/name).exists() and not before.exists():shutil.copy2(desktop/name,before)
         shutil.copyfile(overlay/name,desktop/name);records[name]=sha(overlay/name)
+    # Keep the peer snapshot ABI and service implementation together even in
+    # a narrow desktop rebuild. Otherwise an old host cannot identify peers.
+    ble_sources={}
+    for name in ['glass_ble.h','glass_ble.c','glass_ble_central.h','glass_ble_central.c']:
+        source=repo/'app/espdl-quickapp/overlay/apps/wireless/bluetooth/nimble'/name
+        target=work/'apps/wireless/bluetooth/nimble'/name
+        before=out/'before/nimble'/name;before.parent.mkdir(parents=True,exist_ok=True)
+        if target.exists() and not before.exists():shutil.copy2(target,before)
+        shutil.copyfile(source,target);ble_sources[target]=sha(source);records['nimble/'+name]=sha(source)
     (desktop/'desktop_main.c').touch()
     inputs={str(f.relative_to(desktop)):sha(f) for f in desktop.iterdir() if f.suffix in ('.c','.h','.inc')}
     libraries=list(meta['reused_libraries'])
@@ -38,6 +50,7 @@ def main():
     with (out/'build.log').open('w') as log:subprocess.run(command,cwd=work/'nuttx',env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
     assert sha(work/'nuttx/.config')==config
     for name,digest in inputs.items():assert sha(desktop/name)==digest,'Concurrent build input changed: '+name
+    for path,digest in ble_sources.items():assert sha(path)==digest,'Concurrent BLE build input changed: '+str(path)
     nm=subprocess.check_output([tc+'nm',str(work/'nuttx/nuttx')],text=True)
     ebss=int(re.search(r'^([0-9a-f]+) \w _ebss$',nm,re.M)[1],16);assert ebss<=0x4ffaefc0
     assert not re.search(r'\b(glass_esp_synthesize|glass_nano_probe|glass_zh_q8_probe)$',nm,re.M),'TTS experiment linked'

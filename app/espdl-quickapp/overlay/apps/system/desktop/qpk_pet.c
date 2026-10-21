@@ -6,6 +6,7 @@
 
 #include "qpk_pet.h"
 #include "pet_engine.h"
+#include "pet_lvgl.h"
 
 #include <string.h>
 
@@ -16,6 +17,9 @@ static JSValue js_state(JSContext *context)
 
   pet_engine_get(&state);
   object = JS_NewObject(context);
+  JS_SetPropertyStr(context, object, "appearance",
+                    JS_NewString(context, pet_lvgl_uses_sd_sprites() ?
+                                 "maid" : "fallback"));
   JS_SetPropertyStr(context, object, "mode",
                     JS_NewString(context, state.mode_id));
   JS_SetPropertyStr(context, object, "dir",
@@ -256,9 +260,23 @@ static JSValue js_pet_tick(JSContext *context, JSValueConst this_value,
   return js_state(context);
 }
 
+static JSValue js_pet_load_appearance(JSContext *context,
+                                     JSValueConst this_value,
+                                     int argc, JSValueConst *argv)
+{
+  (void)this_value;
+  (void)argc;
+  (void)argv;
+  return JS_NewBool(context, pet_lvgl_reload_sprites() == 0);
+}
+
 void qpk_pet_bind(JSContext *context, JSValue system)
 {
   JSValue object = JS_NewObject(context);
+
+  JS_SetPropertyStr(context, object, "loadAppearance",
+                    JS_NewCFunction(context, js_pet_load_appearance,
+                                    "loadAppearance", 0));
 
   JS_SetPropertyStr(context, object, "getState",
                     JS_NewCFunction(context, js_pet_get_state,

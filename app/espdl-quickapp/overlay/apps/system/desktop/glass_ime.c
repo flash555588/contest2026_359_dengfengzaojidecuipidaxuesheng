@@ -4,6 +4,7 @@
 #include "glass_pinyin.h"
 #include "glass_icons.h"
 #include "glass_pager.h"
+#include "glass_app_controls.h"
 #ifdef CONFIG_SYSTEM_DESKTOP
 #include "glass_voice.h"
 #endif
@@ -308,8 +309,9 @@ static lv_obj_t *ime_button(struct ime *ime, int x, int width, const lv_font_t *
   lv_obj_t *button=lv_button_create(ime->bar);
   lv_obj_set_pos(button,x,2); lv_obj_set_size(button,width,40);
   lv_obj_remove_flag(button,LV_OBJ_FLAG_CLICK_FOCUSABLE);
-  lv_obj_set_style_bg_color(button,lv_color_hex(surface),0);
-  lv_obj_set_style_bg_color(button,lv_color_hex(surface?0xe6e6e6:0x2a2a2a),LV_STATE_PRESSED);
+  struct glass_app_palette palette=glass_app_palette(foreground<0x888888);
+  glass_app_control_style(button,surface,palette.line);
+  lv_obj_set_style_bg_color(button,lv_color_hex(palette.soft),LV_STATE_PRESSED);
   lv_obj_set_style_opa(button,LV_OPA_50,LV_STATE_DISABLED);
   lv_obj_set_style_radius(button,8,0); lv_obj_set_style_shadow_width(button,0,0); lv_obj_set_style_border_width(button,0,0);
   lv_obj_t *label=lv_label_create(button);
@@ -487,23 +489,22 @@ void glass_ime_attach(lv_obj_t *keyboard, const lv_font_t *font, bool chinese, u
 {
   if (keyboard) lv_obj_set_style_text_font(keyboard, glass_icon_font(14), LV_PART_ITEMS);
   if (!keyboard || get_ime(keyboard)) return;
-  /* Follow the caller's text brightness: light uses white/black, dark uses
-   * black/white. Keep the same geometry and neutral controls in both. */
+  /* Follow the owner's theme without changing keyboard or candidate geometry. */
   unsigned ink=(((foreground>>16)&255)*77+((foreground>>8)&255)*150+(foreground&255)*29)>>8;
   bool light=ink<128;
-  foreground=light?0x000000:0xffffff;
-  surface=light?0xffffff:0x000000;accent=foreground;
+  struct glass_app_palette palette=glass_app_palette(light);
+  foreground=palette.ink;surface=palette.paper;accent=palette.accent;
   lv_obj_set_style_bg_color(keyboard,lv_color_hex(surface),LV_PART_MAIN);
   lv_obj_set_style_bg_opa(keyboard,LV_OPA_COVER,LV_PART_MAIN);
   lv_obj_set_style_bg_color(keyboard,lv_color_hex(surface),LV_PART_ITEMS);
   lv_obj_set_style_text_color(keyboard,lv_color_hex(foreground),LV_PART_ITEMS);
   lv_obj_set_style_border_width(keyboard,1,LV_PART_ITEMS);
-  lv_obj_set_style_border_color(keyboard,lv_color_hex(light?0xdcdcdc:0x242424),LV_PART_ITEMS);
+  lv_obj_set_style_border_color(keyboard,lv_color_hex(palette.line),LV_PART_ITEMS);
   lv_obj_set_style_border_opa(keyboard,LV_OPA_COVER,LV_PART_ITEMS);
   /* Function keys are CHECKED in LVGL; give them the same palette. */
   lv_obj_set_style_bg_color(keyboard,lv_color_hex(surface),LV_PART_ITEMS|LV_STATE_CHECKED);
   lv_obj_set_style_text_color(keyboard,lv_color_hex(foreground),LV_PART_ITEMS|LV_STATE_CHECKED);
-  lv_obj_set_style_bg_color(keyboard,lv_color_hex(light?0xe6e6e6:0x2a2a2a),LV_PART_ITEMS|LV_STATE_PRESSED);
+  lv_obj_set_style_bg_color(keyboard,lv_color_hex(palette.soft),LV_PART_ITEMS|LV_STATE_PRESSED);
   lv_obj_set_style_text_color(keyboard,lv_color_hex(foreground),LV_PART_ITEMS|LV_STATE_PRESSED);
   struct ime *ime=calloc(1,sizeof(*ime));
   if (!ime) return;

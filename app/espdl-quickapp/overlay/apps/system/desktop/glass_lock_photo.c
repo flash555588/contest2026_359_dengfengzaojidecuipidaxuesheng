@@ -17,7 +17,7 @@ static pthread_mutex_t photo_lock=PTHREAD_MUTEX_INITIALIZER;
 static bool busy;
 static struct {
   unsigned generation;bool ready;struct glass_lock_photo result;
-} slots[3];
+} slots[GLASS_COVER_HOME+1];
 struct image_job {unsigned owner,generation;char url[1024];uint8_t *input;size_t used,capacity;bool cached,skip_cache;};
 static bool image_cancelled(void *ctx)
 {
@@ -92,7 +92,7 @@ done:
 }
 static int image_request(unsigned owner,const char *url)
 {
-  if(owner>=3 || (owner && (!url || strncmp(url,"https://",8) || strlen(url)>=1024)))return -EINVAL;
+  if(owner>GLASS_COVER_HOME || (owner && (!url || strncmp(url,"https://",8) || strlen(url)>=1024)))return -EINVAL;
   pthread_mutex_lock(&photo_lock);
   if(busy){pthread_mutex_unlock(&photo_lock);return -EBUSY;}
   struct image_job *job=calloc(1,sizeof(*job));if(!job){pthread_mutex_unlock(&photo_lock);return -ENOMEM;}
@@ -107,13 +107,13 @@ static int image_request(unsigned owner,const char *url)
 }
 static void image_cancel(unsigned owner)
 {
-  if(owner>=3)return;
+  if(owner>GLASS_COVER_HOME)return;
   pthread_mutex_lock(&photo_lock);slots[owner].generation++;slots[owner].ready=false;
   free(slots[owner].result.pixels);slots[owner].result=(struct glass_lock_photo){0};pthread_mutex_unlock(&photo_lock);
 }
 static bool image_take(unsigned owner,struct glass_lock_photo *out)
 {
-  if(owner>=3 || !out)return false;
+  if(owner>GLASS_COVER_HOME || !out)return false;
   pthread_mutex_lock(&photo_lock);bool available=slots[owner].ready;
   if(available){*out=slots[owner].result;slots[owner].result=(struct glass_lock_photo){0};slots[owner].ready=false;}
   pthread_mutex_unlock(&photo_lock);return available;
@@ -121,6 +121,6 @@ static bool image_take(unsigned owner,struct glass_lock_photo *out)
 int glass_lock_photo_request(void){return image_request(0,NULL);}
 void glass_lock_photo_cancel(void){image_cancel(0);}
 bool glass_lock_photo_take(struct glass_lock_photo *out){return image_take(0,out);}
-int glass_lock_cover_request(unsigned owner,const char *url){return owner==1||owner==2?image_request(owner,url):-EINVAL;}
-void glass_lock_cover_cancel(unsigned owner){if(owner==1||owner==2)image_cancel(owner);}
-bool glass_lock_cover_take(unsigned owner,struct glass_lock_photo *out){return (owner==1||owner==2)&&image_take(owner,out);}
+int glass_lock_cover_request(unsigned owner,const char *url){return owner>=GLASS_COVER_MUSIC&&owner<=GLASS_COVER_HOME?image_request(owner,url):-EINVAL;}
+void glass_lock_cover_cancel(unsigned owner){if(owner>=GLASS_COVER_MUSIC&&owner<=GLASS_COVER_HOME)image_cancel(owner);}
+bool glass_lock_cover_take(unsigned owner,struct glass_lock_photo *out){return owner>=GLASS_COVER_MUSIC&&owner<=GLASS_COVER_HOME&&image_take(owner,out);}

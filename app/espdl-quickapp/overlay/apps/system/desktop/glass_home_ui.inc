@@ -5,7 +5,6 @@
  */
 #include "glass_icons.h"
 #include "glass_motion.h"
-#include "glass_home_gradient.inc"
 
 static lv_font_t *g_home_font12;
 static lv_font_t *g_home_font14;
@@ -213,6 +212,138 @@ static void glass_home_finish(void)
   home_reading_style(g_glass.home);
 }
 
+/* A retained view of the same player used by the Music application. The
+ * desktop's existing second tick refreshes it only while home is visible. */
+static struct {
+  lv_obj_t *root,*title,*artist,*album,*status,*progress,*previous,*next,*fade;
+  lv_obj_t *elapsed,*duration_label,*dot,*play;
+  struct music_cover_view cover;
+  char name[128],singer[96],record[128];
+  unsigned seconds,duration,progress_value;
+  enum music_state state;
+  bool valid,paused;
+} g_home_music;
+
+static void home_music_deleted(lv_event_t *event)
+{
+  if(g_home_music.root==lv_event_get_target(event))
+    {music_cover_reset(&g_home_music.cover);memset(&g_home_music,0,sizeof(g_home_music));}
+}
+
+static void home_music_obscure(void)
+{
+  if(g_home_music.cover.requested&&!g_home_music.cover.done){
+    glass_lock_cover_cancel(GLASS_COVER_HOME);g_home_music.cover.requested=false;
+  }
+}
+
+static void home_music_play_draw(lv_event_t *event)
+{
+  lv_obj_t *button=lv_event_get_target(event);
+  lv_area_t area;lv_obj_get_coords(button,&area);
+  lv_layer_t *layer=lv_event_get_layer(event);
+  lv_color_t ink=lv_obj_get_style_text_color(button,0);
+  /* Paint the visible shape about the circle's center, independent of font
+   * ascenders, baseline and glyph bearings. Even heights give equal padding
+   * inside the even-sized button, including its half-pixel center. */
+  int left=area.x1+(lv_area_get_width(&area)-14)/2;
+  int top=area.y1+(lv_area_get_height(&area)-18)/2;
+  bool playing=(g_home_music.state==MUSIC_PLAYING||g_home_music.state==MUSIC_LOADING)&&!g_home_music.paused;
+  if(playing){
+    lv_draw_rect_dsc_t draw;lv_draw_rect_dsc_init(&draw);
+    draw.bg_color=ink;draw.radius=1;
+    lv_area_t bar={left,top,left+3,top+17};
+    lv_draw_rect(layer,&draw,&bar);
+    bar.x1+=10;bar.x2+=10;lv_draw_rect(layer,&draw,&bar);
+  }else{
+    lv_draw_triangle_dsc_t draw;lv_draw_triangle_dsc_init(&draw);
+    draw.bg_color=ink;
+    /* Slightly right of the bounds center balances the triangle's mass. */
+    draw.p[0]=(lv_point_precise_t){left+1,top};
+    draw.p[1]=(lv_point_precise_t){left+1,top+18};
+    draw.p[2]=(lv_point_precise_t){left+16,top+9};
+    lv_draw_triangle(layer,&draw);
+  }
+}
+
+static void home_music_refresh(void)
+{
+  if(!g_home_music.root)return;
+  struct music_now_playing now;
+  glass_music_now_playing(&now);
+  /* Artwork can arrive independently of playback's revision/second tick. */
+  if(!glass_page_covers_home()&&glass_ui_can_paint(g_home_music.root))
+    music_cover_tick(&g_home_music.cover,&now);
+  /* Only feather actual artwork. Alpha blending a solid fallback onto the
+   * same RGB565 surface can otherwise leave a faint quantization rectangle. */
+  if(g_home_music.cover.canvas)lv_obj_remove_flag(g_home_music.fade,LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_add_flag(g_home_music.fade,LV_OBJ_FLAG_HIDDEN);
+  unsigned seconds=now.position_ms/1000;
+  unsigned duration=now.duration_ms/1000;
+  bool paused=now.pause_requested||now.state==MUSIC_PAUSED;
+  bool track_changed=!g_home_music.valid||strcmp(g_home_music.name,now.name);
+  if(track_changed){
+    snprintf(g_home_music.name,sizeof(g_home_music.name),"%s",now.name);
+    lv_label_set_text(g_home_music.title,now.name[0]?now.name:"听见喜欢的声音");
+  }
+  if(track_changed||strcmp(g_home_music.singer,now.artist)){
+    snprintf(g_home_music.singer,sizeof(g_home_music.singer),"%s",now.artist);
+    lv_label_set_text(g_home_music.artist,now.artist[0]?now.artist:now.name[0]?"未知歌手":"搜索好歌，收藏你的热爱");
+  }
+  if(track_changed||strcmp(g_home_music.record,now.album)){
+    snprintf(g_home_music.record,sizeof(g_home_music.record),"%s",now.album);
+    lv_label_set_text(g_home_music.album,strcmp(now.album,now.name)?now.album:"");
+  }
+  if(now.can_skip){lv_obj_remove_state(g_home_music.next,LV_STATE_DISABLED);lv_obj_remove_state(g_home_music.previous,LV_STATE_DISABLED);}
+  else {lv_obj_add_state(g_home_music.next,LV_STATE_DISABLED);lv_obj_add_state(g_home_music.previous,LV_STATE_DISABLED);}
+  if(track_changed||g_home_music.seconds!=seconds||g_home_music.duration!=duration||
+     g_home_music.state!=now.state||g_home_music.paused!=paused){
+    const char *state=now.state==MUSIC_ERROR?"播放失败":now.state==MUSIC_LOADING?(paused?"已暂停":"正在加载"):
+      now.state==MUSIC_PLAYING?(paused?"已暂停":"正在播放"):now.state==MUSIC_PAUSED?"已暂停":
+      now.state==MUSIC_ENDED?"播放结束":now.state==MUSIC_STOPPED?"已停止":"等待播放";
+    lv_label_set_text(g_home_music.status,now.name[0]?state:"等待播放");
+    lv_label_set_text_fmt(g_home_music.elapsed,"%02u:%02u",seconds/60,seconds%60);
+    if(now.duration_ms)lv_label_set_text_fmt(g_home_music.duration_label,"%02u:%02u",duration/60,duration%60);
+    else lv_label_set_text(g_home_music.duration_label,now.name[0]?"--:--":"00:00");
+    lv_obj_set_style_bg_opa(g_home_music.dot,now.state==MUSIC_PLAYING&&!paused?LV_OPA_COVER:LV_OPA_40,0);
+    lv_obj_invalidate(g_home_music.play);
+  }
+  unsigned progress=now.duration_ms?(uint64_t)now.position_ms*1000/now.duration_ms:0;
+  if(progress>1000)progress=1000;
+  if(!g_home_music.valid||g_home_music.progress_value!=progress){
+    lv_bar_set_value(g_home_music.progress,progress,LV_ANIM_OFF);
+  }
+  g_home_music.seconds=seconds;g_home_music.duration=duration;
+  g_home_music.state=now.state;g_home_music.paused=paused;
+  g_home_music.progress_value=progress;g_home_music.valid=true;
+}
+
+static void home_music_toggle(lv_event_t *event)
+{
+  LV_UNUSED(event);
+  struct music_now_playing now;glass_music_now_playing(&now);
+  if(!now.name[0]){glass_music(NULL);return;}
+  glass_music_toggle();home_music_refresh();
+}
+
+static void home_music_next(lv_event_t *event)
+{
+  LV_UNUSED(event);
+  struct music_now_playing now;glass_music_now_playing(&now);
+  if(!now.can_skip)return;
+  if(glass_music_skip(1))show_toast("暂无可播放的下一首");
+  home_music_refresh();
+}
+
+static void home_music_previous(lv_event_t *event)
+{
+  LV_UNUSED(event);
+  struct music_now_playing now;glass_music_now_playing(&now);
+  if(!now.can_skip)return;
+  if(glass_music_skip(-1))show_toast("暂无可播放的上一首");
+  home_music_refresh();
+}
+
 static void glass_rebuild(void)
 {
   desktop_fixed_shell();
@@ -252,59 +383,104 @@ static void glass_rebuild(void)
       lv_obj_set_style_bg_color(item, lv_color_hex(paper), LV_STATE_PRESSED);
     }
 
-  /* One music feature, with adjacent entry points for video and live media. */
-  lv_obj_t *card = home_card(root, 0, 108, 52, 567, 272, 0x272534);
-  static const uint32_t ends[] = {0x695070, 0x754f48, 0x456e67};
-  glass_gradient(card, ends[g_glass.palette < 3 ? g_glass.palette : 0], LV_GRAD_DIR_HOR);
-  lv_obj_t *fill = lv_image_create(card);
-  lv_image_set_src(fill, home_gradients[g_glass.palette < 3 ? g_glass.palette : 0]);
-  lv_obj_set_size(fill, 567, 272);
-  lv_image_set_inner_align(fill, LV_IMAGE_ALIGN_TILE);
-  lv_obj_remove_flag(fill, LV_OBJ_FLAG_CLICKABLE);
-  home_text(card, "MUSIC SPACE", 26, 22, 230, 12, 0xf0e6f5);
-  home_icon(card, GLASS_ICON_HEADPHONES, 438, 20, 14, 0xf0e6f5);
-  home_text(card, "音乐空间", 458, 22, 91, 12, 0xf0e6f5);
-  /* Circles and actual LVGL assets, not a rasterized page background. */
-  for (unsigned i = 0; i < 2; i++)
-    {
-      int d = i ? 294 : 246;
-      lv_obj_t *orbit = glass_box(card, i ? 292 : 316, i ? 29 : 53, d, d, 0xffffff, d/2);
-      lv_obj_set_style_bg_opa(orbit, LV_OPA_TRANSP, 0);
-      lv_obj_set_style_border_width(orbit, 1, 0);
-      lv_obj_set_style_border_color(orbit, lv_color_hex(0xd4b7de), 0);
-      lv_obj_set_style_border_opa(orbit, 30, 0);
-      lv_obj_remove_flag(orbit, LV_OBJ_FLAG_CLICKABLE);
-    }
-  const lv_image_dsc_t *covers[] = {&img_lv_demo_music_cover_3, &img_lv_demo_music_cover_1};
-  const int widths[] = {129, 178};
-  const int positions[][2] = {{300, 62}, {397, 101}};
-  for (unsigned i = 0; i < 2; i++)
-    {
-      lv_obj_t *art = lv_image_create(card);
-      lv_image_set_src(art, covers[i]);
-      lv_image_set_pivot(art, 0, 0);
-      lv_image_set_scale(art, widths[i] * 256 / covers[i]->header.w);
-      lv_obj_set_pos(art, positions[i][0], positions[i][1]);
-      lv_obj_remove_flag(art, LV_OBJ_FLAG_CLICKABLE);
-    }
-  label = home_text(card, "此刻，\n听见喜欢。", 26, 60, 265, 34, 0xfff8ef);
-  lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+  /* Current artwork is the feature, rather than unrelated demo photographs. */
+  const uint32_t music_ink=light?0x26333d:0xeff3f5;
+  const uint32_t music_muted=light?0x697680:0xa9b8c3;
+  const uint32_t music_accent=light?0x38596c:0xa9c6d7;
+  const uint32_t music_paper=light?0xf7f8fa:0x21272d;
+  lv_obj_t *card = home_card(root, 0, 108, 52, 567, 272, music_paper);
+  lv_obj_set_style_radius(card,24,0);
+  g_home_music.root=card;
+  lv_obj_add_event_cb(card,home_music_deleted,LV_EVENT_DELETE,NULL);
+  /* The clear cover occupies about a third of the card. Extend the image
+   * under a translucent edge so it melts into the information surface. */
+  lv_obj_t *sleeve=glass_box(card,0,0,276,272,music_paper,0);
+  lv_obj_remove_flag(sleeve,LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *note=home_icon(sleeve,GLASS_ICON_HEADPHONES,0,0,32,light?0x8b7e9e:0xb1a6c3);
+  lv_obj_set_pos(note,70,104);
+  lv_obj_t *hint=home_text(sleeve,"暂无封面",26,156,120,12,light?0x8b7e9e:0xb1a6c3);
+  lv_obj_set_style_text_align(hint,LV_TEXT_ALIGN_CENTER,0);
+  g_home_music.cover.host=sleeve;g_home_music.cover.owner=GLASS_COVER_HOME;
+  glass_clickable(sleeve,glass_music,NULL);
+  /* Ease both ends of the feather with retained native two-stop strips.
+   * This also works with the board's LV_GRADIENT_MAX_STOPS=2 configuration. */
+  g_home_music.fade=glass_box(card,100,0,178,272,music_paper,0);
+  lv_obj_set_style_bg_opa(g_home_music.fade,LV_OPA_TRANSP,0);
+  lv_obj_remove_flag(g_home_music.fade,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  static const uint8_t feather[]={0,20,64,128,192,235,255};
+  for(unsigned i=0;i<6;i++){
+    int left=176*i/6,right=176*(i+1)/6;
+    lv_obj_t *strip=glass_box(g_home_music.fade,left,0,right-left,272,music_paper,0);
+    lv_obj_set_style_bg_grad_color(strip,lv_color_hex(music_paper),0);
+    lv_obj_set_style_bg_grad_dir(strip,LV_GRAD_DIR_HOR,0);
+    lv_obj_set_style_bg_main_opa(strip,feather[i],0);
+    lv_obj_set_style_bg_grad_opa(strip,feather[i+1],0);
+    lv_obj_set_style_bg_main_stop(strip,0,0);
+    /* Settle to the exact paper color before the image's physical edge. */
+    lv_obj_set_style_bg_grad_stop(strip,i==5?224:255,0);
+    lv_obj_remove_flag(strip,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  }
+  /* A short opaque tail lands exactly on the card color even in RGB565. */
+  lv_obj_t *landing=glass_box(g_home_music.fade,171,0,7,272,music_paper,0);
+  lv_obj_remove_flag(landing,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  g_home_music.dot=glass_box(card,247,30,4,4,music_accent,2);
+  lv_obj_remove_flag(g_home_music.dot,LV_OBJ_FLAG_CLICKABLE);
+  g_home_music.status=home_text(card,"",260,23,185,14,music_accent);
+  lv_obj_set_height(g_home_music.status,26);
+  lv_obj_t *open=home_button(card,NULL,GLASS_ICON_ARROW_NE,499,8,44,
+    0xffffff,music_muted,glass_music,NULL);
+  lv_obj_set_style_bg_opa(open,LV_OPA_TRANSP,0);
+  lv_obj_set_style_bg_opa(open,LV_OPA_10,LV_STATE_PRESSED);
+  lv_obj_set_style_radius(open,22,0);
+  label = home_text(card, "听见喜欢的声音", 244, 64, 291, 34, music_ink);
+  g_home_music.title=label;
+  lv_obj_set_height(label,44);
+  lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
   lv_obj_set_style_text_line_space(label, 2, 0);
-  home_text(card, "搜索好歌，收藏你的热爱", 26, 154, 264, 12, 0xf0e6f5);
-  home_button(card, "进入音乐", LV_SYMBOL_PLAY, 26, 179, 124,
-    0xfff8ef, 0x302637, glass_music, NULL);
-  home_rule(card, 26, 230, 515, 0xe4cfe3);
-#ifdef CONFIG_SYSTEM_BILIBILI_LIVE
-  label = home_text(card, "更多影音", 26, 246, 74, 12, 0xf0e6f5);
-  lv_obj_t *live = home_button(card, "网络直播", GLASS_ICON_RADIO,
-    103, 228, 127, 0x373043, 0xfff8ef, launch_bilibili, NULL);
-  lv_obj_t *video = home_button(card, "相册", LV_SYMBOL_IMAGE,
-    234, 228, 127, 0x373043, 0xfff8ef, launch_local_video, NULL);
-  lv_obj_set_style_bg_opa(live, LV_OPA_TRANSP, 0);
-  lv_obj_set_style_bg_opa(video, LV_OPA_TRANSP, 0);
-#else
-  home_text(card, "搜索 · 播放 · 收藏", 26, 245, 264, 12, 0xf0e6f5);
-#endif
+  g_home_music.artist=home_text(card, "", 244, 111, 291, 16, music_muted);
+  lv_obj_set_height(g_home_music.artist,22);
+  g_home_music.album=home_text(card,"",244,138,291,12,music_muted);
+  lv_obj_set_height(g_home_music.album,22);
+  g_home_music.elapsed=home_text(card,"",244,174,72,14,music_muted);
+  lv_obj_set_height(g_home_music.elapsed,26);
+  g_home_music.duration_label=home_text(card,"",463,174,72,14,music_muted);
+  lv_obj_set_height(g_home_music.duration_label,26);
+  lv_obj_set_style_text_align(g_home_music.duration_label,LV_TEXT_ALIGN_RIGHT,0);
+  g_home_music.progress=lv_bar_create(card);
+  lv_obj_remove_style_all(g_home_music.progress);
+  lv_obj_set_pos(g_home_music.progress,244,163);lv_obj_set_size(g_home_music.progress,291,3);
+  lv_obj_set_style_radius(g_home_music.progress,2,0);
+  lv_obj_set_style_radius(g_home_music.progress,2,LV_PART_INDICATOR);
+  lv_bar_set_range(g_home_music.progress,0,1000);
+  lv_obj_set_style_bg_color(g_home_music.progress,lv_color_hex(music_muted),0);
+  lv_obj_set_style_bg_opa(g_home_music.progress,LV_OPA_20,0);
+  lv_obj_set_style_bg_color(g_home_music.progress,lv_color_hex(music_accent),LV_PART_INDICATOR);
+  lv_obj_set_style_bg_opa(g_home_music.progress,LV_OPA_COVER,LV_PART_INDICATOR);
+  lv_obj_remove_flag(g_home_music.progress,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+  g_home_music.previous=home_button(card,NULL,LV_SYMBOL_PREV,296,211,44,
+    0xffffff,music_ink,home_music_previous,NULL);
+  lv_obj_set_style_bg_opa(g_home_music.previous,LV_OPA_TRANSP,0);
+  lv_obj_set_style_bg_opa(g_home_music.previous,LV_OPA_10,LV_STATE_PRESSED);
+  lv_obj_set_style_bg_opa(g_home_music.previous,LV_OPA_TRANSP,LV_STATE_DISABLED);
+  lv_obj_set_style_opa(g_home_music.previous,LV_OPA_40,LV_STATE_DISABLED);
+  lv_obj_set_style_text_font(lv_obj_get_child(g_home_music.previous,0),glass_icon_font(20),0);
+  lv_obj_t *play=home_button(card,NULL,NULL,362,207,52,
+    music_accent,light?0xffffff:0x17232d,home_music_toggle,NULL);
+  lv_obj_set_height(play,52);lv_obj_set_style_radius(play,26,0);
+  lv_obj_set_style_text_color(play,lv_color_hex(light?0xffffff:0x17232d),0);
+  lv_obj_add_event_cb(play,home_music_play_draw,LV_EVENT_DRAW_MAIN,NULL);
+  g_home_music.play=play;
+  g_home_music.next=home_button(card,NULL,LV_SYMBOL_NEXT,436,211,44,
+    0xffffff,music_ink,home_music_next,NULL);
+  lv_obj_set_style_bg_opa(g_home_music.next,LV_OPA_TRANSP,0);
+  lv_obj_set_style_bg_opa(g_home_music.next,LV_OPA_10,LV_STATE_PRESSED);
+  lv_obj_set_style_bg_opa(g_home_music.next,LV_OPA_TRANSP,LV_STATE_DISABLED);
+  lv_obj_set_style_opa(g_home_music.next,LV_OPA_40,LV_STATE_DISABLED);
+  lv_obj_set_style_text_font(lv_obj_get_child(g_home_music.next,0),glass_icon_font(20),0);
+  /* LONG_DOT measures against retained coordinates. Resolve the new card's
+   * geometry before the first dynamic text, including an initially empty label. */
+  lv_obj_update_layout(card);
+  g_home_music.valid=false;home_music_refresh();
 
   /* City and current conditions sit on a retained native sky illustration. */
   card = home_card(root, 3, 693, 52, 307, 272, 0x244765);

@@ -13,6 +13,7 @@ struct qpk_photo_input {
   size_t bytes;
   unsigned width, height, stride; /* RGB565 input; JPEG ignores these. */
   unsigned zoom, style;
+  unsigned aspect,image_width,image_height; /* Zero keeps the original canvas. */
   const char *root_override; /* Host fixtures only; NULL selects mounted storage. */
 };
 struct qpk_photo_result {

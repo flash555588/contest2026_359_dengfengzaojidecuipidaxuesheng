@@ -26,21 +26,25 @@ static pthread_mutex_t g_camera_lock=PTHREAD_MUTEX_INITIALIZER;
 static int g_photo_status;
 static uint64_t g_photo_status_ms,now=100;
 static uint64_t qpk_now_ms(void){return now;}
+/* Saving is asynchronous in production; this compositor fixture owns status. */
+static void qpk_camera_photo_poll_locked(void){}
 static bool video;
 static int recording;
 static bool qpk_video_selected(void){return video;}
-static int qpk_video_status(unsigned *elapsed){*elapsed=65000;return recording;}
+static int qpk_video_status(unsigned *elapsed){if(elapsed)*elapsed=65000;return recording;}
 '''
 test='''
 int main(int argc,char **argv){
-  assert(argc==2);
+  assert(argc==3);
   uint16_t *allocation=malloc((1024*600+2)*sizeof(uint16_t));assert(allocation);
   uint16_t *pixels=allocation+1;allocation[0]=allocation[1024*600+1]=0x55aa;
   for(int i=0;i<1024*600;i++)pixels[i]=0x1234;
   assert(qpk_camera_bar_blit(pixels,1024)==0);
   assert(pixels[200*1024+512]==0x1234); /* Visible image interior survives. */
   assert(pixels[599*1024+512]==0&&pixels[300*1024+20]==0);
-  assert(pixels[74*1024+300]==qpk_camera_rgb565(0x676268));
+  assert(pixels[74*1024+300]==0); /* No heavy rails across the viewfinder. */
+  assert(pixels[133*1024+126]==qpk_camera_rgb565(0x676268));
+  assert(pixels[22*1024+126]==0); /* The frame fits the image, not a square mockup. */
   assert(pixels[26*1024+28]==qpk_camera_rgb565(0x35ca70));
   const struct camera_reference_tile *shutter=&camera_reference_tiles[CAMERA_REFERENCE_SHUTTER_TILE];
   for(int y=0;y<shutter->h;y++)assert(!memcmp(pixels+(shutter->y+y)*1024+shutter->x,
@@ -51,15 +55,42 @@ int main(int argc,char **argv){
   assert(camera_reference_hit(90,300)==0&&camera_reference_hit(892,60)==3);
   assert(camera_reference_hit(90,48)==0&&camera_reference_hit(90,550)==0&&camera_reference_hit(732,540)==0);
   assert(camera_reference_hit(732,64)==6&&camera_reference_hit(892,540)==7);
-  assert(!qpk_camera_style_set(3));
+  assert(camera_reference_hit(732,108)==6&&camera_reference_hit(892,196)==4);
+  assert(!qpk_camera_style_set(CAMERA_COLOR_STYLE_COUNT));
   assert(camera_color_pixel(0xf800,0)==0xf800);
   assert(camera_color_pixel(0xf800,2)!=0xf800);
   assert(qpk_camera_style_set(2)&&qpk_camera_style()==2);
+  qpk_camera_bar_blit(pixels,1024);
+  const struct camera_reference_tile *caption=&camera_reference_tiles[CAMERA_REFERENCE_STYLE_TILE];
+  for(int y=0;y<caption->h;y++)assert(!memcmp(pixels+(caption->y+y)*1024+caption->x,
+                                          camera_style_2+y*caption->w,caption->w*2));
   assert(camera_color_pixel(0xffff,2)==0xffff&&camera_color_pixel(0,2)==0);
   assert(qpk_camera_style_set(0));
   assert(camera_reference_hit(892,160)==4&&camera_reference_hit(810,300)==0&&camera_reference_hit(500,300)==0);
   FILE *screenshot=fopen(argv[1],"wb");assert(screenshot);
   assert(fwrite(pixels,2,1024*600,screenshot)==1024*600);fclose(screenshot);
+  assert(qpk_camera_filter_action(6)&&qpk_camera_filters_open()&&qpk_camera_style()==0);
+  for(unsigned i=0;i<CAMERA_COLOR_STYLE_COUNT;i++){
+    int x=camera_reference_filter_x(i),y=camera_reference_filter_y(i);
+    assert(camera_reference_control_hit(x+20,y+20,true)==8+i);
+    assert(qpk_camera_filter_action(8+i)&&!qpk_camera_filters_open()&&qpk_camera_style()==i);
+    qpk_camera_filter_action(6);
+  }
+  assert(camera_reference_control_hit(800,166,true)==CAMERA_FILTER_GAP);
+  assert(camera_reference_control_hit(500,300,true)==CAMERA_FILTER_DISMISS);
+  assert(camera_reference_control_hit(892,300,true)==1);
+  assert(qpk_camera_filter_action(CAMERA_FILTER_GAP)&&qpk_camera_filters_open());
+  assert(qpk_camera_filter_action(9)&&!qpk_camera_filters_open()&&qpk_camera_style()==1);
+  qpk_camera_filter_action(6);qpk_camera_bar_blit(pixels,1024);
+  for(unsigned i=0;i<CAMERA_COLOR_STYLE_COUNT;i++)for(unsigned y=4;y<36;y++)for(unsigned x=4;x<36;x++)
+    assert(pixels[(camera_reference_filter_y(i)+y)*1024+camera_reference_filter_x(i)+x]==
+      qpk_camera_rgb565(camera_reference_filter_colors[i]));
+  assert(pixels[300*1024+892]==qpk_camera_rgb565(0xef3829));
+  FILE *popup=fopen(argv[2],"wb");assert(popup);
+  assert(fwrite(pixels,2,1024*600,popup)==1024*600);fclose(popup);
+  assert(qpk_camera_filter_action(CAMERA_FILTER_DISMISS)&&!qpk_camera_filters_open()&&qpk_camera_style()==1);
+  qpk_camera_filter_action(6);assert(!qpk_camera_filter_action(1)&&!qpk_camera_filters_open());
+  qpk_camera_style_set(0);
   g_photo_status=-5;g_photo_status_ms=now;
   assert(qpk_camera_bar_blit(pixels,1024)==-5);
   assert(pixels[364*1024+892]==qpk_camera_rgb565(0xe34f4f));
@@ -68,6 +99,9 @@ int main(int argc,char **argv){
   now+=2001;assert(qpk_camera_bar_blit(pixels,1024)==0);
   video=true;recording=2;qpk_camera_bar_blit(pixels,1024);
   assert(pixels[300*1024+892]==0xffff);
+  const struct camera_reference_tile *mode=&camera_reference_tiles[CAMERA_REFERENCE_MODE_TILE];
+  for(int y=0;y<mode->h;y++)assert(!memcmp(pixels+(mode->y+y)*1024+mode->x,
+                                      camera_mode_video+y*mode->w,mode->w*2));
   assert(allocation[0]==0x55aa&&allocation[1024*600+1]==0x55aa);
   assert(!qpk_camera_zoom_set(0)&&!qpk_camera_zoom_set(999));
   assert(camera_reference_hit(732,300)==5);
@@ -75,7 +109,7 @@ int main(int argc,char **argv){
   assert(camera_reference_zoom_drag(0,390,100)==3);
   assert(camera_reference_zoom_drag(3,100,500)==0);
   assert(camera_reference_zoom_tap(268)==2);
-  for(unsigned style=0;style<3;style++)for(unsigned width=896;width<=1024;width+=128)for(unsigned index=0;index<4;index++){
+  for(unsigned style=0;style<CAMERA_COLOR_STYLE_COUNT;style++)for(unsigned width=896;width<=1024;width+=128)for(unsigned index=0;index<4;index++){
     assert(qpk_camera_style_set(style));
     unsigned zoom=camera_reference_zoom_values[index];assert(qpk_camera_zoom_set(zoom));
     assert(qpk_camera_zoom_percent()==zoom);
@@ -90,16 +124,69 @@ int main(int argc,char **argv){
     }
     assert(allocation[0]==0x55aa&&allocation[1024*600+1]==0x55aa);
   }
-  free(allocation);puts("CAMERA_CONTROLS_OK: shared plain red shutter pixels, landscape guides, shared hit geometry, in-place zoom 1/1.5/2/3x for CSI/USB, frame boundaries, transient result and video stop");
+  /* Independent solid image fixtures expose letterbox/frame mismatches. */
+  const unsigned cases[][10]={
+    {1024,1024,600,0,0,1024,600,126,133,570},
+    {896,640,480,48,0,800,600,157,109,509},
+    {896,1280,720,0,48,896,504,126,140,570}
+  };
+  qpk_camera_style_set(0);video=false;g_photo_status=0;
+  for(unsigned c=0;c<3;c++)for(unsigned z=0;z<4;z++){
+    const unsigned *a=cases[c];unsigned zoom=camera_reference_zoom_values[z];qpk_camera_zoom_set(zoom);
+    memset(pixels,0,1024*600*2);
+    for(unsigned y=a[4];y<a[4]+a[6];y++)for(unsigned x=a[3];x<a[3]+a[5];x++)pixels[y*1024+x]=0x1234;
+    qpk_camera_bar_draw(pixels,a[0],NULL,a[1],a[2]);
+    struct camera_reference_rect frame=camera_reference_frame(a[0],a[1],a[2],zoom,0);
+    if(!z){assert(frame.x==a[7]&&frame.y==a[8]&&frame.w==a[9]);
+      assert(frame.h==(c==0?333:c==1?381:320));}
+    for(unsigned y=22;y<578;y++)for(unsigned x=126;x<696;x++){
+      bool inside=x>=frame.x&&x<frame.x+frame.w&&y>=frame.y&&y<frame.y+frame.h;
+      assert((pixels[y*1024+x]!=0)==inside);
+    }
+    /* Prepared MJPEG output must keep exactly the same guides and letterbox. */
+    qpk_camera_bar_draw(pixels,a[0],&(struct qpk_camera_view_state){zoom,0,0},a[1],a[2]);
+    for(unsigned i=0;i<CAMERA_REFERENCE_GUIDE_COUNT;i++){
+      int line[4];camera_reference_guide(frame,i,line);
+      assert(pixels[line[1]*1024+line[0]]==qpk_camera_rgb565(0x676268));
+    }
+  }
+  recording=0;assert(!qpk_camera_aspect_set(5));
+  for(unsigned aspect=1;aspect<=4;aspect++)for(unsigned c=0;c<3;c++)for(unsigned z=0;z<4;z++){
+    const unsigned *a=cases[c];unsigned zoom=camera_reference_zoom_values[z];qpk_camera_zoom_set(zoom);
+    assert(qpk_camera_aspect_set(aspect));memset(pixels,0,1024*600*2);
+    for(unsigned y=a[4];y<a[4]+a[6];y++)for(unsigned x=a[3];x<a[3]+a[5];x++)pixels[y*1024+x]=0x1234;
+    qpk_camera_bar_draw(pixels,a[0],NULL,a[1],a[2]);
+    struct camera_reference_rect frame=camera_reference_frame(a[0],a[1],a[2],zoom,aspect);
+    assert(frame.w==(aspect==4?556:570));assert(frame.h==(aspect==1?356:aspect==2?320:aspect==3?427:556));
+    for(unsigned y=22;y<578;y++)for(unsigned x=126;x<696;x++){
+      bool inside=x>=frame.x&&x<frame.x+frame.w&&y>=frame.y&&y<frame.y+frame.h;
+      assert((pixels[y*1024+x]!=0)==inside);
+    }
+  }
+  recording=2;assert(!qpk_camera_aspect_set(1)&&qpk_camera_aspect()==4);
+  recording=0;qpk_camera_filter_action(16);assert(qpk_camera_aspect()==1);
+  /* A selection arriving during fast MJPEG decoding applies next frame. */
+  memset(pixels,0,1024*600*2);qpk_camera_aspect_set(4);
+  qpk_camera_bar_draw(pixels,896,&(struct qpk_camera_view_state){100,0,0},640,480);
+  assert(pixels[109*1024+157]==qpk_camera_rgb565(0x676268));
+  assert(pixels[22*1024+133]==0);
+  qpk_camera_style_set(4);memset(pixels,0,1024*600*2);
+  qpk_camera_bar_draw(pixels,896,&(struct qpk_camera_view_state){100,1,2},640,480);
+  assert(pixels[140*1024+126]==qpk_camera_rgb565(0x676268));
+  for(int y=0;y<caption->h;y++)assert(!memcmp(pixels+(caption->y+y)*1024+caption->x,
+    camera_style_1+y*caption->w,caption->w*2));
+  assert(camera_reference_control_hit(828,540,false)==16);
+  assert(camera_reference_control_hit(828,540,true)==CAMERA_FILTER_DISMISS);
+  free(allocation);puts("CAMERA_CONTROLS_OK: native and four selectable aspects, image-only crop without black bars, all zooms/styles, shutter, frame boundaries and recording guard");
 }
 '''
 unit=out/'camera-controls.c';unit.write_text(prelude+source[start:end]+test)
 binary=out/'camera-controls'
 subprocess.run(['gcc','-std=gnu11','-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer','-pthread','-I'+str(Path(__file__).resolve().parents[1]/'overlay/apps/system/desktop'),str(unit),'-o',str(binary)],check=True)
-subprocess.run([str(binary),str(out/"live-camera.rgb565")],check=True)
+subprocess.run([str(binary),str(out/"live-camera.rgb565"),str(out/"live-filter.rgb565")],check=True)
 
 usb=(Path(__file__).resolve().parents[1]/'overlay/apps/system/desktop/qpk_camera_usb.inc').read_text()
-flush=usb[usb.index('static int qpk_camera_clean_frame'):usb.index('/* Runs entirely outside LVGL.')]
+flush=usb[usb.index('static int qpk_camera_clean_frame'):usb.index('static uint64_t qpk_usb_preview_now')]
 cache_test='''#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>

@@ -4,6 +4,7 @@
 extern void review_lyrics_fixture(unsigned,int);
 extern void review_lyrics_text_fixture(const char *);
 extern void review_lyrics_next_fixture(const char *);
+extern void review_lyrics_translation_fixture(const char *);
 extern void review_music_now_fixture(const struct music_now_playing *);
 extern void review_lock_photo_fixture(int);
 extern void review_cover_fixture(const char *);
@@ -17,6 +18,25 @@ static void touch(lv_indev_t *input,int x,int y,bool pressed)
 static void underlying_click(lv_event_t *e){(void)e;leaked_touches++;}
 static unsigned lock_object_count(lv_obj_t *root)
 {unsigned count=1;for(unsigned i=0;i<lv_obj_get_child_count(root);i++)count+=lock_object_count(lv_obj_get_child(root,i));return count;}
+static int lyric_screen_y(struct music_full_ui *full,unsigned index)
+{
+  unsigned slot=index%MUSIC_LYRICS_WINDOW;
+  assert(full->row_index[slot]==index&&!lv_obj_has_flag(full->rows[slot],LV_OBJ_FLAG_HIDDEN));
+  return MUSIC_FULL_PAD+index*MUSIC_FULL_PITCH-lv_obj_get_scroll_y(full->viewport)+
+    lv_obj_get_style_translate_y(full->rows[slot],0);
+}
+static int lyric_screen_x(struct music_full_ui *full,unsigned index)
+{return 22+lv_obj_get_style_translate_x(full->rows[index%MUSIC_LYRICS_WINDOW],0);}
+static void lyric_arc_bounds(struct music_full_ui *full)
+{
+  lv_obj_update_layout(full->root);
+  for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++){
+    if(lv_obj_has_flag(full->rows[i],LV_OBJ_FLAG_HIDDEN))continue;
+    int x=lv_obj_get_style_translate_x(full->rows[i],0);
+    assert(x>=0&&x<=MUSIC_FULL_ARC_WIDTH);
+    assert(22+x+lv_obj_get_width(full->rows[i])<=560);
+  }
+}
 #ifndef MUSIC_FULL_NO_MAIN
 #include <unistd.h>
 static void await_native(struct music_pv_ui *pv)
@@ -63,23 +83,93 @@ int main(int argc,char **argv)
     assert(bounds.x1==0&&bounds.y1==0&&bounds.x2==1023&&bounds.y2==599);
     assert(lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_HIDDEN));
     assert(full->total==192&&full->current==48&&full->window.count==MUSIC_LYRICS_WINDOW);
+    assert(lyric_screen_x(full,48)==22);
+    assert(lyric_screen_x(full,47)==lyric_screen_x(full,49));
+    assert(lyric_screen_x(full,50)>lyric_screen_x(full,49));
+    lyric_arc_bounds(full);
     unsigned objects=lock_object_count(full->root);lv_obj_t *slot=full->rows[0];
+    int previous_y=lyric_screen_y(full,49);
+    int previous_x=lyric_screen_x(full,49);
     g_glass.reduced_motion=false;
+    review_lyrics_translation_fixture("Give today to the gentle evening breeze");
     review_lyrics_fixture(192,49);music_ui_refresh(NULL);
+    assert(lyric_screen_y(full,49)==previous_y);
+    assert(lyric_screen_x(full,49)==previous_x);
+    unsigned current_slot=49%MUSIC_LYRICS_WINDOW,next_slot=50%MUSIC_LYRICS_WINDOW;
+    assert(!lv_obj_has_flag(full->translations[current_slot],LV_OBJ_FLAG_HIDDEN));
+    assert(lv_obj_get_parent(full->translations[current_slot])==full->rows[current_slot]);
     lv_obj_t *animated=NULL;
     for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++)if(full->row_active[i])animated=full->labels[i];
     assert(animated&&lv_anim_get(animated,music_full_lyric_opacity));
     int start_opacity=lv_obj_get_style_text_opa(animated,0);
+    int start_x=lyric_screen_x(full,49);
     lv_tick_inc(120);lv_timer_handler();
     assert(lv_obj_get_style_text_opa(animated,0)>start_opacity);
+    assert(lyric_screen_x(full,49)<start_x);
+    lyric_arc_bounds(full);
+    assert(lv_obj_get_style_text_opa(animated,0)==lv_obj_get_style_text_opa(full->translations[current_slot],0));
+    assert(lv_obj_get_style_translate_y(full->rows[current_slot],0)<
+      lv_obj_get_style_translate_y(full->rows[next_slot],0));
+    lv_anim_t *moving=lv_anim_get(full->rows[current_slot],music_full_lyric_offset);assert(moving);
+    int32_t animation_time=moving->act_time;
+    music_full_draw();music_full_draw();
+    assert(lv_anim_get(full->rows[current_slot],music_full_lyric_offset)==moving&&moving->act_time==animation_time);
+    review_capture(display,"full-lyrics-cascade","全屏歌词 · 半弧滑动与双语同步");
+    /* A rapid next line retains screen positions and does not replay the
+     * previous movement from its original start. */
+    previous_y=lyric_screen_y(full,50);
+    previous_x=lyric_screen_x(full,50);
+    review_lyrics_fixture(192,50);music_ui_refresh(NULL);
+    assert(lyric_screen_y(full,50)==previous_y&&full->labels[current_slot]==animated);
+    assert(lyric_screen_x(full,50)==previous_x);
     now.state=MUSIC_PAUSED;review_music_now_fixture(&now);music_ui_refresh(NULL);
-    for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++)assert(!lv_anim_get(full->labels[i],music_full_lyric_opacity));
-    now.state=MUSIC_PLAYING;review_music_now_fixture(&now);
-    g_glass.reduced_motion=true;review_lyrics_fixture(192,48);music_ui_refresh(NULL);
     for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++){
       assert(!lv_anim_get(full->labels[i],music_full_lyric_opacity));
+      assert(!lv_anim_get(full->translations[i],music_full_lyric_opacity));
+      assert(!lv_anim_get(full->rows[i],music_full_lyric_offset));
+      assert(lv_obj_get_style_translate_y(full->rows[i],0)==0);
+    }
+    now.state=MUSIC_PLAYING;review_music_now_fixture(&now);
+    review_lyrics_translation_fixture(NULL);
+    review_lyrics_fixture(192,51);music_ui_refresh(NULL);
+    lv_tick_inc(700);lv_timer_handler();music_full_draw();
+    assert(lv_obj_get_style_text_opa(full->labels[51%MUSIC_LYRICS_WINDOW],0)==LV_OPA_COVER);
+    assert(lv_obj_get_style_text_opa(full->labels[52%MUSIC_LYRICS_WINDOW],0)>
+      lv_obj_get_style_text_opa(full->labels[53%MUSIC_LYRICS_WINDOW],0));
+    for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++)assert(lv_obj_get_style_translate_y(full->rows[i],0)==0);
+    assert(lyric_screen_x(full,51)==22);
+    assert(lyric_screen_x(full,50)==lyric_screen_x(full,52));
+    lyric_arc_bounds(full);
+    review_capture(display,"full-lyrics-arc","全屏歌词 · 半弧轨迹与当前句聚焦");
+    review_lyrics_fixture(192,52);music_ui_refresh(NULL);
+    int entering_x=lyric_screen_x(full,52),leaving_x=lyric_screen_x(full,51);
+    for(unsigned frame=0;frame<14;frame++){
+      lyric_arc_bounds(full);
+      assert(lyric_screen_x(full,52)<=entering_x&&lyric_screen_x(full,51)>=leaving_x);
+      entering_x=lyric_screen_x(full,52);leaving_x=lyric_screen_x(full,51);
+      if(!theme){
+        char id[64];snprintf(id,sizeof(id),"full-lyrics-arc-frame-%02u",frame);
+        review_capture(display,id,"全屏歌词 · 半弧滑入滑出动画帧");
+      }
+      lv_tick_inc(45);lv_timer_handler();
+    }
+    assert(lyric_screen_x(full,52)==22&&lyric_screen_x(full,51)>22);
+    /* A seek bypasses both the cascade and fade, with no delayed tails. */
+    review_lyrics_fixture(192,70);music_ui_refresh(NULL);
+    for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++){
+      assert(!lv_anim_get(full->rows[i],music_full_lyric_offset));
+      assert(!lv_anim_get(full->labels[i],music_full_lyric_opacity));
+    }
+    review_lyrics_fixture(192,71);music_ui_refresh(NULL);
+    assert(lv_anim_get(full->rows[71%MUSIC_LYRICS_WINDOW],music_full_lyric_offset));
+    g_glass.reduced_motion=true;music_ui_refresh(NULL);
+    for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++){
+      assert(!lv_anim_get(full->labels[i],music_full_lyric_opacity));
+      assert(!lv_anim_get(full->rows[i],music_full_lyric_offset));
+      assert(lv_obj_get_style_translate_y(full->rows[i],0)==0);
       assert(lv_obj_get_style_text_opa(full->labels[i],0)==LV_OPA_COVER);
     }
+    review_lyrics_fixture(192,48);music_ui_refresh(NULL);
     review_capture(display,"full-lyrics-playing","全屏歌词 · 自动跟随与当前行高亮");
     /* PV uses the real LRC cut times, never a second wall-clock player. */
     now.position_ms=192100;review_music_now_fixture(&now);g_glass.reduced_motion=false;
@@ -153,10 +243,18 @@ int main(int argc,char **argv)
     review_music_now_fixture(&now);lv_obj_send_event(full->mode,LV_EVENT_CLICKED,NULL);
     assert(!pv->visible&&lv_timer_get_paused(pv->timer)&&!lv_obj_has_flag(full->viewport,LV_OBJ_FLAG_HIDDEN));
     const char *title=lv_label_get_text(full->title);music_ui_refresh(NULL);assert(title==lv_label_get_text(full->title));
+    g_glass.reduced_motion=false;review_lyrics_fixture(192,49);music_ui_refresh(NULL);
+    assert(lv_anim_get(full->rows[49%MUSIC_LYRICS_WINDOW],music_full_lyric_offset));
     touch(input,700,300,true);touch(input,700,280,true);touch(input,700,230,true);touch(input,700,170,true);touch(input,700,170,false);
     assert(!full->follow);
+    for(unsigned i=0;i<MUSIC_LYRICS_WINDOW;i++){
+      assert(!lv_anim_get(full->rows[i],music_full_lyric_offset));
+      assert(!lv_anim_get(full->labels[i],music_full_lyric_opacity));
+    }
+    g_glass.reduced_motion=true;
     lv_obj_scroll_to_y(full->viewport,130*MUSIC_FULL_PITCH,LV_ANIM_OFF);music_full_draw();
     int manual_y=lv_obj_get_scroll_y(full->viewport);
+    lyric_arc_bounds(full);
     assert(full->window.first>100&&full->rows[0]==slot&&lock_object_count(full->root)==objects);
     now.revision++;now.position_ms=230000;review_music_now_fixture(&now);review_lyrics_fixture(192,75);music_ui_refresh(NULL);
     assert(lv_obj_get_scroll_y(full->viewport)==manual_y&&!full->follow);
@@ -182,13 +280,23 @@ int main(int argc,char **argv)
     music_full_close(NULL);assert(!g_music_ui.full&&g_desktop.current_card==page&&g_music_ui.timer==timer);
     assert(!lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_HIDDEN));
     struct music_now_playing after;glass_music_now_playing(&after);assert(after.state==MUSIC_PLAYING);
-    for(unsigned i=0;i<30;i++){music_full_open(NULL);if(i%2)music_full_mode(NULL);music_full_close(NULL);}
+    now.track_id=100;now.lyrics_state=MUSIC_LYRICS_READY;review_music_now_fixture(&now);
+    g_glass.reduced_motion=false;
+    for(unsigned i=0;i<30;i++){
+      review_lyrics_fixture(192,48);music_full_open(NULL);
+      review_lyrics_fixture(192,49);music_ui_refresh(NULL);
+      lv_obj_t *moving_row=g_music_ui.full->rows[49%MUSIC_LYRICS_WINDOW];
+      assert(lv_anim_get(moving_row,music_full_lyric_offset));
+      if(i%2)music_full_mode(NULL);music_full_close(NULL);
+      assert(!lv_anim_get(moving_row,music_full_lyric_offset));
+    }
+    g_glass.reduced_motion=true;
     music_full_open(NULL);g_edge_page=page;glass_edge_back_async(NULL);assert(!g_music_ui.full&&g_desktop.current_card==page);
     music_full_open(NULL);glass_lock_open(NULL);assert(!g_music_ui.full&&g_lock_ui.root);lock_unlock(NULL);
     music_full_open(NULL);panel_hide(NULL);assert(!g_music_ui.full&&!g_music_ui.root);
     assert(!lv_obj_has_flag(g_status_ui.bar,LV_OBJ_FLAG_HIDDEN));
   }
   fputs("\n]\n",review_manifest);fclose(review_manifest);
-  puts("MUSIC_FULL_NATIVE_OK: both themes; 3 live effects; arbitrary CJK/Latin lyrics; bounded geometry; UTF-8 reveal, backward seek, pause and reduced motion; audio-clock cuts and repeated PV teardown; lyric fade; 600px fullscreen; 192 lyrics with 9 retained rows; pointer scroll; manual hold/follow; transport; return without stopping; lock, edge back, page deletion and 60 reopen cycles");return 0;
+  puts("MUSIC_FULL_NATIVE_OK: both themes; 3 live effects; arbitrary CJK/Latin lyrics; bounded geometry; UTF-8 reveal, backward seek, pause and reduced motion; audio-clock cuts and repeated PV teardown; half-ellipse lyric entry/exit, bounded widths, continuous rapid advances on both axes, stable row recycling, synchronized translations and distance fading; 600px fullscreen; 192 lyrics with 9 retained rows; pointer interruption; manual hold/follow; transport; return without stopping; lock, edge back, page deletion and 60 reopen cycles during active animations");return 0;
 }
 #endif

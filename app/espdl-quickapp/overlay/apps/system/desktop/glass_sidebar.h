@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include "glass_app_theme.h"
 /* Shared geometry for app navigation; data panels keep their own heights. */
 #define GLASS_SIDEBAR_WIDTH 164
 #define GLASS_SIDEBAR_PAD 12
@@ -10,6 +11,11 @@
 #define GLASS_SIDEBAR_ITEM_HEIGHT 44
 #define GLASS_SIDEBAR_GAP 8
 #define GLASS_SIDEBAR_RADIUS 12
+#if GLASS_SIDEBAR_WIDTH != GLASS_APP_SIDEBAR_WIDTH || \
+    GLASS_SIDEBAR_ITEM_WIDTH != GLASS_APP_SIDEBAR_ITEM_WIDTH || \
+    GLASS_SIDEBAR_ITEM_HEIGHT != GLASS_APP_SIDEBAR_ITEM_HEIGHT
+#error "Application navigation geometry differs from the shared UI contract"
+#endif
 
 static struct {
   lv_obj_t *source,*cursor;

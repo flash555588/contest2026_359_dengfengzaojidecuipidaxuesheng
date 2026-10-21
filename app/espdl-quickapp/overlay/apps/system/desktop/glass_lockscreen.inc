@@ -298,6 +298,7 @@ static void lock_clock_page(lv_obj_t *root)
 
 static void glass_lock_open(lv_event_t *e)
 {
+  home_music_obscure();
   LV_UNUSED(e);if(g_lock_ui.root)return;
   /* Keep growing lyric snapshots in PSRAM and release them with the overlay;
    * internal static RAM is reserved for DMA and the kernel. */

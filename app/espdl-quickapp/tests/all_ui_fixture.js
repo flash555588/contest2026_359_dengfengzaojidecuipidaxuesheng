@@ -19,6 +19,7 @@ globalThis.system={
  yield:()=>({then:resolve=>__reviewDeferred.push(resolve)}),
  storage:{get:()=>null,set(){},delete(){}},
  camera:{style:()=>globalThis.__cameraStyle||0,setStyle:value=>{globalThis.__cameraStyle=value;return true;},
+   aspect:()=>globalThis.__cameraAspect||0,setAspect:value=>{globalThis.__cameraAspect=value;return true;},
    takeAction:()=>{if(__cameraState.busy)return 0;const action=globalThis.__cameraAction||0;globalThis.__cameraAction=0;return action;},
    openAlbum:()=>{globalThis.__cameraAlbumRequested=true;return true;},devices:()=>__devices,status:()=>__cameraState,frames:()=>0,
    zoom:()=>globalThis.__cameraZoom||100,setZoom:percent=>{globalThis.__cameraZoom=percent;return true;},

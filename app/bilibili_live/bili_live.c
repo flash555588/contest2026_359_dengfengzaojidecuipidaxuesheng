@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "bili_live.h"
 #include "glass_icons.h"
+#include "glass_app_controls.h"
 #include "bili_http.h"
 #include "bili_api.h"
 #include "live_platform.h"
@@ -396,7 +397,11 @@ static void button(lv_obj_t *parent, const char *text, int x,
 {
   lv_obj_t *b = lv_button_create(parent), *label;
   lv_obj_set_pos(b, x, 12); lv_obj_set_size(b, 100, 44);
+  struct glass_app_palette palette=glass_app_palette(lv_color_brightness(lv_obj_get_style_bg_color(parent,0))>128);
+  bool primary=!strcmp(text,"播放");
+  glass_app_control_style(b,primary?palette.accent:palette.soft,palette.line);
   label = lv_label_create(b); lv_label_set_text(label, text); lv_obj_center(label);
+  lv_obj_set_style_text_color(label,lv_color_hex(primary?palette.on_accent:palette.ink),0);
   lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
 }
 void bili_live_show(lv_obj_t *parent, const lv_font_t *font)
@@ -405,20 +410,27 @@ void bili_live_show(lv_obj_t *parent, const lv_font_t *font)
   bili_live_stop(); reap();
   if (g_session && g_session->joined) release();
   g_page = parent;g_font=font;g_scale=true;
+  struct glass_app_palette palette=glass_app_palette(lv_color_brightness(lv_obj_get_style_bg_color(parent,0))>128);
+  lv_obj_set_style_bg_color(parent,lv_color_hex(palette.canvas),0);
+  lv_obj_set_style_text_color(parent,lv_color_hex(palette.ink),0);
   lv_obj_add_event_cb(parent, deleted, LV_EVENT_DELETE, NULL);
   if (font) lv_obj_set_style_text_font(parent, font, 0);
   lv_obj_set_style_pad_all(parent, 0, 0);
   lv_obj_remove_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
   g_room = lv_textarea_create(parent);
+  glass_app_input_style(g_room,palette);
   lv_obj_set_pos(g_room, 10, 12); lv_obj_set_size(g_room, 260, 44);
   lv_textarea_set_one_line(g_room, true);
   lv_textarea_set_max_length(g_room, 10);
   lv_textarea_set_accepted_chars(g_room, "0123456789");
   lv_textarea_set_placeholder_text(g_room, "数字直播间号");
   g_platform=lv_dropdown_create(parent);
+  glass_app_input_style(g_platform,palette);
   lv_dropdown_set_options(g_platform,"B站\n虎牙\n网易CC");
   lv_dropdown_set_symbol(g_platform,"v");
   if(font) lv_obj_set_style_text_font(lv_dropdown_get_list(g_platform),font,0);
+  glass_app_panel_style(lv_dropdown_get_list(g_platform),palette.paper,palette.line);
+  lv_obj_set_style_text_color(lv_dropdown_get_list(g_platform),lv_color_hex(palette.ink),0);
   lv_obj_set_pos(g_platform,530,12);lv_obj_set_size(g_platform,160,44);
   button(parent, "播放", 290, play_clicked);
   button(parent, "停止", 410, stop_clicked);
@@ -440,6 +452,14 @@ void bili_live_show(lv_obj_t *parent, const lv_font_t *font)
   g_image = lv_image_create(viewport);
   lv_obj_set_pos(g_image, 0, 0); lv_obj_set_size(g_image, WIDTH, HEIGHT);
   keyboard = lv_keyboard_create(parent);
+  glass_app_panel_style(keyboard,palette.paper,palette.line);
+  lv_obj_set_style_bg_color(keyboard,lv_color_hex(palette.soft),LV_PART_ITEMS);
+  lv_obj_set_style_text_color(keyboard,lv_color_hex(palette.ink),LV_PART_ITEMS);
+  lv_obj_set_style_radius(keyboard,GLASS_APP_CONTROL_RADIUS,LV_PART_ITEMS);
+  lv_obj_set_style_bg_color(keyboard,lv_color_hex(palette.accent),LV_PART_ITEMS|LV_STATE_CHECKED);
+  lv_obj_set_style_text_color(keyboard,lv_color_hex(palette.on_accent),LV_PART_ITEMS|LV_STATE_CHECKED);
+  lv_obj_set_style_bg_color(keyboard,lv_color_hex(palette.accent),LV_PART_ITEMS|LV_STATE_PRESSED);
+  lv_obj_set_style_text_color(keyboard,lv_color_hex(palette.on_accent),LV_PART_ITEMS|LV_STATE_PRESSED);
   lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_NUMBER);
   lv_obj_set_style_text_font(keyboard, glass_icon_font(14), LV_PART_ITEMS);
   lv_obj_set_size(keyboard, 270, 270);

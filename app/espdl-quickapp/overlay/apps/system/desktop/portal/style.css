@@ -14,3 +14,30 @@
 @media(max-width:640px){.connection-tools{gap:2px}.connect-card{padding:26px 22px;margin-top:16px}.connect-card h2{font-size:23px}#pair-code{font-size:30px;letter-spacing:8px}}
 
 #agent details{border-top:1px solid #ececf2;padding:16px 0}#agent summary{cursor:pointer;font-weight:600;margin-bottom:16px}.inline-option{display:flex;align-items:center;gap:10px}.inline-option input{width:auto;margin:0}
+/* Generated shared application theme */
+:root{color-scheme:light;--ui-canvas:#f4f5f8;--ui-paper:#ffffff;--ui-soft:#f3f2f7;--ui-line:#e8e9ef;--ui-ink:#292c38;--ui-muted:#808491;--ui-accent:#77658f;--ui-on-accent:#ffffff;--ui-success:#39816a;--ui-warning:#98672e;--ui-danger:#b34d63}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--ui-canvas:#15171e;--ui-paper:#22252f;--ui-soft:#2e303d;--ui-line:#383b48;--ui-ink:#eeeef5;--ui-muted:#a2a7b7;--ui-accent:#c1aedb;--ui-on-accent:#22252f;--ui-success:#82c6ad;--ui-warning:#e7ba80;--ui-danger:#f0a1b1}}
+
+:root{color:var(--ui-ink);background:var(--ui-canvas)}
+.brand,.eyebrow,.upload>span{color:var(--ui-accent)}
+.brand span{color:var(--ui-ink)}
+p,label,.brand small,.section-title>span,.form-footer>span,.file-row small,.note,footer{color:var(--ui-muted)}
+.card{background:var(--ui-paper);border-color:var(--ui-line);border-radius:18px;box-shadow:none}
+nav,button,.button,.upload,.connect-icon{background:var(--ui-soft);color:var(--ui-ink)}
+button,.button,input,select,textarea{border-radius:12px;min-height:44px}
+nav .active{background:var(--ui-paper);color:var(--ui-accent);box-shadow:none}
+button:hover,.button:hover{background:var(--ui-line)}
+.primary,.primary:hover{background:var(--ui-accent);color:var(--ui-on-accent)}
+input,select,textarea{background:var(--ui-soft);border-color:var(--ui-line);color:var(--ui-ink)}
+input::placeholder{color:var(--ui-muted)}
+input:focus,select:focus,textarea:focus{border-color:var(--ui-accent);box-shadow:none}
+:focus-visible{outline-color:var(--ui-accent)}
+.file-row,.upload{border-color:var(--ui-line)}
+.badge{background:var(--ui-soft);color:var(--ui-success)}
+.badge:before{background:var(--ui-success)}
+.badge.offline{background:var(--ui-soft);color:var(--ui-muted)}
+.badge.offline:before{background:var(--ui-muted)}
+.text-button{background:transparent}
+#status:not(:empty){background:var(--ui-soft);color:var(--ui-accent)}
+#status.error{background:var(--ui-soft);color:var(--ui-danger)}
+progress{accent-color:var(--ui-accent)}
