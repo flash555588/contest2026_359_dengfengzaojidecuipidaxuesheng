@@ -41,7 +41,7 @@ endif
 ifeq ($(CONFIG_SYSTEM_GLASS_BLE),y)
 include $(NIMBLE_ROOT)/porting/examples/nuttx/Make.defs
 CSRCS := $(filter-out %/porting/examples/nuttx/ble.c,$(CSRCS))
-CSRCS += glass_ble.c glass_ble_hid.c glass_ble_store.c mouse_core.c
+CSRCS += glass_ble.c glass_ble_hid.c glass_ble_store.c glass_ble_central.c mouse_core.c
 MAINSRC =
 PROGNAME =
 CFLAGS += -I$(APPDIR)/system/c6ble

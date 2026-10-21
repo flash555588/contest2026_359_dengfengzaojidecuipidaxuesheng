@@ -1,6 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_chat.h"
+#include "glass_ai_config.h"
 #include "glass_chat_backend.h"
+#include "glass_vision.h"
+#include "qpk_espdl.h"
+#include "glass_camera_observation.h"
 #include <cJSON.h>
 #include <errno.h>
 #include <pthread.h>
@@ -15,7 +19,7 @@ static pthread_cond_t chat_wake = PTHREAD_COND_INITIALIZER;
 /* Large histories belong in the runtime heap, after PSRAM initialization. */
 static struct chat_snapshot *chat_state;
 #define chat (*chat_state)
-static bool started, send_pending, clear_pending, refresh_pending;
+static bool started, send_pending, clear_pending, refresh_pending,worker_busy;
 static atomic_bool cancelled;
 static int clear_mode = -1;
 static uint32_t next_id = 1;
@@ -38,6 +42,8 @@ const char *glass_chat_error_text(enum chat_error error)
     case CHAT_ERROR_MEMORY: return "可用内存不足，关闭其他应用后再试。";
     case CHAT_ERROR_INTERRUPTED: return "上次回复因设备重启而中断，可以重新发送。";
     case CHAT_ERROR_CLEANUP: return "上一请求仍在结束中，请稍后重试。";
+    case CHAT_ERROR_CAMERA: return "未能完成相机采集：请连接 USB 摄像头并关闭其他相机任务，再手动重试。";
+    case CHAT_ERROR_CAMERA_STORAGE: return "录制未保存到 SD，已停止分析。请检查 SD 卡和剩余空间后手动重试。";
     default: return "暂时无法连接 AI 服务，请检查 Wi-Fi 后重试。";
   }
 }
@@ -217,6 +223,100 @@ static void refresh_settings(struct portal_ai_config *settings)
   pthread_mutex_unlock(&chat_lock);
 }
 
+static void camera_progress(uint32_t id,const char *text,enum chat_activity activity)
+{
+  pthread_mutex_lock(&chat_lock);
+  if(chat.count&&chat.turns[chat.count-1].id==id&&!atomic_load(&cancelled)){
+    snprintf(chat.turns[chat.count-1].progress,sizeof(chat.turns[0].progress),"%s",text);
+    current_activity=activity;changed();
+  }
+  pthread_mutex_unlock(&chat_lock);
+}
+static enum chat_error camera_reply(struct chat_turn *turn,char **reply)
+{
+  struct qpk_dl_result local;qpk_dl_status(&local);
+  if(local.busy)return CHAT_ERROR_CAMERA;
+  camera_progress(turn->id,"检查 SD · 准备录制",CHAT_ACTIVITY_TOOL);
+  int ret=glass_camera_recording_check();
+  if(ret){turn->camera_save_error=ret;return CHAT_ERROR_CAMERA_STORAGE;}
+  struct qpk_camera_clip clip={0};
+  camera_progress(turn->id,"正在录制 · 5 秒画面采样",CHAT_ACTIVITY_TOOL);
+  uint32_t start=now_ms();ret=qpk_camera_clip_capture(&clip,&cancelled);
+  printf("[bot-camera] turn=%lu capture_ms=%lu frames=%u result=%d camera_closed=1\n",
+    (unsigned long)turn->id,(unsigned long)(now_ms()-start),clip.count,ret);
+  if(ret){qpk_camera_clip_free(&clip);return CHAT_ERROR_CAMERA;}
+  camera_progress(turn->id,"录制结束 · 正在保存 SD",CHAT_ACTIVITY_TOOL);
+  start=now_ms();ret=glass_camera_recording_save(turn->id,turn->prompt,&clip,&cancelled,turn->camera_recording);
+  printf("[bot-camera] turn=%lu save_ms=%lu recording_saved=%u result=%d\n",
+    (unsigned long)turn->id,(unsigned long)(now_ms()-start),turn->camera_recording[0]!=0,ret);
+  if(ret){turn->camera_save_error=ret;qpk_camera_clip_free(&clip);return CHAT_ERROR_CAMERA_STORAGE;}
+  pthread_mutex_lock(&chat_lock);
+  if(chat.count&&chat.turns[chat.count-1].id==turn->id)
+    snprintf(chat.turns[chat.count-1].camera_recording,128,"%s",turn->camera_recording);
+  pthread_mutex_unlock(&chat_lock);
+  camera_progress(turn->id,"已保存 SD · 正在上传并思考",CHAT_ACTIVITY_THINK);
+  start=now_ms();
+  char *response=glass_vision_analyze_clip_take(&clip,turn->prompt,&cancelled);
+  cJSON *root=response?cJSON_Parse(response):NULL;
+  const cJSON *ok=cJSON_GetObjectItemCaseSensitive(root,"ok"),*answer=cJSON_GetObjectItemCaseSensitive(root,"answer");
+  enum chat_error error=CHAT_ERROR_RESPONSE;
+  if(!response)error=CHAT_ERROR_MEMORY;
+  else if(cJSON_IsTrue(ok)&&cJSON_IsString(answer)&&glass_chat_utf8(answer->valuestring,4096,true)){
+    camera_progress(turn->id,"思考完成 · 正在整理答案",CHAT_ACTIVITY_REPLY);
+    *reply=strdup(answer->valuestring);error=*reply?CHAT_ERROR_NONE:CHAT_ERROR_MEMORY;
+    if(turn->session_history&&*reply&&!atomic_load(&cancelled))turn->camera_save_error=glass_camera_observation_save(
+      turn->id,turn->mode,turn->prompt,*reply,&clip,&cancelled,turn->camera_observation);
+  }else{
+    const cJSON *reason=cJSON_GetObjectItemCaseSensitive(root,"error");
+    const char *code=cJSON_IsString(reason)?reason->valuestring:"";
+    if(!strcmp(code,"vision_timeout"))error=CHAT_ERROR_TIMEOUT;
+    else if(!strcmp(code,"vision_output_limit")||!strcmp(code,"vision_response_limit"))error=CHAT_ERROR_OUTPUT_LIMIT;
+    else if(!strcmp(code,"vision_auth_failed"))error=CHAT_ERROR_AUTH;
+    else if(!strcmp(code,"vision_model_not_configured"))error=CHAT_ERROR_CONFIG;
+    else if(!strcmp(code,"vision_model_rejected_image"))error=CHAT_ERROR_MODEL;
+    else if(!strcmp(code,"vision_transport_failed")||!strcmp(code,"vision_http_failed"))error=CHAT_ERROR_NETWORK;
+  }
+  /* Keep service diagnostics out of the answer and never log payloads/keys. */
+  printf("[bot-camera] turn=%lu analysis_ms=%lu result=%d cancelled=%u\n",
+    (unsigned long)turn->id,(unsigned long)(now_ms()-start),error,atomic_load(&cancelled));
+  qpk_camera_clip_free(&clip);cJSON_Delete(root);free(response);return error;
+}
+
+char *glass_chat_observe_tool(const char *question,atomic_bool *cancel)
+{
+  if(!question||!glass_chat_utf8(question,512,true)||!*question)return strdup("{\"ok\":false,\"error\":\"invalid_question\"}");
+  struct chat_turn *turn=calloc(1,sizeof(*turn));if(!turn)return NULL;
+  pthread_mutex_lock(&chat_lock);
+  struct chat_turn *current=chat_state&&chat.count?&chat.turns[chat.count-1]:NULL;
+  bool allowed=cancel==&cancelled&&current&&current->mode==AGENT_MODE_ASSISTANT&&
+    chat.phase==CHAT_REQUESTING&&!current->camera_tool_used&&!atomic_load(cancel);
+  if(allowed){current->camera_tool_used=true;turn->id=current->id;turn->mode=current->mode;
+    turn->session_history=true;snprintf(turn->prompt,sizeof(turn->prompt),"%s",question);}
+  pthread_mutex_unlock(&chat_lock);
+  if(!allowed){free(turn);return strdup("{\"ok\":false,\"error\":\"camera_not_available_or_already_attempted_no_retry\"}");}
+  char *answer=NULL;enum chat_error error=camera_reply(turn,&answer);
+  pthread_mutex_lock(&chat_lock);
+  current=chat.count?&chat.turns[chat.count-1]:NULL;
+  if(current&&current->id==turn->id){
+    current->camera_save_error=turn->camera_save_error;
+    snprintf(current->camera_recording,128,"%s",turn->camera_recording);
+    snprintf(current->camera_observation,128,"%s",turn->camera_observation);
+  }
+  pthread_mutex_unlock(&chat_lock);
+  cJSON *result=cJSON_CreateObject();char *wire=NULL;
+  if(result){
+    bool success=error==CHAT_ERROR_NONE&&answer&&!atomic_load(cancel);
+    cJSON_AddBoolToObject(result,"ok",success);
+    cJSON_AddStringToObject(result,"scope","cloud_temporal_samples");
+    cJSON_AddStringToObject(result,"recording",turn->camera_recording);
+    if(success)cJSON_AddStringToObject(result,"observation",answer);
+    else cJSON_AddStringToObject(result,"error",atomic_load(cancel)?"cancelled":
+      error==CHAT_ERROR_CAMERA_STORAGE?"sd_recording_failed_no_upload":"camera_observation_failed_no_retry");
+    wire=cJSON_PrintUnformatted(result);cJSON_Delete(result);
+  }
+  free(answer);free(turn);return wire;
+}
+
 static void *chat_worker(void *unused)
 {
   (void)unused;
@@ -225,7 +325,7 @@ static void *chat_worker(void *unused)
   if (!copy || !settings) {
     free(copy); free(settings);
     pthread_mutex_lock(&chat_lock);
-    started = false; chat.storage_error = -ENOMEM; changed();
+    started = worker_busy = false; chat.storage_error = -ENOMEM; changed();
     pthread_mutex_unlock(&chat_lock); return NULL;
   }
   int loaded = glass_chat_store_load(copy);
@@ -238,12 +338,13 @@ static void *chat_worker(void *unused)
   refresh_settings(settings);
   memset(settings, 0, sizeof(*settings));
   pthread_mutex_lock(&chat_lock);
-  chat.loaded = true; chat.phase = CHAT_IDLE; changed();
+  chat.loaded = true; chat.phase = CHAT_IDLE; worker_busy=false;changed();
   pthread_mutex_unlock(&chat_lock);
 
   for (;;) {
     pthread_mutex_lock(&chat_lock);
     while (!send_pending && !clear_pending && !refresh_pending) pthread_cond_wait(&chat_wake, &chat_lock);
+    worker_busy=true;
     bool clear = clear_pending, send = send_pending;
     refresh_pending = false;
     if (clear) {
@@ -264,10 +365,12 @@ static void *chat_worker(void *unused)
       }
       chat.storage_error = ret; chat.phase = CHAT_IDLE; changed();
       pthread_mutex_unlock(&chat_lock);
-      refresh_settings(settings); memset(settings, 0, sizeof(*settings)); continue;
+      refresh_settings(settings); memset(settings, 0, sizeof(*settings));
+      pthread_mutex_lock(&chat_lock);worker_busy=false;pthread_mutex_unlock(&chat_lock);continue;
     }
     if (!send) {
-      pthread_mutex_unlock(&chat_lock); refresh_settings(settings); memset(settings, 0, sizeof(*settings)); continue;
+      pthread_mutex_unlock(&chat_lock); refresh_settings(settings); memset(settings, 0, sizeof(*settings));
+      pthread_mutex_lock(&chat_lock);worker_busy=false;pthread_mutex_unlock(&chat_lock);continue;
     }
     send_pending = false;
     memcpy(copy, &chat, sizeof(*copy));
@@ -275,22 +378,36 @@ static void *chat_worker(void *unused)
     pthread_mutex_unlock(&chat_lock);
 
     refresh_settings(settings);
-    save_snapshot(copy);
-    char *context = glass_chat_context(copy), *reply = NULL;
     struct chat_turn *turn = &copy->turns[copy->count - 1];
+    uint32_t request_began=now_ms();
+    if(turn->session_history)printf("[bot-session] turn=%lu stage=begin camera=%u flash_history=0\n",(unsigned long)turn->id,turn->camera_samples);
+    /* Bot requests never save Flash snapshots, including connection and
+     * answer completion. Successful text receipts use the SD card. */
+    if(!turn->session_history)save_snapshot(copy);
+    char *context = turn->camera_samples?NULL:glass_chat_context(copy), *reply = NULL;
     enum chat_error error = CHAT_ERROR_NONE;
     if (!atomic_load(&cancelled)) {
       pthread_mutex_lock(&chat_lock); bool configured = chat.configured; pthread_mutex_unlock(&chat_lock);
       if (!configured) error = CHAT_ERROR_CONFIG;
+      else if(turn->camera_samples)error=camera_reply(turn,&reply);
       else if (!context) error = CHAT_ERROR_MEMORY;
       else error = glass_chat_request(settings, context, turn->prompt, turn->id, turn->mode, &cancelled, &reply);
     }
     free(context);
+    pthread_mutex_lock(&chat_lock);
+    if(chat.count&&chat.turns[chat.count-1].id==turn->id&&chat.turns[chat.count-1].camera_tool_used){
+      turn->camera_tool_used=true;
+      snprintf(turn->camera_recording,128,"%s",chat.turns[chat.count-1].camera_recording);
+    }
+    pthread_mutex_unlock(&chat_lock);
     char archive[48] = ""; uint32_t archive_bytes = 0;
     const char *complete = error == CHAT_ERROR_NONE && reply && !atomic_load(&cancelled) ? reply : stream_text;
     int archive_error = 0;
     if (complete && strlen(complete) > CHAT_REPLY_BYTES)
-      archive_error = glass_chat_archive(complete, turn->id, archive, &archive_bytes);
+      archive_error = turn->session_history?glass_chat_archive_session(complete,turn->id,archive,&archive_bytes):
+        glass_chat_archive(complete, turn->id, archive, &archive_bytes);
+    if(turn->session_history&&!turn->camera_samples&&error==CHAT_ERROR_NONE&&reply&&!atomic_load(&cancelled))
+      turn->camera_save_error=glass_camera_observation_save(turn->id,turn->mode,turn->prompt,reply,NULL,&cancelled,turn->camera_observation);
     /* Do not retain the API key in the idle worker's configuration buffer. */
     memset(settings, 0, sizeof(*settings));
     pthread_mutex_lock(&chat_lock);
@@ -298,6 +415,11 @@ static void *chat_worker(void *unused)
     if (!reset) {
       struct chat_turn *current = &chat.turns[chat.count - 1];
       current->activity_ms=now_ms();
+      if(current->session_history){
+        current->camera_save_error=turn->camera_save_error;
+        snprintf(current->camera_observation,sizeof(current->camera_observation),"%s",turn->camera_observation);
+        snprintf(current->camera_recording,sizeof(current->camera_recording),"%s",turn->camera_recording);
+      }
       snprintf(current->archive, sizeof(current->archive), "%s", archive); current->archive_bytes = archive_bytes;
       if (archive_error) chat.storage_error = archive_error;
       if (atomic_load(&cancelled)) {
@@ -310,21 +432,29 @@ static void *chat_worker(void *unused)
         current->state = CHAT_FAILED;
         current->error = error == CHAT_ERROR_NONE ? CHAT_ERROR_RESPONSE : error;
       }
+      if(current->camera_samples)snprintf(current->progress,sizeof(current->progress),"%s",
+        current->state==CHAT_DONE?(current->camera_save_error?"AI 分析完成 · 仅本次会话，SD 保存失败":"AI 分析完成 · 已保存 SD"):
+        current->state==CHAT_CANCELLED?(current->camera_recording[0]?"已停止 · SD 录制已保留":"录制已停止"):
+        current->error==CHAT_ERROR_CAMERA_STORAGE?"SD 保存失败 · 未上传分析":
+        current->camera_recording[0]?"录制已存 SD · AI 分析未完成":"录制未完成");
       memcpy(copy, &chat, sizeof(*copy)); changed();
     }
     pthread_mutex_unlock(&chat_lock);
     free(reply);
     free(stream_text); stream_text = NULL; stream_size = stream_capacity = 0;
-    if (!reset) save_snapshot(copy);
+    if (!reset&&!turn->session_history) save_snapshot(copy);
+    if(turn->session_history)printf("[bot-session] turn=%lu stage=end elapsed_ms=%lu result=%d cancelled=%u sd_saved=%u sd_error=%d\n",
+      (unsigned long)turn->id,(unsigned long)(now_ms()-request_began),error,atomic_load(&cancelled),turn->camera_observation[0]!=0,turn->camera_save_error);
     pthread_mutex_lock(&chat_lock);
     if (!clear_pending) chat.phase = CHAT_IDLE;
+    worker_busy=false;
     changed();
     pthread_mutex_unlock(&chat_lock);
   }
   return NULL;
 }
 
-int glass_chat_start(void)
+static int chat_start(void)
 {
   pthread_mutex_lock(&chat_lock);
   if (started) { pthread_mutex_unlock(&chat_lock); return 0; }
@@ -339,20 +469,44 @@ int glass_chat_start(void)
   pthread_t thread; atomic_store(&cancelled, false);
   int ret = pthread_create(&thread, &attr, chat_worker, NULL);
   pthread_attr_destroy(&attr);
-  if (!ret) started = true;
+  if (!ret) started = worker_busy = true;
   pthread_mutex_unlock(&chat_lock); return -ret;
 }
 
-void glass_chat_refresh_config(void)
+int glass_chat_start(void)
+{
+  if(!glass_ai_start_enter())return -EBUSY;
+  int ret=chat_start();glass_ai_start_leave();return ret;
+}
+bool glass_chat_config_idle(void)
+{
+  pthread_mutex_lock(&chat_lock);
+  bool idle=!started||(!worker_busy&&!send_pending&&!clear_pending&&!refresh_pending&&chat.phase==CHAT_IDLE);
+  pthread_mutex_unlock(&chat_lock);return idle;
+}
+void glass_chat_config_reload(void)
+{
+  pthread_mutex_lock(&chat_lock);bool ready=started&&!worker_busy;pthread_mutex_unlock(&chat_lock);
+  if(!ready)return;
+  struct portal_ai_config *settings=calloc(1,sizeof(*settings));
+  if(settings){refresh_settings(settings);memset(settings,0,sizeof(*settings));free(settings);}
+}
+static void chat_refresh_config(void)
 {
   if (glass_chat_start()) return;
   pthread_mutex_lock(&chat_lock); refresh_pending = true;
   pthread_cond_signal(&chat_wake); pthread_mutex_unlock(&chat_lock);
 }
 
-static int queue_turn(const char *prompt, bool retry, enum glass_agent_mode mode)
+void glass_chat_refresh_config(void)
+{
+  if(!glass_ai_start_enter())return;
+  chat_refresh_config();glass_ai_start_leave();
+}
+static int queue_turn_ungated(const char *prompt, bool retry, enum glass_agent_mode mode,bool camera,bool session)
 {
   if (!glass_agent_mode_valid(mode)) return -EINVAL;
+  if(camera&&mode==AGENT_MODE_CREATE)return -EACCES;
   if (!retry && (!prompt || !glass_chat_utf8(prompt, CHAT_PROMPT_BYTES, true))) return -EINVAL;
   if (glass_chat_start()) return -ENOMEM;
   pthread_mutex_lock(&chat_lock); int ret = -EBUSY;
@@ -365,6 +519,8 @@ static int queue_turn(const char *prompt, bool retry, enum glass_agent_mode mode
       ret=-EINVAL;goto done;
     }
     index--;
+    if(chat.turns[index].camera_samples){ret=-EACCES;goto done;}
+    session=chat.turns[index].session_history;
     /* Another mode may have completed since this failure. Move only this
      * mode's latest failed prompt to the queue tail; keep IDs ordered. */
     if(index!=chat.count-1){
@@ -386,12 +542,15 @@ static int queue_turn(const char *prompt, bool retry, enum glass_agent_mode mode
     t->mode=mode;memcpy(t->prompt, prompt, size); t->prompt[size] = 0;
   }
   struct chat_turn *t = &chat.turns[chat.count - 1];
+  t->camera_samples=camera;
+  t->session_history=session;
   t->id = next_id++;
   chat.active_mode = t->mode;
   t->reply[0] = 0; t->clipped = false; t->state = CHAT_WAITING; t->error = CHAT_ERROR_NONE;
   t->text_bytes = t->reasoning_bytes = t->output_tokens = t->reasoning_tokens = t->stream_round = 0;
   t->has_output_tokens = t->has_reasoning_tokens = t->output_limited = false;
   t->archive[0] = 0; t->archive_bytes = 0;
+  t->camera_tool_used=false;t->camera_save_error=0;t->camera_observation[0]=0;t->camera_recording[0]=0;
   t->reasoning[0] = 0; strcpy(t->progress, "等待服务响应"); t->began_ms = t->activity_ms = now_ms();
   t->tool_count=t->tool_total=0;memset(t->tools,0,sizeof(t->tools));
   t->card_count=0;memset(t->cards,0,sizeof(t->cards));
@@ -402,8 +561,26 @@ done:
   pthread_mutex_unlock(&chat_lock); return ret;
 }
 
-int glass_chat_send_mode(const char *prompt,enum glass_agent_mode mode) { return queue_turn(prompt,false,mode); }
-int glass_chat_retry_mode(enum glass_agent_mode mode) { return queue_turn(NULL,true,mode); }
+static int queue_turn(const char *prompt,bool retry,enum glass_agent_mode mode,bool camera,bool session)
+{
+  if(!glass_ai_start_enter())return -EBUSY;
+  int ret=queue_turn_ungated(prompt,retry,mode,camera,session);glass_ai_start_leave();return ret;
+}
+int glass_chat_send_mode(const char *prompt,enum glass_agent_mode mode) {return queue_turn(prompt,false,mode,false,false);}
+int glass_chat_send_bot(const char *prompt,enum glass_agent_mode mode) {
+  return queue_turn(prompt,false,mode,false,true);
+}
+int glass_chat_send_bot_camera(const char *prompt,enum glass_agent_mode mode)
+{
+  if(mode!=AGENT_MODE_ASSISTANT)return glass_chat_send_camera(prompt,mode);
+  if(!glass_chat_utf8(prompt,CHAT_PROMPT_BYTES,true))return -EINVAL;
+  char question[CHAT_PROMPT_BYTES+1];
+  int n=snprintf(question,sizeof(question),"请调用摄像头观察：%s",prompt);
+  if(n<0||n>CHAT_PROMPT_BYTES)return -E2BIG;
+  return glass_chat_send_bot(question,mode);
+}
+int glass_chat_send_camera(const char *prompt,enum glass_agent_mode mode) { return queue_turn(prompt,false,mode,true,true); }
+int glass_chat_retry_mode(enum glass_agent_mode mode) { return queue_turn(NULL,true,mode,false,false); }
 int glass_chat_send(const char *prompt) { return glass_chat_send_mode(prompt,AGENT_MODE_CREATE); }
 int glass_chat_retry(void) { return glass_chat_retry_mode(AGENT_MODE_CREATE); }
 
@@ -417,7 +594,7 @@ void glass_chat_cancel(void)
   pthread_mutex_unlock(&chat_lock);
 }
 
-static int clear_turns(int mode)
+static int clear_turns_ungated(int mode)
 {
   if (glass_chat_start()) return -ENOMEM;
   pthread_mutex_lock(&chat_lock);
@@ -427,6 +604,11 @@ static int clear_turns(int mode)
   changed(); pthread_cond_signal(&chat_wake); pthread_mutex_unlock(&chat_lock); return 0;
 }
 
+static int clear_turns(int mode)
+{
+  if(!glass_ai_start_enter())return -EBUSY;
+  int ret=clear_turns_ungated(mode);glass_ai_start_leave();return ret;
+}
 int glass_chat_clear(void) { return clear_turns(-1); }
 int glass_chat_clear_mode(enum glass_agent_mode mode)
 {return glass_agent_mode_valid(mode)?clear_turns(mode):-EINVAL;}

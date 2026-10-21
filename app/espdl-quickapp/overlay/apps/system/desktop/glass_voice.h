@@ -46,6 +46,8 @@ int glass_voice_start(void);
 int glass_voice_start_request(uint32_t *request);
 void glass_voice_stop_request(uint32_t request);
 void glass_voice_cancel(void);
+/* Includes retired workers still closing their sockets/capture after cancel. */
+bool glass_voice_config_idle(void);
 void glass_voice_stop(void);
 void glass_voice_get(struct glass_voice_snapshot *out);
 const char *glass_voice_error_text(enum glass_voice_error error);

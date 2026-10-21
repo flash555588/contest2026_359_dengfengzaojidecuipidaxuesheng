@@ -209,11 +209,11 @@ endif # ARCH_CHIP_ESP32P4
 
 config P4_REV3_MSPI_CRASH_AFTER_POWER_UP_WORKAROUND
 	bool
-	default y if ESP32P4_REV_MIN_300
+	default y if ESP32P4_REV_MIN_FULL >= 300
 
 config P4_REV3_MSPI_WORKAROUND_SIZE
 	hex
-	default 0x100 if ESP32P4_REV_MIN_300
+	default 0x100 if ESP32P4_REV_MIN_FULL >= 300
 	default 0
 
 config ESP32P4_CAMERA_USB
@@ -222,3 +222,22 @@ config ESP32P4_CAMERA_USB
 	help
 		P4 HS host, UVC MJPEG capture, hotplug inventory and camera switching.
 		Uses the dedicated OTG HS port; USB Serial/JTAG stays on its own PHY.
+
+config ESP32P4_FLASH_AUTO_SUSPEND
+	bool
+	depends on n
+	default n
+	---help---
+		Rejected experiment: the measured C84018 board suffered a PSRAM
+		store bus fault during Bot/history writes with this option enabled.
+		A driver capability flag and a successful build do not qualify this
+		configuration for deployment. Keep the original cache protection.
+
+config ESP32P4_DSI_FLASH_RELOAD
+	bool
+	depends on n
+	default n
+	help
+		Rejected experiment: autonomous cache-on scanout passed, but the
+		physical USB/Flash test still flickered and writes became slow.
+		Retain only for reproduction, never enable in normal firmware.

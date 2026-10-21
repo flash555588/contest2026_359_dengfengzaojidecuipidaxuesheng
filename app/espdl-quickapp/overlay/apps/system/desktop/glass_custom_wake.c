@@ -13,9 +13,9 @@ extern void qpk_dl_sha256(const void *,size_t,uint8_t[32]);
 _Static_assert(GLASS_WAKE_MODEL_BYTES==32+GLASS_WAKE_WEIGHTS*4,"Wake model shape");
 
 struct glass_custom_wake {
-  float *weights,threshold,noise,score,initial_floor;
+  float *weights,threshold,noise,score,initial_floor,initial_peak;
   int16_t pcm[GLASS_WAKE_MAX_SAMPLES],block[320],pre[2560];
-  unsigned samples,used,pre_at,pre_count,above,below,cooldown,evaluations,warmup;
+  unsigned samples,used,pre_at,pre_count,above,below,cooldown,evaluations,warmup,initial_clipped;
   bool speaking;
 };
 static uint32_t wake_u32(const uint8_t *p)
@@ -66,10 +66,19 @@ static int wake_block(struct glass_custom_wake *s)
      * 80 ms estimate plus attack fits inside the existing 160 ms preroll. */
     if(s->warmup){
       s->initial_floor=fminf(s->initial_floor,rms);
+      s->initial_peak=fmaxf(s->initial_peak,rms);
+      for(unsigned i=0;i<320;i++)
+        if(s->block[i]>=32000||s->block[i]<=-32000)s->initial_clipped++;
       if(--s->warmup)return 0;
       /* A user can already be speaking in the first capture block. Bound
        * that initial estimate; subsequent idle blocks track the actual bed. */
       s->noise=fmaxf(10,fminf(500,s->initial_floor));
+      /* A stationary bed above the capped floor's 2.5x attack level would
+       * start a false, endless utterance. Only this clearly loud/stable
+       * startup uses its measured floor. Variable onset (a user already
+       * speaking), quiet/far speech and the classifier keep their policy. */
+      if(!s->initial_clipped&&s->initial_floor>1250&&s->initial_peak<s->initial_floor*1.3f)
+        s->noise=s->initial_floor;
     }
     if(rms>fmaxf(90,s->noise*2.5f))s->above++;else{s->above=0;s->noise=.98f*s->noise+.02f*rms;}
     if(s->above>=2){

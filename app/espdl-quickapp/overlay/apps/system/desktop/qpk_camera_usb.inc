@@ -1,47 +1,11 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-/* Preserve the negotiated image resolution and avoid writing an expanded
- * screen-sized bitmap to slow flash. The decoder has validated this JPEG
- * and inserted standard Huffman tables where the camera omitted them. */
-static void qpk_camera_save_jpeg(const uint8_t *image, size_t size)
+extern void qpk_camera_timing_log(void);
+
+static void qpk_camera_save_jpeg(const uint8_t *image,size_t size)
 {
-  pthread_mutex_lock(&g_camera_lock);
-  bool pending = g_photo_pending;
-  g_photo_pending = false;
-  pthread_mutex_unlock(&g_camera_lock);
-  if (!pending) return;
-  char path[128];
-  FILE *file = NULL;
-  int error = 0;
-  if (mkdir(QPK_PHOTO_DIR, 0755) < 0 && errno != EEXIST) error = errno;
-  if (!error)
-    {
-      do
-        {
-          snprintf(path, sizeof(path), QPK_PHOTO_DIR "/camera-%08u.jpg", ++g_photo_sequence);
-          file = fopen(path, "wbx");
-        }
-      while (!file && errno == EEXIST && g_photo_sequence < 100000);
-      if (!file) error = errno ? errno : EIO;
-    }
-  if (file)
-    {
-      for (size_t offset = 0; !error && offset < size;)
-        {
-          if (qpk_camera_cancelled()) { error = ECANCELED; break; }
-          size_t count = size - offset;
-          if (count > 4096) count = 4096;
-          if (fwrite(image + offset, 1, count, file) != count) error = EIO;
-          offset += count;
-        }
-      if (!error && (fflush(file) || fsync(fileno(file)))) error = EIO;
-      if (fclose(file) && !error) error = EIO;
-      if (error) unlink(path);
-    }
-  pthread_mutex_lock(&g_camera_lock);
-  qpk_camera_set_photo_status(error ? -error : 2);
-  if (!error) snprintf(g_photo_path, sizeof(g_photo_path), "%s", path);
-  pthread_mutex_unlock(&g_camera_lock);
-  printf("[qpk] JPEG photo status=%d bytes=%lu\n", error ? -error : 2, (unsigned long)size);
+  struct qpk_photo_input input={.format=QPK_PHOTO_JPEG,.data=image,.bytes=size,
+    .root_override=QPK_PHOTO_DIR};
+  qpk_camera_stage_photo(&input);
 }
 
 /* P4 manages PSRAM cache through Espressif's HAL: CONFIG_ARCH_DCACHE is
@@ -63,6 +27,15 @@ static int qpk_camera_clean_frame(uint16_t *pixels, size_t bytes)
   return 0;
 }
 
+static uint64_t qpk_usb_preview_now(void)
+{
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI
+  return esp_camera_timing_now();
+#else
+  return qpk_now_us();
+#endif
+}
+
 /* Runs entirely outside LVGL. Decoder and input buffers belong to this
  * worker and are released before cleanup joins and resumes the desktop. */
 static void *qpk_camera_usb_thread(pthread_addr_t arg)
@@ -82,62 +55,106 @@ static void *qpk_camera_usb_thread(pthread_addr_t arg)
   input = malloc(mode.max_frame_size + 512);
   decoder = qpk_mjpeg_create();
   if (!input || !decoder) { error = -ENOMEM; goto done; }
+  /* Smooth live view; JPEG photos retain the original negotiated frame. */
+  qpk_mjpeg_preview_limits(decoder,320,240);
   uint64_t last_frame = qpk_now_ms();
   unsigned decode_failures = 0;
+  uint64_t profile_start = qpk_usb_preview_now(), costs[6] = {0};
+  unsigned samples = 0;
   struct pollfd pfd = { .fd = camera->fd, .events = POLLIN };
   while (!qpk_camera_cancelled())
     {
+      uint64_t started = qpk_usb_preview_now();
       int ret = poll(&pfd, 1, 100);
+      costs[0] += qpk_usb_preview_now() - started;
       if (qpk_camera_cancelled()) break;
       if (ret < 0) { if (errno == EINTR) continue; error = -errno; break; }
       if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) { error = -ENODEV; break; }
       if (!ret)
         { if (qpk_now_ms() - last_frame > 6000) { error = -ETIMEDOUT; break; } continue; }
+      started = qpk_usb_preview_now();
       ssize_t size = read(camera->fd, input, mode.max_frame_size);
+      costs[1] += qpk_usb_preview_now() - started;
       if (size < 0) { if (errno == EAGAIN || errno == EINTR) continue; error = -errno; break; }
       if (!size) continue;
       unsigned next = (camera->fb_page + 1) % QPK_CAMERA_FRAMEBUFFER_COUNT;
       uint16_t *target = (uint16_t *)((uint8_t *)camera->fb_plane.fbmem + next * QPK_CAMERA_FRAME_SIZE);
-      ret = qpk_mjpeg_decode_region(decoder, input, size, mode.max_frame_size + 512,
+      /* Pending photos and video retain the original full-canvas path. A
+       * shutter arriving during fast preview is handled on the next frame. */
+      pthread_mutex_lock(&g_camera_lock);
+      bool photo_needs_frame = g_photo_pending;
+      pthread_mutex_unlock(&g_camera_lock);
+      bool prepared = qpk_camera_zoom_percent()==100 && qpk_camera_style()==0 &&
+                      !qpk_video_selected() && !photo_needs_frame;
+      started = qpk_usb_preview_now();
+      if (prepared) {
+        unsigned width=CAMERA_REFERENCE_VIEW_RIGHT-CAMERA_REFERENCE_VIEW_LEFT;
+        unsigned height=QPK_CAMERA_RAW_HEIGHT*width/QPK_CAMERA_BAR_LEFT;
+        unsigned top=22+(556-height)/2;
+        ret = qpk_mjpeg_decode_view(decoder,input,size,mode.max_frame_size+512,
+          target+top*QPK_CAMERA_RAW_WIDTH+CAMERA_REFERENCE_VIEW_LEFT,
+          QPK_CAMERA_BAR_LEFT,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH,
+          mode.width,mode.height,width,height);
+      } else ret = qpk_mjpeg_decode_region(decoder, input, size, mode.max_frame_size + 512,
                              target, QPK_CAMERA_BAR_LEFT, QPK_CAMERA_RAW_HEIGHT, QPK_CAMERA_RAW_WIDTH,
                              mode.width, mode.height);
+      costs[2] += qpk_usb_preview_now() - started;
       if (ret < 0)
         { if (++decode_failures == 10) { error = ret; break; } continue; }
       decode_failures = 0;
-      qpk_video_frame(target,QPK_CAMERA_BAR_LEFT,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
+      started = qpk_usb_preview_now();
+      if (!prepared) qpk_video_frame(target,QPK_CAMERA_BAR_LEFT,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
       last_frame = qpk_now_ms();
       camera->captured_frames++;
       if (qpk_camera_cancelled()) break;
       /* The frame is saved before any reference UI is composed into it. */
       int photo_status = qpk_camera_bar_status();
-      if (photo_status == 1)
+      if (!prepared && photo_status == 1)
         qpk_camera_capture_ring(target, qpk_camera_rgb565(0xf6f7ff));
       /* The untouched JPEG is lossless to the incoming stream at 1x. For a
        * zoomed shot, save the matching RGB565 crop before drawing any UI. */
-      if(qpk_camera_zoom_percent()==100&&qpk_camera_style()==0)qpk_camera_save_jpeg(input,qpk_mjpeg_frame_size(decoder));
-      else qpk_camera_save(target,QPK_CAMERA_BAR_LEFT);
+      if (!prepared) {
+        if(qpk_camera_zoom_percent()==100&&qpk_camera_style()==0)qpk_camera_save_jpeg(input,qpk_mjpeg_frame_size(decoder));
+        else qpk_camera_save(target,QPK_CAMERA_BAR_LEFT);
+      }
       photo_status = qpk_camera_bar_status();
       /* The reference's guides and shutter extend into the decoded image.
        * Re-compose after every frame, not just when the old right rail changes. */
-      qpk_camera_bar_blit(target,QPK_CAMERA_BAR_LEFT);
+      qpk_camera_bar_draw(target,QPK_CAMERA_BAR_LEFT,prepared);
       qpk_wake_overlay_blit(target,QPK_CAMERA_RAW_WIDTH,QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_RAW_WIDTH);
+      costs[3] += qpk_usb_preview_now() - started;
       size_t dirty_bytes = QPK_CAMERA_FRAME_SIZE;
+      started = qpk_usb_preview_now();
       ret = qpk_camera_clean_frame(target, dirty_bytes);
+      costs[4] += qpk_usb_preview_now() - started;
       if (ret < 0) { error = ret; break; }
       camera->fb_plane.yoffset = next * QPK_CAMERA_RAW_HEIGHT;
-      if (ioctl(camera->fb_fd, FBIOPAN_DISPLAY, (uintptr_t)&camera->fb_plane) < 0)
+      started = qpk_usb_preview_now();
+      if (qpk_camera_present(camera->fb_fd,&camera->fb_plane) < 0)
         { camera->pan_errors++; error = -errno; break; }
-      /* The older framebuffer upper half drops pandisplay's return value.
-       * Confirm scanout changed before allowing another page to be reused. */
-      struct fb_planeinfo_s displayed = { .display = 0 };
-      if (ioctl(camera->fb_fd, FBIOGET_PLANEINFO, (uintptr_t)&displayed) < 0 ||
-          displayed.yoffset != camera->fb_plane.yoffset)
-        { camera->pan_errors++; error = -EIO; break; }
+      costs[5] += qpk_usb_preview_now() - started;
       camera->fb_page = next;
       pthread_mutex_lock(&g_camera_lock);
       camera->frames++;
       pthread_mutex_unlock(&g_camera_lock);
       if (camera->frames == 1) printf("[qpk] USB MJPEG first frame %ux%u\n", mode.width, mode.height);
+      samples++;
+      uint64_t now = qpk_usb_preview_now(), elapsed = now - profile_start;
+      if (elapsed >= 5000000)
+        {
+          struct uvc_camera_stats stats = {0};
+          int stats_error = ioctl(camera->fd, UVCIOC_STATS, (unsigned long)&stats) < 0 ? errno : 0;
+          unsigned fps10 = (uint64_t)samples * 10000000 / elapsed;
+          printf("[usb-preview] fps=%u.%u frames=%lu received=%lu dropped=%lu errors=%lu stats_error=%d avg_us(wait/read/decode/draw/flush/pan)=%lu/%lu/%lu/%lu/%lu/%lu\n",
+            fps10/10, fps10%10, (unsigned long)camera->frames,
+            (unsigned long)stats.frames, (unsigned long)stats.dropped,
+            (unsigned long)stats.errors, stats_error,
+            (unsigned long)(costs[0]/samples), (unsigned long)(costs[1]/samples),
+            (unsigned long)(costs[2]/samples), (unsigned long)(costs[3]/samples),
+            (unsigned long)(costs[4]/samples), (unsigned long)(costs[5]/samples));
+          qpk_camera_timing_log();
+          memset(costs, 0, sizeof(costs)); samples = 0; profile_start = qpk_usb_preview_now();
+        }
     }
 done:
   ioctl(camera->fd, UVCIOC_STOP, 0);

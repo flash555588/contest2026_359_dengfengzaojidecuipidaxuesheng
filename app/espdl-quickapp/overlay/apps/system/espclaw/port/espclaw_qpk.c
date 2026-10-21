@@ -3,6 +3,7 @@
 #include "claw_stream.h"
 #include "glass_qpk_builder.h"
 #include "glass_agent.h"
+#include "glass_agent_profiles.h"
 #include <stdio.h>
 #include <cJSON.h>
 #include <limits.h>
@@ -28,8 +29,8 @@ static esp_err_t guide_context(const claw_core_request_t *request, claw_core_con
     "仅执行本轮明确的目标、动作和参数，不从历史、近似名称或未定义的代词补全。"
     "设备内部功能先用 home_device 读取真实关联的功能实体、服务和范围/选项；只修改本轮指定的功能，不猜枚举或联动修改其他实体。"
     "必要信息不完整时先澄清，不发送猜测的控制参数；仅查询不控制。\n":"";
-  size_t n=strlen(profile)+strlen(guide)+strlen(agent)+strlen(intent)+64;
-  out->content=malloc(n);if(out->content)snprintf(out->content,n,"%s\n%s\nAgent extensions:\n%s%s",profile,guide,agent,intent);
+  size_t n=strlen(agent_harness_prompt)+strlen(profile)+strlen(guide)+strlen(agent)+strlen(intent)+64;
+  out->content=malloc(n);if(out->content)snprintf(out->content,n,"%s\n%s\n%s\nAgent extensions:\n%s%s",agent_harness_prompt,profile,guide,agent,intent);
   free(agent);
   return out->content ? ESP_OK : ESP_ERR_NO_MEM;
 }
@@ -78,6 +79,8 @@ static esp_err_t call_tool(const char *name, const char *input, const claw_core_
   cJSON *args = !strncmp(name,"skill_",6)||!strncmp(name,"mcp_",4)||!strncmp(name,"home_",5)||!strncmp(name,"music_",6)||!strncmp(name,"assistant_",10)?glass_agent_json(input):
     strstr(input,"\\u0000")?NULL:cJSON_ParseWithOpts(input,NULL,true);
   if (!cJSON_IsObject(args)) { cJSON_Delete(args); return fail(out, "invalid_arguments", "Arguments must be one complete JSON object."); }
+  if(session->tool_calls>=session->tool_budget){cJSON_Delete(args);return fail(out,"tool_budget_exhausted","Report completed and pending steps. Do not replay effects.");}
+  session->tool_calls++;
   const cJSON *called=cJSON_GetObjectItemCaseSensitive(args,"tool");
   claw_stream_emit(CLAW_STREAM_TOOL,!strcmp(name,"mcp_call_tool")&&cJSON_IsString(called)?called->valuestring:name);
   int handled=glass_agent_call(session->agent,name,args,out);
@@ -89,7 +92,7 @@ static esp_err_t call_tool(const char *name, const char *input, const claw_core_
       (!strncmp(tool->valuestring,"home_",5)||!strncmp(tool->valuestring,"music_",6)));
     cJSON_Delete(args);if(handled<0)return ESP_ERR_NO_MEM;
     cJSON *extension=cJSON_Parse(*out);
-    bool failed=!extension||cJSON_GetObjectItemCaseSensitive(extension,"error")||cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(extension,"isError"));
+    bool failed=!extension||cJSON_GetObjectItemCaseSensitive(extension,"error")||cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(extension,"ok"))||cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(extension,"isError"));
     if(!failed&&local_card){
       /* Device results carry a display card for the chat dialog. It travels as
        * a stream event for the UI and is stripped from the model-visible text. */
@@ -137,6 +140,7 @@ static esp_err_t call_tool(const char *name, const char *input, const claw_core_
 void claw_qpk_configure(claw_core_config_t *config, struct claw_qpk_session *session)
 {
   session->agent=glass_agent_create(session->cancel,session->mode);
+  session->tool_calls=0;session->tool_budget=session->mode==AGENT_MODE_ASSISTANT?64:session->mode==AGENT_MODE_CREATE?32:0;
   config->supports_tools = session->agent && session->mode != AGENT_MODE_CHAT;
   config->call_cap = call_tool; config->cap_user_ctx = session;
   config->max_tool_iterations = session->mode == AGENT_MODE_ASSISTANT ? 16 : 8;

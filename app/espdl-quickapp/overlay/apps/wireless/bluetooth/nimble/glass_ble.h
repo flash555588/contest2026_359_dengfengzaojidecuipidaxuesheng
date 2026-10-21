@@ -18,6 +18,9 @@ struct glass_ble_state
   int error;
   unsigned count;
   struct glass_ble_device devices[GLASS_BLE_LIMIT];
+  uint32_t generation,scan_generation;
+  uint16_t mtu;
+  bool encrypted,bonded;
 };
 struct glass_ble_hid_state
 {

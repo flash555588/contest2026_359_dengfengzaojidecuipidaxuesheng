@@ -73,6 +73,7 @@ static cJSON *board_ui_execute(const char *operation,const cJSON *args)
   cJSON *out=cJSON_CreateObject();if(!out)return NULL;
   if(!strcmp(operation,"camera_capture")) {
     uint32_t request=0;bool accepted=qpk_runtime_camera_capture_request(&request);
+    printf("[camera-flow] ui camera_capture accepted=%d request=%lu\n",accepted,(unsigned long)request);
     cJSON_AddBoolToObject(out,"ok",accepted);
     if(accepted){cJSON_AddBoolToObject(out,"accepted",true);cJSON_AddNumberToObject(out,"request_id",request);}
     else cJSON_AddStringToObject(out,"error","camera_preview_required_or_busy");
@@ -114,6 +115,7 @@ static cJSON *board_ui_execute(const char *operation,const cJSON *args)
     if(offset<total&&total-offset>16)cJSON_AddNumberToObject(out,"next_offset",offset+16);
   } else if(!strcmp(operation,"app_open")) {
     const cJSON *v=cJSON_GetObjectItemCaseSensitive(args,"id");const char *id=cJSON_IsString(v)?v->valuestring:"";
+    if(!strcmp(id,"camera"))printf("[camera-flow] ui app_open=camera\n");
     bool found=false;
     for(unsigned i=0;i<sizeof(board_builtins)/sizeof(board_builtins[0]);i++)if(!strcmp(id,board_builtins[i].id)){board_builtins[i].open(NULL);found=true;break;}
     if(!found){qpk_scan();for(int i=0;i<g_desktop.nqpk;i++)if(!strcmp(id,g_desktop.qpk[i].package)){launch_external_qapp(i);found=true;break;}}

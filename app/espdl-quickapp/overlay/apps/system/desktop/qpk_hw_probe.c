@@ -52,6 +52,27 @@ static int check_result(struct qpk_hw_session *session, const char *op,
 }
 static int check(struct qpk_hw_session *s, const char *op, const char *args)
 { return check_result(s, op, args, 0, NULL); }
+/* Each operation/JSON pair shares one owner. "wait" accepts milliseconds,
+ * which permits a scan or stream to finish without losing its task group. */
+int qpk_hw_call(int argc,char **argv)
+{
+  if(argc%2||pthread_mutex_trylock(&probe_lock))return -EINVAL;
+  struct qpk_hw_session *s=qpk_hw_create("hardware-diagnostic");
+  int ret=s?0:-ENOMEM;
+  for(int i=0;s&&i<argc;i+=2){
+    if(!strcmp(argv[i],"wait")){
+      char *end;long ms=strtol(argv[i+1],&end,10);
+      if(*end||ms<0||ms>15000){ret=-EINVAL;break;}
+      usleep((useconds_t)ms*1000);continue;
+    }
+    cJSON *out=NULL;int code=check_result(s,argv[i],argv[i+1],0,&out);
+    char *text=out?cJSON_PrintUnformatted(out):NULL;
+    printf("hardware-call: %s code=%d %s\n",argv[i],code,text?text:"{}");
+    free(text);cJSON_Delete(out);if(code&&!ret)ret=code;
+  }
+  if(s)qpk_hw_release_wait(s);
+  pthread_mutex_unlock(&probe_lock);return ret;
+}
 static int value_is(struct qpk_hw_session *s, const char *op, const char *args,
                      const char *key, int expected)
 {

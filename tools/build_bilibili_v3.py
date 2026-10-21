@@ -38,7 +38,16 @@ def main():
     p.add_argument('--offline-inputs',action='store_true',help='Do not download missing official ESP-TTS inputs')
     p.add_argument('--esp-tts-storage',choices=['sd','flash'],default='sd',help='Official voice storage (default: verified SD asset, preserving the 12 MB firmware / 4 MB data layout)')
     p.add_argument('--source-revision',help='Explicit 40-hex source revision for Windows-mounted Git worktrees')
+    p.add_argument('--usb-camera',action='store_true',help='Include the dedicated P4 HS/UTMI UVC MJPEG host alongside the existing CSI camera')
+    p.add_argument('--psram-xip',action='store_true',help='Opt-in experimental P4 Simple Boot text/rodata PSRAM XIP; requires dedicated trial workspace and physical validation')
+    p.add_argument('--flash-auto-suspend-jedec',choices=['c84018'],help='Rejected experiment; retained only to reject old deployment commands explicitly')
+    p.add_argument('--dsi-flash-reload',action='store_true',help='Rejected physical experiment; retained to reject old deployment commands')
+    p.add_argument('--factory-header',action='store_true',help='Use factory P4X J1 pins, reserving GPIO0/1 for XTAL32K: I2C1=2/3, SPI2=6/3/4/5, PWM0=2')
     a=p.parse_args();repo=Path(__file__).resolve().parent.parent
+    if a.flash_auto_suspend_jedec:
+        p.error('P4 Flash auto-suspend candidate failed physical Bot/PSRAM testing; deployment is disabled')
+    if a.dsi_flash_reload:
+        p.error('P4 DSI reload candidate still flickered during USB/Flash testing; deployment is disabled')
     if a.esp_tts_prepared and not a.speech_runtime:p.error('--esp-tts-prepared requires --speech-runtime')
     if a.esp_tts_prepared and a.tts_backend!='esp-tts':p.error('--esp-tts-prepared conflicts with --tts-backend sanotts')
     base=a.baseline.resolve();root=a.workspace.resolve();out=a.output.resolve()
@@ -69,6 +78,11 @@ def main():
                 if updated!=data:f.write_bytes(updated)
     # Apply only the requested current overlay, preserving the external tree.
     overlay=repo/'app/espdl-quickapp/overlay'
+    def source_inputs():
+        return {str(f.relative_to(repo)):hashlib.sha256(f.read_bytes()).hexdigest()
+                for folder in [repo/'app/bilibili_live',overlay]
+                for f in folder.rglob('*') if f.is_file()}
+    copied_source_hashes=source_inputs()
     for src in overlay.rglob('*'):
         if not src.is_file():continue
         # The shipped overlay .config predates hardware/API preparation.
@@ -80,6 +94,19 @@ def main():
         if not target.exists() or target.read_bytes()!=data:target.write_bytes(data)
     from adapt_c6_status import apply as apply_c6_status
     apply_c6_status(root/'apps')
+    from instrument_p4_timing import apply as apply_camera_timing
+    camera_timing_sources=apply_camera_timing(root/'nuttx')
+    from protect_p4_display_flash import restore as restore_display_flash
+    display_flash_sources={'enabled':False,'rejected_cache_off_irq_removed':
+                          restore_display_flash(root/'nuttx')}
+    from prepare_p4_flash_suspend import apply as prepare_flash_suspend
+    flash_suspend_sources=prepare_flash_suspend(root/'nuttx')
+    from prepare_p4_scanout_reload import apply as prepare_scanout_reload
+    scanout_reload_sources=prepare_scanout_reload(root/'nuttx')
+    psram_xip_sources={}
+    if a.psram_xip:
+        from prepare_p4_psram_xip import apply as prepare_psram_xip
+        psram_xip_sources=prepare_psram_xip(root/'nuttx')
     speech_libraries=[]
     desktop_make=root/'apps/system/desktop/Makefile'
     make=desktop_make.read_text()
@@ -87,7 +114,7 @@ def main():
     if a.speech_runtime:
         prepared=a.speech_runtime.resolve()
         make+='\n# BEGIN OPTIONAL LOCAL SPEECH\nCFLAGS += -DGLASS_LOCAL_SPEECH -DQPK_DL_SD_ONLY\n'
-    desktop_make.write_text(make)
+    if desktop_make.read_text()!=make:desktop_make.write_text(make)
 
     # No private credential header is imported into the candidate.
     for name in ['music_credentials.h','music_api_key.h']:
@@ -100,11 +127,15 @@ def main():
     except ValueError as error:p.error(str(error))
     # Live FLV needs more than the baseline's 3 KiB socket window. Keep the
     # pool bounded (48 KiB payload) and leave internal RAM for DMA/threads.
-    for name,value in [('ESPRESSIF_STORAGE_MTD_OFFSET',hex(data_offset)),('ESPRESSIF_STORAGE_MTD_SIZE',hex(data_size)),('LIBM','y'),('LIBM_TOOLCHAIN','n'),('LIBM_NONE','n'),('NET_BROADCAST','y'),('SYSTEM_BILIBILI_LIVE','y'),('PTHREAD_MUTEX_TYPES','y'),('NSH_DISABLE_DATE','n'),
+    for name,value in [('ESP32P4_FLASH_AUTO_SUSPEND','y' if a.flash_auto_suspend_jedec else 'n'),('ESPRESSIF_STORAGE_MTD_OFFSET',hex(data_offset)),('ESPRESSIF_STORAGE_MTD_SIZE',hex(data_size)),('LIBM','y'),('LIBM_TOOLCHAIN','n'),('LIBM_NONE','n'),('NET_BROADCAST','y'),('SYSTEM_BILIBILI_LIVE','y'),('PTHREAD_MUTEX_TYPES','y'),('NSH_DISABLE_DATE','n'),
+                       ('ESP32P4_PSRAM_XIP','y' if a.psram_xip else 'n'),
+                       ('ESP32P4_DSI_FLASH_RELOAD','y' if a.dsi_flash_reload else 'n'),
                        ('NET_RECV_BUFSIZE','32768'),('NET_MAX_RECV_BUFSIZE','32768'),('NSH_NETINIT','n'),('LV_USE_SNAPSHOT','y'),
                        # A cancelled ASR must not sit behind 30s x 3 DNS retries.
                        ('NETDB_DNSCLIENT_RECV_TIMEOUT','3'),('NETDB_DNSCLIENT_SEND_TIMEOUT','3'),('NETDB_DNSCLIENT_RETRIES','2'),
                        ('IOB_NBUFFERS','96'),('IOB_BUFSIZE','512'),('RR_INTERVAL','20'),('ESP32P4_PPA','y'),
+                       # Manifest model filenames and audio clips exceed 32 bytes.
+                       ('NAME_MAX','64'),('FAT_MAXFNAME','64'),
                        ('ESPRESSIF_CACHE_L2_CACHE_128KB','n'),
                        ('ESPRESSIF_CACHE_L2_CACHE_256KB','y' if a.l2_kb==256 else 'n'),
                        ('ESPRESSIF_CACHE_L2_CACHE_512KB','y' if a.l2_kb==512 else 'n'),
@@ -115,6 +146,16 @@ def main():
         if re.search(pattern,s,re.M):s=re.sub(pattern,line,s,flags=re.M)
         else:s+=line+'\n'
     if cfg.read_text()!=s:cfg.write_text(s)
+    if a.factory_header:
+        for key,value in [('ESPRESSIF_I2C1_SDAPIN',2),('ESPRESSIF_I2C1_SCLPIN',3),('ESPRESSIF_SPI2_CSPIN',6),('ESPRESSIF_LEDC_CHANNEL0_PIN',2)]:
+            name='CONFIG_'+key;pattern=r'^'+name+r'=.*$'
+            if re.search(pattern,s,re.M):s=re.sub(pattern,name+'='+str(value),s,flags=re.M)
+            else:s+='\n'+name+'='+str(value)+'\n'
+        if cfg.read_text()!=s:cfg.write_text(s)
+    if a.usb_camera:
+        s=re.sub(r'^(?:CONFIG_ESP32P4_CAMERA_USB=.*|# CONFIG_ESP32P4_CAMERA_USB is not set)$','CONFIG_ESP32P4_CAMERA_USB=y',s,flags=re.M)
+        if 'CONFIG_ESP32P4_CAMERA_USB=y' not in s:s+='\nCONFIG_ESP32P4_CAMERA_USB=y\n'
+        if cfg.read_text()!=s:cfg.write_text(s)
     tc=a.toolchain.resolve();cross=f'CROSSDEV={tc}/riscv32-esp-elf-'
     tls=base/'standalone-tls'
     includes=f'-I{tls}/include -I{tls}/tf-psa-crypto/include -I{tls}/tf-psa-crypto/drivers/builtin/include -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD'
@@ -126,13 +167,36 @@ def main():
         libs.append(Path(subprocess.check_output([str(tc/'riscv32-esp-elf-g++'),*abi,'-print-file-name='+name],text=True).strip()))
     run(['make','olddefconfig',cross],cwd=root/'nuttx')
     config=cfg.read_text()
+    if a.factory_header:
+        for value in ['CONFIG_ESPRESSIF_I2C1_SDAPIN=2','CONFIG_ESPRESSIF_I2C1_SCLPIN=3','CONFIG_ESPRESSIF_SPI2_CSPIN=6','CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN=2']:
+            if value not in config:raise RuntimeError('Factory J1 pin configuration missing: '+value)
+    if a.usb_camera and 'CONFIG_ESP32P4_CAMERA_USB=y' not in config:raise RuntimeError('USB camera disabled by Kconfig')
+    if a.psram_xip:
+        for option in ['ESP32P4_PSRAM_XIP','SPIRAM_FETCH_INSTRUCTIONS','SPIRAM_RODATA','SPIRAM_XIP_FROM_PSRAM','SPIRAM_FLASH_LOAD_TO_PSRAM']:
+            if 'CONFIG_'+option+'=y' not in config:raise RuntimeError('PSRAM XIP dependency not enabled: '+option)
+    if a.flash_auto_suspend_jedec and 'CONFIG_ESP32P4_FLASH_AUTO_SUSPEND=y' not in config:
+        raise RuntimeError('P4 auto-suspend dependency/revision check failed')
     for value in ['CONFIG_SYSTEM_C6_DESKTOP=y','CONFIG_SYSTEM_BILIBILI_LIVE=y','CONFIG_ARCH_FPU=y',
+                  'CONFIG_ESPRESSIF_MIPI_DSI=y',
+                  'CONFIG_NAME_MAX=64','CONFIG_FAT_MAXFNAME=64',
                   f'CONFIG_ESPRESSIF_STORAGE_MTD_OFFSET={hex(data_offset)}',f'CONFIG_ESPRESSIF_STORAGE_MTD_SIZE={hex(data_size)}',
                   f'CONFIG_ESPRESSIF_CACHE_L2_CACHE_SIZE={hex(a.l2_kb*1024)}',
                   f'CONFIG_ESPRESSIF_CACHE_L2_CACHE_LINE_SIZE={64 if a.l2_kb==256 else 128}']:
         if value not in config:raise RuntimeError('Unexpected v3 configuration: '+value)
     clean_stamp=root/'bilibili-clean.txt'
-    config_hash=hashlib.sha256((config+'\nspeech='+str(bool(a.speech_runtime))+'\nesp_tts='+str(bool(a.esp_tts_prepared))+'\nvoice_storage='+a.esp_tts_storage).encode()).hexdigest()
+    # NuttX's imported chip sources do not always regenerate header dependencies.
+    # A struct/extern change must not leave an old ISR in libarch.a.
+    headers=hashlib.sha256()
+    for header in sorted(path for path in overlay.rglob('*') if path.suffix in ['.h','.inc']):
+        headers.update(str(header.relative_to(overlay)).encode())
+        headers.update(hashlib.sha256(header.read_bytes()).digest())
+    # The SDK DMA propagation API is inline: invalidate every object if its
+    # guarded implementation changes, even when overlay headers do not.
+    headers.update(hashlib.sha256((repo/'tools/protect_p4_display_flash.py').read_bytes()).digest())
+    headers.update(hashlib.sha256((repo/'tools/prepare_p4_flash_suspend.py').read_bytes()).digest())
+    headers.update(hashlib.sha256((repo/'tools/prepare_p4_scanout_reload.py').read_bytes()).digest())
+    if a.psram_xip:headers.update(hashlib.sha256((repo/'tools/prepare_p4_psram_xip.py').read_bytes()).digest())
+    config_hash=hashlib.sha256((config+'\nspeech='+str(bool(a.speech_runtime))+'\nesp_tts='+str(bool(a.esp_tts_prepared))+'\nvoice_storage='+a.esp_tts_storage+'\nheaders='+headers.hexdigest()).encode()).hexdigest()
     if not clean_stamp.exists() or clean_stamp.read_text().strip()!=config_hash:
         run(['make','clean',cross],cwd=root/'nuttx');clean_stamp.write_text(config_hash+'\n')
     run(['make','context',cross,f'ESPCLAW_TLS_CFLAGS={includes}'],cwd=root/'nuttx')
@@ -152,8 +216,17 @@ def main():
     for name,target in [('nuttx.bin','nuttx.bin'),('nuttx','nuttx.elf'),('.config','resolved.config')]:shutil.copy2(root/'nuttx'/name,out/target)
     def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
     nm=subprocess.check_output([str(tc/'riscv32-esp-elf-nm'),'-C',str(out/'nuttx.elf')],text=True)
-    for symbol in ['bili_live_show','bili_flv_run','glass_https_tls_ops','WelsCreateDecoder']:
+    for symbol in ['bili_live_show','bili_flv_run','glass_https_tls_ops','WelsCreateDecoder',
+                   'qpk_photo_store_initialize','esp_camera_display_frame','esp_camera_flash_end']:
         if symbol not in nm:raise RuntimeError('Missing linked symbol '+symbol)
+    if re.search(r'\besp_display_flash_isr_enter$',nm,re.M):
+        raise RuntimeError('Rejected cache-off IRQ experiment is still linked')
+    if a.flash_auto_suspend_jedec:
+        for symbol in ['esp_flash_chip_gd','spi_flash_chip_gd_get_caps','esp32p4_flash_auto_diagnostics']:
+            if not re.search(r'\b'+symbol+r'$',nm,re.M):raise RuntimeError('Missing auto-suspend symbol '+symbol)
+    if a.usb_camera:
+        for symbol in ['camera_usb_initialize','glass_vision_analyze']:
+            if not re.search(r'\b'+symbol+r'$',nm,re.M):raise RuntimeError('Missing linked camera/vision symbol '+symbol)
     if a.esp_tts_prepared:
         for symbol in ['glass_esp_synthesize','esp_tts_create','esp_tts_stream_play','glass_esp_tts_voice_load']:
             if not re.search(r'\b'+symbol+r'$',nm,re.M):raise RuntimeError('Missing linked ESP-TTS symbol '+symbol)
@@ -164,17 +237,29 @@ def main():
     if revision:
         if not re.fullmatch('[0-9a-f]{40}',revision):p.error('source-revision must be 40-hex')
     else:revision=subprocess.check_output(['git','-C',str(repo),'rev-parse','HEAD'],text=True).strip()
-    metadata={'upstream':revision,
+    metadata={'camera_timing':camera_timing_sources,
+              'psram_xip':{'enabled':a.psram_xip,'sources':psram_xip_sources,'tool_sha256':sha(repo/'tools/prepare_p4_psram_xip.py')},
+              'display_flash':display_flash_sources,
+              'scanout_reload':{'enabled':a.dsi_flash_reload,'sources':scanout_reload_sources},
+              'scanout_reload_tool_sha256':sha(repo/'tools/prepare_p4_scanout_reload.py'),
+              'flash_auto_suspend':{'measured_jedec':a.flash_auto_suspend_jedec,'sdk_sources':flash_suspend_sources},
+              'flash_suspend_tool_sha256':sha(repo/'tools/prepare_p4_flash_suspend.py'),
+              'display_flash_tool_sha256':sha(repo/'tools/protect_p4_display_flash.py'),
+              'camera_timing_tool_sha256':sha(repo/'tools/instrument_p4_timing.py'),
+              'upstream':revision,
               'baseline':str(base),'baseline_config_sha256':sha(base/'nuttx/.config'),
               'workspace':str(root),'tls':'existing glass_https / mbedTLS',
               'tts_backend':a.tts_backend if a.speech_runtime else None,'ebss':hex(int(bss.group(1),16)),
+              'usb_camera':a.usb_camera,
+              'factory_header':a.factory_header,
               'esp_tts_voice_storage':a.esp_tts_storage if a.esp_tts_prepared else None,
               'compiler':subprocess.check_output([str(tc/'riscv32-esp-elf-gcc'),'--version'],text=True).splitlines()[0],
               'flash_offset':'0x2000','program_limit':hex(program_limit),'vision_models_sd_only':True,'data_offset':hex(data_offset),'data_size':hex(data_size),'flash_layout':f'{data_offset//0x100000}m-firmware-{data_size//0x100000}m-data','board_tested':False,'l2_cache_kb':a.l2_kb,
               'sha256':{name:sha(out/name) for name in ['nuttx.bin','nuttx.elf','resolved.config']},
               'reused_libraries':{str(lib):sha(Path(lib)) for lib in libs if Path(lib).is_file()},
-              'source_sha256':{str(f.relative_to(repo)):sha(f) for folder in [repo/'app/bilibili_live',overlay]
-                               for f in folder.rglob('*') if f.is_file()}}
+              'source_sha256':copied_source_hashes}
+    if source_inputs()!=copied_source_hashes:
+        raise RuntimeError('Source inputs changed during build; rebuild before deployment')
     if a.speech_runtime:
         metadata['speech']={'lock_sha256':sha(repo/'app/espdl-quickapp/speech/upstream.lock.json'),
                            'sd_manifest_sha256':sha(prepared/'sdcard/speech/manifest.json'),

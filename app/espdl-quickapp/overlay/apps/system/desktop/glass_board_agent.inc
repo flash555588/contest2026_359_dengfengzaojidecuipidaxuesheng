@@ -32,7 +32,11 @@ static const char *board_operations[] = {
   "uart.open", "uart.read", "uart.write", "uart.close", "pwm.write", "pwm.stop",
   "servo.write", "servo.stop", "audio.record", "audio.play", "audio.tone",
   "audio.save", "audio.info", "audio.list", "audio.remove", "ble.start",
-  "ble.scan", "ble.status", "ble.connect", "ble.cancel", "ble.disconnect"
+  "ble.scan", "ble.status", "ble.connect", "ble.cancel", "ble.disconnect", "ble.services", "ble.characteristics", "ble.descriptors",
+  "ble.read", "ble.write", "ble.subscribe", "ble.notification", "ble.pair", "ble.mtu", "net.status",
+  "usb.list", "usb.info", "usb.mode", "usb.hidRead", "usb.hidReport",
+  "usb.audioStart", "usb.audioRead", "usb.audioWrite", "usb.audioStop", "usb.cdcRead", "usb.cdcWrite",
+  "usb.mount", "usb.unmount", "usb.files", "usb.readFile", "usb.writeFile"
 };
 static const char board_tool_catalog[] =
 "{\"tools\":["

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "glass_assistant.h"
+#include "glass_vision.h"
 #include "glass_agent.h"
 #include "glass_board.h"
 #include "glass_chat.h"
@@ -9,6 +10,7 @@
 #include "glass_speech.h"
 #include "glass_status.h"
 #include "qpk_espdl.h"
+#include "qpk_photo_store.h"
 #include "../hass/hass_actions.h"
 #ifdef CONFIG_SYSTEM_C6_DESKTOP
 #include "c6net.h"
@@ -144,67 +146,113 @@ static char *diagnostics(void)
 /* An opaque ticket distinguishes assistant ownership from other camera users. */
 static pthread_mutex_t camera_lock=PTHREAD_MUTEX_INITIALIZER;
 static unsigned camera_ticket,camera_request;
+static unsigned camera_upload_ticket;
+static uint32_t camera_save_job;
+static int camera_save_error;
+static bool camera_save_cancelled;
+static struct qpk_dl_result *camera_save_view;
+static uint64_t camera_created_ms;
 static bool camera_preview,camera_saved,camera_recognition;
 static char camera_path[128];
 #ifndef ASSISTANT_PHOTO_ROOT
-#define ASSISTANT_PHOTO_ROOT "/data/photos"
+#define ASSISTANT_PHOTO_ROOT NULL
 #endif
-static void little32(unsigned char *p,uint32_t value){for(unsigned i=0;i<4;i++)p[i]=(unsigned char)(value>>(i*8));}
 static int save_frame(const struct qpk_dl_result *view)
 {
-  uint16_t *pixels=malloc(QPK_DL_PIXELS*sizeof(*pixels));struct qpk_dl_result *copy=malloc(sizeof(*copy));
+  uint16_t *pixels=malloc(QPK_DL_PIXELS*sizeof(*pixels));
+  struct qpk_dl_result *copy=malloc(sizeof(*copy));
   if(!pixels||!copy){free(pixels);free(copy);return -ENOMEM;}
   int ret=qpk_dl_copy_preview(view->request,view->frame,pixels,QPK_DL_PIXELS,copy);
-  if(ret){free(pixels);free(copy);return ret;}free(copy);
-  if(mkdir(ASSISTANT_PHOTO_ROOT,0755)&&errno!=EEXIST){ret=-errno;goto done;}
-  FILE *file=NULL;for(unsigned n=0;n<100;n++){
-    snprintf(camera_path,sizeof(camera_path),ASSISTANT_PHOTO_ROOT "/ai-%lu-%u.bmp",(unsigned long)view->request,n);
-    file=fopen(camera_path,"wbx");if(file||errno!=EEXIST)break;
+  if(!ret){
+    struct qpk_photo_input input={.format=QPK_PHOTO_BMP24,.data=pixels,
+      .bytes=QPK_DL_PIXELS*2,.width=QPK_DL_WIDTH,.height=QPK_DL_HEIGHT,
+      .stride=QPK_DL_WIDTH,.zoom=100,.root_override=ASSISTANT_PHOTO_ROOT};
+    ret=qpk_photo_store_submit(QPK_PHOTO_ASSISTANT,&input,&camera_save_job);
   }
-  if(!file){ret=-errno;goto done;}
-  unsigned char header[54]={0},row[QPK_DL_WIDTH*3];header[0]='B';header[1]='M';
-  little32(header+2,54+QPK_DL_WIDTH*QPK_DL_HEIGHT*3);little32(header+10,54);little32(header+14,40);
-  little32(header+18,QPK_DL_WIDTH);little32(header+22,QPK_DL_HEIGHT);header[26]=1;header[28]=24;
-  ret=fwrite(header,1,sizeof(header),file)==sizeof(header)?0:-EIO;
-  for(int y=QPK_DL_HEIGHT-1;y>=0&&!ret;y--){
-    for(unsigned x=0;x<QPK_DL_WIDTH;x++){uint16_t p=pixels[y*QPK_DL_WIDTH+x];
-      row[x*3]=(p&31)*255/31;row[x*3+1]=((p>>5)&63)*255/63;row[x*3+2]=(p>>11)*255/31;}
-    if(fwrite(row,1,sizeof(row),file)!=sizeof(row))ret=-EIO;
-  }
-  if(!ret&&(fflush(file)||fsync(fileno(file))))ret=-EIO;
-  if(fclose(file)&&!ret)ret=-EIO;
-  if(ret){unlink(camera_path);camera_path[0]=0;}
-done:
+  if(!ret){free(camera_save_view);camera_save_view=copy;}else free(copy);
   free(pixels);return ret;
+}
+
+static int camera_unique_usb(const cJSON *items,unsigned *device,uint32_t *generation)
+{
+  const cJSON *entry;unsigned count=0;
+  cJSON_ArrayForEach(entry,items)if(!strcmp(string(entry,"source"),"usb")&&cJSON_IsTrue(get(entry,"connected"))&&cJSON_IsTrue(get(entry,"supported"))){
+    if(!number(get(entry,"device"),0,UVC_CAMERA_MAX_DEVICES-1)||!number(get(entry,"generation"),1,4294967295.0))return -ENODEV;
+    *device=(unsigned)get(entry,"device")->valuedouble;*generation=(uint32_t)get(entry,"generation")->valuedouble;count++;
+  }
+  return count==1?0:count?-EEXIST:-ENODEV;
 }
 static char *camera_list(void)
 {
   cJSON *o=result(true,NULL),*items=cJSON_AddArrayToObject(o,"items");struct stat st;
+  cJSON_AddStringToObject(o,"selection_policy","csi0_then_unique_supported_usb");
+  cJSON_AddBoolToObject(o,"cloud_vision_requires_upload",true);
+  bool csi=false;
   if(!stat("/dev/video0",&st)&&S_ISCHR(st.st_mode)){
+    csi=true;
     cJSON *d=cJSON_CreateObject();cJSON_AddStringToObject(d,"source","csi0");cJSON_AddBoolToObject(d,"capture_requires_preview",true);
+    cJSON_AddBoolToObject(d,"default",true);
     cJSON_AddBoolToObject(d,"local_classification",false);cJSON_AddItemToArray(items,d);
   }
   int fd=open("/dev/uvcctl",O_RDONLY);if(fd<0){cJSON_AddNumberToObject(o,"usb_inventory_error",-errno);return done(o);}
   struct uvc_camera_list list={0};int ret=ioctl(fd,UVCIOC_LIST,(unsigned long)&list);int code=errno;close(fd);
   if(ret<0){cJSON_AddNumberToObject(o,"usb_inventory_error",-code);return done(o);}
+  unsigned usable=0;for(unsigned i=0;i<list.count&&i<UVC_CAMERA_MAX_DEVICES;i++)if(list.devices[i].connected&&list.devices[i].supported)usable++;
   for(unsigned i=0;i<list.count&&i<UVC_CAMERA_MAX_DEVICES;i++){
     struct uvc_camera_device *d=&list.devices[i];cJSON *entry=cJSON_CreateObject();
     cJSON_AddNumberToObject(entry,"device",d->id);cJSON_AddNumberToObject(entry,"generation",d->generation);
     cJSON_AddStringToObject(entry,"name",d->name);cJSON_AddBoolToObject(entry,"connected",d->connected);
+    cJSON_AddBoolToObject(entry,"default",!csi&&usable==1&&d->connected&&d->supported);
     cJSON_AddBoolToObject(entry,"supported",d->supported);cJSON_AddStringToObject(entry,"source","usb");cJSON_AddItemToArray(items,entry);
   }
   return done(o);
 }
+static char *vision(const cJSON *args,atomic_bool *cancel)
+{
+  if(!keys(args,",request_id,,question,,upload,")||!number(get(args,"request_id"),1,2147483647)||
+     !string(args,"question")[0]||!glass_chat_utf8(string(args,"question"),512,true))return error("invalid_arguments");
+  if(!cJSON_IsTrue(get(args,"upload")))return error("image_upload_not_authorized");
+  char path[sizeof(camera_path)];
+  if(pthread_mutex_trylock(&camera_lock))return error("assistant_camera_busy");
+  bool owned=get(args,"request_id")->valuedouble==camera_ticket&&camera_saved&&camera_path[0];
+  if(!owned){pthread_mutex_unlock(&camera_lock);return error("completed_camera_receipt_required");}
+  if(milliseconds()-camera_created_ms>120000){pthread_mutex_unlock(&camera_lock);return error("camera_image_expired");}
+  if(camera_upload_ticket==camera_ticket){pthread_mutex_unlock(&camera_lock);return error("image_upload_already_attempted");}
+  camera_upload_ticket=camera_ticket;
+  snprintf(path,sizeof(path),"%s",camera_path);pthread_mutex_unlock(&camera_lock);
+  return glass_vision_analyze(path,string(args,"question"),cancel);
+}
 static char *camera(const cJSON *args,atomic_bool *cancel)
 {
   const char *op=string(args,"operation");bool start=!strcmp(op,"capture")||!strcmp(op,"recognize");
-  const char *allowed=!strcmp(op,"list")?",operation,":start?",operation,,device,,generation,":
+  const char *allowed=!strcmp(op,"list")?",operation,":start?",operation,,device,,generation,,source,":
     !strcmp(op,"photo_status")||!strcmp(op,"recognition_status")||!strcmp(op,"cancel")?",operation,,request_id,":NULL;
   if(!allowed||!keys(args,allowed))return error("invalid_arguments");
   if(!strcmp(op,"list"))return camera_list();
   if(pthread_mutex_trylock(&camera_lock))return error("assistant_camera_busy");
   char *out=NULL;
   if(start){
+    printf("[camera-flow] assistant operation=%s at_ms=%llu\n",op,(unsigned long long)milliseconds());
+    if(camera_save_job){
+      struct qpk_photo_result saving;
+      if(!qpk_photo_store_status(QPK_PHOTO_ASSISTANT,camera_save_job,&saving)&&!saving.done){out=error("camera_busy");goto done;}
+    }
+    const char *source=string(args,"source");cJSON *selected=NULL;
+    if(get(args,"source")){
+      if(get(args,"device")||get(args,"generation")||
+         (strcmp(source,"default")&&strcmp(source,"usb")&&strcmp(source,"csi0"))){out=error("invalid_arguments");goto done;}
+      struct stat st;bool csi=!stat("/dev/video0",&st)&&S_ISCHR(st.st_mode);
+      if(!strcmp(source,"csi0")&&!csi){out=error("csi_camera_unavailable");goto done;}
+      if(!strcmp(source,"usb")||(!strcmp(source,"default")&&!csi)){
+        char *inventory=camera_list();cJSON *list=inventory?glass_agent_json(inventory):NULL;free(inventory);
+        unsigned device=0;uint32_t generation=0;int selection=camera_unique_usb(get(list,"items"),&device,&generation);
+        if(selection){cJSON_Delete(list);out=error(selection==-EEXIST?"ambiguous_usb_camera":"usb_camera_unavailable");goto done;}
+        selected=cJSON_Duplicate(args,true);if(!selected){cJSON_Delete(list);goto done;}
+        cJSON_AddNumberToObject(selected,"device",device);cJSON_AddNumberToObject(selected,"generation",generation);
+        cJSON_DeleteItemFromObjectCaseSensitive(selected,"source");cJSON_Delete(list);
+        pthread_mutex_unlock(&camera_lock);out=camera(selected,cancel);cJSON_Delete(selected);return out;
+      }
+    }
     bool preview=!get(args,"device")&&!strcmp(op,"capture");
     if(preview&&get(args,"generation")){out=error("invalid_arguments");goto done;}
     if(!preview&&(!number(get(args,"device"),0,UVC_CAMERA_MAX_DEVICES-1)||!number(get(args,"generation"),1,4294967295.0))){out=error("camera_inventory_required");goto done;}
@@ -224,7 +272,9 @@ static char *camera(const cJSON *args,atomic_bool *cancel)
       int id=qpk_dl_start(&req);if(id<0){out=error(id==-EBUSY?"camera_busy":"camera_start_failed");goto done;}request=(unsigned)id;
     }
     camera_ticket=(camera_ticket+1)&0x7fffffff;if(!camera_ticket)camera_ticket=1;
-    camera_request=request;camera_preview=preview;camera_saved=false;camera_path[0]=0;camera_recognition=!strcmp(op,"recognize");
+    camera_created_ms=milliseconds();
+    free(camera_save_view);camera_save_view=NULL;
+    camera_request=request;camera_preview=preview;camera_save_job=0;camera_save_error=0;camera_save_cancelled=false;camera_saved=false;camera_path[0]=0;camera_recognition=!strcmp(op,"recognize");
     cJSON *r=result(true,NULL);cJSON_AddBoolToObject(r,"accepted",true);cJSON_AddNumberToObject(r,"request_id",camera_ticket);out=done(r);goto done;
   }
   if(!number(get(args,"request_id"),1,2147483647)||get(args,"request_id")->valuedouble!=camera_ticket||!camera_request){out=error("camera_request_not_owned_or_replaced");goto done;}
@@ -233,18 +283,44 @@ static char *camera(const cJSON *args,atomic_bool *cancel)
     cJSON *query=cJSON_CreateObject();cJSON_AddNumberToObject(query,"request_id",camera_request);
     out=glass_board_ui("camera_photo_status",query,cancel);cJSON_Delete(query);
     cJSON *r=out?glass_agent_json(out):NULL;
-    if(r&&cJSON_IsTrue(get(r,"done"))){camera_saved=true;if(get(r,"path"))snprintf(camera_path,sizeof(camera_path),"%s",string(r,"path"));}
+    if(r&&cJSON_IsTrue(get(r,"done"))){camera_saved=true;
+      if(cJSON_IsTrue(get(r,"ok"))&&!get(r,"photo_save_error")&&string(r,"path")[0])snprintf(camera_path,sizeof(camera_path),"%s",string(r,"path"));}
     if(r)cJSON_AddNumberToObject(r,"request_id",camera_ticket);
     free(out);out=r?done(r):error("photo_status_unavailable");goto done;
   }
-  if(!strcmp(op,"cancel")){qpk_dl_cancel_request(camera_request);camera_saved=true;out=done(result(true,NULL));goto done;}
+  if(!strcmp(op,"cancel")){qpk_dl_cancel_request(camera_request);if(camera_save_job)qpk_photo_store_cancel(QPK_PHOTO_ASSISTANT,camera_save_job);camera_save_cancelled=true;camera_save_error=-ECANCELED;camera_path[0]=0;camera_saved=true;out=done(result(true,NULL));goto done;}
   if(camera_recognition!=!strcmp(op,"recognition_status")){out=error("wrong_camera_status_operation");goto done;}
-  struct qpk_dl_result *s=malloc(sizeof(*s));if(!s){out=NULL;goto done;}qpk_dl_status(s);
+  if(camera_save_cancelled){
+    bool finished;
+    if(camera_save_job){struct qpk_photo_result saved;int ret=qpk_photo_store_status(QPK_PHOTO_ASSISTANT,camera_save_job,&saved);finished=ret||saved.done;}
+    else{struct qpk_dl_result capture;qpk_dl_status(&capture);finished=capture.request!=camera_request||!capture.busy;}
+    cJSON *r=result(false,"camera_cancelled");cJSON_AddNumberToObject(r,"request_id",camera_ticket);
+    cJSON_AddBoolToObject(r,"done",finished);cJSON_AddNumberToObject(r,"service_error",-ECANCELED);out=done(r);goto done;
+  }
+  struct qpk_dl_result *s=malloc(sizeof(*s));if(!s){out=NULL;goto done;}
+  if(camera_save_job&&camera_save_view)*s=*camera_save_view;else qpk_dl_status(s);
   if(s->request!=camera_request){free(s);out=error("camera_request_replaced");goto done;}
   cJSON *r=result(s->error==0,s->error?"camera_or_model_failed":NULL);cJSON_AddNumberToObject(r,"request_id",camera_ticket);
   cJSON_AddBoolToObject(r,"done",!s->busy);cJSON_AddNumberToObject(r,"service_error",s->error);
   if(!s->busy&&!s->error&&s->frame){
-    if(!camera_saved){int ret=save_frame(s);if(ret){cJSON_AddNumberToObject(r,"photo_save_error",ret);}else camera_saved=true;}
+    if(!camera_saved){
+      if(!camera_save_job&&!camera_save_error)camera_save_error=save_frame(s);
+      if(camera_save_job){
+        struct qpk_photo_result saved;
+        int ret=qpk_photo_store_status(QPK_PHOTO_ASSISTANT,camera_save_job,&saved);
+        if(ret)camera_save_error=ret;
+        else if(saved.done){
+          camera_saved=true;camera_save_error=saved.error;
+          if(!saved.error)snprintf(camera_path,sizeof(camera_path),"%s",saved.path);
+        }
+      }
+      if(camera_save_error)camera_saved=true;
+    }
+    if(!camera_saved)cJSON_ReplaceItemInObjectCaseSensitive(r,"done",cJSON_CreateFalse());
+    if(camera_save_error){
+      cJSON_AddNumberToObject(r,"photo_save_error",camera_save_error);
+      cJSON_ReplaceItemInObjectCaseSensitive(r,"ok",cJSON_CreateFalse());
+    }
     if(camera_saved&&camera_path[0])cJSON_AddStringToObject(r,"path",camera_path);
     cJSON_AddStringToObject(r,"scope","local_model_classification_not_general_vision");
     if(camera_recognition){cJSON *items=cJSON_AddArrayToObject(r,"items");
@@ -282,6 +358,13 @@ char *glass_assistant_platform(const char *tool,const cJSON *args,atomic_bool *c
   if(!strcmp(tool,"assistant_speak"))return glass_assistant_action_valid("speak",args)?speak(string(args,"text")):error("invalid_arguments");
   if(!strcmp(tool,"assistant_diagnostics"))return keys(args,"")?diagnostics():error("invalid_arguments");
   if(!strcmp(tool,"assistant_camera"))return camera(args,cancel);
+  if(!strcmp(tool,"assistant_vision"))return vision(args,cancel);
+  if(!strcmp(tool,"assistant_observe")){
+    const char *question=string(args,"question");
+    if(!keys(args,",question,,upload,")||!question[0]||!glass_chat_utf8(question,512,true)||
+       !cJSON_IsTrue(get(args,"upload")))return error("invalid_arguments_or_upload_not_requested");
+    return glass_chat_observe_tool(question,cancel);
+  }
   if(!strcmp(tool,"assistant_status")){
     cJSON *r=result(true,NULL);
 #ifdef GLASS_LOCAL_SPEECH

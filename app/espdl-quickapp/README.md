@@ -1,5 +1,7 @@
 # ESP-DL 人脸跟随与物体分类
 
+ESPClaw 开发入口：[agent.md](agent.md) · [Harness 框架](HARNESS.md) · [默认 CSI／USB 多模态摄像头](MULTIMODAL-CAMERA.md)。
+
 ## LVGL 首页品质升级（待用户审核）
 
 当前首页使用原生 LVGL 对象复刻审核稿，布局固定为 1024×600；保留上游音乐封面，
@@ -162,3 +164,5 @@ See the source and hardware work log at ../../docs/WORKLOG_2026-09-19.md and the
 ## Grok Ball LVGL port
 
 OuO now launches Grok Ball 2.0.0 using the pinned MIT upstream engine and native SVG contour adaptation. See ../../ouo/README.md for source/license, state migration and validation limits. The CLI/package identifiers remain compatible. Native host render and ESP32-P4 build are review evidence only; no flashing or hardware performance validation was performed.
+
+接口与引脚依据官方开发板手册，见 [BOARD-INTERFACES.md](BOARD-INTERFACES.md)。

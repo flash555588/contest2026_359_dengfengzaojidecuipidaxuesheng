@@ -14,10 +14,25 @@ struct mjpeg_decoder
   const uint8_t *input;
   size_t size, position;
   uint16_t *pixels;
+  uint16_t *scratch, *columns;
+  size_t scratch_capacity;
+  unsigned column_capacity;
+  unsigned preview_width, preview_height;
   unsigned stride, height, width;
 };
 void *qpk_mjpeg_create(void) { return calloc(1, sizeof(struct mjpeg_decoder)); }
-void qpk_mjpeg_destroy(void *decoder) { free(decoder); }
+void qpk_mjpeg_destroy(void *decoder)
+{
+  struct mjpeg_decoder *d = decoder;
+  if (d) { free(d->scratch); free(d->columns); free(d); }
+}
+int qpk_mjpeg_preview_limits(void *decoder, unsigned width, unsigned height)
+{
+  if (!decoder || width > 4096 || height > 4096 || (!width != !height)) return -EINVAL;
+  struct mjpeg_decoder *d = decoder;
+  d->preview_width = width; d->preview_height = height;
+  return 0;
+}
 size_t qpk_mjpeg_frame_size(void *decoder)
 { return decoder ? ((struct mjpeg_decoder *)decoder)->size : 0; }
 static size_t jpeg_input(JDEC *jd, uint8_t *buffer, size_t count)
@@ -93,11 +108,13 @@ int qpk_mjpeg_probe(const uint8_t *input, size_t size, unsigned *width,
 
 static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
                               uint16_t *output, unsigned width, unsigned height, unsigned stride,
-                              unsigned expected_width, unsigned expected_height)
+                              unsigned expected_width, unsigned expected_height,
+                              unsigned view_width, unsigned view_height)
 {
   struct mjpeg_decoder *d = decoder;
   if (!d || !input || !output || !width || !height || stride < width ||
-      stride > 4096 || height > 4096) return -EINVAL;
+      stride > 4096 || height > 4096 ||
+      (view_width && (!view_height || view_width > width || view_height > height))) return -EINVAL;
   d->input = input; d->size = size; d->position = 0;
   if (qpk_jd_prepare(&d->jpeg, jpeg_input, d->workspace, sizeof(d->workspace), d) != JDR_OK) return -EBADMSG;
   if (!expected_width && !expected_height) {
@@ -108,19 +125,28 @@ static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
   if (d->jpeg.width != expected_width || d->jpeg.height != expected_height ||
       !expected_width || !expected_height || expected_width > 4096 || expected_height > 4096) return -EPROTO;
   unsigned scale = 0;
-  while (scale < 3 && ((expected_width >> scale) > width || (expected_height >> scale) > height)) scale++;
+  unsigned limit_width = width, limit_height = height;
+  if (view_width && d->preview_width) {
+    if (limit_width > d->preview_width) limit_width = d->preview_width;
+    if (limit_height > d->preview_height) limit_height = d->preview_height;
+  }
+  while (scale < 3 && ((expected_width >> scale) > limit_width || (expected_height >> scale) > limit_height)) scale++;
   d->width = expected_width >> scale; d->height = expected_height >> scale;
   if (!d->width || !d->height || d->width > width || d->height > height) return -ENOTSUP;
   size_t pixels = (size_t)d->width * d->height;
   /* The AI preview exactly matches the reduced JPEG. Decode into its worker
    * buffer and publish only on success, avoiding a temporary frame and copy. */
-  bool direct = d->width == width && d->height == height;
-  bool twice = stride == width && d->width * 2 == width && d->height * 2 == height;
-  d->pixels = direct || twice ? output : malloc(pixels * 2); d->stride = direct ? stride : d->width;
-  if (!d->pixels) return -ENOMEM;
-  JRESULT result = qpk_jd_decomp(&d->jpeg, jpeg_output, scale);
+  bool direct = !view_width && d->width == width && d->height == height;
+  bool twice = !view_width && stride == width && d->width * 2 == width && d->height * 2 == height;
+  if (!direct && !twice && pixels > d->scratch_capacity) {
+    uint16_t *scratch = realloc(d->scratch, pixels * sizeof(*scratch));
+    if (!scratch) return -ENOMEM;
+    d->scratch = scratch; d->scratch_capacity = pixels;
+  }
+  d->pixels = direct || twice ? output : d->scratch; d->stride = direct ? stride : d->width;
+  JRESULT result = view_width && d->preview_width ?
+    qpk_jd_decomp_preview(&d->jpeg, jpeg_output, scale) : qpk_jd_decomp(&d->jpeg, jpeg_output, scale);
   if (result != JDR_OK) {
-    if (!direct && !twice) free(d->pixels);
     d->pixels = NULL; return -EBADMSG;
   }
   if (direct) { d->pixels = NULL; return 0; }
@@ -137,28 +163,67 @@ static int jpeg_decode_pixels(void *decoder, const uint8_t *input, size_t size,
   }
   unsigned dw = width, dh = (uint64_t)d->height * width / d->width;
   if (dh > height) { dh = height; dw = (uint64_t)d->width * height / d->height; }
+  if (!dw || !dh) { d->pixels = NULL; return -ENOTSUP; }
+  unsigned columns_needed = view_width ? view_width : dw;
+  if (columns_needed > d->column_capacity) {
+    uint16_t *columns = realloc(d->columns, columns_needed * sizeof(*columns));
+    if (!columns) { d->pixels = NULL; return -ENOMEM; }
+    d->columns = columns; d->column_capacity = columns_needed;
+  }
   unsigned ox = (width - dw) / 2, oy = (height - dh) / 2;
-  for (unsigned y = 0; y < height; y++) memset(output + (size_t)y * stride, 0, (size_t)width * 2);
+  if (view_width) {
+    /* Fuse the existing contain-to-canvas and canvas-to-view sampling. This
+     * preserves both integer rounding steps without materializing the canvas. */
+    for (unsigned x = 0; x < view_width; x++) {
+      unsigned cx = x * width / view_width;
+      d->columns[x] = cx < ox || cx >= ox + dw ? UINT16_MAX : (cx - ox) * d->width / dw;
+    }
+    unsigned previous = UINT32_MAX;
+    for (unsigned y = 0; y < view_height; y++) {
+      unsigned cy = y * height / view_height;
+      uint16_t *dst = output + (size_t)y * stride;
+      if (cy < oy || cy >= oy + dh) { memset(dst, 0, view_width * 2); previous = UINT32_MAX; continue; }
+      unsigned sy = (cy - oy) * d->height / dh;
+      const uint16_t *src = d->pixels + (size_t)sy * d->width;
+      if (sy == previous) memcpy(dst, dst - stride, view_width * 2);
+      else for (unsigned x = 0; x < view_width; x++)
+        dst[x] = d->columns[x] == UINT16_MAX ? 0 : src[d->columns[x]];
+      previous = sy;
+    }
+    d->pixels = NULL; return 0;
+  }
+  /* Keep reusable decoder-owned buffers and one column map. The old loop
+   * divided once per destination pixel and cleared pixels it then overwrote. */
+  for (unsigned x = 0; x < dw; x++) d->columns[x] = x * d->width / dw;
+  for (unsigned y = 0; y < oy; y++) memset(output + (size_t)y * stride, 0, (size_t)width * 2);
+  for (unsigned y = oy + dh; y < height; y++) memset(output + (size_t)y * stride, 0, (size_t)width * 2);
+  unsigned previous = UINT32_MAX;
   for (unsigned y = 0; y < dh; y++)
     {
-      const uint16_t *src = d->pixels + (size_t)(y * d->height / dh) * d->width;
+      unsigned sy = y * d->height / dh;
+      const uint16_t *src = d->pixels + (size_t)sy * d->width;
       uint16_t *dst = output + (size_t)(y + oy) * stride + ox;
-      for (unsigned x = 0; x < dw; x++) dst[x] = src[x * d->width / dw];
+      memset(dst - ox, 0, ox * sizeof(*dst));
+      memset(dst + dw, 0, (width - ox - dw) * sizeof(*dst));
+      if (sy == previous) memcpy(dst, dst - stride, dw * sizeof(*dst));
+      else if (dw == d->width) memcpy(dst, src, dw * sizeof(*dst));
+      else for (unsigned x = 0; x < dw; x++) dst[x] = src[d->columns[x]];
+      previous = sy;
     }
-  free(d->pixels); d->pixels = NULL;
+  d->pixels = NULL;
   return 0;
 }
 
 int qpk_mjpeg_decode_still(void *decoder, const uint8_t *input, size_t size,
                            uint16_t *output, unsigned width, unsigned height)
 {
-  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,width,height);
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,width,height,0,0);
 }
 
 int qpk_mjpeg_decode_still_fit(void *decoder, const uint8_t *input, size_t size,
                                uint16_t *output, unsigned width, unsigned height)
 {
-  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,0,0);
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,width,0,0,0,0);
 }
 
 int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t capacity,
@@ -169,7 +234,21 @@ int qpk_mjpeg_decode_region(void *decoder, uint8_t *input, size_t size, size_t c
       stride > 4096 || height > 4096 || size > capacity) return -EINVAL;
   int ret = jpeg_tables(input,&size,capacity);
   if (ret < 0) return ret;
-  return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,expected_width,expected_height);
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,expected_width,expected_height,0,0);
+}
+
+int qpk_mjpeg_decode_view(void *decoder, uint8_t *input, size_t size, size_t capacity,
+                         uint16_t *output, unsigned width, unsigned height, unsigned stride,
+                         unsigned expected_width, unsigned expected_height,
+                         unsigned view_width, unsigned view_height)
+{
+  if (!decoder || !input || !output || !width || !height || stride < width ||
+      stride > 4096 || height > 4096 || !view_width || !view_height ||
+      view_width > width || view_height > height || size > capacity) return -EINVAL;
+  int ret = jpeg_tables(input,&size,capacity);
+  if (ret < 0) return ret;
+  return jpeg_decode_pixels(decoder,input,size,output,width,height,stride,
+                            expected_width,expected_height,view_width,view_height);
 }
 
 int qpk_mjpeg_decode(void *decoder, uint8_t *input, size_t size, size_t capacity,

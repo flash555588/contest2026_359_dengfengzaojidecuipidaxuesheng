@@ -20,7 +20,7 @@ struct qpk_draft_info {
   uint32_t save_started_ms, save_elapsed_ms;
   char name[QPK_DRAFT_NAME_MAX + 1], slug[QPK_DRAFT_SLUG_MAX + 1];
   char installed_package[32], preview_error[256];
-  enum qpk_volume installed_volume;
+  enum qpk_volume installed_volume, draft_volume;
 };
 
 /* No LVGL in this module. Synchronous file work is for worker/core threads. */

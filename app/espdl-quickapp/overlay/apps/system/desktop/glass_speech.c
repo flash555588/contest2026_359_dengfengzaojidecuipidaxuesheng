@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "glass_speech.h"
+#include "glass_ai_config.h"
 #include "glass_voice.h"
 #include "glass_speech_sr.h"
 #include "glass_speech_tts.h"
@@ -120,13 +121,15 @@ static void *speech_prepare_worker(void *unused)
   if(!ret)glass_esp_tts_voice_release(owned);
   else atomic_store(&speech_prepared,false);
   printf("[speech] voice_preload result=%d elapsed_ms=%lu\n",ret,(unsigned long)(speech_milliseconds()-started));
+  glass_ai_start_leave();
   return NULL;
 }
 #endif
 void glass_speech_prepare(void)
 {
 #ifdef GLASS_ESP_TTS
-  if(atomic_exchange(&speech_prepared,true))return;
+  if(!glass_ai_start_enter())return;
+  if(atomic_exchange(&speech_prepared,true)){glass_ai_start_leave();return;}
   pthread_attr_t attr;int ret=pthread_attr_init(&attr);
   if(!ret){
     ret=pthread_attr_setstacksize(&attr,16384);
@@ -134,7 +137,7 @@ void glass_speech_prepare(void)
     if(!ret){pthread_t tid;ret=pthread_create(&tid,&attr,speech_prepare_worker,NULL);}
     pthread_attr_destroy(&attr);
   }
-  if(ret)atomic_store(&speech_prepared,false);
+  if(ret){atomic_store(&speech_prepared,false);glass_ai_start_leave();}
 #endif
 }
 const char *glass_speech_backend(void)
@@ -148,13 +151,17 @@ const char *glass_speech_backend(void)
 void glass_speech_stop_request(uint32_t request){if(request)speech_stop(request);}
 static bool speech_cancelled(void *unused)
 {(void)unused;return atomic_load(&speech_cancel);}
-struct speech_play {struct music_pcm pcm;bool opened;unsigned rate,volume;uint64_t started,first_write;};
+#include "glass_speech_barge.inc"
+struct speech_play {struct music_pcm pcm;struct speech_barge *barge;bool opened,barge_attempted;unsigned rate,volume;uint64_t started,first_write;};
 static int speech_write(void *opaque,const int16_t *data,size_t frames)
 {
   struct speech_play *play=opaque;if(speech_cancelled(NULL))return -ECANCELED;
   if(!play->opened){int ret=music_pcm_try_open(&play->pcm,play->rate,play->volume);if(ret)return ret;play->opened=true;play->first_write=speech_milliseconds();
     printf("[speech] tts first_pcm_ms=%lu\n",(unsigned long)(speech_milliseconds()-play->started));}
   int ret=music_pcm_write(&play->pcm,data,frames,1);
+  if(!ret&&play->pcm.started&&!play->barge_attempted){
+    play->barge_attempted=true;play->barge=speech_barge_start(play->pcm.fd);
+  }
   if(!ret){unsigned level=glass_speech_pcm_level(data,frames);
     pthread_mutex_lock(&speech_lock);speech.level=level;speech_level_at=speech_milliseconds();pthread_mutex_unlock(&speech_lock);}
   return ret;
@@ -395,6 +402,7 @@ again:
       uint64_t elapsed=speech_milliseconds()-play.first_write;
       printf("[speech] playback frames=%llu expected_ms=%llu elapsed_ms=%llu result=%d\n",
         (unsigned long long)played,(unsigned long long)(played*1000/play.rate),(unsigned long long)elapsed,ret);
+      speech_barge_stop(play.barge);
       music_pcm_close(&play.pcm);
     }
 #ifdef GLASS_ESP_TTS
@@ -411,7 +419,7 @@ again:
   if(job)goto again;
   return NULL;
 }
-static int speech_start_mode(const char *text,bool probe,bool wake_only,uint32_t *request,int nano,bool background)
+static int speech_start_mode_ungated(const char *text,bool probe,bool wake_only,uint32_t *request,int nano,bool background)
 {
   char *copy=NULL;if(text){if(!text[0]||strlen(text)>1024)return -EINVAL;copy=strdup(text);if(!copy)return -ENOMEM;}
   struct speech_job *job=calloc(1,sizeof(*job));if(!job){free(copy);return -ENOMEM;}job->text=copy;job->probe=probe;job->wake_only=wake_only;job->nano=nano;
@@ -445,6 +453,13 @@ static int speech_start_mode(const char *text,bool probe,bool wake_only,uint32_t
   if(ret){speech.active=false;speech.phase=SPEECH_ERROR;speech.error=-ret;free(copy);free(job);}
   else if(request)*request=speech.request;
   pthread_mutex_unlock(&speech_lock);return -ret;
+}
+static int speech_start_mode(const char *text,bool probe,bool wake_only,uint32_t *request,int nano,bool background)
+{
+  if(request)*request=0;
+  if(!glass_ai_start_enter())return -EBUSY;
+  int ret=speech_start_mode_ungated(text,probe,wake_only,request,nano,background);
+  glass_ai_start_leave();return ret;
 }
 static int speech_start(const char *text,bool probe,bool wake_only,uint32_t *request)
 {return speech_start_mode(text,probe,wake_only,request,0,false);}

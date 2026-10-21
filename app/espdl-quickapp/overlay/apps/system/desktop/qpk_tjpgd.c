@@ -1124,10 +1124,44 @@ JRESULT qpk_jd_prepare(
 /* Start to decompress the JPEG picture                                  */
 /*-----------------------------------------------------------------------*/
 
-JRESULT qpk_jd_decomp(
+/* Preview uses one sample per reduced pixel. IDCT/entropy validation remain
+ * identical, but discarded pixels never incur RGB conversion or averaging. */
+static JRESULT mcu_preview_output(JDEC *jd, int (*outfunc)(JDEC *, void *, JRECT *),
+                                  unsigned x, unsigned y)
+{
+#if JD_FORMAT == 1 && JD_USE_SCALE
+    if (jd->scale) {
+        const int CVACC = (sizeof(int) > 2) ? 1024 : 128;
+        unsigned mx=jd->msx*8, my=jd->msy*8, scale=jd->scale;
+        unsigned rx=((x+mx<=jd->width)?mx:jd->width-x)>>scale;
+        unsigned ry=((y+my<=jd->height)?my:jd->height-y)>>scale;
+        if (!rx || !ry) return JDR_OK;
+        JRECT rect={.left=x>>scale,.right=(x>>scale)+rx-1,
+                    .top=y>>scale,.bottom=(y>>scale)+ry-1};
+        unsigned chroma=jd->msx*jd->msy*64;
+        uint16_t *dst=jd->workbuf;
+        for (unsigned dy=0;dy<ry;dy++) for (unsigned dx=0;dx<rx;dx++) {
+            unsigned ix=dx<<scale, iy=dy<<scale;
+            unsigned luma=((iy/8)*jd->msx+ix/8)*64+(iy%8)*8+ix%8;
+            unsigned c=(iy/jd->msy)*8+ix/jd->msx;
+            int yy=jd->mcubuf[luma], cb=jd->mcubuf[chroma+c]-128,
+                cr=jd->mcubuf[chroma+64+c]-128;
+            unsigned r=BYTECLIP(yy+((int)(1.402*CVACC)*cr)/CVACC);
+            unsigned g=BYTECLIP(yy-((int)(0.344*CVACC)*cb+(int)(0.714*CVACC)*cr)/CVACC);
+            unsigned b=BYTECLIP(yy+((int)(1.772*CVACC)*cb)/CVACC);
+            *dst++=(uint16_t)((r&0xf8)<<8|(g&0xfc)<<3|b>>3);
+        }
+        return !outfunc || outfunc(jd,jd->workbuf,&rect) ? JDR_OK : JDR_INTR;
+    }
+#endif
+    return qpk_jd_mcu_output(jd,outfunc,x,y);
+}
+
+static JRESULT jpeg_decomp(
     JDEC * jd,                              /* Initialized decompression object */
     int (*outfunc)(JDEC *, void *, JRECT *), /* RGB output function */
-    uint8_t scale                           /* Output de-scaling factor (0 to 3) */
+    uint8_t scale,                          /* Output de-scaling factor (0 to 3) */
+    uint8_t preview
 )
 {
     unsigned int x, y, mx, my;
@@ -1154,11 +1188,18 @@ JRESULT qpk_jd_decomp(
             }
             rc = qpk_jd_mcu_load(jd);                  /* Load an MCU (decompress huffman coded stream, dequantize and apply IDCT) */
             if(rc != JDR_OK) return rc;
-            rc = qpk_jd_mcu_output(jd, outfunc, x, y); /* Output the MCU (YCbCr to RGB, scaling and output) */
+            rc = preview ? mcu_preview_output(jd,outfunc,x,y) :
+                           qpk_jd_mcu_output(jd,outfunc,x,y);
             if(rc != JDR_OK) return rc;
         }
     }
 
     return rc;
 }
+
+JRESULT qpk_jd_decomp(JDEC *jd, int (*outfunc)(JDEC *, void *, JRECT *), uint8_t scale)
+{ return jpeg_decomp(jd,outfunc,scale,0); }
+
+JRESULT qpk_jd_decomp_preview(JDEC *jd, int (*outfunc)(JDEC *, void *, JRECT *), uint8_t scale)
+{ return jpeg_decomp(jd,outfunc,scale,1); }
 #endif

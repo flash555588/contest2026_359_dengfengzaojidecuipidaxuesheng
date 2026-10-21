@@ -28,6 +28,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/audio/i2s_observer.h>
 
 #include <nuttx/kmalloc.h>
 
@@ -3517,6 +3518,33 @@ static int i2s_ioctl(struct i2s_dev_s *dev, int cmd, unsigned long arg)
 
   switch (cmd)
     {
+      case I2SIOC_RXSTOP:
+        {
+          struct esp_buffer_s *buffer;
+          irqstate_t flags;
+          ret = nxmutex_lock(&priv->lock);
+          if (ret < 0)break;
+          flags = spin_lock_irqsave_nopreempt(&priv->slock);
+          ret = i2s_rx_channel_stop(priv);
+          if (ret == OK)
+            {
+              while ((buffer = (struct esp_buffer_s *)sq_remfirst(&priv->rx.act)))
+                {
+                  buffer->result = -ECANCELED;
+                  sq_addlast((sq_entry_t *)buffer, &priv->rx.done);
+                }
+              while ((buffer = (struct esp_buffer_s *)sq_remfirst(&priv->rx.pend)))
+                {
+                  buffer->result = -ECANCELED;
+                  sq_addlast((sq_entry_t *)buffer, &priv->rx.done);
+                }
+            }
+          spin_unlock_irqrestore_nopreempt(&priv->slock, flags);
+          work_cancel_sync(HPWORK, &priv->rx.work);
+          i2s_rx_worker(priv);
+          nxmutex_unlock(&priv->lock);
+        }
+        break;
       /* AUDIOIOC_START - Start the audio stream.
        *
        *   ioctl argument:  Audio session

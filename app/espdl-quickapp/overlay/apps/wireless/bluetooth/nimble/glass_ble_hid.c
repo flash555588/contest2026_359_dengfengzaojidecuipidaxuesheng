@@ -2,6 +2,7 @@
 #include "glass_ble.h"
 #include "glass_ble_hid_internal.h"
 #include "glass_ble_store.h"
+#include "glass_ble_central.h"
 #include "mouse_core.h"
 #include <errno.h>
 #include <pthread.h>
@@ -283,7 +284,9 @@ static int gap_event(struct ble_gap_event *event, void *arg)
         break;
     }
   pthread_cond_broadcast(&g_done);
+  bool release_role=!g_mouse.connected&&!g_advertising&&!g_user_enabled;
   pthread_mutex_unlock(&g_lock);
+  if(release_role)glass_ble_role_release(2);
   return 0;
 }
 
@@ -297,6 +300,8 @@ static int advertise(void)
   if (g_stop_pending) return -EBUSY;
   if (g_mouse.connected) return g_mouse.enabled ? 0 : -EBUSY;
   if (ble_gap_adv_active()) return 0;
+  ret = glass_ble_role_claim(2);
+  if(ret)return ret;
   fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
   fields.uuids16 = &uuid;
   fields.num_uuids16 = 1;
@@ -318,6 +323,7 @@ static int advertise(void)
   g_mouse.enabled = g_advertising = ret == 0;
   if (!ret) g_user_enabled = true;
   g_mouse.error = ret ? -EIO : 0;
+  if(ret)glass_ble_role_release(2);
   return g_mouse.error;
 }
 
@@ -540,6 +546,7 @@ int glass_ble_hid_stop(void)
       ret = ret ? -ret : g_stop_result;
     }
   pthread_mutex_unlock(&g_lock);
+  if(!ret)glass_ble_role_release(2);
   return ret;
 }
 

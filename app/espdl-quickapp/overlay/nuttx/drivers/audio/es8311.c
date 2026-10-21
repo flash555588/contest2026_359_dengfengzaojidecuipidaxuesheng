@@ -28,6 +28,7 @@
 #include <nuttx/mutex.h>
 
 #include <sys/ioctl.h>
+#include <nuttx/audio/es8311_barge.h>
 #include <sys/param.h>
 #include <sys/types.h>
 
@@ -1899,6 +1900,22 @@ static int es8311_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 
   switch (cmd)
     {
+      case ES8311IOC_BARGEIN:
+        {
+          FAR struct es8311_dev_s *priv=(FAR struct es8311_dev_s *)dev;
+          FAR struct es8311_bargein *tap=(FAR struct es8311_bargein *)arg;
+          if(!tap)return -EINVAL;
+          tap->i2s=NULL;tap->rate=0;
+          if(priv->audio_mode!=ES_MODULE_DAC||priv->samprate!=16000||
+             priv->bpsamp!=16||priv->threadid==0)return -EBUSY;
+          /* START already powers ADC and DAC. Enable the ADC serial output
+           * with the same 16-bit word length, preserving the DAC and clocks. */
+          uint8_t reg=es8311_readreg(priv,ES8311_SDPOUT_REG0A);
+          ret=es8311_writereg(priv,ES8311_SDPOUT_REG0A,(reg&0xa3)|0x0c);
+          if(ret<0)return ret;
+          tap->i2s=priv->i2s;tap->rate=priv->samprate;
+          return OK;
+        }
       /* Report our preferred buffer size and quantity */
 
       /* The audio upper half requires this limit even with generic buffers. */

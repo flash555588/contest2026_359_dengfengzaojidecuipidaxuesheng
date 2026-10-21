@@ -142,8 +142,8 @@ void local_video_play_path(const char *path){(void)path;}
       'glass_weather.h','glass_settings_service.h','glass_file_service.h','glass_system_monitor.h','glass_voice.h','glass_pinyin.h',
       'glass_ble.h','glass_status.h','glass_speech.h','qpk_espdl.h','desktop_worker.h','pet_engine.h','pet_lvgl.h','qpk_mjpeg.h']
     skip={'glass_ime_attach','glass_ime_commit','glass_ime_commit_tree','glass_ime_start_voice','glass_ime_set_target',
-          'desktop_motion_button','qpk_mjpeg_create','qpk_mjpeg_destroy','qpk_mjpeg_probe',
-          'qpk_mjpeg_frame_size','qpk_mjpeg_decode','qpk_mjpeg_decode_region','qpk_mjpeg_decode_still','qpk_mjpeg_decode_still_fit'}
+          'desktop_motion_button','qpk_mjpeg_create','qpk_mjpeg_destroy','qpk_mjpeg_probe','qpk_mjpeg_preview_limits',
+          'qpk_mjpeg_frame_size','qpk_mjpeg_decode','qpk_mjpeg_decode_region','qpk_mjpeg_decode_view','qpk_mjpeg_decode_still','qpk_mjpeg_decode_still_fit'}
     mocks=['#include <stdlib.h>\n#include <string.h>\n#include <stdio.h>\n#include <errno.h>\n#include <netinet/in.h>\n#include "glass_icons.h"']
     mocks += [f'#include "{name}"' for name in headers]
     prototypes={}

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "usbh_core.h"
+#include <nuttx/kmalloc.h>
 
 #undef USB_DBG_TAG
 #define USB_DBG_TAG "usbh_core"
@@ -21,7 +22,9 @@ struct setup_align_buffer {
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t ep0_request_buffer[CONFIG_USBHOST_MAX_BUS][USB_ALIGN_UP(CONFIG_USBHOST_REQUEST_BUFFER_LEN, CONFIG_USB_ALIGN_SIZE)];
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX struct setup_align_buffer g_setup_buffer[CONFIG_USBHOST_MAX_BUS][CONFIG_USBHOST_MAX_EXTHUBS + 1][CONFIG_USBHOST_MAX_EHPORTS];
 
-struct usbh_bus g_usbhost_bus[CONFIG_USBHOST_MAX_BUS];
+/* Descriptor tables are CPU metadata, not DMA buffers. Allocate after the
+ * board heap/PSRAM is ready; P4 must keep its early-boot BSS below the stack. */
+struct usbh_bus *g_usbhost_bus;
 
 /* general descriptor field offsets */
 #define DESC_bLength         0 /** Length offset */
@@ -654,6 +657,11 @@ int usbh_initialize(uint8_t busid, uintptr_t reg_base, usbh_event_handler_t even
 
     USB_ASSERT_MSG(busid < CONFIG_USBHOST_MAX_BUS, "bus overflow\r\n");
 
+    if (!g_usbhost_bus) {
+        g_usbhost_bus = kumm_zalloc(sizeof(*g_usbhost_bus) * CONFIG_USBHOST_MAX_BUS);
+        if (!g_usbhost_bus) return -USB_ERR_NOMEM;
+    }
+
     bus = &g_usbhost_bus[busid];
 
     usbh_bus_init(bus, busid, reg_base);
@@ -664,9 +672,10 @@ int usbh_initialize(uint8_t busid, uintptr_t reg_base, usbh_event_handler_t even
         bus->event_handler = dummy_event_handler;
     }
 
-    extern const struct usbh_class_info camera_usb_classes[2];
+    extern const struct usbh_class_info camera_usb_classes[];
+    extern const unsigned camera_usb_class_count;
     usbh_class_info_table_begin = (struct usbh_class_info *)camera_usb_classes;
-    usbh_class_info_table_end = usbh_class_info_table_begin + 2;
+    usbh_class_info_table_end = usbh_class_info_table_begin + camera_usb_class_count;
     return usbh_hub_initialize(bus);
 }
 

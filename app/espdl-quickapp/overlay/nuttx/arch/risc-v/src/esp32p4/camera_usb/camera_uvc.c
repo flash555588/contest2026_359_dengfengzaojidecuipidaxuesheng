@@ -10,6 +10,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/video/uvc_camera.h>
+#include <nuttx/usb/board_usb.h>
 #include <poll.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -29,7 +30,7 @@ struct camera_uvc
   struct uvc_camera_stats stats;
   struct usbh_urb urb;
   struct usb_endpoint_descriptor endpoint;
-  uint8_t control[64] __attribute__((aligned(64)));
+  uint8_t *control; /* Internal SRAM DMA buffer; metadata may live in PSRAM. */
   uint8_t *transfer;
   uint8_t *frames[UVC_BUFFERS];
   size_t lengths[UVC_BUFFERS];
@@ -40,7 +41,7 @@ struct camera_uvc
   bool running, claimed;
 };
 struct camera_uvc_file { struct camera_uvc *dev; uint32_t generation; bool owner; };
-static struct camera_uvc g_devices[UVC_CAMERA_MAX_DEVICES] __attribute__((aligned(64)));
+static struct camera_uvc *g_devices;
 static struct camera_uvc *g_stream;
 static uint32_t g_generation;
 
@@ -139,7 +140,7 @@ static int uvc_start(struct camera_uvc *d, struct uvc_camera_start *req)
       if (reported == 26 || reported == 34 || reported == 48) length = reported;
       else printf("[uvc] ignoring invalid GET_LEN %u; use UVC version length %u\n", reported, length);
     }
-  memset(d->control, 0, sizeof(d->control));
+  memset(d->control, 0, 64);
   d->control[0] = 1; d->control[2] = m->format_index; d->control[3] = m->frame_index;
   put32(d->control + 4, req->interval);
   if (uvc_control(d, 0x21, 1, 0x100, d->desc.stream_interface, length) < 0 ||
@@ -225,7 +226,7 @@ static int uvc_open(struct file *file)
   struct camera_uvc_file *f = kmm_zalloc(sizeof(*f));
   if (!f) return -ENOMEM;
   nxmutex_lock(&d->lock);
-  if (!d->info.connected) { nxmutex_unlock(&d->lock); kmm_free(f); return -ENODEV; }
+  if (!d->info.connected || !board_usb_host_available()) { nxmutex_unlock(&d->lock); kmm_free(f); return -ENODEV; }
   f->dev = d; f->generation = d->info.generation; d->refs++;
   file->f_priv = f;
   nxmutex_unlock(&d->lock);
@@ -335,7 +336,7 @@ static void uvc_name(struct camera_uvc *d)
   uint16_t lang = get16(d->control + 2);
   if (uvc_control(d, 0x80, 6, 0x300 | index, lang, 2) < 0) return;
   unsigned len = d->control[0];
-  if (len < 4 || len > sizeof(d->control) || (len & 1)) return;
+  if (len < 4 || len > 64 || (len & 1)) return;
   if (uvc_control(d, 0x80, 6, 0x300 | index, lang, len) < 0 || d->control[1] != 3) return;
   char name[64] = {0}; unsigned used = 0;
   for (unsigned i = 2; i < len; i += 2)
@@ -395,15 +396,42 @@ static int uvc_disconnect(struct usbh_hubport *port, uint8_t intf)
 static const struct usbh_class_driver g_camera_driver =
 { .driver_name = "uvc", .connect = uvc_connect, .disconnect = uvc_disconnect };
 extern const struct usbh_class_driver hub_class_driver;
-const struct usbh_class_info camera_usb_classes[2] =
+extern const struct usbh_class_driver msc_class_driver,hid_class_driver;
+extern const struct usbh_class_driver board_audio_control_driver,board_audio_stream_driver;
+const struct usbh_class_info camera_usb_classes[] =
 {
   { .match_flags = USB_CLASS_MATCH_INTF_CLASS, .bInterfaceClass = 9, .class_driver = &hub_class_driver },
   { .match_flags = USB_CLASS_MATCH_INTF_CLASS | USB_CLASS_MATCH_INTF_SUBCLASS,
-    .bInterfaceClass = 14, .bInterfaceSubClass = 2, .class_driver = &g_camera_driver }
+    .bInterfaceClass = 14, .bInterfaceSubClass = 2, .class_driver = &g_camera_driver },
+  { .match_flags=USB_CLASS_MATCH_INTF_CLASS|USB_CLASS_MATCH_INTF_SUBCLASS|USB_CLASS_MATCH_INTF_PROTOCOL,
+    .bInterfaceClass=8,.bInterfaceSubClass=6,.bInterfaceProtocol=0x50,.class_driver=&msc_class_driver },
+  { .match_flags=USB_CLASS_MATCH_INTF_CLASS,.bInterfaceClass=3,.class_driver=&hid_class_driver },
+  { .match_flags=USB_CLASS_MATCH_INTF_CLASS|USB_CLASS_MATCH_INTF_SUBCLASS,
+    .bInterfaceClass=1,.bInterfaceSubClass=1,.class_driver=&board_audio_control_driver },
+  { .match_flags=USB_CLASS_MATCH_INTF_CLASS|USB_CLASS_MATCH_INTF_SUBCLASS,
+    .bInterfaceClass=1,.bInterfaceSubClass=2,.class_driver=&board_audio_stream_driver }
 };
+const unsigned camera_usb_class_count=sizeof(camera_usb_classes)/sizeof(camera_usb_classes[0]);
+bool camera_usb_busy(void)
+{
+  if(!g_devices)return false;
+  bool busy=false;for(unsigned i=0;i<UVC_CAMERA_MAX_DEVICES;i++){
+    nxmutex_lock(&g_devices[i].lock);busy|=g_devices[i].refs!=0||g_devices[i].running;nxmutex_unlock(&g_devices[i].lock);}
+  return busy;
+}
 int camera_usb_initialize(void)
 {
-  int ret = register_driver("/dev/uvcctl", &g_uvc_list_ops, 0666, NULL);
+  if(!g_devices){
+    struct camera_uvc *pool=kumm_zalloc(sizeof(*pool)*UVC_CAMERA_MAX_DEVICES);
+    if(!pool)return -ENOMEM;
+    for(unsigned i=0;i<UVC_CAMERA_MAX_DEVICES;i++){
+      pool[i].control=kmm_memalign(64,64);
+      if(!pool[i].control){for(unsigned j=0;j<i;j++)kmm_free(pool[j].control);kumm_free(pool);return -ENOMEM;}
+    }
+    g_devices=pool;
+  }
+  int ret=board_usb_initialize();if(ret<0)return ret;
+  ret = register_driver("/dev/uvcctl", &g_uvc_list_ops, 0666, NULL);
   if (ret < 0) return ret;
   for (unsigned i = 0; i < UVC_CAMERA_MAX_DEVICES; i++)
     {

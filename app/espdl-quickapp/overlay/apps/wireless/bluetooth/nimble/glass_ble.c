@@ -8,6 +8,7 @@
 #include "glass_ble.h"
 #include "glass_ble_hid_internal.h"
 #include "glass_ble_store.h"
+#include "glass_ble_central.h"
 #include "host/ble_hs.h"
 #include "host/util/util.h"
 #include "nimble/nimble_port.h"
@@ -18,6 +19,14 @@
 static pthread_mutex_t g_host_lock = PTHREAD_MUTEX_INITIALIZER;
 static bool g_started, g_ready;
 static int g_error;
+static unsigned g_role;
+int glass_ble_role_claim(unsigned role)
+{
+  pthread_mutex_lock(&g_host_lock);int ret=g_role&&g_role!=role?-EBUSY:0;
+  if(!ret)g_role=role;pthread_mutex_unlock(&g_host_lock);return ret;
+}
+void glass_ble_role_release(unsigned role)
+{pthread_mutex_lock(&g_host_lock);if(g_role==role)g_role=0;pthread_mutex_unlock(&g_host_lock);}
 extern void ble_hci_sock_ack_handler(void *arg);
 
 static void reset(int reason)
@@ -27,6 +36,7 @@ static void reset(int reason)
   g_error = -EIO;
   pthread_mutex_unlock(&g_host_lock);
   glass_ble_hid_reset(reason);
+  glass_ble_central_reset();
 }
 
 static void synced(void)
@@ -46,13 +56,22 @@ static void *hci_thread(void *unused)
   ble_hci_sock_ack_handler(unused);
   return NULL;
 }
+static void *command_thread(void *unused)
+{
+  (void)unused;
+  /* Shares the host's descriptor table. NPL's mq descriptor cannot be
+   * posted by callers in the desktop/NSH task group. NimBLE GAP/GATT APIs
+   * take their own host lock; callbacks still run on the event thread. */
+  for(;;){glass_ble_central_poll();usleep(10000);}
+  return NULL;
+}
 
 /* A NuttX task owns the host and HCI pthread. Unlike a detached pthread
  * created by c6ble_main, this task survives the short-lived NSH command. */
 static int host_main(int argc, char **argv)
 {
   pthread_attr_t attr;
-  pthread_t hci;
+  pthread_t hci,commands;
   int ret;
   (void)argc;
   (void)argv;
@@ -64,6 +83,7 @@ static int host_main(int argc, char **argv)
       ble_svc_gatt_init();
       glass_ble_store_init();
       ret = glass_ble_hid_service_init();
+      if (!ret) ret = glass_ble_central_init();
       if (!ret)
         {
           ble_hs_cfg.sync_cb = synced;
@@ -73,6 +93,8 @@ static int host_main(int argc, char **argv)
             {
               ret = pthread_attr_setstacksize(&attr, 32768);
               if (!ret) ret = pthread_create(&hci, &attr, hci_thread, NULL);
+              if (!ret) ret = pthread_attr_setstacksize(&attr, 8192);
+              if (!ret) ret = pthread_create(&commands, &attr, command_thread, NULL);
               pthread_attr_destroy(&attr);
               if (!ret) nimble_port_run();
             }
@@ -132,9 +154,10 @@ void glass_ble_read(struct glass_ble_state *state)
   state->ready = g_ready;
   state->error = g_error;
   pthread_mutex_unlock(&g_host_lock);
-  state->connected = hid.connected;
+  glass_ble_central_read(state);
+  state->connected = state->connected || hid.connected;
 }
-int glass_ble_scan(void) { return -ENOTSUP; }
-int glass_ble_connect(unsigned index) { (void)index; return -ENOTSUP; }
-int glass_ble_cancel(void) { return 0; }
-int glass_ble_disconnect(void) { return glass_ble_hid_stop(); }
+int glass_ble_scan(void) { return glass_ble_central_scan(); }
+int glass_ble_connect(unsigned index) { return glass_ble_central_connect(index,0); }
+int glass_ble_cancel(void) { return glass_ble_central_cancel(); }
+int glass_ble_disconnect(void) { return glass_ble_central_disconnect(); }

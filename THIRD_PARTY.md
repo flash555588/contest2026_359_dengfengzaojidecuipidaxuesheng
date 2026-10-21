@@ -4,6 +4,14 @@ This file records the third-party source material used by the ESP32-P4
 overlay. It does not replace the license files shipped by the corresponding
 upstream projects.
 
+## CherryUSB board interface classes
+
+- Source: https://github.com/cherry-embedded/CherryUSB, tag `v1.6.1`, commit `c9625ffa773ad10b8824d1b5361bca2ccc1f3d1e`.
+- License: Apache-2.0, copyright notices retained in source.
+- Imported MSC/SCSI, HID, CDC ACM, device core and DWC2 device controller into the existing `camera_usb/cherryusb` vendor tree.
+- Original source hashes and archive digest are in `camera_usb/cherryusb/INTERFACES-UPSTREAM.json`.
+- Local integration validates MSC short transfers and CSW identity/residue, bounds HID descriptor parsing, routes HID controls to the correct interface, and integrates NuttX heap-backed host pools and the class registry. Board UAC1/CDC/VFS adapters are maintained by this project.
+
 ## JIZURA complete reference application
 
 - Source: https://github.com/852wa/JIZURA

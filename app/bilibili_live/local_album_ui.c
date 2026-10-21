@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#ifdef __NuttX__
+#include <sys/statfs.h>
+#endif
 
 static struct {
   lv_obj_t *root,*note,*pager,*view,*canvas,*overlay;
@@ -354,7 +358,20 @@ static void album_create(lv_obj_t *parent,const lv_font_t *font,bool browse)
 void local_album_show(lv_obj_t *parent,const lv_font_t *font)
 {album_create(parent,font,true);}
 void local_album_show_camera(lv_obj_t *parent,const lv_font_t *font)
-{snprintf(album_directory,sizeof(album_directory),"%s",ALBUM_LOCAL_ROOT);album_create(parent,font,true);}
+{
+  const char *directory=ALBUM_LOCAL_ROOT;
+  struct stat st;
+  bool mounted=true;
+#ifdef __NuttX__
+  struct statfs fs;
+  mounted=statfs(ALBUM_ROOT,&fs)==0 &&
+    (fs.f_type==MSDOS_SUPER_MAGIC || fs.f_type==FATFS_SUPER_MAGIC);
+#endif
+  if(mounted && !lstat(ALBUM_ROOT "/photos",&st) && S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode))
+    directory=ALBUM_ROOT "/photos";
+  snprintf(album_directory,sizeof(album_directory),"%s",directory);
+  album_create(parent,font,true);
+}
 static void album_open_error(const char *message)
 {
   album_clear();album_ui.need_list=false;album_ui.mode=1;album_ui.image_attempted=true;

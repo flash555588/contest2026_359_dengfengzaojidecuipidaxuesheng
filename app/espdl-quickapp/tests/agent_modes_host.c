@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Real worker + store; deterministic backend, no network or LVGL. */
 #include "glass_chat_backend.h"
+#include "glass_vision.h"
+#include "qpk_espdl.h"
+#include "glass_camera_observation.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -12,6 +15,52 @@
 static atomic_bool hold, entered, fail_next;
 static enum glass_agent_mode request_mode;
 static char request_context[CHAT_CONTEXT_BYTES*2];
+static atomic_bool capture_hold,capture_entered,camera_closed,local_busy;
+static unsigned camera_uploads;
+static unsigned recording_saves;
+static bool recording_saved,recording_fail;
+int glass_camera_recording_check(void){return 0;}
+int glass_camera_recording_save(uint32_t id,const char *question,const struct qpk_camera_clip *clip,
+ atomic_bool *cancel,char path[128])
+{
+ assert(id&&question[0]&&clip->count==3&&atomic_load(&camera_closed));
+ if(atomic_load(cancel))return -ECANCELED;
+ if(recording_fail)return -ENOSPC;
+ recording_saved=true;recording_saves++;snprintf(path,128,"/sdcard/espclaw-recordings/record-%u-0/record.json",id);return 0;
+}
+static uint32_t persisted_last_id;
+static unsigned observation_saves;
+static bool observation_fail;
+static bool long_answer;
+void qpk_dl_status(struct qpk_dl_result *out){memset(out,0,sizeof(*out));out->busy=atomic_load(&local_busy);}
+int qpk_camera_clip_capture(struct qpk_camera_clip *clip,atomic_bool *cancel)
+{
+  recording_saved=false;atomic_store(&camera_closed,false);atomic_store(&capture_entered,true);
+  /* The queue must not persist a waiting upload before capture closes. */
+  struct chat_snapshot *disk=calloc(1,sizeof(*disk));assert(disk&&!glass_chat_store_load(disk));
+  assert(disk->count&&disk->turns[disk->count-1].id==persisted_last_id);
+  free(disk);
+  while(atomic_load(&capture_hold)&&!atomic_load(cancel))usleep(1000);
+  clip->count=3;clip->duration_ms=5000;atomic_store(&camera_closed,true);
+  return atomic_load(cancel)?-ECANCELED:0;
+}
+void qpk_camera_clip_free(struct qpk_camera_clip *clip){memset(clip,0,sizeof(*clip));}
+char *glass_vision_analyze_clip(const struct qpk_camera_clip *clip,const char *question,atomic_bool *cancel)
+{
+  assert(recording_saved&&atomic_load(&camera_closed)&&clip->count==3&&question[0]&&!atomic_load(cancel));camera_uploads++;
+  return strdup("{\"ok\":true,\"scope\":\"cloud_temporal_samples\",\"answer\":\"camera samples answer\"}");
+}
+char *glass_vision_analyze_clip_take(struct qpk_camera_clip *clip,const char *question,atomic_bool *cancel)
+{return glass_vision_analyze_clip(clip,question,cancel);}
+int glass_camera_observation_save(uint32_t id,enum glass_agent_mode mode,
+ const char *question,const char *answer,const struct qpk_camera_clip *clip,
+ atomic_bool *cancel,char path[128])
+{
+ assert(id&&glass_agent_mode_valid(mode)&&question[0]&&answer[0]&&!atomic_load(cancel));
+ if(clip)assert(atomic_load(&camera_closed)&&clip->count==3);
+ if(observation_fail){path[0]=0;return -ENOSPC;}
+ observation_saves++;snprintf(path,128,"/sdcard/espclaw-observations/camera-%u-0.json",id);return 0;
+}
 int glass_chat_load_settings(struct portal_ai_config *out)
 {memset(out,0,sizeof(*out));strcpy(out->model,"test");return 0;}
 enum chat_error glass_chat_request(const struct portal_ai_config *settings,
@@ -23,7 +72,15 @@ enum chat_error glass_chat_request(const struct portal_ai_config *settings,
   atomic_store(&entered,true);
   while(atomic_load(&hold)&&!atomic_load(cancel))usleep(1000);
   if(atomic_exchange(&fail_next,false))return CHAT_ERROR_NETWORK;
-  *reply=strdup(prompt);return CHAT_ERROR_NONE;
+  if(!strcmp(prompt,"agent-look")){
+    char *wire=glass_chat_observe_tool("what is on the desk?",cancel);
+    assert(wire&&strstr(wire,"camera samples answer"));free(wire);
+    wire=glass_chat_observe_tool("do not replay",cancel);
+    assert(wire&&strstr(wire,"already_attempted_no_retry"));free(wire);
+    *reply=strdup("continued answer after camera tool result");return CHAT_ERROR_NONE;
+  }
+  if(long_answer){*reply=malloc(CHAT_REPLY_BYTES+100);assert(*reply);memset(*reply,'a',CHAT_REPLY_BYTES+99);(*reply)[CHAT_REPLY_BYTES+99]=0;}
+  else *reply=strdup(prompt);return CHAT_ERROR_NONE;
 }
 static struct chat_snapshot state;
 static void idle(void)
@@ -137,6 +194,82 @@ int main(void)
   assert(saved->card_count==2&&!strcmp(saved->cards[0].name,"客厅主灯")&&saved->cards[0].level==80&&saved->cards[0].on&&
          !strcmp(saved->cards[1].kind,"sensor")&&!strcmp(saved->cards[1].state,"23.5 °C")&&!saved->cards[1].on);
   free(withcards);free(reloaded);
+  /* Explicit camera upload is separate from local inference and text tools.
+   * Capture closes before upload, cancellation is final, retries do not
+   * silently capture/upload again, and the origin survives persistence. */
+  assert(glass_chat_send_camera("camera",AGENT_MODE_CREATE)==-EACCES);
+  struct chat_snapshot *legacy_camera=calloc(1,sizeof(*legacy_camera));assert(legacy_camera);
+  assert(!glass_chat_store_load(legacy_camera)&&legacy_camera->count);
+  persisted_last_id=legacy_camera->turns[legacy_camera->count-1].id;
+  legacy_camera->turns[legacy_camera->count-1].camera_samples=true;
+  assert(!glass_chat_store_save(legacy_camera));
+  struct chat_snapshot *legacy_check=calloc(1,sizeof(*legacy_check));assert(legacy_check);
+  assert(!glass_chat_store_load(legacy_check)&&legacy_check->turns[legacy_check->count-1].camera_samples);
+  free(legacy_check);legacy_camera->turns[legacy_camera->count-1].camera_samples=false;
+  assert(!glass_chat_store_save(legacy_camera));free(legacy_camera);
+  atomic_store(&local_busy,true);
+  assert(!glass_chat_send_camera("camera",AGENT_MODE_CHAT));idle();
+  assert(state.turns[state.count-1].error==CHAT_ERROR_CAMERA&&!camera_uploads);
+  struct chat_snapshot *failed_camera=calloc(1,sizeof(*failed_camera));assert(failed_camera);
+  assert(!glass_chat_store_load(failed_camera)&&failed_camera->turns[failed_camera->count-1].id==persisted_last_id);free(failed_camera);
+  f=fopen(CHAT_DATA_ROOT "/chat/history.json","r");assert(f);char stored_camera[65536];
+  size_t stored_bytes=fread(stored_camera,1,sizeof(stored_camera)-1,f);fclose(f);stored_camera[stored_bytes]=0;
+  cJSON *compatible=cJSON_Parse(stored_camera);assert(compatible);const cJSON *item;
+  cJSON_ArrayForEach(item,cJSON_GetObjectItemCaseSensitive(compatible,"turns")){
+    assert(cJSON_GetObjectItemCaseSensitive(item,"error")->valueint<=CHAT_ERROR_STREAM);
+  }cJSON_Delete(compatible);
+  assert(glass_chat_retry_mode(AGENT_MODE_CHAT)==-EACCES);
+  assert(!glass_chat_clear_mode(AGENT_MODE_CHAT));idle();atomic_store(&local_busy,false);
+  atomic_store(&capture_hold,true);atomic_store(&capture_entered,false);
+  assert(!glass_chat_send_camera("camera",AGENT_MODE_CHAT));
+  while(!atomic_load(&capture_entered))usleep(1000);
+  assert(glass_chat_send_mode("busy",AGENT_MODE_CHAT)==-EBUSY);
+  glass_chat_cancel();idle();assert(!camera_uploads&&atomic_load(&camera_closed));
+  assert(state.turns[state.count-1].state==CHAT_CANCELLED&&state.turns[state.count-1].camera_samples);
+  assert(glass_chat_retry_mode(AGENT_MODE_CHAT)==-EACCES);
+  assert(!glass_chat_clear_mode(AGENT_MODE_CHAT));idle();
+  atomic_store(&capture_hold,false);assert(!glass_chat_send_camera("camera",AGENT_MODE_CHAT));idle();
+  assert(camera_uploads==1&&state.turns[state.count-1].state==CHAT_DONE&&state.turns[state.count-1].camera_samples);
+  assert(!strcmp(state.turns[state.count-1].reply,"camera samples answer"));
+  struct chat_snapshot *camera_disk=calloc(1,sizeof(*camera_disk));assert(camera_disk);
+  assert(!glass_chat_store_load(camera_disk)&&camera_disk->turns[camera_disk->count-1].id==persisted_last_id);
+  assert(!camera_disk->turns[camera_disk->count-1].session_history);
+  assert(observation_saves==1&&state.turns[state.count-1].camera_observation[0]&&state.turns[state.count-1].session_history);
+  uint32_t new_camera_id=state.turns[state.count-1].id;
+  send_mode("follow-up-to-camera",AGENT_MODE_ASSISTANT);
+  assert(!glass_chat_store_load(camera_disk));
+  for(unsigned i=0;i<camera_disk->count;i++)assert(camera_disk->turns[i].id!=new_camera_id);
+  uint32_t before_bot=camera_disk->turns[camera_disk->count-1].id;
+  assert(!glass_chat_send_bot("voice-bot",AGENT_MODE_ASSISTANT));idle();
+  assert(state.turns[state.count-1].state==CHAT_DONE&&state.turns[state.count-1].session_history&&observation_saves==2);
+  uint32_t bot_id=state.turns[state.count-1].id;
+  assert(!glass_chat_store_load(camera_disk)&&camera_disk->turns[camera_disk->count-1].id==before_bot);
+  atomic_store(&hold,true);atomic_store(&entered,false);
+  assert(!glass_chat_send_bot("cancel-voice",AGENT_MODE_ASSISTANT));
+  while(!atomic_load(&entered))usleep(1000);
+  assert(!glass_chat_store_load(camera_disk)&&camera_disk->turns[camera_disk->count-1].id==before_bot);
+  glass_chat_cancel();idle();atomic_store(&hold,false);
+  assert(state.turns[state.count-1].state==CHAT_CANCELLED&&observation_saves==2);
+  observation_fail=true;assert(!glass_chat_retry_mode(AGENT_MODE_ASSISTANT));idle();
+  assert(state.turns[state.count-1].state==CHAT_DONE&&state.turns[state.count-1].session_history);
+  assert(state.turns[state.count-1].camera_save_error==-ENOSPC&&!state.turns[state.count-1].camera_observation[0]);
+  assert(!glass_chat_store_load(camera_disk)&&camera_disk->turns[camera_disk->count-1].id==before_bot);
+  observation_fail=false;send_mode("normal-after-bot",AGENT_MODE_CHAT);
+  assert(!glass_chat_store_load(camera_disk));
+  for(unsigned i=0;i<camera_disk->count;i++)assert(camera_disk->turns[i].id!=bot_id&&!camera_disk->turns[i].session_history);
+  before_bot=camera_disk->turns[camera_disk->count-1].id;
+  long_answer=true;assert(!glass_chat_send_bot("long-bot",AGENT_MODE_ASSISTANT));idle();long_answer=false;
+  assert(state.turns[state.count-1].state==CHAT_DONE&&state.turns[state.count-1].clipped);
+  assert(!strncmp(state.turns[state.count-1].archive,"sd-reply-",9)&&state.turns[state.count-1].archive_bytes>CHAT_REPLY_BYTES);
+  assert(!glass_chat_store_load(camera_disk)&&camera_disk->turns[camera_disk->count-1].id==before_bot);
+  free(camera_disk);
+  persisted_last_id=before_bot;
+  assert(!glass_chat_send_bot("agent-look",AGENT_MODE_ASSISTANT));idle();
+  assert(state.turns[state.count-1].state==CHAT_DONE&&state.turns[state.count-1].camera_tool_used);
+  assert(strstr(state.turns[state.count-1].reply,"continued answer")&&state.turns[state.count-1].camera_recording[0]);
+  unsigned uploads_before=camera_uploads;
+  recording_fail=true;assert(!glass_chat_send_camera("camera",AGENT_MODE_ASSISTANT));idle();recording_fail=false;
+  assert(state.turns[state.count-1].error==CHAT_ERROR_CAMERA_STORAGE&&camera_uploads==uploads_before);
   /* Both slots invalid: the load reports failure instead of guessing. */
   for(unsigned i=0;i<2;i++){
     f=fopen(i?CHAT_DATA_ROOT "/chat/history.tmp":CHAT_DATA_ROOT "/chat/history.json","w");assert(f);

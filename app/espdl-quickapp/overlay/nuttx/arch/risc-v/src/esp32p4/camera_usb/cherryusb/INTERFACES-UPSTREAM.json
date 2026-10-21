@@ -1,0 +1,22 @@
+{
+  "source": "https://github.com/cherry-embedded/CherryUSB",
+  "revision": "c9625ffa773ad10b8824d1b5361bca2ccc1f3d1e",
+  "license": "Apache-2.0",
+  "source_sha256": {
+    "class/msc/usbh_msc.c": "e2b04e18f98597a70f4885da378cf76485afdb39f869349070f128d81d25543a",
+    "class/msc/usbh_msc.h": "d83cbbdf207fc08240ad530dcc6181d313c84b49c1c8ddfc2dcc15cb7e7f4c77",
+    "class/msc/usb_msc.h": "c7156bf55615113cd79ec9a6b33d81eb3b3b29a0fc410bdd4f98500eef76476b",
+    "class/msc/usb_scsi.h": "66c45017bda142cbcafe403d027f00a87880ff48eaf519ca0f4c67dad4188bb8",
+    "class/hid/usbh_hid.c": "3937d77cf3d44b90987de50554b785795e84e1ce6c24f748ead30710a8a705e3",
+    "class/hid/usbh_hid.h": "3cbe2f45c6b6a2062c4b3229a6f80a1cdcd415e6ef552f701cc34908634935b9",
+    "class/hid/usb_hid.h": "3925b14520270d8b6913aa7fd015968fbf23493d7c28c9a7997e26fe0a1928fb",
+    "core/usbd_core.c": "409b74d21a58335d67c19e01cab99447c05443d408b94aad72d3627e34793f56",
+    "core/usbd_core.h": "7f2d455e2d32e9e0f66f8c88718c1e64afd0b2f5f58e97bc6b513d0afc5176e1",
+    "port/dwc2/usb_dc_dwc2.c": "9811a628a60e06f9a19385ae5285e7a72ec4bd03d4f31b76b6cc5d1bc94be9a6",
+    "common/usb_dc.h": "b086beabb5da7871e1311d2d48fc1eb910902352b6c647d98c87991dd8156932",
+    "class/cdc/usbd_cdc_acm.c": "cf483b1962b7c8d4c1047935d40c6ef14ed3d6e78dd72d6b22879ff682972879",
+    "class/cdc/usbd_cdc_acm.h": "bfcc0101c13f537658ab09f480f22e65003385d25fad7fb4d57da33f7908e8da",
+    "class/cdc/usb_cdc.h": "a8d25b954d5dbfd0d03659651c79af342abe8e5b993fefa278cd8246fa64e476"
+  },
+  "local_changes": "MSC transfer validation; bounded HID descriptors; user heap Device metadata; NuttX board adapters"
+}

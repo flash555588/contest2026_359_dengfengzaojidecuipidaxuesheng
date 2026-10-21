@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_chat.h"
+#include "glass_ai_config.h"
 #include "glass_ime.h"
 #include "glass_qpk_builder.h"
 #include "glass_grok.h"
@@ -58,6 +59,9 @@ static struct {
   lv_obj_t *voice_result;uint32_t voice_result_signature,external_result_turn;
   lv_obj_t *voice_waveform;
   lv_obj_t *voice_face_label;
+  lv_obj_t *voice_camera_label;
+  bool voice_camera_pending,camera_result_handoff,voice_camera_armed;
+  uint32_t voice_camera_wait,voice_camera_turn;
   uint32_t voice_face_request,voice_face_frame,voice_face_seen;
   int voice_gaze_x,voice_gaze_y;
   uint8_t voice_wave_heights[25];
@@ -113,7 +117,7 @@ static void chat_display_resume(void)
 
 static char chat_drafts[AGENT_MODE_COUNT][CHAT_PROMPT_BYTES + 1];
 #define chat_draft chat_drafts[g_chat_ui.mode]
-static enum glass_agent_mode chat_interface_modes[2]={AGENT_MODE_CREATE,AGENT_MODE_CHAT};
+static enum glass_agent_mode chat_interface_modes[2]={AGENT_MODE_CREATE,AGENT_MODE_ASSISTANT};
 static bool chat_portal_return_apps,chat_portal_return_ball;
 static void glass_chat_open(lv_event_t *e);
 static void glass_chat_show(bool from_apps);
@@ -217,12 +221,16 @@ static void chat_ui_preview_app(lv_event_t *e)
   char *source = glass_qpk_preview_source(&draft);
   if (!source) { show_toast("请先让 AI 生成草稿，或等待保存结束"); return; }
   bool origin = g_desktop.chat_return_apps;
-  char title[96], package[48];
+  char title[96], package[48], filename[192];
   snprintf(title, sizeof(title), "预览 · %s", draft.name);
   snprintf(package, sizeof(package), "preview.%s", draft.slug);
+  /* Runtime storage follows the native source volume. A bare "app.js"
+   * defaults to internal Flash even when this draft lives on SD. */
+  snprintf(filename, sizeof(filename), "%s/.draft/%s.js",
+           qpk_volume_root(draft.draft_volume), draft.slug);
   lv_obj_t *card = qapp_page_prepare(title);
   if (!card) { free(source); show_toast("内存不足，无法预览"); return; }
-  int ret = qpk_runtime_launch(card, draft.name, package, "draft", "app.js", source, strlen(source),
+  int ret = qpk_runtime_launch(card, draft.name, package, "draft", filename, source, strlen(source),
                                zh_font, show_toast, qpk_show_dialog, qpk_show_unresponsive);
   free(source);
   const char *error = qpk_runtime_last_error();
@@ -309,7 +317,7 @@ static void chat_ui_editor_close(lv_event_t *e)
   glass_chat_copy_utf8(chat_draft, sizeof(chat_draft), lv_textarea_get_text(g_chat_ui.input));
   lv_obj_delete(g_chat_ui.editor);
   g_chat_ui.editor = g_chat_ui.input = g_chat_ui.keyboard = g_chat_ui.counter = NULL;
-  lv_label_set_text(g_chat_ui.draft_label, chat_draft[0] ? chat_draft : chat_ui_placeholder());
+  chat_ui_label(g_chat_ui.draft_label, chat_draft[0] ? chat_draft : chat_ui_placeholder());
   chat_ui_ball_position(NULL);
 }
 
@@ -321,17 +329,23 @@ static void chat_ui_send(lv_event_t *e)
   const char *text = chat_draft;
   if (g_chat_ui.editor) { glass_ime_commit(g_chat_ui.keyboard); text = lv_textarea_get_text(g_chat_ui.input); }
   if (strlen(text) > CHAT_PROMPT_BYTES) { show_toast("消息太长，请删减少量文字后再试"); return; }
-  int ret = glass_chat_send_mode(text,g_chat_ui.mode);
+  bool camera=g_chat_ui.ball_mode&&g_chat_ui.voice_camera_armed;
+  int ret = camera?glass_chat_send_bot_camera(text,g_chat_ui.mode):
+    g_chat_ui.ball_mode?glass_chat_send_bot(text,g_chat_ui.mode):glass_chat_send_mode(text,g_chat_ui.mode);
   if (ret) {
     show_toast(ret == -ENOKEY ? "先扫码完成 AI 配置" : ret == -EBUSY ? "请等待当前回复结束" : "请输入有效的消息");
     return;
   }
+  g_chat_ui.voice_camera_armed=false;
+  if(camera&&g_chat_ui.mode!=AGENT_MODE_ASSISTANT){glass_chat_get_mode(g_chat_ui.snapshot,g_chat_ui.mode);
+    g_chat_ui.voice_camera_turn=g_chat_ui.snapshot->turns[g_chat_ui.snapshot->count-1].id;}
   if (g_chat_ui.editor) {
     lv_obj_delete(g_chat_ui.editor);
     g_chat_ui.editor = g_chat_ui.input = g_chat_ui.keyboard = g_chat_ui.counter = NULL;
   }
   chat_draft[0] = 0; g_chat_ui.began = lv_tick_get();
-  lv_label_set_text(g_chat_ui.draft_label, chat_ui_placeholder()); chat_ui_refresh(NULL);
+  /* The Bot shares this editor but has no workbench composer label. */
+  chat_ui_label(g_chat_ui.draft_label, chat_ui_placeholder()); chat_ui_refresh(NULL);
 }
 
 static void chat_ui_action(lv_event_t *e)
@@ -409,7 +423,7 @@ static void chat_ui_editor_open(lv_event_t *e)
 static void chat_ui_suggestion(lv_event_t *e)
 {
   snprintf(chat_draft, sizeof(chat_draft), "%s", (const char *)lv_event_get_user_data(e));
-  lv_label_set_text(g_chat_ui.draft_label, chat_draft); chat_ui_editor_open(NULL);
+  chat_ui_label(g_chat_ui.draft_label, chat_draft); chat_ui_editor_open(NULL);
 }
 
 static void chat_ui_retry(lv_event_t *e)
@@ -605,7 +619,7 @@ static void chat_ui_new_confirm(lv_event_t *e)
   if (ret) { show_toast("请等待对话载入后再试"); return; }
   if (g_chat_ui.editor) chat_ui_editor_close(NULL);
   chat_draft[0] = 0;
-  lv_label_set_text(g_chat_ui.draft_label, chat_ui_placeholder());
+  chat_ui_label(g_chat_ui.draft_label, chat_ui_placeholder());
   chat_ui_confirm_close(NULL); chat_ui_refresh(NULL);
 }
 
@@ -730,7 +744,10 @@ static void chat_ui_refresh(lv_timer_t *timer)
     }
     chat_ui_label(g_chat_ui.model, s->model[0] ? s->model : "选择你的 AI 服务，开始第一段对话");
     char count_text[48]; snprintf(count_text, sizeof(count_text), "当前模式 · %u 轮", s->count); chat_ui_label(g_chat_ui.count, count_text);
-    chat_ui_label(g_chat_ui.storage,
+    const struct chat_turn *stored=s->count?&s->turns[s->count-1]:NULL;
+    chat_ui_label(g_chat_ui.storage,stored&&stored->session_history?
+      (stored->state==CHAT_WAITING?"本次会话 · 完成后保存 SD":
+       stored->camera_observation[0]?"结果已独立保存 SD":"仅本次会话 · 未保存 SD"):
       s->storage_error == -EINVAL ? "记录读取失败，原文件已保留" :
       s->storage_error == -ENOSPC ? "存储空间不足" :
       s->storage_error ? "记录暂未保存" : "自动保存在设备");
@@ -781,6 +798,8 @@ static void chat_ui_deleted(lv_event_t *e)
   chat_display_restore();
   if(g_chat_ui.ball_mode)chat_ball_stop();
   if(g_chat_ui.voice_face_request)qpk_dl_cancel_request(g_chat_ui.voice_face_request);
+  if(!g_chat_ui.camera_result_handoff&&g_chat_ui.voice_camera_turn&&g_chat_ui.snapshot&&g_chat_ui.snapshot->count&&
+     g_chat_ui.snapshot->turns[g_chat_ui.snapshot->count-1].id==g_chat_ui.voice_camera_turn)glass_chat_cancel();
   if(g_chat_ui.voice_wave_timer)lv_timer_delete(g_chat_ui.voice_wave_timer);
   free(g_chat_ui.archive_page); g_chat_ui.archive_page = NULL;
   if (g_chat_ui.editor && g_chat_ui.input) {
@@ -812,7 +831,12 @@ static void glass_chat_open(lv_event_t *e)
 
 static void chat_ui_open_espclaw(lv_event_t *event)
 {
-  LV_UNUSED(event);glass_chat_show(g_desktop.chat_return_apps);
+  LV_UNUSED(event);
+  chat_interface_modes[0]=g_chat_ui.mode;
+  lv_obj_t *previous_root=g_chat_ui.root;
+  g_chat_ui.camera_result_handoff=true;
+  glass_chat_show(g_desktop.chat_return_apps);
+  if(g_chat_ui.root==previous_root)g_chat_ui.camera_result_handoff=false;
 }
 static void glass_chat_ball_open(lv_event_t *event)
 {

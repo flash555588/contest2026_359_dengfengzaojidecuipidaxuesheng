@@ -11,6 +11,7 @@ globals=s[s.index('static pthread_mutex_t voice_lock'):s.index('static int rando
 stream='struct voice_stream {'+s.split('struct voice_stream {')[1].split('\n};')[0]+'\n};'
 prefix=r'''
 #include "glass_voice.h"
+#include "glass_ai_config.h"
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
@@ -27,7 +28,7 @@ struct portal_voice_config {char app_id[33],secret_id[129],secret_key[129];};
 static int portal_voice_load(struct portal_voice_config *c){strcpy(c->app_id,"public-fixture");return 0;}
 static void voice_run(struct portal_voice_config *config);
 '''
-names=['voice_changed','voice_publish','voice_finish','glass_voice_get','glass_voice_stop_request','glass_voice_stop','glass_voice_cancel','voice_worker','glass_voice_start_request']
+names=['voice_changed','voice_publish','voice_finish','glass_voice_get','glass_voice_stop_request','glass_voice_stop','glass_voice_cancel','voice_worker','glass_voice_config_idle','voice_start_request','glass_voice_start_request']
 suffix=r'''
 static atomic_uint entered;
 static atomic_bool release_old,release_new;
@@ -62,8 +63,10 @@ int main(void)
   /* Cancellation by another microphone owner invalidates late completions. */
   atomic_store(&entered,0);atomic_store(&release_old,false);
   assert(!glass_voice_start_request(&first));wait_entered(1);glass_voice_cancel();
+  glass_voice_get(&state);assert(!state.active&&!glass_voice_config_idle());
   atomic_store(&release_old,true);wait_idle();glass_voice_get(&state);
   assert(!state.active&&state.phase==GLASS_VOICE_IDLE&&!state.text[0]);
+  assert(glass_voice_config_idle());
   /* PCM packets retain every sample across a wrapped ring and a short tail. */
   struct voice_stream *stream=calloc(1,sizeof(*stream));assert(stream);pthread_mutex_init(&stream->lock,NULL);
   stream->read=VOICE_RING_FRAMES-101;stream->used=6501;stream->done=true;

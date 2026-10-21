@@ -66,23 +66,23 @@ void usb_osal_thread_delete(usb_osal_thread_t thread)
 
 void usb_osal_thread_schedule_other(void)
 {
-    struct sched_param param;
+    struct sched_param param = {0};
     int old_priority;
 
     /* Get current priority (pid=0 means current task) */
-    assert(sched_getparam(0, &param) == 0);
+    if (sched_getparam(0, &param) != 0) return;
     old_priority = param.sched_priority;
 
     /* Set to minimum priority to yield CPU to other tasks */
     param.sched_priority = SCHED_PRIORITY_MIN;
-    assert(sched_setparam(0, &param) == 0);
+    if (sched_setparam(0, &param) != 0) return;
 
     /* Yield CPU to other tasks */
     sched_yield();
 
     /* Restore original priority */
     param.sched_priority = old_priority;
-    assert(sched_setparam(0, &param) == 0);
+    (void)sched_setparam(0, &param);
 }
 
 usb_osal_sem_t usb_osal_sem_create(uint32_t initial_count)

@@ -1,8 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "qpk_hardware.h"
+#include "qpk_board_pins.h"
 #include "qpk_volume.h"
 #include "glass_ble.h"
+#include "glass_ble_central.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -30,11 +32,14 @@ struct hw_platform {
   struct spi_dev_s *spi;
   int uart, pwm[4];
   bool ble;
+  void *usb;
 };
 static pthread_mutex_t claims_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct hw_platform *pin_owner[7], *ble_owner;
-static const unsigned pwm_pins[] = {0, 3, 4, 6};
+static const unsigned pwm_pins[] = {CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN,CONFIG_ESPRESSIF_LEDC_CHANNEL1_PIN,CONFIG_ESPRESSIF_LEDC_CHANNEL2_PIN,CONFIG_ESPRESSIF_LEDC_CHANNEL3_PIN};
 extern int qpk_hw_audio_execute_at(const char *,const char *,const char *,const cJSON *,cJSON *,struct qpk_hw_progress *);
+extern int qpk_usb_execute(void **,const char *,const cJSON *,cJSON *,struct qpk_hw_progress *);
+extern void qpk_usb_destroy(void *);
 
 static const char *string_arg(const cJSON *a, const char *key, const char *fallback)
 { cJSON *v = cJSON_GetObjectItemCaseSensitive(a, key); return !v ? fallback : cJSON_IsString(v) ? v->valuestring : NULL; }
@@ -71,6 +76,7 @@ static uint64_t milliseconds(void)
 { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return (uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000; }
 static int claim(struct hw_platform *p, unsigned pins)
 {
+  if(!pins||(pins&~QPK_HEADER_GPIO_MASK))return -EACCES;
   pthread_mutex_lock(&claims_lock);
   int ret = 0;
   for (unsigned i = 0; i < 7; i++) if ((pins & (1u << i)) && pin_owner[i]) { ret = -EBUSY; break; }
@@ -101,6 +107,7 @@ void *qpk_hw_platform_create(const char *package)
 void qpk_hw_platform_destroy(void *opaque)
 {
   struct hw_platform *p = opaque; if (!p) return;
+  qpk_usb_destroy(p->usb);
   if (p->i2c) esp_i2cbus_uninitialize(p->i2c);
   if (p->spi) esp_spibus_uninitialize(p->spi);
   if (p->uart >= 0) close(p->uart);
@@ -108,18 +115,6 @@ void qpk_hw_platform_destroy(void *opaque)
   if (p->ble) { glass_ble_cancel(); glass_ble_disconnect(); }
   pthread_mutex_lock(&claims_lock); if (ble_owner == p) ble_owner = NULL; pthread_mutex_unlock(&claims_lock);
   unclaim(p, 0x7f); free(p);
-}
-char *qpk_hw_capabilities(void)
-{
-  /* Only extension pins verified against this board configuration are exposed.
-   * The system's display, audio, flash, USB and C6 pins cannot be reconfigured. */
-  return strdup("{\"version\":1,\"async\":true,\"gpioPins\":[0,1,2,3,4,5,6],"
-    "\"i2c\":[{\"bus\":1,\"sda\":1,\"scl\":2}],"
-    "\"spi\":[{\"bus\":2,\"cs\":0,\"sck\":3,\"mosi\":4,\"miso\":5}],"
-    "\"uart\":[{\"port\":1,\"tx\":4,\"rx\":5}],"
-    "\"pwm\":[{\"channel\":0,\"pin\":0},{\"channel\":1,\"pin\":3},{\"channel\":2,\"pin\":4},{\"channel\":3,\"pin\":6}],"
-    "\"audio\":{\"record\":true,\"play\":true,\"tone\":true,\"format\":\"PCM16 WAV\",\"recordRate\":16000},"
-    "\"bluetooth\":{\"ble\":true,\"classic\":false,\"scan\":true,\"connect\":true}}");
 }
 
 static int gpio_operation(struct hw_platform *p, const char *op, const cJSON *a, cJSON *out)
@@ -159,13 +154,13 @@ static int i2c_operation(struct hw_platform *p, const char *op, const cJSON *a, 
 {
   if (number_arg(a, "bus", 1, 1, 1) != 1) return -EINVAL;
   if (!strcmp(op, "open")) {
-    int ret = claim(p, 6); if (ret) return ret;
+    int ret = claim(p, QPK_I2C_MASK); if (ret) return ret;
     p->i2c = esp_i2cbus_initialize(1);
-    if (!p->i2c) { unclaim(p, 6); return -ENODEV; }
+    if (!p->i2c) { unclaim(p, QPK_I2C_MASK); return -ENODEV; }
     return 0;
   }
   if (!p->i2c) return -EBADF;
-  if (!strcmp(op, "close")) { int ret = esp_i2cbus_uninitialize(p->i2c); if (ret) return ret; p->i2c = NULL; unclaim(p, 6); return 0; }
+  if (!strcmp(op, "close")) { int ret = esp_i2cbus_uninitialize(p->i2c); if (ret) return ret; p->i2c = NULL; unclaim(p, QPK_I2C_MASK); return 0; }
   if (strcmp(op, "transfer")) return -ENOSYS;
   int address = number_arg(a, "address", -1, 8, 119), count = number_arg(a, "readLength", 0, 0, 65535);
   int hz = number_arg(a, "frequency", 100000, 10000, 400000);
@@ -186,13 +181,13 @@ static int spi_operation(struct hw_platform *p, const char *op, const cJSON *a, 
 {
   if (number_arg(a, "bus", 2, 2, 2) != 2) return -EINVAL;
   if (!strcmp(op, "open")) {
-    int ret = claim(p, 0x39); if (ret) return ret;
+    int ret = claim(p, QPK_SPI_MASK); if (ret) return ret;
     p->spi = esp_spibus_initialize(2);
-    if (!p->spi) { unclaim(p, 0x39); return -ENODEV; }
+    if (!p->spi) { unclaim(p, QPK_SPI_MASK); return -ENODEV; }
     return 0;
   }
   if (!p->spi) return -EBADF;
-  if (!strcmp(op, "close")) { int ret = esp_spibus_uninitialize(p->spi); if (ret) return ret; p->spi = NULL; unclaim(p, 0x39); return 0; }
+  if (!strcmp(op, "close")) { int ret = esp_spibus_uninitialize(p->spi); if (ret) return ret; p->spi = NULL; unclaim(p, QPK_SPI_MASK); return 0; }
   if (strcmp(op, "transfer")) return -ENOSYS;
   int mode = number_arg(a, "mode", 0, 0, 3), hz = number_arg(a, "frequency", 1000000, 1000, 20000000);
   if (mode < 0 || hz < 0) return -EINVAL;
@@ -218,24 +213,24 @@ static int uart_operation(struct hw_platform *p, const char *op, const cJSON *a,
   if (!strcmp(op, "open")) {
     int baud = number_arg(a, "baudRate", 115200, 1200, 921600);
     if (baud < 0) return -EINVAL;
-    int ret = claim(p, 0x30); if (ret) return ret;
+    int ret = claim(p, QPK_UART_MASK); if (ret) return ret;
     /* The serial driver's reopen path does not restore the GPIO matrix. */
-    esp_gpiowrite(4, true);
-    esp_configgpio(4, OUTPUT); esp_gpio_matrix_out(4, UART1_TXD_PAD_OUT_IDX, false, false);
-    esp_configgpio(5, INPUT | PULLUP); esp_gpio_matrix_in(5, UART1_RXD_PAD_IN_IDX, false);
+    esp_gpiowrite(CONFIG_ESPRESSIF_UART1_TXPIN, true);
+    esp_configgpio(CONFIG_ESPRESSIF_UART1_TXPIN, OUTPUT); esp_gpio_matrix_out(CONFIG_ESPRESSIF_UART1_TXPIN, UART1_TXD_PAD_OUT_IDX, false, false);
+    esp_configgpio(CONFIG_ESPRESSIF_UART1_RXPIN, INPUT | PULLUP); esp_gpio_matrix_in(CONFIG_ESPRESSIF_UART1_RXPIN, UART1_RXD_PAD_IN_IDX, false);
     p->uart = open("/dev/ttyS0", O_RDWR | O_NONBLOCK);
-    if (p->uart < 0) { ret = -errno; unclaim(p, 0x30); return ret; }
+    if (p->uart < 0) { ret = -errno; unclaim(p, QPK_UART_MASK); return ret; }
     struct termios t;
     ret = tcgetattr(p->uart, &t);
     if (!ret) {
       cfmakeraw(&t); t.c_cflag &= ~(CSIZE | PARENB | CSTOPB); t.c_cflag |= CS8 | CREAD | CLOCAL;
       cfsetispeed(&t, baud); cfsetospeed(&t, baud); ret = tcsetattr(p->uart, TCSANOW, &t);
     }
-    if (ret) { ret = -errno; close(p->uart); p->uart = -1; unclaim(p, 0x30); }
+    if (ret) { ret = -errno; close(p->uart); p->uart = -1; unclaim(p, QPK_UART_MASK); }
     return ret;
   }
   if (p->uart < 0) return -EBADF;
-  if (!strcmp(op, "close")) { close(p->uart); p->uart = -1; unclaim(p, 0x30); return 0; }
+  if (!strcmp(op, "close")) { close(p->uart); p->uart = -1; unclaim(p, QPK_UART_MASK); return 0; }
   bool reading = !strcmp(op, "read"); if (!reading && strcmp(op, "write")) return -ENOSYS;
   int timeout = number_arg(a, "timeoutMs", 1000, 0, INT_MAX);
   if (timeout < 0) return -EINVAL;
@@ -295,7 +290,8 @@ static int pwm_operation(struct hw_platform *p, const char *op, const cJSON *a, 
   cJSON_AddNumberToObject(out, "pin", pwm_pins[channel]); return ret;
 }
 
-static int ble_operation(struct hw_platform *p, const char *op, const cJSON *a, cJSON *out)
+extern int qpk_ble_gatt_execute(const char *,const cJSON *,cJSON *,struct qpk_hw_progress *);
+static int ble_operation(struct hw_platform *p, const char *op, const cJSON *a, cJSON *out,struct qpk_hw_progress *progress)
 {
   struct glass_ble_state *s = malloc(sizeof(*s)); if (!s) return -ENOMEM;
   glass_ble_read(s);
@@ -304,6 +300,8 @@ static int ble_operation(struct hw_platform *p, const char *op, const cJSON *a, 
     cJSON_AddBoolToObject(out, "ready", s->ready); cJSON_AddBoolToObject(out, "scanning", s->scanning);
     cJSON_AddBoolToObject(out, "connecting", s->connecting); cJSON_AddBoolToObject(out, "connected", s->connected);
     cJSON_AddNumberToObject(out, "error", s->error);
+    cJSON_AddNumberToObject(out,"generation",s->generation);cJSON_AddNumberToObject(out,"scanGeneration",s->scan_generation);
+    cJSON_AddNumberToObject(out,"mtu",s->mtu);cJSON_AddBoolToObject(out,"encrypted",s->encrypted);cJSON_AddBoolToObject(out,"bonded",s->bonded);
     cJSON *list = cJSON_AddArrayToObject(out, "devices");
     if (!list) { free(s); return -ENOMEM; }
     for (unsigned i = 0; i < s->count; i++) {
@@ -321,10 +319,12 @@ static int ble_operation(struct hw_platform *p, const char *op, const cJSON *a, 
     if (!ret) {
       if (!strcmp(op, "start")) ret = glass_ble_start();
       else if (!strcmp(op, "scan")) ret = glass_ble_scan();
-      else if (!strcmp(op, "connect")) { int index = number_arg(a, "index", -1, 0, GLASS_BLE_LIMIT - 1); ret = index < 0 ? -EINVAL : glass_ble_connect(index); }
+      else if (!strcmp(op, "connect")) { int index = number_arg(a, "index", -1, 0, GLASS_BLE_LIMIT - 1);
+        int generation=number_arg(a,"scanGeneration",0,0,INT_MAX);
+        ret = index < 0 || generation<0 ? -EINVAL : glass_ble_central_connect(index,generation); }
       else if (!strcmp(op, "cancel")) ret = glass_ble_cancel();
       else if (!strcmp(op, "disconnect")) ret = glass_ble_disconnect();
-      else ret = -ENOSYS;
+      else ret = qpk_ble_gatt_execute(op,a,out,progress);
     }
   }
   free(s); return ret;
@@ -333,13 +333,16 @@ static int ble_operation(struct hw_platform *p, const char *op, const cJSON *a, 
 int qpk_hw_platform_execute(void *opaque, const char *op, const cJSON *a, cJSON *out, struct qpk_hw_progress *progress)
 {
   struct hw_platform *p = opaque;
+  extern int qpk_network_status(cJSON *);
+  if(!strcmp(op,"net.status"))return qpk_network_status(out);
+  if (!strncmp(op,"usb.",4))return qpk_usb_execute(&p->usb,op+4,a,out,progress);
   if (!strncmp(op, "gpio.", 5)) return gpio_operation(p, op + 5, a, out);
   if (!strncmp(op, "i2c.", 4)) return i2c_operation(p, op + 4, a, out);
   if (!strncmp(op, "spi.", 4)) return spi_operation(p, op + 4, a, out);
   if (!strncmp(op, "uart.", 5)) return uart_operation(p, op + 5, a, out, progress);
   if (!strncmp(op, "pwm.", 4)) return pwm_operation(p, op + 4, a, out, false);
   if (!strncmp(op, "servo.", 6)) return pwm_operation(p, op + 6, a, out, true);
-  if (!strncmp(op, "ble.", 4)) return ble_operation(p, op + 4, a, out);
+  if (!strncmp(op, "ble.", 4)) return ble_operation(p, op + 4, a, out,progress);
   if (!strncmp(op, "audio.", 6)) return qpk_hw_audio_execute_at(p->data_root,p->package, op + 6, a, out, progress);
   return -ENOSYS;
 }

@@ -25,7 +25,7 @@ static void speech_ui_update(lv_timer_t *timer)
       else{
         g_speech_ui.recording=false;
         if(v.phase==GLASS_VOICE_DONE&&v.text[0]){
-          int ret=glass_chat_send_mode(v.text,AGENT_MODE_ASSISTANT);
+          int ret=glass_chat_send_bot(v.text,AGENT_MODE_ASSISTANT);
           if(ret)speech_ui_label(g_speech_ui.status,"AI 暂忙，识别文本已保留");
           else{struct chat_result_snapshot r;if(glass_chat_result_get(&r,0,AGENT_MODE_ASSISTANT,0))g_speech_ui.turn=r.turn_id;speech_ui_label(g_speech_ui.status,"AI 正在联网处理…");}
         }else speech_ui_label(g_speech_ui.status,v.phase==GLASS_VOICE_ERROR?glass_voice_error_text(v.error):"输入已结束");

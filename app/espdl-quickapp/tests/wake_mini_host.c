@@ -49,6 +49,8 @@ const char *glass_voice_error_text(enum glass_voice_error error)
 {return error==GLASS_VOICE_ERROR_INCOMPLETE?"语音未完整识别，未发送，请重说":"语音识别失败";}
 int glass_chat_send_mode(const char *text,enum glass_agent_mode mode)
 {assert(text[0]&&mode==AGENT_MODE_ASSISTANT);sends++;fixture_activity.phase=CHAT_QUEUED;return 0;}
+int glass_chat_send_bot(const char *text,enum glass_agent_mode mode)
+{return glass_chat_send_mode(text,mode);}
 int glass_speech_background_wake(uint32_t *request)
 {arms++;*request=fixture_speech.request=arms;fixture_speech.background_wake=true;fixture_speech.active=true;return 0;}
 static bool fixture_pcm_busy;
@@ -122,13 +124,16 @@ int main(int argc,char **argv)
   unsigned before=arms;fixture_speech.active=false;fixture_pcm_busy=true;wake_mini_service();assert(arms==before);
   fixture_pcm_busy=false;g_chat_ui.speech_owned=true;wake_mini_service();assert(arms==before);
   g_chat_ui.speech_owned=false;fixture_voice.active=true;wake_mini_service();assert(arms==before);
-  fixture_voice.active=false;wake_mini_service();assert(arms==before+1);
+  fixture_voice.active=false;lv_tick_inc(1500);wake_mini_service();assert(arms==before+1);
   /* A fresh wake in somebody else's PCM gets its own request. */
   fixture_speech.active=false;fixture_voice.active=true;fixture_voice.phase=GLASS_VOICE_LISTENING;fixture_pcm_busy=true;
   fixture_speech.wake_event=5;fixture_speech.wake_ms=wake_mini_clock();
   unsigned started=starts,stopped=stops;wake_mini_service();
   assert(g_wake_mini.visible&&starts==started+1&&g_wake_mini.voice_owned);
-  lv_tick_inc(6000);wake_mini_service();assert(!g_wake_mini.visible&&stops==stopped+1&&!fixture_voice.active);
+  lv_tick_inc(6000);wake_mini_service();
+  assert(stops==stopped+1&&!fixture_voice.active);
+  /* Empty capture completion publishes its hint before its idle timeout. */
+  wake_mini_service();lv_tick_inc(6000);wake_mini_service();assert(!g_wake_mini.visible);
   fixture_voice.active=false;fixture_pcm_busy=false;g_chat_ui.voice_session=false;
   fixture_ball_route=true;fixture_speech.request=g_wake_mini.request;
   fixture_speech.wake_event=6;fixture_speech.wake_ms=wake_mini_clock();
@@ -146,7 +151,8 @@ int main(int argc,char **argv)
    * Count inactivity only after their final completion, not from summon. */
   fixture_ball_route=false;fixture_voice.active=false;
   fixture_speech.active=false;fixture_speech.wake_event=9;fixture_speech.wake_ms=wake_mini_clock();
-  fixture_activity.phase=CHAT_QUEUED;wake_mini_service();assert(g_wake_mini.visible);
+  fixture_activity.phase=CHAT_QUEUED;wake_mini_service();assert(g_wake_mini.visible&&fixture_activity.phase==CHAT_IDLE);
+  fixture_activity.phase=CHAT_QUEUED; /* The newly accepted request. */
   lv_tick_inc(12000);wake_mini_service();assert(g_wake_mini.visible&&g_wake_mini.busy);
   fixture_activity.phase=CHAT_REQUESTING;fixture_activity.activity=CHAT_ACTIVITY_TOOL;
   lv_tick_inc(20000);wake_mini_service();assert(g_wake_mini.visible);
@@ -178,7 +184,8 @@ int main(int argc,char **argv)
   lv_tick_inc(1);wake_mini_service();assert(!g_wake_mini.visible);
   fixture_speech.active=false;fixture_speech.wake_event=11;fixture_speech.wake_ms=wake_mini_clock();
   fixture_voice.active=true;fixture_voice.phase=GLASS_VOICE_LISTENING;fixture_voice.level=1200;
-  wake_mini_service();lv_tick_inc(10000);wake_mini_service();assert(g_wake_mini.visible);
+  wake_mini_service();fixture_voice.level=1200;fixture_voice.revision++;
+  lv_tick_inc(10000);wake_mini_service();assert(g_wake_mini.visible);
   fixture_voice.level=0;fixture_voice.phase=GLASS_VOICE_FINISHING;
   lv_tick_inc(10000);wake_mini_service();assert(g_wake_mini.visible);
   fixture_voice.active=false;fixture_voice.phase=GLASS_VOICE_DONE;wake_mini_service();
@@ -221,6 +228,12 @@ int main(int argc,char **argv)
   strcpy(fixture_result.reply,"请说明完整设备名。");
   wake_mini_service();assert(!strcmp(spoken,fixture_result.reply));
   assert(!strcmp(chat_result_title(&fixture_result),"AI 回复"));capture(display,argv[2],"plain-reply");
+  fixture_result_enabled=false;fixture_speech.active=false;fixture_voice.active=false;
+  g_wake_mini.speech_owned=g_wake_mini.voice_owned=g_wake_mini.result_pending=false;
+  fixture_activity.phase=CHAT_STOPPING;strcpy(g_wake_mini.pending_prompt,"新的用户问题");
+  unsigned sent_before=sends;wake_mini_service();assert(sends==sent_before&&g_wake_mini.pending_prompt[0]);
+  fixture_activity.phase=CHAT_IDLE;wake_mini_service();assert(sends==sent_before+1&&!g_wake_mini.pending_prompt[0]);
+  wake_mini_service();assert(sends==sent_before+1);
   lv_obj_delete(g_wake_mini.root);lv_display_delete(display);lv_tiny_ttf_destroy(font12);lv_tiny_ttf_destroy(font16);lv_deinit();free(data);
   uint8_t rgba[8]={0,0,255,255,255,0,0,0};uint16_t pixels[4]={0,0x07e0,0,0};
   assert(!qpk_runtime_wake_overlay(rgba,2,1,8,0,0));qpk_wake_overlay_blit(pixels,2,2,2);assert(pixels[0]==0xf800&&pixels[1]==0x07e0&&pixels[2]==0);
@@ -230,5 +243,5 @@ int main(int argc,char **argv)
 }
 
 int glass_voice_start_request(uint32_t *request){int ret=glass_voice_start();if(!ret){if(!++fixture_voice.request)fixture_voice.request=1;if(request)*request=fixture_voice.request;}return ret;}
-void glass_voice_stop_request(uint32_t request){if(request&&request==fixture_voice.request)glass_voice_stop();}
+void glass_voice_stop_request(uint32_t request){if(request&&request==fixture_voice.request&&fixture_voice.active)glass_voice_stop();}
 void glass_voice_cancel(void){glass_voice_stop();fixture_voice.active=false;fixture_voice.text[0]=0;fixture_voice.phase=GLASS_VOICE_IDLE;fixture_voice.request++;}
