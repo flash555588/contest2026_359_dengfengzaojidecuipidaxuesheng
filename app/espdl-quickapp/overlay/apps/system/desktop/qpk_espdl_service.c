@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "qpk_espdl.h"
+#include "glass_ai_config.h"
 #include <nuttx/video/uvc_camera.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -140,7 +141,7 @@ static void *worker(void *arg)
   pthread_mutex_unlock(&g_dl_lock);
   return NULL;
 }
-int qpk_dl_start(const struct qpk_dl_request *request)
+static int dl_start(const struct qpk_dl_request *request)
 {
   if (!request || request->mode<QPK_DL_CLASSIFY || request->mode>QPK_DL_SNAPSHOT ||
       (!request->selftest && (request->device>=UVC_CAMERA_MAX_DEVICES || !request->generation))) return -EINVAL;
@@ -170,4 +171,9 @@ int qpk_dl_start(const struct qpk_dl_request *request)
   }
   pthread_mutex_unlock(&g_dl_lock);
   return ret?-ret:(int)id;
+}
+int qpk_dl_start(const struct qpk_dl_request *request)
+{
+  if(!glass_ai_start_enter())return -EBUSY;
+  int ret=dl_start(request);glass_ai_start_leave();return ret;
 }

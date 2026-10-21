@@ -2,12 +2,22 @@
 /* Production platform bridge and real ESP-DL worker; device boundaries mocked. */
 #include <assert.h>
 #include "../overlay/apps/system/desktop/glass_assistant_platform.c"
+#undef fsync
+extern int fsync(int);
+static atomic_bool hold_save,save_entered;
+int assistant_test_fsync(int fd)
+{atomic_store(&save_entered,true);while(atomic_load(&hold_save))usleep(1000);return fsync(fd);}
 static struct glass_weather_snapshot weather_fixture;
 static unsigned refreshes,spoken,backend_opens,backend_closes,capture_opens,capture_closes;
 static atomic_bool hold_capture;
 static bool audio_busy,home_permission=true;
 static char last_spoken[512];
 static struct speech_snapshot speech_fixture;
+static unsigned vision_uploads;
+char *glass_chat_observe_tool(const char *question,atomic_bool *cancel)
+{assert(question&&*question&&!atomic_load(cancel));return strdup("{\"ok\":true,\"observation\":\"camera observation\"}");}
+char *glass_vision_analyze(const char *path,const char *question,atomic_bool *cancel)
+{assert(path&&strstr(path,".bmp")&&question&&*question&&!atomic_load(cancel));vision_uploads++;return strdup("{\"ok\":true,\"answer\":\"测试画面\"}");}
 void glass_weather_get(struct glass_weather_snapshot *out){*out=weather_fixture;}
 void glass_weather_start(void){}
 void glass_weather_refresh(void){refreshes++;}
@@ -67,6 +77,18 @@ static cJSON *poll(unsigned id,const char *operation)
 }
 int main(void)
 {
+  assert(qpk_photo_store_initialize()==0);
+  cJSON *observed=invoke("assistant_observe","{\"question\":\"what is visible?\",\"upload\":true}",false);
+  assert(strstr(get(observed,"observation")->valuestring,"camera observation"));cJSON_Delete(observed);
+  cJSON_Delete(invoke("assistant_observe","{\"question\":\"what is visible?\",\"upload\":false}",true));
+  cJSON_Delete(invoke("assistant_observe","{\"question\":\"\",\"upload\":true}",true));
+  cJSON_Delete(invoke("assistant_observe","{\"question\":\"what?\",\"upload\":true,\"path\":\"/data/private\"}",true));
+  unsigned selected_device=0;uint32_t selected_generation=0;
+  cJSON *inventory=cJSON_Parse("[{\"source\":\"usb\",\"device\":3,\"generation\":42,\"connected\":true,\"supported\":true}]");
+  assert(!camera_unique_usb(inventory,&selected_device,&selected_generation)&&selected_device==3&&selected_generation==42);
+  cJSON_AddItemToArray(inventory,cJSON_Duplicate(cJSON_GetArrayItem(inventory,0),true));assert(camera_unique_usb(inventory,&selected_device,&selected_generation)==-EEXIST);
+  cJSON_ReplaceItemInObjectCaseSensitive(cJSON_GetArrayItem(inventory,1),"connected",cJSON_CreateFalse());assert(!camera_unique_usb(inventory,&selected_device,&selected_generation));
+  cJSON_ReplaceItemInObjectCaseSensitive(cJSON_GetArrayItem(inventory,0),"supported",cJSON_CreateFalse());assert(camera_unique_usb(inventory,&selected_device,&selected_generation)==-ENODEV);cJSON_Delete(inventory);
   cJSON *r=invoke("assistant_weather","{}",false);assert(cJSON_IsFalse(get(r,"valid"))&&!get(r,"temperature_c"));cJSON_Delete(r);
   weather_fixture.valid=true;weather_fixture.state=WEATHER_READY;weather_fixture.received_ms=milliseconds();
   strcpy(weather_fixture.data.location,"杭州");strcpy(weather_fixture.data.condition,"晴");strcpy(weather_fixture.data.report_time,"2026-10-19 12:00");weather_fixture.data.temperature=25;weather_fixture.data.humidity=50;
@@ -93,6 +115,12 @@ int main(void)
   char path[128];snprintf(path,sizeof(path),"%s",string(r,"path"));cJSON_Delete(r);
   FILE *file=fopen(path,"rb");assert(file);unsigned char header[54];assert(fread(header,1,54,file)==54&&header[0]=='B'&&header[1]=='M'&&header[28]==24);fclose(file);
   r=poll(id,"photo_status");assert(!strcmp(path,string(r,"path")));cJSON_Delete(r);
+  cJSON_Delete(invoke("assistant_vision","{\"request_id\":1,\"question\":\"画面是什么\",\"upload\":false}",true));assert(!vision_uploads);
+  char vision_json[256];snprintf(vision_json,sizeof(vision_json),"{\"request_id\":%u,\"question\":\"画面是什么\",\"upload\":true}",id);
+  cJSON_Delete(invoke("assistant_vision",vision_json,false));assert(vision_uploads==1);
+  cJSON_Delete(invoke("assistant_vision",vision_json,true));assert(vision_uploads==1);
+  cJSON_Delete(invoke("assistant_vision","{\"request_id\":2147483647,\"question\":\"画面是什么\",\"upload\":true}",true));
+  cJSON_Delete(invoke("assistant_vision","{\"request_id\":1,\"path\":\"/data/config/secret\",\"question\":\"读文件\",\"upload\":true}",true));assert(vision_uploads==1);
   unsigned old=id;id=start("recognize");r=poll(id,"recognition_status");
   assert(backend_opens==1&&backend_closes==1&&cJSON_GetArraySize(get(r,"items"))==1&&get(r,"path"));cJSON_Delete(r);
   char json[128];snprintf(json,sizeof(json),"{\"operation\":\"photo_status\",\"request_id\":%u}",old);cJSON_Delete(invoke("assistant_camera",json,true));
@@ -102,7 +130,36 @@ int main(void)
   r=invoke("assistant_camera","{\"operation\":\"capture\"}",false);id=(unsigned)get(r,"request_id")->valuedouble;cJSON_Delete(r);
   r=poll(id,"photo_status");assert(!strcmp(string(r,"path"),"/data/photos/camera-test.bmp"));cJSON_Delete(r);
   cJSON_Delete(invoke("assistant_camera","{\"operation\":\"recognize\"}",true));
+  cJSON_Delete(invoke("assistant_camera","{\"operation\":\"capture\",\"source\":\"usb\",\"device\":0,\"generation\":1}",true));
+  cJSON_Delete(invoke("assistant_camera","{\"operation\":\"capture\",\"source\":\"unknown\"}",true));
   qpk_dl_cancel();assert(backend_opens==backend_closes&&capture_opens==capture_closes);
+  atomic_store(&hold_save,true);atomic_store(&save_entered,false);
+  id=start("capture");
+  for(unsigned n=0;n<3000&&!atomic_load(&save_entered);n++){
+    snprintf(json,sizeof(json),"{\"operation\":\"photo_status\",\"request_id\":%u}",id);
+    cJSON_Delete(invoke("assistant_camera",json,false));usleep(1000);
+  }
+  assert(atomic_load(&save_entered));
+  struct qpk_dl_request external={.mode=QPK_DL_SNAPSHOT,.device=0,.generation=1};
+  int external_id=qpk_dl_start(&external);assert(external_id>0);
+  for(unsigned n=0;n<3000;n++){qpk_dl_status(&view);if(!view.busy)break;usleep(1000);}
+  assert(!view.busy);atomic_store(&hold_save,false);
+  r=poll(id,"photo_status");assert(get(r,"path")&&!get(r,"photo_save_error"));cJSON_Delete(r);
+  atomic_store(&hold_save,true);atomic_store(&save_entered,false);id=start("capture");
+  for(unsigned n=0;n<3000&&!atomic_load(&save_entered);n++){
+    snprintf(json,sizeof(json),"{\"operation\":\"photo_status\",\"request_id\":%u}",id);
+    cJSON_Delete(invoke("assistant_camera",json,false));usleep(1000);
+  }
+  assert(atomic_load(&save_entered));
+  snprintf(json,sizeof(json),"{\"operation\":\"cancel\",\"request_id\":%u}",id);cJSON_Delete(invoke("assistant_camera",json,false));
+  snprintf(json,sizeof(json),"{\"operation\":\"photo_status\",\"request_id\":%u}",id);
+  r=invoke("assistant_camera",json,true);assert(cJSON_IsFalse(get(r,"ok"))&&cJSON_IsFalse(get(r,"done"))&&!get(r,"path"));cJSON_Delete(r);
+  atomic_store(&hold_save,false);
+  for(unsigned n=0;n<3000;n++){r=invoke("assistant_camera",json,true);bool ended=cJSON_IsTrue(get(r,"done"));cJSON_Delete(r);if(ended)break;usleep(1000);}
+  r=invoke("assistant_camera",json,true);assert(cJSON_IsTrue(get(r,"done"))&&get(r,"service_error")->valueint==-ECANCELED&&!get(r,"path"));cJSON_Delete(r);
+  puts("ASSISTANT_PHOTO_ASYNC_OK: owned receipt survives replaced inference; fsync cancellation remains pending until cleanup and never reports success");
   puts("ASSISTANT_PLATFORM_CAMERA_OK: real snapshot/classifier workers, no model for plain capture, saved BMP, stable photo receipt, recognition results, cancellation, ownership and preview receipt mapping");
+  qpk_photo_store_shutdown();
+  free(camera_save_view);camera_save_view=NULL;
   return 0;
 }

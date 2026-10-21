@@ -26,6 +26,10 @@ CMN_CSRCS := $(filter-out riscv_mtimer.c,$(CMN_CSRCS))
 include common/espressif/Make.defs
 
 CHIP_CSRCS += esp_chip_rev.c esp_atomic64.c
+ifeq ($(CONFIG_ESPRESSIF_MIPI_DSI),y)
+CHIP_CSRCS += esp32p4_camera_cache.c
+CHIP_CSRCS += esp32p4_camera_timing.c
+endif
 ifeq ($(CONFIG_ESP32P4_PPA),y)
 CHIP_CSRCS += esp32p4_ppa.c
 INCLUDES += -I$(ARCH_SRCDIR)/chip/$(ESP_HAL_3RDPARTY_REPO)/components/esp_hal_ppa/include
@@ -59,4 +63,9 @@ INCLUDES += -I$(ARCH_SRCDIR)/$(CAMCHERRY)/port/dwc2
 CHIP_CSRCS += $(CAMCHERRY)/core/usbh_core.c $(CAMCHERRY)/class/hub/usbh_hub.c
 CHIP_CSRCS += $(CAMCHERRY)/port/dwc2/usb_hc_dwc2.c $(CAMCHERRY)/usb_osal_nuttx.c
 CHIP_CSRCS += $(CAMUSB)/camera_usb_port.c $(CAMUSB)/camera_uvc.c $(CAMUSB)/camera_uvc_protocol.c
+INCLUDES += -I$(ARCH_SRCDIR)/$(CAMCHERRY)/class/msc -I$(ARCH_SRCDIR)/$(CAMCHERRY)/class/hid -I$(ARCH_SRCDIR)/$(CAMCHERRY)/class/cdc
+CHIP_CSRCS += $(CAMCHERRY)/class/msc/usbh_msc.c $(CAMCHERRY)/class/hid/usbh_hid.c
+CHIP_CSRCS += $(CAMCHERRY)/core/usbd_core.c $(CAMCHERRY)/port/dwc2/usb_dc_dwc2.c $(CAMCHERRY)/class/cdc/usbd_cdc_acm.c
+CHIP_CSRCS += $(CAMUSB)/board_usb.c $(CAMUSB)/board_usb_mode.c $(CAMUSB)/board_usb_cdc.c
+CHIP_CSRCS += $(CAMUSB)/board_usb_audio.c $(CAMUSB)/board_usb_audio_protocol.c
 endif

@@ -30,8 +30,7 @@
 #ifndef O_NOFOLLOW
 #define O_NOFOLLOW 0
 #endif
-#define DRAFT_DIR QPK_BUILDER_ROOT "/.draft"
-#define EXAMPLE_DIR QPK_BUILDER_ROOT "/.examples"
+#define LEGACY_DRAFT_DIR QPK_BUILDER_ROOT "/.draft"
 
 struct qpk_example_asset { const char *example, *file, *text; };
 #include "glass_qpk_assets.inc"
@@ -46,7 +45,11 @@ static uint32_t clock_ms(void)
 { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return (uint32_t)((uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000); }
 static void save_stage(unsigned stage)
 { pthread_mutex_lock(&state_lock); info.save_stage = stage; pthread_mutex_unlock(&state_lock); }
-static const char *const slots[] = {DRAFT_DIR "/draft0.json", DRAFT_DIR "/draft1.json"};
+/* Pin a mounted medium for this builder session. A removed/full/broken SD
+ * must fail instead of silently writing the same draft to Flash. */
+static int builder_volume = -1;
+static char builder_root[128], draft_dir[144], example_dir[144], slots[2][160];
+static bool draft_seed_legacy;
 
 struct draft_record {
   uint32_t revision;
@@ -69,17 +72,31 @@ static int directory(const char *path, bool create)
 
 static int root_ready(void)
 {
+  if (builder_volume < 0) {
+    int ret = qpk_volume_mounted(QPK_VOLUME_SD);
+    if (ret && ret != -ENOENT && ret != -ENODEV && ret != -ENXIO) return ret;
+    enum qpk_volume volume = ret ? QPK_VOLUME_INTERNAL : QPK_VOLUME_SD;
+    const char *root = qpk_volume_root(volume);
+    if (!root || strlen(root) >= sizeof(builder_root)) return -ENAMETOOLONG;
+    strcpy(builder_root, root);
+    snprintf(draft_dir, sizeof(draft_dir), "%s/.draft", builder_root);
+    snprintf(example_dir, sizeof(example_dir), "%s/.examples", builder_root);
+    for (unsigned i = 0; i < 2; i++) snprintf(slots[i], sizeof(slots[i]), "%s/draft%u.json", draft_dir, i);
+    builder_volume = volume;
+  }
+  int mounted = qpk_volume_mounted((enum qpk_volume)builder_volume);
+  if (mounted) return mounted;
   char path[256];
-  if (strlen(QPK_BUILDER_ROOT) >= sizeof(path) || QPK_BUILDER_ROOT[0] != '/') return -EINVAL;
-  strcpy(path, QPK_BUILDER_ROOT);
+  if (builder_root[0] != '/') return -EINVAL;
+  strcpy(path, builder_root);
   /* Never follow a symlink in an ancestor and never create the data mount. */
   for (char *p = path + 1; *p; p++) if (*p == '/') {
     *p = 0; int ret = directory(path, false); *p = '/';
     if (ret) return ret;
   }
   int ret = directory(path, true);
-  if (!ret) ret = directory(DRAFT_DIR, true);
-  if (!ret) ret = directory(EXAMPLE_DIR, true);
+  if (!ret) ret = directory(draft_dir, true);
+  if (!ret) ret = directory(example_dir, true);
   return ret;
 }
 
@@ -297,6 +314,14 @@ static int initialize_locked(void)
   if (loaded) return 0;
   struct draft_record records[2];
   int errors[] = {record_read(slots[0], &records[0]), record_read(slots[1], &records[1])};
+  /* Preserve an existing internal draft. Read it only when a fresh SD has
+   * no draft at all; its first explicit edit commits to SD, never to Flash.
+   * An SD tombstone or corrupt record must not resurrect an older draft. */
+  if (builder_volume == QPK_VOLUME_SD && errors[0] == -ENOENT && errors[1] == -ENOENT) {
+    errors[0] = record_read(LEGACY_DRAFT_DIR "/draft0.json", &records[0]);
+    errors[1] = record_read(LEGACY_DRAFT_DIR "/draft1.json", &records[1]);
+    draft_seed_legacy = !errors[0] || !errors[1];
+  }
   int newest = errors[0] ? (errors[1] ? -1 : 1) :
                errors[1] || records[0].sequence >= records[1].sequence ? 0 : 1;
   if (newest < 0 && (errors[0] != -ENOENT || errors[1] != -ENOENT)) ret = -EBADMSG;
@@ -309,6 +334,7 @@ static int initialize_locked(void)
   info.error = ret;
   if (!ret) {
     info.loaded = true;
+    info.draft_volume = (enum qpk_volume)builder_volume;
     if (newest >= 0) {
       struct draft_record *r = &records[newest];
       draft_sequence = r->sequence;
@@ -373,7 +399,7 @@ static int example_file(const struct qpk_example_asset *asset, char **out)
   *out = NULL;
   int ret = root_ready();
   if (ret) return ret;
-  snprintf(dir, sizeof(dir), EXAMPLE_DIR "/%s", asset->example);
+  snprintf(dir, sizeof(dir), "%s/%s", example_dir, asset->example);
   ret = directory(dir, true);
   if (ret) return ret;
   snprintf(path, sizeof(path), "%s/%s", dir, asset->file);
@@ -393,6 +419,15 @@ char *glass_qpk_list_examples(void)
   int ret = root_ready();
   cJSON *root = ret ? NULL : parse(qpk_example_catalog);
   if (root) {
+    cJSON *example;
+    cJSON_ArrayForEach(example, cJSON_GetObjectItemCaseSensitive(root, "examples")) {
+      const cJSON *id = cJSON_GetObjectItemCaseSensitive(example, "id");
+      if (cJSON_IsString(id)) {
+        char path[256]; snprintf(path, sizeof(path), "%s/%s", example_dir, id->valuestring);
+        cJSON *value = cJSON_CreateString(path);
+        if (value) cJSON_ReplaceItemInObjectCaseSensitive(example, "path", value);
+      }
+    }
     int seed_error = 0;
     for (unsigned i = 0; i < sizeof(qpk_example_assets) / sizeof(qpk_example_assets[0]); i++) {
       char *text = NULL; int e = example_file(&qpk_example_assets[i], &text); free(text);
@@ -432,7 +467,7 @@ char *glass_qpk_read_example(const char *example, const char *file, unsigned sta
   ((char *)p)[0] = 0;
   cJSON *root = cJSON_CreateObject();
   if (root) {
-    char path[256]; snprintf(path, sizeof(path), EXAMPLE_DIR "/%s/%s", example, file);
+    char path[256]; snprintf(path, sizeof(path), "%s/%s/%s", example_dir, example, file);
     cJSON_AddBoolToObject(root, "ok", true); cJSON_AddStringToObject(root, "path", path);
     cJSON_AddBoolToObject(root, "verified_source", true);
     cJSON_AddNumberToObject(root, "start_line", start); cJSON_AddNumberToObject(root, "line_count", count);
@@ -503,18 +538,24 @@ static int check_source(const char *source, atomic_bool *cancel, char error[256]
 
 static int persist_record(const struct draft_record *next)
 {
+  int ready = root_ready();
+  if (ready) return ready;
   struct draft_record previous[2];
   int errors[] = {record_read(slots[0], &previous[0]), record_read(slots[1], &previous[1])};
   int newest = errors[0] ? (errors[1] ? -1 : 1) :
                errors[1] || previous[0].sequence >= previous[1].sequence ? 0 : 1;
   int ret = 0;
   if (newest < 0 && (errors[0] != -ENOENT || errors[1] != -ENOENT)) ret = -EBADMSG;
-  if (!ret && (newest < 0 ? next->sequence != 1 : previous[newest].sequence + 1 != next->sequence)) ret = -ESTALE;
+  if (!ret && (newest < 0 ? next->sequence != (draft_seed_legacy ? draft_sequence + 1 : 1) : previous[newest].sequence + 1 != next->sequence)) ret = -ESTALE;
   int target = newest == 0 ? 1 : 0;
   free(previous[0].source); free(previous[1].source);
   char *body = ret ? NULL : record_pack(next);
   if (!ret && !body) ret = -ENOMEM;
   if (!ret) ret = write_file(slots[target], body, true);
+  if (!ret) draft_seed_legacy = false;
+  printf("[qpk-draft] medium=%s sequence=%lu revision=%lu result=%d\n",
+    builder_volume == QPK_VOLUME_SD ? "sdcard" : "internal",
+    (unsigned long)next->sequence, (unsigned long)next->revision, ret);
   free(body); return ret;
 }
 
@@ -643,6 +684,7 @@ int glass_qpk_discard(void)
     bool busy = info.busy, discarding = info.discarding;
     memset(&info, 0, sizeof(info));
     info.loaded = true; info.busy = busy; info.discarding = discarding;
+    info.draft_volume = (enum qpk_volume)builder_volume;
     draft_sequence = empty.sequence;
     pthread_mutex_unlock(&state_lock);
   }

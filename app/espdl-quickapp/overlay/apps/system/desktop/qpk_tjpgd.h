@@ -92,6 +92,8 @@ struct JDEC {
 JRESULT qpk_jd_prepare(JDEC * jd, size_t (*infunc)(JDEC *, uint8_t *, size_t), void * pool, size_t sz_pool, void * dev);
 
 JRESULT qpk_jd_decomp(JDEC * jd, int (*outfunc)(JDEC *, void *, JRECT *), uint8_t scale);
+/* Preview-only nearest sample: skip RGB conversion of discarded pixels. */
+JRESULT qpk_jd_decomp_preview(JDEC * jd, int (*outfunc)(JDEC *, void *, JRECT *), uint8_t scale);
 
 JRESULT qpk_jd_mcu_load(JDEC * jd);
 

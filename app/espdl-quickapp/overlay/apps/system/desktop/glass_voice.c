@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include <nuttx/config.h>
 #include "glass_voice.h"
+#include "glass_ai_config.h"
 #include "glass_portal.h"
 #include "glass_https.h"
 #include "glass_music.h"
@@ -701,7 +702,9 @@ static void *voice_worker(void *unused)
     voice_run(config);
   }
 }
-int glass_voice_start_request(uint32_t *request)
+bool glass_voice_config_idle(void)
+{pthread_mutex_lock(&voice_lock);bool idle=!voice_running&&!voice_pending;pthread_mutex_unlock(&voice_lock);return idle;}
+static int voice_start_request(uint32_t *request)
 {
   struct portal_voice_config *config=calloc(1,sizeof(*config));if(!config)return -ENOMEM;
   int ret=portal_voice_load(config);
@@ -730,5 +733,11 @@ int glass_voice_start_request(uint32_t *request)
       voice.active=false;voice.error=GLASS_VOICE_ERROR_MEMORY;voice.phase=GLASS_VOICE_ERROR;voice_changed();}
   }
   pthread_mutex_unlock(&voice_lock);return -ret;
+}
+int glass_voice_start_request(uint32_t *request)
+{
+  if(request)*request=0;
+  if(!glass_ai_start_enter())return -EBUSY;
+  int ret=voice_start_request(request);glass_ai_start_leave();return ret;
 }
 int glass_voice_start(void){return glass_voice_start_request(NULL);}

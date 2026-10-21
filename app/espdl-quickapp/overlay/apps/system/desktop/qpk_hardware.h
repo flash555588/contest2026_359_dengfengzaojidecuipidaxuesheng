@@ -23,6 +23,7 @@ int qpk_hw_submit(struct qpk_hw_session *session, const char *operation, const c
 char *qpk_hw_poll(struct qpk_hw_session *session, unsigned id);
 int qpk_hw_cancel(struct qpk_hw_session *session, unsigned id, bool finish);
 char *qpk_hw_capabilities(void);
+char *qpk_board_interfaces(void);
 
 /* Platform calls run on a dedicated worker, never on the LVGL/JS thread. */
 void *qpk_hw_platform_create(const char *package);

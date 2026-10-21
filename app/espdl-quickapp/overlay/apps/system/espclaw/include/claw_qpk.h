@@ -9,6 +9,7 @@ struct claw_qpk_session {
   atomic_bool *cancel;
   enum glass_agent_mode mode;
   struct glass_agent *agent;
+  unsigned tool_calls, tool_budget;
 };
 
 void claw_qpk_configure(claw_core_config_t *config, struct claw_qpk_session *session);

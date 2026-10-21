@@ -8,13 +8,15 @@
 
 | API | 参数与返回 |
 | --- | --- |
-| `system.hardware.capabilities()` | 同步返回真实接口版本、GPIO 列表、总线引脚、PWM 通道和音频／BLE 能力 |
+| `system.hardware.capabilities()` | 同步返回 version 3、GPIO／保留引脚、最终配置的总线引脚、PWM、音频／BLE，以及 boardInterfaces 官方板级接口目录 |
 | `system.hardware.poll(id)` | 同步返回任务状态；`done:false` 时继续轮询。完成后这次调用取走结果并释放任务记录，不能再次读取同一结果 |
 | `system.hardware.cancel(id)` | 请求取消排队中或运行中的任务；不阻塞。继续查询到结束。取消录音会放弃这次文件写入，保留同名旧录音 |
 | `system.hardware.finish(id)` | 请求正常提前结束当前录音／播放；录音保存已经采集的内容 |
 | `system.audio.stop(id)` | 与 `hardware.finish(id)` 相同，适用于录音、播放、提示音 |
 
 状态结构：`{id,state,done,ok,bytes,elapsedMs,peak,result?,error?,message?}`。
+
+`boardInterfaces.interfaces` 每项含 id、protocol、access、documented、compiled、available、endpoint（可选）和 note。compiled 来自固件配置；available 是节点／网卡注册或存储挂载检查，没有检查项时为 null，不证明实际传输或链路。先发现服务，再读真实完成回执。目录覆盖 DSI／GT911、CSI／UVC、ES8311、SD／Flash、C6 Wi-Fi／BLE、RMII Ethernet 和扩展总线。高速 USB Type-A Host 与高速 Type-C Device 共用控制器，此固件默认 HS Host（UVC／MSC／HID／UAC1），可互斥切换 HS CDC Device；独立 FS CDC 受屏幕 GPIO26/27 接线占用保护，当前接线返回 EBUSY。Serial/JTAG 仅用于可信本地控制台。
 
 - `state` 为 `queued`、`running`、`done`，或已经取走／不存在时的 `unknown`。
 - 只有 `done === true && ok === true` 才是成功。`result` 是相应 API 的结果对象。
@@ -48,7 +50,7 @@ function watchHardware(id, done) {
 | `system.gpio.write(options)` | `pin,value`；必须已经以输出方式打开 | `{}` |
 | `system.gpio.close(options)` | `pin` | `{}`，引脚回到输入态并释放 |
 
-当前固件开放的扩展 GPIO 是 0～6，实际列表以 `capabilities().gpioPins` 为准。其他引脚被系统板载功能保留，不要猜测可用性。传感器电压、外部上拉和接线需要依据真实外设；没有外设时不能把浮空输入解释成传感器读数。
+当前固件开放的扩展 GPIO 是 2～6，实际列表以 `capabilities().gpioPins` 为准。出厂 P4X GPIO0/1 用于 XTAL32K；其他引脚被系统板载功能保留，不要猜测可用性。传感器电压、外部上拉和接线需要依据真实外设；没有外设时不能把浮空输入解释成传感器读数。
 
 ```javascript
 watchHardware(system.gpio.open({pin: 6, mode: 'input', pull: 'up'}), function () {
@@ -67,7 +69,7 @@ watchHardware(system.gpio.open({pin: 6, mode: 'input', pull: 'up'}), function ()
 | `system.i2c.transfer(options)` | `bus`；`address` 必填，7 位地址 8～119；`data` 是要写出的字节数组；`readLength` 默认 0；`frequency` 默认 100000 Hz，支持 10000～400000 | `{data:[读回字节],bytes:读回数量}` |
 | `system.i2c.close(options)` | `bus` | `{}` |
 
-I²C1 的 SDA=GPIO1，SCL=GPIO2。写入与读取同时指定时，用同一次总线传输完成寄存器地址写入与重复起始读取。`data` 与 `readLength` 不能同时为空，单个方向最多 65535 字节。`address` 已是 7 位值，不要再左移。总线没有设备应报告驱动错误，不能返回虚构读数。
+出厂引脚配置的 I²C1 SDA=GPIO2，SCL=GPIO3，以 capabilities 为准。写入与读取同时指定时，用同一次总线传输完成寄存器地址写入与重复起始读取。`data` 与 `readLength` 不能同时为空，单个方向最多 65535 字节。`address` 已是 7 位值，不要再左移。总线没有设备应报告驱动错误，不能返回虚构读数。
 
 ```javascript
 // 仅演示协议格式。0x48、寄存器0x00必须替换为实际外设手册中的值。
@@ -87,7 +89,7 @@ watchHardware(system.i2c.open({bus: 1}), function () {
 | `system.spi.transfer(options)` | 非空 `data` 字节数组；`bus`；`mode` 0～3，默认 0；`frequency` 1000～20000000 Hz，默认 1000000 | `{data:[等长读回字节],bytes,frequency:实际时钟频率}` |
 | `system.spi.close(options)` | `bus` | `{}` |
 
-SPI2：CS=GPIO0、SCK=GPIO3、MOSI=GPIO4、MISO=GPIO5；8 位、MSB first、全双工。一次 `transfer` 期间保持片选有效。只读时由应用发送相应数量的 dummy 字节。模式、速度、命令和 dummy 值依据外设手册，不能假定所有设备一致。
+SPI2：CS=GPIO6、SCK=GPIO3、MOSI=GPIO4、MISO=GPIO5，以 capabilities 为准；8 位、MSB first、全双工。一次 `transfer` 期间保持片选有效。只读时由应用发送相应数量的 dummy 字节。模式、速度、命令和 dummy 值依据外设手册，不能假定所有设备一致。
 
 ## 5. UART
 
@@ -109,7 +111,7 @@ UART1：TX=GPIO4、RX=GPIO5，8 数据位、无校验、1 停止位。SPI2 与 U
 | `system.servo.write(options)` | `channel`；`frequency` 默认 50 Hz；`pulseUs` 默认 1500，允许 100～5000，但必须小于一个周期 | `{pin}` |
 | `system.servo.stop(options)` | `channel` | `{}` |
 
-通道 0／1／2／3 对应 GPIO0／3／4／6。底层使用硬件 LEDC，不用 JS 定时器模拟 PWM。PWM 频率参数范围 1～100000 Hz，实际能否实现还受硬件时钟和分辨率约束，失败以任务错误为准。端点占空比按驱动精度处理。舵机 API 输出的是脉宽，不能保证机械角度；电源、共同地线、型号允许的脉宽区间必须由真实接线和器件决定。
+通道 0／1／2／3 对应 GPIO2／3／4／6，以 capabilities 为准。底层使用硬件 LEDC，不用 JS 定时器模拟 PWM。PWM 频率参数范围 1～100000 Hz，实际能否实现还受硬件时钟和分辨率约束，失败以任务错误为准。端点占空比按驱动精度处理。舵机 API 输出的是脉宽，不能保证机械角度；电源、共同地线、型号允许的脉宽区间必须由真实接线和器件决定。
 
 ```javascript
 // 仅在用户确实连接了适合该脉宽的舵机后调用。
@@ -183,7 +185,46 @@ setInterval(function () {
 
 这里的 `status()` 同样返回任务 ID，要通过 `hardware.poll` 取得上表结果。扫描项包含 `index,name,address,addressType,rssi`。扫描完成后再让用户选择设备，扫描期间列表仍会变化。实际最多保存 32 个扫描项，当前蓝牙主机同时支持一个 BLE 连接；系统设置正在使用蓝牙时，不抢占它的连接。
 
-ESP32-C6 提供 BLE，不提供经典蓝牙 A2DP。连接成功不等于已配对、可以播放蓝牙音频，或已经完成某设备的 GATT 协议。当前这一组接口公开扫描和连接管理，不要捏造 GATT 特征读写、通知订阅和配对函数。
+ESP32-C6 提供 BLE，不提供经典蓝牙 A2DP。连接成功不等于已配对、可以播放蓝牙音频，或已经完成某设备的 GATT 协议。Central 与鼠标 Peripheral 共用一条连接且互斥。先读取 status 的 scanGeneration，再用 connect({index,scanGeneration}) 选择刚扫描的设备。连接完成后用 status.generation 作为下表 GATT 操作的必填 generation，断开后旧代次失效。
+
+GATT 操作仍返回硬件任务 ID，轮询 hardware.poll：
+
+| API | 参数／结果 |
+| --- | --- |
+| `system.ble.services({generation})` | 发现服务，返回 items 的 uuid、start、end |
+| `system.ble.characteristics({generation,start,end})` | 返回 valueHandle、properties、uuid |
+| `system.ble.descriptors({generation,start,end})` | 发现描述符，先找到真实 CCCD 0x2902；禁止猜句柄 |
+| `system.ble.read({generation,handle})` | 返回 data 字节数组，最多512字节；超限报错 |
+| `system.ble.write({generation,handle,data,response:true})` | 默认等 ATT Write Response；response:false 只表示已提交，均不代表应用控制结果已回读 |
+| `system.ble.subscribe({generation,handle,mode})` | handle是实际CCCD，mode 0关闭／1通知／2指示 |
+| `system.ble.notification({generation})` | 取一条通知 data、handle、indication、dropped；EAGAIN表示队列为空，最多保留8条，溢出丢最旧并计数 |
+| `system.ble.pair({generation})` | 启动加密／绑定，再查status.encrypted、bonded；NoInputNoOutput，不宣称MITM保护；不自动删除旧绑定 |
+| `system.ble.mtu({generation})` | 协商ATT MTU；写入长度仍受对端MTU限制 |
+
+GATT 每次最多32项，truncated 为true时说明清单不完整，缩小句柄范围再查询。每次请求限15秒；取消／超时会断开本Central连接以释放尚未完成的协议过程，不自动重发。仅用户指定的设备、服务、特征和值可被写入。
+
+### USB 与网络补充接口
+
+`system.usb` 与 Agent `hardware_submit({operation:"usb.<方法>",arguments:{...}})` 共用同一实现，各调用返回任务 ID。先 list，再用真实 id/generation；不能猜设备编号。`system.net.status()` 返回 eth0/wlan0 的注册、link、addressReady、address、netmask、gateway；不把这些状态描述为互联网可达。
+
+| USB 方法 | 参数／完成结果 |
+| --- | --- |
+| `list({})` | items含kind、id、generation、vid/pid、endpoint、formats；hsRole/fsRole：0关闭、1Host、2CDC；fsError描述实际冲突 |
+| `info({id,generation})` | 真实容量、HID协议、音频模式、队列／错误统计 |
+| `mode({port,role})` | port0高速、port1全速；高速Host与Device互斥。先停相机、关闭音频、卸载U盘；被占用返回EBUSY。FS不提供Host；当前屏幕接线阻止FS CDC启用 |
+| `hidRead({id,generation})` | 返回一条原始HID报告data；Boot键盘8字节／鼠标报告需按其协议解析，空队列EAGAIN。不会把外部报告当作用户指令 |
+| `hidReport({id,generation,reportType,reportId,data})` | 发送Output／Feature等报告，type1～3，id0～255，最多512字节；仅表示传输提交 |
+| `audioStart({id,generation,mode})` | mode必须来自formats。仅UAC1 PCM16、单／双声道8～48kHz；异步扬声器feedback、UAC2明确不支持 |
+| `audioRead({id,generation})` / `audioWrite({id,generation,data})` | PCM16小端数据块，最多512字节；队列满／空EAGAIN，不代表完整录音／播放。写入后info字节统计才反映USB传输进度 |
+| `audioStop({id,generation})` | 停止本会话流并释放；应用退出自动清理 |
+| `cdcRead({port})` / `cdcWrite({port,data})` | CDC已被外部主机配置后收发最多512字节；ENOTCONN未连接，EAGAIN暂不可用。与NSH控制台独立，不执行CDC收到的内容 |
+| `mount({id,generation,writable:false})` | FAT挂到/mnt/usbN，默认只读，返回path；只在用户需要写文件时设writable:true，不格式化 |
+| `unmount({id,generation})` | 卸载本会话卷；仍有打开文件时返回EBUSY，不能强拆 |
+| `files({id,generation,path:"",offset:0})` | 每页最多16个目录项、more和nextOffset；相对路径不接受..或符号链接逃逸 |
+| `readFile({id,generation,path,offset:0,length:512})` | 最多512个实际字节与fileBytes；自行分块读取，不能假定一次是完整文件 |
+| `writeFile({id,generation,path,data,offset:0,replace:false})` | 仅本会话显式可写挂载；首块默认独占创建，同名报EEXIST；replace:true显式替换，后续块用连续offset。返回真实bytes并fsync，失败可能已部分写入，不能自动重放 |
+
+USB 音频／HID 输入使用有界队列，断开报告ENODEV，旧代次ESTALE；完整端到端外设行为仍须实机验收。U盘按块设备与FAT操作，不导出板内Flash／SD给主机同时写入。
 
 ## 9. 生成与验证要求
 

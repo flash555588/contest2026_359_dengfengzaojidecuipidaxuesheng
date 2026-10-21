@@ -1,7 +1,7 @@
 # 本地助手工具
 
-助手模式新增八个 `assistant_*` 工具，直接随模型请求提供 schema，也可从 `board` MCP 发现并调用。
-完整桌面构建注册 34 个 board 工具：11 个应用／硬件工具、7 个 home 工具、8 个 music 工具、8 个本地助手工具。
+助手模式提供十个 `assistant_*` 工具，直接随模型请求提供 schema，也可从 `board` MCP 发现并调用。
+完整桌面构建注册 36 个 board 工具：11 个应用／硬件工具、7 个 home 工具、8 个 music 工具、10 个助手工具。
 发现结果按 16 KiB 上限分页，有 `nextCursor` 时继续；未链接 Home Assistant 的构建按实际注册能力返回。
 普通聊天和创作模式不能调用这些助手工具。
 
@@ -12,13 +12,15 @@
 | `assistant_weather` | 当前定位的天气、缓存年龄、请求刷新、播报 | `valid`、`stale`、`report_time`；播报另看 `speech` |
 | `assistant_speak` | 中文文本播报 | 受理返回 `speech_request`，再核对播报状态 |
 | `assistant_camera` | 摄像头清单、拍照、本地分类、结果查询及按请求取消 | 对应 request_id 完成；保存另需 path 且无保存错误 |
+| `assistant_observe` | 按用户现场观察问题自动采集约5秒、保存SD并进行多帧模型分析 | `ok`、`recording`和`observation`；结果交回同一轮Agent继续回答 |
+| `assistant_vision` | 已授权的单张照片云端问答／OCR | 最新已保存相机回执，分析成功返回 answer；不证明设备控制 |
 | `assistant_records` | 本地笔记、待办、日程的增删改查 | 完成持久化后返回 item |
 | `assistant_schedule` | 一次性／每天的提醒、播报、停音乐和家居动作 | 保存后查任务 state/result；家居还需 verified |
 | `assistant_alias` | 用户自定义设备／应用／歌曲别名、查询与删除 | 返回匹配结果，本工具不执行控制 |
 
 ## 本地笔记、待办和日程
 
-资料保存在 `/data/assistant`，不需要外部账号，不上传云端。每种资料最多 16 条，每个快照最多 8 KiB；
+有SD时新资料优先保存在 `/sdcard/espclaw-assistant`，无卡时本地资料服务仍使用 `/data/assistant`。SD故障不回退Flash；旧笔记/别名只读兼容，在用户修改时才写当前介质。定时任务按介质隔离，不复制待执行任务，避免重复执行。资料不需要外部账号，不上传云端。每种资料最多 16 条，每个快照最多 8 KiB；
 每条 title 最多 96 个 UTF-8 字节，text 最多 512 字节。日程时间使用 UTC Unix 秒，界面和模型需按用户时区转换。
 默认提示使用北京时间（UTC+8）；可通过 `assistant_status` 读取 now，不能依赖模型记忆的当前时间。
 
@@ -113,7 +115,7 @@ CSI 拍照复用原生相机预览：先打开相机、按实际按钮启动预�
 
 请求编号由助手封装，旧请求、别的页面替换的请求不会被误认。取消只针对自己的底层识别请求。
 识别成功和照片保存成功分别返回，photo_save_error 时不能声称照片已保存。
-当前能力是本地分类，不包含通用视觉问答、OCR 或人脸身份识别；USB 模型识别须有实际摄像头及已部署模型。
+`recognize` 是本地分类，不能当成通用视觉。新增 `assistant_vision` 支持单张照片云端问答／OCR，需要用户明确授权和支持图片的模型；不识别人脸身份。默认 CSI／USB 选择、2 分钟回执、单次上传与部署见 [多模态摄像头](MULTIMODAL-CAMERA.md)。
 
 ## 精确别名
 
@@ -141,6 +143,8 @@ python3 tools/generate_agent_profiles.py
 python3 tools/test_assistant_service.py --apps <prepared-apps> --output <output>/service
 python3 tools/test_assistant_platform.py --baseline <prepared-workspace> --output <output>/platform
 python3 tools/test_agent.py --apps <prepared-apps> --output <output>/agent
+python3 tools/test_vision.py --apps <prepared-apps> --output <output>/vision
+python3 tools/test_usb_camera_pools.py --output <output>/usb-pools
 python3 tools/cross_compile_assistant.py --baseline <prepared-workspace> --output <output>/cross
 ```
 

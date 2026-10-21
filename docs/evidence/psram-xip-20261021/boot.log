@@ -1,0 +1,12 @@
+[psram-xip] verified text=48000000..48370480 hash=a444e362 rodata=48380020..489ebec4 hash=3e251a3d heap=489f0000..4a000000
+I (3304) hex_psram: psram CS IO is dedicated
+ABCDV1: soc startup begin
+I (3305) cpu_start: Pro cpu start user code
+I (3305) cpu_start: cpu freq: 400000000 Hz
+I (3307) esp_psram: Adding pool of 22592K of PSRAM memory to heap allocator
+I (3314) esp_psram: Adding pool of 62K of PSRAM memory gap generated due to end address alignment of irom to the heap allocator
+I (3325) esp_psram: Adding pool of 16K of PSRAM memory gap generated due to end address alignment of drom to the heap allocator
+W (3336) spi_flash: Detected GigaDevice flash chip but using generic driver. For optimal functionality, enable `SPI_FLASH_SUPPORT_GD_CHIP` in menuconfig
+I (3350) spi_flash: detected chip: generic
+I (3353) spi_flash: flash io: dio
+V1: soc startup end

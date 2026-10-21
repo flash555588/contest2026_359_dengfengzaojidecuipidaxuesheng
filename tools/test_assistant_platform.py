@@ -12,10 +12,10 @@ repo=Path(__file__).resolve().parents[1];desktop=repo/'app/espdl-quickapp/overla
 with tempfile.TemporaryDirectory(prefix='assistant-platform-') as temp:
     root=Path(temp);(root/'nuttx/video').mkdir(parents=True);(root/'nuttx/config.h').write_text('#pragma once\n')
     shutil.copy2(a.baseline/'nuttx/include/nuttx/video/uvc_camera.h',root/'nuttx/video/uvc_camera.h')
-    flags=['-D_GNU_SOURCE','-DGLASS_LOCAL_SPEECH','-std=gnu11','-O1','-g','-pthread','-fsanitize=address,undefined',
+    flags=['-D_GNU_SOURCE','-DGLASS_LOCAL_SPEECH','-Dfsync=assistant_test_fsync','-std=gnu11','-O1','-g','-pthread','-fsanitize=address,undefined',
            '-fno-omit-frame-pointer','-ffunction-sections','-fdata-sections','-I'+str(root),'-I'+str(desktop),
            '-I'+str(a.baseline/'apps/netutils/cjson/cJSON'),'-DASSISTANT_PHOTO_ROOT="'+str(root/'photos')+'"']
-    command=['gcc',*flags,str(repo/'app/espdl-quickapp/tests/assistant_platform_host.c'),str(desktop/'qpk_espdl_service.c'),
+    command=['gcc',*flags,str(repo/'app/espdl-quickapp/tests/assistant_platform_host.c'),str(desktop/'qpk_espdl_service.c'),str(desktop/'qpk_photo_store.c'),
              str(desktop/'glass_agent_config.c'),str(desktop/'glass_chat_store.c'),
              str(a.baseline/'apps/netutils/cjson/cJSON/cJSON.c'),'-Wl,--gc-sections','-lm','-o',str(root/'test')]
     logs=[];env={**os.environ,'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}

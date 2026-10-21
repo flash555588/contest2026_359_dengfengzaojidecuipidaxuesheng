@@ -104,7 +104,7 @@ static JSValue js_camera_status(JSContext *c, JSValueConst self, int argc, JSVal
 {
   JSValue o = JS_NewObject(c);
   pthread_mutex_lock(&g_camera_lock);
-  bool busy = g_camera_state != QPK_CAMERA_IDLE;
+  bool busy = g_camera_state != QPK_CAMERA_IDLE || g_camera_start.pending || g_camera_redraw;
   int error = g_camera.thread_error ? g_camera.thread_error : g_camera_last_error;
   uint32_t frames = g_camera.frames;
   struct uvc_camera_start mode = g_camera.usb_mode;

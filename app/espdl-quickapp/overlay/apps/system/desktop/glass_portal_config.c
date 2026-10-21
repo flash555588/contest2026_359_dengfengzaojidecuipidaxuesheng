@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "glass_portal.h"
 #include "glass_agent.h"
+#include "glass_ai_config.h"
 #include "qpk_storage.h"
 #include <nuttx/config.h>
 #include "../hass/hass_config_validate.h"
@@ -18,8 +19,15 @@
 static pthread_mutex_t config_lock=PTHREAD_MUTEX_INITIALIZER;
 static uint8_t desktop_values[4],desktop_pending[4];
 static bool desktop_dirty;
+static bool config_section_valid(const char *section)
+{
+  return section&&(!strcmp(section,"ai")||!strcmp(section,"homeassistant")||!strcmp(section,"music")||
+    !strcmp(section,"voice")||!strcmp(section,"agent")||!strcmp(section,"desktop"));
+}
 static cJSON *load(const char *section)
 {
+  if(!config_section_valid(section))return NULL;
+  /* Essential configuration must survive removal or failure of the SD card. */
   char *data=malloc(8193); size_t size=0; cJSON *obj=NULL;
   if(!data) return NULL;
   int ret=qpk_storage_read(PORTAL_CONFIG_ROOT,"portal",section,data,8193,&size);
@@ -104,14 +112,15 @@ cJSON *portal_config_get(const char *section)
   }
   pthread_mutex_unlock(&config_lock); return o;
 }
-int portal_config_save(const char *section,const cJSON *patch)
+static int config_save(const char *section,const cJSON *patch)
 {
   if(!cJSON_IsObject(patch)) return -EINVAL;
-  pthread_mutex_lock(&config_lock); cJSON *o=defaults(section); int ret=-EINVAL;
+  pthread_mutex_lock(&config_lock); cJSON *o=defaults(section),*previous=NULL; int ret=-EINVAL;
 #ifdef CONFIG_SYSTEM_HASS
   int ha_client=0;
 #endif
   if(!o) goto done;
+  previous=cJSON_Duplicate(o,true);if(!previous){ret=-ENOMEM;goto done;}
   const char *desktop_keys[]={"light","palette","widget","reduced_motion"};
   for(const cJSON *v=patch->child;v;v=v->next) {
     if(!v->string) goto done;
@@ -163,7 +172,13 @@ int portal_config_save(const char *section,const cJSON *patch)
   }
   char *data=cJSON_PrintUnformatted(o);
   if(!data) { ret=-ENOMEM; goto done; }
-  ret=strlen(data)>8192?-E2BIG:qpk_storage_write(PORTAL_CONFIG_ROOT,"portal",section,data,strlen(data)); free(data);
+  bool unchanged=cJSON_Compare(previous,o,true);
+  bool write_needed=!unchanged;
+  ret=!write_needed?0:strlen(data)>8192?-E2BIG:
+    qpk_storage_write(PORTAL_CONFIG_ROOT,"portal",section,data,strlen(data));
+  printf("[portal-config] section=%s medium=%s changed=%u written=%u result=%d\n",section,
+    "flash",!unchanged,write_needed&&!ret,ret);
+  memset(data,0,strlen(data));free(data);
 #ifdef CONFIG_SYSTEM_HASS
   if(!ret&&ha_client>0) {
     const char *url=string(o,"url",""),*token=string(o,"token","");
@@ -174,7 +189,16 @@ done:
 #ifdef CONFIG_SYSTEM_HASS
   if(ha_client>0) hass_close(ha_client);
 #endif
-  cJSON_Delete(o); pthread_mutex_unlock(&config_lock); return ret;
+  cJSON_Delete(previous);cJSON_Delete(o); pthread_mutex_unlock(&config_lock); return ret;
+}
+int portal_config_save(const char *section,const cJSON *patch)
+{
+  if(!config_section_valid(section)||!cJSON_IsObject(patch))return -EINVAL;
+  bool ai=!strcmp(section,"ai")||!strcmp(section,"voice")||!strcmp(section,"agent");
+  if(ai){int ret=glass_ai_config_begin(10000);if(ret)return ret;}
+  int ret=config_save(section,patch);
+  if(ai)glass_ai_config_end();
+  return ret;
 }
 int portal_ai_load(struct portal_ai_config *out)
 {

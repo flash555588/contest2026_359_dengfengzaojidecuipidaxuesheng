@@ -1,0 +1,59 @@
+{
+  "status": "passed_this_bounded_trial",
+  "firmware_sha256": "ddf284dfa3cfe7410e2cc50591d25a40ee711f5edf8afc6088474bd73942ce25",
+  "rollback_sha256": "28f43ea68b036e38a84b6182ec03b7d189974c04d0d947ad43a590aa2a63e8c7",
+  "flash_offset": "0x2000",
+  "data_partition_preserved": true,
+  "host_tests_passed": true,
+  "build_passed": true,
+  "flash_verified": true,
+  "boot_copy_verified": true,
+  "protected_cpus": 3,
+  "game": {
+    "rounds": 8,
+    "counters": {
+      "reads": 16905,
+      "writes": 2775,
+      "erases": 285,
+      "max_read_us": 15108,
+      "max_write_us": 22105,
+      "max_erase_us": 55413
+    },
+    "max_display_irq_gap_us": 16593,
+    "physical": "user confirmed no blue/black/flicker"
+  },
+  "usb": {
+    "rounds": 4,
+    "counters": {
+      "reads": 23000,
+      "writes": 3862,
+      "erases": 387,
+      "max_read_us": 15108,
+      "max_write_us": 32267,
+      "max_erase_us": 55413
+    },
+    "max_display_irq_gap_us": 16612,
+    "physical": "user confirmed no blue/black/flicker",
+    "frames_at_last_stress_sample": 755,
+    "usb_errors": 0
+  },
+  "final": {
+    "counters": {
+      "reads": 23000,
+      "writes": 3862,
+      "erases": 387,
+      "max_read_us": 15108,
+      "max_write_us": 32267,
+      "max_erase_us": 55413
+    },
+    "display_irq_gap_max_us": 16612,
+    "camera_stopped": true,
+    "desktop_restored": true,
+    "draft_revision": 6
+  },
+  "limitations": [
+    "No long-duration soak or power-off cold-boot acceptance in this trial",
+    "No guarantee for concurrent reads through arbitrary raw Flash mmap windows",
+    "Experimental build opt-in remains off by default; device currently runs this trial image"
+  ]
+}

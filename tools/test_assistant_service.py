@@ -15,7 +15,9 @@ with tempfile.TemporaryDirectory(prefix='assistant-service-') as temporary:
     flags=['-D_GNU_SOURCE','-DASSISTANT_MANUAL_TICK','-std=gnu11','-O1','-g','-pthread',
            '-fsanitize=address,undefined','-fno-omit-frame-pointer','-ffunction-sections','-fdata-sections',
            '-I'+str(desktop),'-I'+str(a.apps/'netutils/cjson/cJSON'),
-           '-DASSISTANT_DATA_ROOT="'+str(root/'data')+'"']
+           '-DASSISTANT_DATA_ROOT="'+str(root/'data')+'"',
+           '-DASSISTANT_SD_ROOT="'+str(root/'sd/assistant')+'"',
+           '-DQPK_VOLUME_SD_ROOT="'+str(root/'sd/qpk')+'"']
     env={**os.environ,'ASAN_OPTIONS':'detect_leaks=1','UBSAN_OPTIONS':'halt_on_error=1'}
     commands=[['gcc',*flags,'-Dqpk_storage_write_sync=test_storage_write_sync_impl','-c',str(desktop/'qpk_storage.c'),'-o',str(root/'storage.o')],
               ['gcc',*flags,str(repo/'app/espdl-quickapp/tests/assistant_service_host.c'),str(desktop/'glass_agent_config.c'),

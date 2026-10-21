@@ -23,55 +23,55 @@
       "zh-CN-shaanxi-XiaoniNeural"
     ]
   },
-  "ratio_threshold": 0.9187046494054794,
+  "ratio_threshold": 0.9164757694506646,
   "seed": 20261016,
   "metrics": {
     "train": {
       "samples": 2412,
       "positive": 324,
       "negative": 2088,
-      "true_positive": 310,
-      "false_positive": 23,
-      "recall": 0.9567901234567902,
-      "false_positive_fraction": 0.011015325670498084,
+      "true_positive": 308,
+      "false_positive": 22,
+      "recall": 0.9506172839506173,
+      "false_positive_fraction": 0.01053639846743295,
       "min_negative_ratio": 0.7840918302536011,
-      "max_positive_ratio": 1.0939016342163086,
+      "max_positive_ratio": 1.10586416721344,
       "clean_recall": 1.0
     },
     "validation": {
       "samples": 1340,
       "positive": 180,
       "negative": 1160,
-      "true_positive": 175,
-      "false_positive": 9,
-      "recall": 0.9722222222222222,
-      "false_positive_fraction": 0.007758620689655172,
-      "min_negative_ratio": 0.8673398494720459,
-      "max_positive_ratio": 0.9394484162330627,
+      "true_positive": 173,
+      "false_positive": 6,
+      "recall": 0.9611111111111111,
+      "false_positive_fraction": 0.005172413793103448,
+      "min_negative_ratio": 0.8769764304161072,
+      "max_positive_ratio": 0.9616243243217468,
       "clean_recall": 1.0
     },
     "test": {
       "samples": 1340,
       "positive": 180,
       "negative": 1160,
-      "true_positive": 171,
-      "false_positive": 3,
-      "recall": 0.95,
-      "false_positive_fraction": 0.002586206896551724,
-      "min_negative_ratio": 0.8957788348197937,
-      "max_positive_ratio": 0.9975007772445679,
+      "true_positive": 168,
+      "false_positive": 2,
+      "recall": 0.9333333333333333,
+      "false_positive_fraction": 0.0017241379310344827,
+      "min_negative_ratio": 0.9094515442848206,
+      "max_positive_ratio": 1.0072392225265503,
       "clean_recall": 1.0
     },
     "streaming_validation": {
       "samples": 1340,
       "positive": 180,
       "negative": 1160,
-      "true_positive": 177,
-      "false_positive": 7,
-      "recall": 0.9833333333333333,
-      "false_positive_fraction": 0.00603448275862069,
-      "min_negative_ratio": 0.8673399090766907,
-      "max_positive_ratio": 0.9394484758377075,
+      "true_positive": 171,
+      "false_positive": 4,
+      "recall": 0.95,
+      "false_positive_fraction": 0.0034482758620689655,
+      "min_negative_ratio": 0.8769763708114624,
+      "max_positive_ratio": 0.9616243243217468,
       "clean_recall": 1.0
     }
   },
@@ -87,7 +87,21 @@
       "samples": 31872,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "565b80af5817d2d2ef70.pcm",
+        "sha256": "f583adbc4a038c80bda2a9032e9172207f453d509e6f3a4bd7d5739d435184b4",
+        "samples": 31872,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -100,7 +114,33 @@
       "samples": 31872,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "08d9b3459205c662bf9e.pcm",
+        "sha256": "fa01faa5bd89512867d42faad516b5c5428594072bcb115401e37478faa3e45c",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 137,
+          "source_pcm": "08d9b3459205c662bf9e.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 1,
+          "variant": 47,
+          "rate": 0.8725419897388043,
+          "gain": 0.1812520768912706,
+          "echo": 0.12256422332232986,
+          "snr_db": 19.34172708165516,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -113,7 +153,33 @@
       "samples": 31872,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "d4621e9b57739325937a.pcm",
+        "sha256": "d2ebb02527604b899c9002b2975ba665dbfa8ce35e1e1b48329ee2628d470ab2",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 194,
+          "source_pcm": "d4621e9b57739325937a.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 1,
+          "variant": 4,
+          "rate": 1.0893894272081577,
+          "gain": 0.051876650345498945,
+          "echo": 0.17703212089687054,
+          "snr_db": 31.342129266720562,
+          "blur": 3
+        }
+      }
     },
     {
       "split": "train",
@@ -126,7 +192,21 @@
       "samples": 33792,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "64c15cadbffccd9f0469.pcm",
+        "sha256": "2214d03708650ec1aa95b42a2932fdf2d2591cbf69a3cca98af8af40ba1aa0a5",
+        "samples": 33792,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -139,7 +219,33 @@
       "samples": 33792,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "6a9c5dc6eb56a910f62d.pcm",
+        "sha256": "e711cb186c088b83bbdf9a28214b97925f8b63814281ec5cbea09cfb3e98a744",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 166,
+          "source_pcm": "6a9c5dc6eb56a910f62d.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 1,
+          "variant": 47,
+          "rate": 0.8004924840253933,
+          "gain": 0.16774913061410435,
+          "echo": 0.1093926606207472,
+          "snr_db": 27.122405981429026,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -152,7 +258,33 @@
       "samples": 33792,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "d4621e9b57739325937a.pcm",
+        "sha256": "d2ebb02527604b899c9002b2975ba665dbfa8ce35e1e1b48329ee2628d470ab2",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 194,
+          "source_pcm": "d4621e9b57739325937a.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 1,
+          "variant": 4,
+          "rate": 1.0893894272081577,
+          "gain": 0.051876650345498945,
+          "echo": 0.17703212089687054,
+          "snr_db": 31.342129266720562,
+          "blur": 3
+        }
+      }
     },
     {
       "split": "train",
@@ -165,7 +297,21 @@
       "samples": 34176,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "ed1933fc9665953dbb9b.pcm",
+        "sha256": "5d60c49f56b9ce55304e540b6bf3f38c1e3aa57e83ec98b24b9a0d8711a0a78d",
+        "samples": 34176,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -178,7 +324,21 @@
       "samples": 34176,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "ed1933fc9665953dbb9b.pcm",
+        "sha256": "5d60c49f56b9ce55304e540b6bf3f38c1e3aa57e83ec98b24b9a0d8711a0a78d",
+        "samples": 34176,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -191,7 +351,33 @@
       "samples": 34176,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "934e2c8307962e347263.pcm",
+        "sha256": "7755766b9827245b2a46f9e6162dd33c828ec0457b556ca945f59e5a705a2acc",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 178,
+          "source_pcm": "934e2c8307962e347263.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 1,
+          "variant": 33,
+          "rate": 1.1600044574011803,
+          "gain": 0.19244943149466787,
+          "echo": 0.0,
+          "snr_db": 21.36590490845417,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -204,7 +390,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "38e87edfcafdd395e2a4.pcm",
+        "sha256": "7826d7bd384138b0abff277af04216db71d18875c8f22582f96b4105a0035c7b",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -217,7 +417,33 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "87e47c05f7a63d75a79a.pcm",
+        "sha256": "49cfcf3eea36fd44529d51d191b3166ba133c3e55352ac4768e55caf31fcd6de",
+        "samples": 41856,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 234,
+          "source_pcm": "87e47c05f7a63d75a79a.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 1,
+          "variant": 18,
+          "rate": 0.902742662411872,
+          "gain": 0.07590828580615581,
+          "echo": 0.0,
+          "snr_db": 20.29136984371422,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -230,7 +456,33 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "3c56ad52e292552d57df.pcm",
+        "sha256": "69333305392864dbf6f72f1a67fecdbe620711e7e11f8af4d541cc13ffe477b3",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 217,
+          "source_pcm": "3c56ad52e292552d57df.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 1,
+          "variant": 10,
+          "rate": 1.1053684096009526,
+          "gain": 0.24371825257580548,
+          "echo": 0.1905273630026888,
+          "snr_db": 24.074144252855028,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -243,7 +495,21 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "673d3feccf381f01a790.pcm",
+        "sha256": "7e5f3d91284cde492715f92d5154cc5025b9c970c5d7e16170869497dffcd366",
+        "samples": 39168,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -256,7 +522,33 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "c5bb87b05cd6a5204d83.pcm",
+        "sha256": "a5492aa65155022d5f9a8d71c680791702f36aa0db5e7ecc23bcf77c185cba3c",
+        "samples": 34176,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 255,
+          "source_pcm": "c5bb87b05cd6a5204d83.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 1,
+          "variant": 17,
+          "rate": 0.9104758871342183,
+          "gain": 0.20131734500456688,
+          "echo": 0.17575540943025092,
+          "snr_db": 13.45020719782504,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -269,7 +561,21 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "673d3feccf381f01a790.pcm",
+        "sha256": "7e5f3d91284cde492715f92d5154cc5025b9c970c5d7e16170869497dffcd366",
+        "samples": 39168,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -282,7 +588,21 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "a4e0f923c90f382a4b96.pcm",
+        "sha256": "7b4c2f0f01dce9ef3ef8e329179dceea6863aaa3be4e685fc59cb3f8e54f2baa",
+        "samples": 39168,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -295,7 +615,21 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "673d3feccf381f01a790.pcm",
+        "sha256": "7e5f3d91284cde492715f92d5154cc5025b9c970c5d7e16170869497dffcd366",
+        "samples": 39168,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -308,7 +642,33 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "1b725626a21761ef1b07.pcm",
+        "sha256": "49bb561ee6fdf9c86d83719bac1f08101d93082bc131cab40bd7769e2aee4cc9",
+        "samples": 38016,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 344,
+          "source_pcm": "1b725626a21761ef1b07.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 10,
+          "rate": 1.091310594159446,
+          "gain": 1.014925611850838,
+          "echo": 0.1060178047077018,
+          "snr_db": 24.390953850332416,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -321,7 +681,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "18477ef5c202583d2ae7.pcm",
+        "sha256": "6ee40b1455203ce183889c5be891b109cfdb0442b731bb42aaf8581b418c9b0b",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -334,7 +708,33 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "18477ef5c202583d2ae7.pcm",
+        "sha256": "6ee40b1455203ce183889c5be891b109cfdb0442b731bb42aaf8581b418c9b0b",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 273,
+          "source_pcm": "18477ef5c202583d2ae7.pcm",
+          "speaker": "zh-CN-YunxiNeural",
+          "label": 1,
+          "variant": 35,
+          "rate": 0.8786149440079775,
+          "gain": 0.9153328954976212,
+          "echo": 0.0804299815466826,
+          "snr_db": 27.446639408748194,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -347,7 +747,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "18477ef5c202583d2ae7.pcm",
+        "sha256": "6ee40b1455203ce183889c5be891b109cfdb0442b731bb42aaf8581b418c9b0b",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -360,7 +774,21 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "318edcd68fbff7f5e23a.pcm",
+        "sha256": "08c0865405aaa4f64d3ccc61763ce703bc3fd67e4ec850389c8b116a972825e3",
+        "samples": 39168,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -373,7 +801,33 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "18477ef5c202583d2ae7.pcm",
+        "sha256": "6ee40b1455203ce183889c5be891b109cfdb0442b731bb42aaf8581b418c9b0b",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 273,
+          "source_pcm": "18477ef5c202583d2ae7.pcm",
+          "speaker": "zh-CN-YunxiNeural",
+          "label": 1,
+          "variant": 35,
+          "rate": 0.8786149440079775,
+          "gain": 0.9153328954976212,
+          "echo": 0.0804299815466826,
+          "snr_db": 27.446639408748194,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -386,7 +840,21 @@
       "samples": 39168,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "18477ef5c202583d2ae7.pcm",
+        "sha256": "6ee40b1455203ce183889c5be891b109cfdb0442b731bb42aaf8581b418c9b0b",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -399,7 +867,21 @@
       "samples": 37248,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "5b3889378068c2d69dd6.pcm",
+        "sha256": "8dcdc13e6115f0a456a76e04b1185ccd6d027efee55db03dafecc3f33a9634f3",
+        "samples": 37248,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -412,7 +894,33 @@
       "samples": 37248,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "6539221ee5c9e5759a27.pcm",
+        "sha256": "fba758b1cfcb4504a96089bde2ed54dbc6cdcea291ee0982ff8d7a32124c9ebf",
+        "samples": 34176,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 294,
+          "source_pcm": "6539221ee5c9e5759a27.pcm",
+          "speaker": "zh-CN-YunxiNeural",
+          "label": 1,
+          "variant": 53,
+          "rate": 0.8567839269403784,
+          "gain": 1.1484072199701938,
+          "echo": 0.10360421166540919,
+          "snr_db": 21.5696603202191,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -425,7 +933,33 @@
       "samples": 37248,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "48454e6e3684ba535f2b.pcm",
+        "sha256": "2720f1c75a0445cb3b6bcad80341944c0def309a8ac53fdf911a50431e9c5695",
+        "samples": 41856,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 287,
+          "source_pcm": "48454e6e3684ba535f2b.pcm",
+          "speaker": "zh-CN-YunxiNeural",
+          "label": 1,
+          "variant": 41,
+          "rate": 1.0907777193154615,
+          "gain": 0.06396440775686463,
+          "echo": 0.31464123710117736,
+          "snr_db": 19.40601816305368,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -438,7 +972,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "3c8b9b7927a24e4bb022.pcm",
+        "sha256": "872b8af4b86648563f88198c916ff7eac6dc7d85cf769f9a238b46fda58962ba",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -451,7 +999,33 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "3c8b9b7927a24e4bb022.pcm",
+        "sha256": "872b8af4b86648563f88198c916ff7eac6dc7d85cf769f9a238b46fda58962ba",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 352,
+          "source_pcm": "3c8b9b7927a24e4bb022.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 31,
+          "rate": 0.8758009838791965,
+          "gain": 0.49691435945746637,
+          "echo": 0.10668989446210131,
+          "snr_db": 17.501648779496904,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -464,7 +1038,33 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "1b725626a21761ef1b07.pcm",
+        "sha256": "49bb561ee6fdf9c86d83719bac1f08101d93082bc131cab40bd7769e2aee4cc9",
+        "samples": 38016,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 344,
+          "source_pcm": "1b725626a21761ef1b07.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 10,
+          "rate": 1.091310594159446,
+          "gain": 1.014925611850838,
+          "echo": 0.1060178047077018,
+          "snr_db": 24.390953850332416,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -477,7 +1077,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "53ce70b1644128fda827.pcm",
+        "sha256": "d6f934d1e69fda8e4ada968eaa7efe2f9ae02e04a07c523e7681ad8195488715",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -490,7 +1104,33 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "53ce70b1644128fda827.pcm",
+        "sha256": "d6f934d1e69fda8e4ada968eaa7efe2f9ae02e04a07c523e7681ad8195488715",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 357,
+          "source_pcm": "53ce70b1644128fda827.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 37,
+          "rate": 0.9502112502041188,
+          "gain": 0.11679565980072643,
+          "echo": 0.4259907961270643,
+          "snr_db": 23.482010729142488,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -503,7 +1143,33 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "53ce70b1644128fda827.pcm",
+        "sha256": "d6f934d1e69fda8e4ada968eaa7efe2f9ae02e04a07c523e7681ad8195488715",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 357,
+          "source_pcm": "53ce70b1644128fda827.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 47,
+          "rate": 1.1123283487811104,
+          "gain": 0.23071501026915217,
+          "echo": 0.08046153669702419,
+          "snr_db": 23.436128794824057,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -516,7 +1182,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "ae3b48bb0e38fab800fc.pcm",
+        "sha256": "85fc45bbb0b0009c5e67a384f984d957e1faf978672264a7070aab72f38a135f",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -529,7 +1209,33 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "ae3b48bb0e38fab800fc.pcm",
+        "sha256": "85fc45bbb0b0009c5e67a384f984d957e1faf978672264a7070aab72f38a135f",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 383,
+          "source_pcm": "ae3b48bb0e38fab800fc.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 11,
+          "rate": 0.7929967271920175,
+          "gain": 0.6630708366859541,
+          "echo": 0.15950659705599446,
+          "snr_db": 23.451348395702286,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -542,7 +1248,33 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "53ce70b1644128fda827.pcm",
+        "sha256": "d6f934d1e69fda8e4ada968eaa7efe2f9ae02e04a07c523e7681ad8195488715",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 357,
+          "source_pcm": "53ce70b1644128fda827.pcm",
+          "speaker": "zh-CN-YunyangNeural",
+          "label": 1,
+          "variant": 47,
+          "rate": 1.1123283487811104,
+          "gain": 0.23071501026915217,
+          "echo": 0.08046153669702419,
+          "snr_db": 23.436128794824057,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -555,7 +1287,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "9d544b4d8cf972df9017.pcm",
+        "sha256": "73445294b7f1945c3a2d54b4e414b8b2617b927edf00cf6d8e198389ec1b02f6",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -568,7 +1314,33 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "26283ee3d41cb1cd1ce8.pcm",
+        "sha256": "de6edb2f178407d78199a9b659ca82190b3100b4f090f9ad49de5226ba5c290d",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 412,
+          "source_pcm": "26283ee3d41cb1cd1ce8.pcm",
+          "speaker": "zh-TW-HsiaoChenNeural",
+          "label": 1,
+          "variant": 3,
+          "rate": 0.814780209463526,
+          "gain": 0.45004138495971857,
+          "echo": 0.0,
+          "snr_db": 24.135351051299438,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -581,7 +1353,33 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "731fee8f2a4eb451590a.pcm",
+        "sha256": "85453364d4b37bedefe777c5762496dcebfeae4964c44dd3da9967c5be035105",
+        "samples": 36864,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 429,
+          "source_pcm": "731fee8f2a4eb451590a.pcm",
+          "speaker": "zh-TW-HsiaoChenNeural",
+          "label": 1,
+          "variant": 25,
+          "rate": 1.1136245859498384,
+          "gain": 1.200187286963488,
+          "echo": 0.10812815651204272,
+          "snr_db": 24.895340566399508,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -594,7 +1392,21 @@
       "samples": 36864,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "a5b821d4731b084e010a.pcm",
+        "sha256": "36b0a776547b4941e88a628613f599f4e26068c1aab31b57a2d001336eb484bb",
+        "samples": 36864,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -607,7 +1419,21 @@
       "samples": 36864,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "a5b821d4731b084e010a.pcm",
+        "sha256": "36b0a776547b4941e88a628613f599f4e26068c1aab31b57a2d001336eb484bb",
+        "samples": 36864,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -620,7 +1446,33 @@
       "samples": 36864,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "c74a5f5e06d49522026f.pcm",
+        "sha256": "7a1fe69d2a05a63a2e604ff496008e94bb5c28f34ba0e82f3b24ada9468108e2",
+        "samples": 43008,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 451,
+          "source_pcm": "c74a5f5e06d49522026f.pcm",
+          "speaker": "zh-TW-HsiaoChenNeural",
+          "label": 1,
+          "variant": 34,
+          "rate": 1.1421446574796679,
+          "gain": 0.32003367999575066,
+          "echo": 0.1117001757981583,
+          "snr_db": 25.997847576363927,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -633,7 +1485,21 @@
       "samples": 36480,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "f4c87f8d3722783ed2d2.pcm",
+        "sha256": "9f78dd32ecd927f8b047d232b13421b429d3694413388d0b1833fa39bbdf2e23",
+        "samples": 36480,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -646,7 +1512,33 @@
       "samples": 36480,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "f4c87f8d3722783ed2d2.pcm",
+        "sha256": "9f78dd32ecd927f8b047d232b13421b429d3694413388d0b1833fa39bbdf2e23",
+        "samples": 36480,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 463,
+          "source_pcm": "f4c87f8d3722783ed2d2.pcm",
+          "speaker": "zh-TW-HsiaoChenNeural",
+          "label": 1,
+          "variant": 28,
+          "rate": 0.9073319286188148,
+          "gain": 0.9661054387202854,
+          "echo": 0.08349908988792523,
+          "snr_db": 23.13593312550868,
+          "blur": 3
+        }
+      }
     },
     {
       "split": "train",
@@ -659,7 +1551,33 @@
       "samples": 36480,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "c74a5f5e06d49522026f.pcm",
+        "sha256": "7a1fe69d2a05a63a2e604ff496008e94bb5c28f34ba0e82f3b24ada9468108e2",
+        "samples": 43008,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 451,
+          "source_pcm": "c74a5f5e06d49522026f.pcm",
+          "speaker": "zh-TW-HsiaoChenNeural",
+          "label": 1,
+          "variant": 34,
+          "rate": 1.1421446574796679,
+          "gain": 0.32003367999575066,
+          "echo": 0.1117001757981583,
+          "snr_db": 25.997847576363927,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -672,7 +1590,21 @@
       "samples": 40320,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "1b8d6e4f7094aabbb502.pcm",
+        "sha256": "473d81ca9258717679b92f46aba181b91cf6786d6fa691c2768e770fa5a3cf50",
+        "samples": 40320,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -685,7 +1617,21 @@
       "samples": 40320,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "1b8d6e4f7094aabbb502.pcm",
+        "sha256": "473d81ca9258717679b92f46aba181b91cf6786d6fa691c2768e770fa5a3cf50",
+        "samples": 40320,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -698,7 +1644,21 @@
       "samples": 40320,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，openvela。",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "1b8d6e4f7094aabbb502.pcm",
+        "sha256": "473d81ca9258717679b92f46aba181b91cf6786d6fa691c2768e770fa5a3cf50",
+        "samples": 40320,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -711,7 +1671,21 @@
       "samples": 41088,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "69d8940f0aed0f44a21c.pcm",
+        "sha256": "3cb800f137db3205aab1edf43747921f653d12c5e9b4c131d2ecd4fc11195647",
+        "samples": 41088,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -724,7 +1698,21 @@
       "samples": 41088,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "69d8940f0aed0f44a21c.pcm",
+        "sha256": "3cb800f137db3205aab1edf43747921f653d12c5e9b4c131d2ecd4fc11195647",
+        "samples": 41088,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -737,7 +1725,33 @@
       "samples": 41088,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，Open Vela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "69d8940f0aed0f44a21c.pcm",
+        "sha256": "3cb800f137db3205aab1edf43747921f653d12c5e9b4c131d2ecd4fc11195647",
+        "samples": 41088,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 490,
+          "source_pcm": "69d8940f0aed0f44a21c.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 1,
+          "variant": 50,
+          "rate": 1.1320987166943848,
+          "gain": 0.5675888676816896,
+          "echo": 0.20673852970890638,
+          "snr_db": 29.603523159730027,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -750,7 +1764,21 @@
       "samples": 36480,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+0%",
+        "pcm": "d17aa0cfac2888256ae9.pcm",
+        "sha256": "0462cc676b5d528d197e27bd93f094a0af0cf1be77e59b7928d6f14d54ac88da",
+        "samples": 36480,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -763,7 +1791,33 @@
       "samples": 36480,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "+15%",
+        "pcm": "6caf57372251cac5b0c5.pcm",
+        "sha256": "516974933cf30270bb5c1e43d62dda6c7b98995b893cc03fdacd9ba108334ca4",
+        "samples": 31872,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 492,
+          "source_pcm": "6caf57372251cac5b0c5.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 1,
+          "variant": 30,
+          "rate": 0.8624294377367928,
+          "gain": 0.175129601742273,
+          "echo": 0.0,
+          "snr_db": 21.001279061091207,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -776,7 +1830,33 @@
       "samples": 36480,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenVela",
+        "label": 1,
+        "rate": "-15%",
+        "pcm": "c19ab431c774678f2240.pcm",
+        "sha256": "23342f9f771e5785f93060f9aa2af6d8261ce1b23344cb8534c97e73154a3d3a",
+        "samples": 42624,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 518,
+          "source_pcm": "c19ab431c774678f2240.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 1,
+          "variant": 43,
+          "rate": 1.0523797244040516,
+          "gain": 0.17389969836976482,
+          "echo": 0.17430579521324732,
+          "snr_db": 24.019741037344787,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -789,7 +1869,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93d3647287be8d81f1c5.pcm",
+        "sha256": "1132ceecae3e3bd4f52c565fcdb5fd9c05de0362eebcbc1b194872b81a76f56b",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -802,7 +1896,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93d3647287be8d81f1c5.pcm",
+        "sha256": "1132ceecae3e3bd4f52c565fcdb5fd9c05de0362eebcbc1b194872b81a76f56b",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -815,7 +1923,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93d3647287be8d81f1c5.pcm",
+        "sha256": "1132ceecae3e3bd4f52c565fcdb5fd9c05de0362eebcbc1b194872b81a76f56b",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -828,7 +1950,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "121c4be415ac2dc5c2a8.pcm",
+        "sha256": "c5d091585789108b9736270384ff2194ef31b8131ba7f5e9c651b6d992edc264",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -841,7 +1977,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "121c4be415ac2dc5c2a8.pcm",
+        "sha256": "c5d091585789108b9736270384ff2194ef31b8131ba7f5e9c651b6d992edc264",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -854,7 +2004,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "121c4be415ac2dc5c2a8.pcm",
+        "sha256": "c5d091585789108b9736270384ff2194ef31b8131ba7f5e9c651b6d992edc264",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -867,7 +2031,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Vela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "6c97eb5fbeded9f5b7c8.pcm",
+        "sha256": "097d5240f9afe6ffd3fc3ca76d0b897aed58f0d15308c70f6c3602206efe90f2",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -880,7 +2058,33 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Opera",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "c29153230be22ebd07e1.pcm",
+        "sha256": "a1cd7adadedd309ebb114c45fcb50c78e2b365471f66226cbf27f8f727eed152",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 189,
+          "source_pcm": "c29153230be22ebd07e1.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 0,
+          "variant": 25,
+          "rate": 0.8639330319751725,
+          "gain": 1.2017371299502844,
+          "echo": 0.15838891927844917,
+          "snr_db": 22.15288594775683,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -893,7 +2097,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Vela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "6c97eb5fbeded9f5b7c8.pcm",
+        "sha256": "097d5240f9afe6ffd3fc3ca76d0b897aed58f0d15308c70f6c3602206efe90f2",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -906,7 +2124,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "ace5b9a75bd57d9d2525.pcm",
+        "sha256": "a5c29067497d77f6867630fff3c46d7fd46dbee6afb1691b8b43d978463b2512",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -919,7 +2151,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "ace5b9a75bd57d9d2525.pcm",
+        "sha256": "a5c29067497d77f6867630fff3c46d7fd46dbee6afb1691b8b43d978463b2512",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -932,7 +2178,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "ace5b9a75bd57d9d2525.pcm",
+        "sha256": "a5c29067497d77f6867630fff3c46d7fd46dbee6afb1691b8b43d978463b2512",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -945,7 +2205,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Opera",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "c29153230be22ebd07e1.pcm",
+        "sha256": "a1cd7adadedd309ebb114c45fcb50c78e2b365471f66226cbf27f8f727eed152",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -958,7 +2232,33 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Opera",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "c29153230be22ebd07e1.pcm",
+        "sha256": "a1cd7adadedd309ebb114c45fcb50c78e2b365471f66226cbf27f8f727eed152",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 189,
+          "source_pcm": "c29153230be22ebd07e1.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 0,
+          "variant": 25,
+          "rate": 0.8639330319751725,
+          "gain": 1.2017371299502844,
+          "echo": 0.15838891927844917,
+          "snr_db": 22.15288594775683,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -971,7 +2271,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Opera",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "c29153230be22ebd07e1.pcm",
+        "sha256": "a1cd7adadedd309ebb114c45fcb50c78e2b365471f66226cbf27f8f727eed152",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -984,7 +2298,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7ce01c128f2aa628fa5e.pcm",
+        "sha256": "6746da4e0dd3e3c13b045d2e24b88c2a518aea56ccc2dfe7e93a94afe6508550",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -997,7 +2325,33 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93ca65d305d30d9bfd3f.pcm",
+        "sha256": "21015c55294cd007f796c9fcb533db4c32442f147ad5bb8c80755e4d6bed3dd4",
+        "samples": 38784,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 504,
+          "source_pcm": "93ca65d305d30d9bfd3f.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 0,
+          "variant": 31,
+          "rate": 1.034293216039068,
+          "gain": 0.06506563799584002,
+          "echo": 0.19329150031529507,
+          "snr_db": 15.620823349706141,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1010,7 +2364,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7ce01c128f2aa628fa5e.pcm",
+        "sha256": "6746da4e0dd3e3c13b045d2e24b88c2a518aea56ccc2dfe7e93a94afe6508550",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1023,7 +2391,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "29082badfeb9a9f689eb.pcm",
+        "sha256": "3acb2fa9d338e93de0956a51ad2341dd923b1cd5ad8bce9650574043883346ee",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1036,7 +2418,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "29082badfeb9a9f689eb.pcm",
+        "sha256": "3acb2fa9d338e93de0956a51ad2341dd923b1cd5ad8bce9650574043883346ee",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1049,7 +2445,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "29082badfeb9a9f689eb.pcm",
+        "sha256": "3acb2fa9d338e93de0956a51ad2341dd923b1cd5ad8bce9650574043883346ee",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1062,7 +2472,21 @@
       "samples": 33408,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "59c8d6a9b6f4120a036e.pcm",
+        "sha256": "6f4d63e8d22875620fdf5d45cde1098866bc94c27db4be2deec84b92d3c94e29",
+        "samples": 33408,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1075,7 +2499,33 @@
       "samples": 33408,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "5b1183afb0de58ba6887.pcm",
+        "sha256": "63032f345c06f6cff9bdbf3a562daa0d4ac11a1fe9d79d3323a9211ed4f0cc8d",
+        "samples": 33024,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 163,
+          "source_pcm": "5b1183afb0de58ba6887.pcm",
+          "speaker": "zh-CN-XiaoxiaoNeural",
+          "label": 0,
+          "variant": 25,
+          "rate": 1.054495410275612,
+          "gain": 0.4304916263277762,
+          "echo": 0.22877235054857098,
+          "snr_db": 15.71741753437188,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1088,7 +2538,21 @@
       "samples": 33408,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "59c8d6a9b6f4120a036e.pcm",
+        "sha256": "6f4d63e8d22875620fdf5d45cde1098866bc94c27db4be2deec84b92d3c94e29",
+        "samples": 33408,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1101,7 +2565,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9ad117d8dc10df58918f.pcm",
+        "sha256": "94fbc8a23fe95a63c6ed5b0bf6adc69161c5364143426a92ed01989da0d6466f",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1114,7 +2592,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9ad117d8dc10df58918f.pcm",
+        "sha256": "94fbc8a23fe95a63c6ed5b0bf6adc69161c5364143426a92ed01989da0d6466f",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1127,7 +2619,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9ad117d8dc10df58918f.pcm",
+        "sha256": "94fbc8a23fe95a63c6ed5b0bf6adc69161c5364143426a92ed01989da0d6466f",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1140,7 +2646,21 @@
       "samples": 33408,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "bb304cffb63ac4661949.pcm",
+        "sha256": "63ee6e74dbbf7ce3efa5d3ae722e367c7df7acb61763fc0e45c024b57ac13b8d",
+        "samples": 33408,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1153,7 +2673,21 @@
       "samples": 33408,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "bb304cffb63ac4661949.pcm",
+        "sha256": "63ee6e74dbbf7ce3efa5d3ae722e367c7df7acb61763fc0e45c024b57ac13b8d",
+        "samples": 33408,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1166,7 +2700,21 @@
       "samples": 33408,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "bb304cffb63ac4661949.pcm",
+        "sha256": "63ee6e74dbbf7ce3efa5d3ae722e367c7df7acb61763fc0e45c024b57ac13b8d",
+        "samples": 33408,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1179,7 +2727,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9aa50fb935cb0b431f17.pcm",
+        "sha256": "fc096601a84c7f9c4f5412e79fb00cc7875b5c91af0684e0949533ade3fc5e4d",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1192,7 +2754,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9aa50fb935cb0b431f17.pcm",
+        "sha256": "fc096601a84c7f9c4f5412e79fb00cc7875b5c91af0684e0949533ade3fc5e4d",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1205,7 +2781,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9aa50fb935cb0b431f17.pcm",
+        "sha256": "fc096601a84c7f9c4f5412e79fb00cc7875b5c91af0684e0949533ade3fc5e4d",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1218,7 +2808,21 @@
       "samples": 34176,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "3a30d9299665655b281e.pcm",
+        "sha256": "044a26d1b6563847dc4dfee6f29febe231c2c7358b2ece7e6f46e3796207fba8",
+        "samples": 34176,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1231,7 +2835,21 @@
       "samples": 34176,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "3a30d9299665655b281e.pcm",
+        "sha256": "044a26d1b6563847dc4dfee6f29febe231c2c7358b2ece7e6f46e3796207fba8",
+        "samples": 34176,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1244,7 +2862,33 @@
       "samples": 34176,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93ca65d305d30d9bfd3f.pcm",
+        "sha256": "21015c55294cd007f796c9fcb533db4c32442f147ad5bb8c80755e4d6bed3dd4",
+        "samples": 38784,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 504,
+          "source_pcm": "93ca65d305d30d9bfd3f.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 0,
+          "variant": 31,
+          "rate": 1.034293216039068,
+          "gain": 0.06506563799584002,
+          "echo": 0.19329150031529507,
+          "snr_db": 15.620823349706141,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1257,7 +2901,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7c039bf3d808de6a83e0.pcm",
+        "sha256": "88d8386098b7d96d11dcedf26a41acbdb6b0e2ae405dee219311365ae1c37b42",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1270,7 +2928,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7c039bf3d808de6a83e0.pcm",
+        "sha256": "88d8386098b7d96d11dcedf26a41acbdb6b0e2ae405dee219311365ae1c37b42",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1283,7 +2955,33 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "1147192a19e323bedcdc.pcm",
+        "sha256": "b85ca6dca08a4717932b82d8a9baaf5acb84f173061f792051bb0e0c73addae5",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 205,
+          "source_pcm": "1147192a19e323bedcdc.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 0,
+          "variant": 55,
+          "rate": 1.044706907112553,
+          "gain": 0.21254475435526568,
+          "echo": 0.2069964808151611,
+          "snr_db": 20.525480855599902,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1296,7 +2994,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "1147192a19e323bedcdc.pcm",
+        "sha256": "b85ca6dca08a4717932b82d8a9baaf5acb84f173061f792051bb0e0c73addae5",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1309,7 +3021,33 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "1147192a19e323bedcdc.pcm",
+        "sha256": "b85ca6dca08a4717932b82d8a9baaf5acb84f173061f792051bb0e0c73addae5",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 205,
+          "source_pcm": "1147192a19e323bedcdc.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 0,
+          "variant": 55,
+          "rate": 1.044706907112553,
+          "gain": 0.21254475435526568,
+          "echo": 0.2069964808151611,
+          "snr_db": 20.525480855599902,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1322,7 +3060,33 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "1147192a19e323bedcdc.pcm",
+        "sha256": "b85ca6dca08a4717932b82d8a9baaf5acb84f173061f792051bb0e0c73addae5",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 205,
+          "source_pcm": "1147192a19e323bedcdc.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 0,
+          "variant": 55,
+          "rate": 1.044706907112553,
+          "gain": 0.21254475435526568,
+          "echo": 0.2069964808151611,
+          "snr_db": 20.525480855599902,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1335,7 +3099,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "a7f54cef48d4482bd87b.pcm",
+        "sha256": "9fde93266c6a69474a5365acacff3bd4b24972ee62ee84b0beab14b69b70cb8e",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1348,7 +3126,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "a7f54cef48d4482bd87b.pcm",
+        "sha256": "9fde93266c6a69474a5365acacff3bd4b24972ee62ee84b0beab14b69b70cb8e",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1361,7 +3153,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "a7f54cef48d4482bd87b.pcm",
+        "sha256": "9fde93266c6a69474a5365acacff3bd4b24972ee62ee84b0beab14b69b70cb8e",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1374,7 +3180,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好贝拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "4ca2943d437a51981988.pcm",
+        "sha256": "d6284fbf56d30156cc5651594b7df3ffbe60d7602823c02727edd7919c924dc4",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1387,7 +3207,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好贝拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "4ca2943d437a51981988.pcm",
+        "sha256": "d6284fbf56d30156cc5651594b7df3ffbe60d7602823c02727edd7919c924dc4",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1400,7 +3234,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好贝拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "4ca2943d437a51981988.pcm",
+        "sha256": "d6284fbf56d30156cc5651594b7df3ffbe60d7602823c02727edd7919c924dc4",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1413,7 +3261,21 @@
       "samples": 34944,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "6fc2b3d649fe1584e6c1.pcm",
+        "sha256": "4020a39ee7ddb140efa3a652a21e3a7e5c54ee34b842ee5faefdda6838680313",
+        "samples": 34944,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1426,7 +3288,33 @@
       "samples": 34944,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "6fc2b3d649fe1584e6c1.pcm",
+        "sha256": "4020a39ee7ddb140efa3a652a21e3a7e5c54ee34b842ee5faefdda6838680313",
+        "samples": 34944,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 296,
+          "source_pcm": "6fc2b3d649fe1584e6c1.pcm",
+          "speaker": "zh-CN-YunxiNeural",
+          "label": 0,
+          "variant": 14,
+          "rate": 0.8865246535514429,
+          "gain": 0.14979719528146837,
+          "echo": 0.17580161350425788,
+          "snr_db": 18.45900135685575,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1439,7 +3327,21 @@
       "samples": 34944,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "6fc2b3d649fe1584e6c1.pcm",
+        "sha256": "4020a39ee7ddb140efa3a652a21e3a7e5c54ee34b842ee5faefdda6838680313",
+        "samples": 34944,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1452,7 +3354,21 @@
       "samples": 34944,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "fab6bcff5016172ed386.pcm",
+        "sha256": "7ef26932db60848db51e48cfa5231c9c16c3519acdbb01488720075b8977218e",
+        "samples": 34944,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1465,7 +3381,21 @@
       "samples": 34944,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "fab6bcff5016172ed386.pcm",
+        "sha256": "7ef26932db60848db51e48cfa5231c9c16c3519acdbb01488720075b8977218e",
+        "samples": 34944,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1478,7 +3408,21 @@
       "samples": 34944,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "fab6bcff5016172ed386.pcm",
+        "sha256": "7ef26932db60848db51e48cfa5231c9c16c3519acdbb01488720075b8977218e",
+        "samples": 34944,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1491,7 +3435,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "8c19a1c3a4232384fafa.pcm",
+        "sha256": "4580043f5864082192f897dff616dbdc767650d95ffbffc82d24cc1664e7d4ca",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1504,7 +3462,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "8c19a1c3a4232384fafa.pcm",
+        "sha256": "4580043f5864082192f897dff616dbdc767650d95ffbffc82d24cc1664e7d4ca",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1517,7 +3489,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "8c19a1c3a4232384fafa.pcm",
+        "sha256": "4580043f5864082192f897dff616dbdc767650d95ffbffc82d24cc1664e7d4ca",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1530,7 +3516,21 @@
       "samples": 37248,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "33922a983463ac44621c.pcm",
+        "sha256": "bf36d1a908dabf9d2ee075cbe7349a8ac00335a8ff4c89b46c3e716be27a5bf8",
+        "samples": 37248,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1543,7 +3543,21 @@
       "samples": 37248,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "33922a983463ac44621c.pcm",
+        "sha256": "bf36d1a908dabf9d2ee075cbe7349a8ac00335a8ff4c89b46c3e716be27a5bf8",
+        "samples": 37248,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1556,7 +3570,21 @@
       "samples": 37248,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "33922a983463ac44621c.pcm",
+        "sha256": "bf36d1a908dabf9d2ee075cbe7349a8ac00335a8ff4c89b46c3e716be27a5bf8",
+        "samples": 37248,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1569,7 +3597,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "036d1b53fdff0853c333.pcm",
+        "sha256": "f417e6d198a1cf966c7960bda06a02a5c03ed94b9811f2b51b03a6af85c59bcd",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1582,7 +3624,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "036d1b53fdff0853c333.pcm",
+        "sha256": "f417e6d198a1cf966c7960bda06a02a5c03ed94b9811f2b51b03a6af85c59bcd",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1595,7 +3651,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "036d1b53fdff0853c333.pcm",
+        "sha256": "f417e6d198a1cf966c7960bda06a02a5c03ed94b9811f2b51b03a6af85c59bcd",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1608,7 +3678,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d22b0d24e6cca4504dd7.pcm",
+        "sha256": "3a15fb355701b94811ce13056214861c76ec1a427bf29e888b903337266d9174",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1621,7 +3705,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d22b0d24e6cca4504dd7.pcm",
+        "sha256": "3a15fb355701b94811ce13056214861c76ec1a427bf29e888b903337266d9174",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1634,7 +3732,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d22b0d24e6cca4504dd7.pcm",
+        "sha256": "3a15fb355701b94811ce13056214861c76ec1a427bf29e888b903337266d9174",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1647,7 +3759,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 Vela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "70d911eaff9f5186dbbe.pcm",
+        "sha256": "dcce30cddfe7517e63cdcaf2e96c281431bfeb2414875d0bc6abbb81ae6bbc1e",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1660,7 +3786,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好 Vela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "70d911eaff9f5186dbbe.pcm",
+        "sha256": "dcce30cddfe7517e63cdcaf2e96c281431bfeb2414875d0bc6abbb81ae6bbc1e",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1673,7 +3813,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-XiaoxiaoNeural",
+        "text": "你好 Vela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "6c97eb5fbeded9f5b7c8.pcm",
+        "sha256": "097d5240f9afe6ffd3fc3ca76d0b897aed58f0d15308c70f6c3602206efe90f2",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1686,7 +3840,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好贝拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "bb2390fd3724f2e35132.pcm",
+        "sha256": "d198f7e86c9aa0daaa9299dfeed813bfcf5e7936eafd387806f9a9c9ca229f38",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1699,7 +3867,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好贝拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "bb2390fd3724f2e35132.pcm",
+        "sha256": "d198f7e86c9aa0daaa9299dfeed813bfcf5e7936eafd387806f9a9c9ca229f38",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1712,7 +3894,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunxiNeural",
+        "text": "你好贝拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "bb2390fd3724f2e35132.pcm",
+        "sha256": "d198f7e86c9aa0daaa9299dfeed813bfcf5e7936eafd387806f9a9c9ca229f38",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1725,7 +3921,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "a62af1f51a2840e274fa.pcm",
+        "sha256": "396b6544c1642304e983eef833fe63322a6eaa2d0ae03324f104eea42f4f3b83",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1738,7 +3948,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "a62af1f51a2840e274fa.pcm",
+        "sha256": "396b6544c1642304e983eef833fe63322a6eaa2d0ae03324f104eea42f4f3b83",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1751,7 +3975,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "a62af1f51a2840e274fa.pcm",
+        "sha256": "396b6544c1642304e983eef833fe63322a6eaa2d0ae03324f104eea42f4f3b83",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1764,7 +4002,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d11e1f7664ecd157281a.pcm",
+        "sha256": "c168f977567f0275c993ec84b40a7798bf050896a55983bfa26abb1b4231e2af",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1777,7 +4029,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d11e1f7664ecd157281a.pcm",
+        "sha256": "c168f977567f0275c993ec84b40a7798bf050896a55983bfa26abb1b4231e2af",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1790,7 +4056,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d11e1f7664ecd157281a.pcm",
+        "sha256": "c168f977567f0275c993ec84b40a7798bf050896a55983bfa26abb1b4231e2af",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1803,7 +4083,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "601b9319b844c862ca0c.pcm",
+        "sha256": "a2274c91cb5feadef20cae1199650faf9c4d86f78e309be45bd87da59a7c69ac",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1816,7 +4110,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "601b9319b844c862ca0c.pcm",
+        "sha256": "a2274c91cb5feadef20cae1199650faf9c4d86f78e309be45bd87da59a7c69ac",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1829,7 +4137,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "601b9319b844c862ca0c.pcm",
+        "sha256": "a2274c91cb5feadef20cae1199650faf9c4d86f78e309be45bd87da59a7c69ac",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1842,7 +4164,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "28f7e282c311c46a94f1.pcm",
+        "sha256": "19d3f7966f6e6487899c6111e522c99d00694fd8126446bd4393a4cd3b003b30",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1855,7 +4191,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "28f7e282c311c46a94f1.pcm",
+        "sha256": "19d3f7966f6e6487899c6111e522c99d00694fd8126446bd4393a4cd3b003b30",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1868,7 +4218,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "28f7e282c311c46a94f1.pcm",
+        "sha256": "19d3f7966f6e6487899c6111e522c99d00694fd8126446bd4393a4cd3b003b30",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1881,7 +4245,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0c2a58c75e8f18b5530f.pcm",
+        "sha256": "b43724cc51982fabf254cd0b021296a4d70f3602d300bd142c85ce12cb1a511b",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1894,7 +4272,33 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunjianNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "1147192a19e323bedcdc.pcm",
+        "sha256": "b85ca6dca08a4717932b82d8a9baaf5acb84f173061f792051bb0e0c73addae5",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 205,
+          "source_pcm": "1147192a19e323bedcdc.pcm",
+          "speaker": "zh-CN-YunjianNeural",
+          "label": 0,
+          "variant": 55,
+          "rate": 1.044706907112553,
+          "gain": 0.21254475435526568,
+          "echo": 0.2069964808151611,
+          "snr_db": 20.525480855599902,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -1907,7 +4311,21 @@
       "samples": 31104,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0c2a58c75e8f18b5530f.pcm",
+        "sha256": "b43724cc51982fabf254cd0b021296a4d70f3602d300bd142c85ce12cb1a511b",
+        "samples": 31104,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1920,7 +4338,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "62b19248e98be671c1c8.pcm",
+        "sha256": "6cde9d4d77192958eade6889775c2abc1451cd74a665cc2e0706fb21cd88bae2",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1933,7 +4365,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "62b19248e98be671c1c8.pcm",
+        "sha256": "6cde9d4d77192958eade6889775c2abc1451cd74a665cc2e0706fb21cd88bae2",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1946,7 +4392,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 OpenValue",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "62b19248e98be671c1c8.pcm",
+        "sha256": "6cde9d4d77192958eade6889775c2abc1451cd74a665cc2e0706fb21cd88bae2",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1959,7 +4419,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，欧拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9e5b67d68dfa3db3bbe9.pcm",
+        "sha256": "feb8767f5fb8e8a40799902b9b71fe96c6b0481b08c4c0bd77faf09b3416e639",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1972,7 +4446,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好，欧拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9e5b67d68dfa3db3bbe9.pcm",
+        "sha256": "feb8767f5fb8e8a40799902b9b71fe96c6b0481b08c4c0bd77faf09b3416e639",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1985,7 +4473,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好 Open",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "28f7e282c311c46a94f1.pcm",
+        "sha256": "19d3f7966f6e6487899c6111e522c99d00694fd8126446bd4393a4cd3b003b30",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -1998,7 +4500,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "4e0527f55c01fee9e539.pcm",
+        "sha256": "e419424e5fae325ecb77cf8b20cc7915fd4e6afc893b3af5d57036438ffd48ab",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2011,7 +4527,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "4e0527f55c01fee9e539.pcm",
+        "sha256": "e419424e5fae325ecb77cf8b20cc7915fd4e6afc893b3af5d57036438ffd48ab",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2024,7 +4554,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-CN-YunyangNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "4e0527f55c01fee9e539.pcm",
+        "sha256": "e419424e5fae325ecb77cf8b20cc7915fd4e6afc893b3af5d57036438ffd48ab",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2037,7 +4581,21 @@
       "samples": 30720,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "94a572d62bcffd26e49d.pcm",
+        "sha256": "c4cf0adbe7591a7ca73eafca2e5753487ac723d233b5c9dcc743fcb1a617ca1d",
+        "samples": 30720,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2050,7 +4608,21 @@
       "samples": 30720,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "94a572d62bcffd26e49d.pcm",
+        "sha256": "c4cf0adbe7591a7ca73eafca2e5753487ac723d233b5c9dcc743fcb1a617ca1d",
+        "samples": 30720,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2063,7 +4635,21 @@
       "samples": 30720,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "94a572d62bcffd26e49d.pcm",
+        "sha256": "c4cf0adbe7591a7ca73eafca2e5753487ac723d233b5c9dcc743fcb1a617ca1d",
+        "samples": 30720,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2076,7 +4662,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d89154c081cce11ea79f.pcm",
+        "sha256": "de1c78e9b8ba45b7dc0307dc1937aa62979b69995f668889da9765e685248938",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2089,7 +4689,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d89154c081cce11ea79f.pcm",
+        "sha256": "de1c78e9b8ba45b7dc0307dc1937aa62979b69995f668889da9765e685248938",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2102,7 +4716,21 @@
       "samples": 31488,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "d89154c081cce11ea79f.pcm",
+        "sha256": "de1c78e9b8ba45b7dc0307dc1937aa62979b69995f668889da9765e685248938",
+        "samples": 31488,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2115,7 +4743,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "841e5fb1ff1272810821.pcm",
+        "sha256": "056cd387ee3e58057a6847daf6a2f30d8fbc374cfc14b233be675c587984441f",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2128,7 +4770,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "841e5fb1ff1272810821.pcm",
+        "sha256": "056cd387ee3e58057a6847daf6a2f30d8fbc374cfc14b233be675c587984441f",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2141,7 +4797,21 @@
       "samples": 29952,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好朋友",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "841e5fb1ff1272810821.pcm",
+        "sha256": "056cd387ee3e58057a6847daf6a2f30d8fbc374cfc14b233be675c587984441f",
+        "samples": 29952,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2154,7 +4824,21 @@
       "samples": 41472,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，好久不见",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "fec5bb3c881d9943f19e.pcm",
+        "sha256": "e6a79f394820775cd45e6f41528eafa399aa5f7cdc7e87085449fc4f0e64eccc",
+        "samples": 41472,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2167,7 +4851,21 @@
       "samples": 41472,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，好久不见",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "fec5bb3c881d9943f19e.pcm",
+        "sha256": "e6a79f394820775cd45e6f41528eafa399aa5f7cdc7e87085449fc4f0e64eccc",
+        "samples": 41472,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2180,7 +4878,21 @@
       "samples": 41472,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，好久不见",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "fec5bb3c881d9943f19e.pcm",
+        "sha256": "e6a79f394820775cd45e6f41528eafa399aa5f7cdc7e87085449fc4f0e64eccc",
+        "samples": 41472,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2193,7 +4905,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7db51a0314565fecb9d3.pcm",
+        "sha256": "337f3dfd92585bb4dd142307b01660035d34cc2f855eaa5956452772a92b6231",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2206,7 +4932,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7db51a0314565fecb9d3.pcm",
+        "sha256": "337f3dfd92585bb4dd142307b01660035d34cc2f855eaa5956452772a92b6231",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2219,7 +4959,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7db51a0314565fecb9d3.pcm",
+        "sha256": "337f3dfd92585bb4dd142307b01660035d34cc2f855eaa5956452772a92b6231",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2232,7 +4986,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，欧拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0fdeb7b70b7bfb5ede1f.pcm",
+        "sha256": "16112bd95d641771b6cd5d932775165cce90e65af3a076c95ffb32459563f66a",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2245,7 +5013,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，欧拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0fdeb7b70b7bfb5ede1f.pcm",
+        "sha256": "16112bd95d641771b6cd5d932775165cce90e65af3a076c95ffb32459563f66a",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2258,7 +5040,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，欧拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0fdeb7b70b7bfb5ede1f.pcm",
+        "sha256": "16112bd95d641771b6cd5d932775165cce90e65af3a076c95ffb32459563f66a",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2271,7 +5067,21 @@
       "samples": 42240,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，打开这个",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "152cbe4f1a3678234903.pcm",
+        "sha256": "fa6bbde0b573e3e9cd3dbc9a4b391d7d3b5a28f119110f69deb6a414b77c1dc2",
+        "samples": 42240,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2284,7 +5094,21 @@
       "samples": 42240,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，打开这个",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "152cbe4f1a3678234903.pcm",
+        "sha256": "fa6bbde0b573e3e9cd3dbc9a4b391d7d3b5a28f119110f69deb6a414b77c1dc2",
+        "samples": 42240,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2297,7 +5121,21 @@
       "samples": 42240,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好，打开这个",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "152cbe4f1a3678234903.pcm",
+        "sha256": "fa6bbde0b573e3e9cd3dbc9a4b391d7d3b5a28f119110f69deb6a414b77c1dc2",
+        "samples": 42240,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2310,7 +5148,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "be26d5360b50deeb2661.pcm",
+        "sha256": "a3d6019c6867f72f3dedf0eca4c59ae5dc47b78c616387af81716c7b3df32e37",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2323,7 +5175,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "be26d5360b50deeb2661.pcm",
+        "sha256": "a3d6019c6867f72f3dedf0eca4c59ae5dc47b78c616387af81716c7b3df32e37",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2336,7 +5202,21 @@
       "samples": 32256,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-HsiaoChenNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "be26d5360b50deeb2661.pcm",
+        "sha256": "a3d6019c6867f72f3dedf0eca4c59ae5dc47b78c616387af81716c7b3df32e37",
+        "samples": 32256,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2349,7 +5229,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "e744d7c1b119b612db41.pcm",
+        "sha256": "791b049045c129d3fa006f374b0d2ae69d2819886cd16f76e4d0e4c518ccef45",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2362,7 +5256,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "e744d7c1b119b612db41.pcm",
+        "sha256": "791b049045c129d3fa006f374b0d2ae69d2819886cd16f76e4d0e4c518ccef45",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2375,7 +5283,21 @@
       "samples": 35328,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "打开 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "e744d7c1b119b612db41.pcm",
+        "sha256": "791b049045c129d3fa006f374b0d2ae69d2819886cd16f76e4d0e4c518ccef45",
+        "samples": 35328,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2388,7 +5310,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "e4a84520beb6940c0be9.pcm",
+        "sha256": "bc09507a05ef1b1d87033999f0ceae75e21e6d5e4ba06c64df6214bb769048f3",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2401,7 +5337,33 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "e4a84520beb6940c0be9.pcm",
+        "sha256": "bc09507a05ef1b1d87033999f0ceae75e21e6d5e4ba06c64df6214bb769048f3",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 522,
+          "source_pcm": "e4a84520beb6940c0be9.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 0,
+          "variant": 30,
+          "rate": 0.9752180658011012,
+          "gain": 0.22103207579158599,
+          "echo": 0.0,
+          "snr_db": 11.471563150308246,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -2414,7 +5376,21 @@
       "samples": 35712,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "关闭 OpenVela",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "e4a84520beb6940c0be9.pcm",
+        "sha256": "bc09507a05ef1b1d87033999f0ceae75e21e6d5e4ba06c64df6214bb769048f3",
+        "samples": 35712,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2427,7 +5403,21 @@
       "samples": 38784,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93ca65d305d30d9bfd3f.pcm",
+        "sha256": "21015c55294cd007f796c9fcb533db4c32442f147ad5bb8c80755e4d6bed3dd4",
+        "samples": 38784,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2440,7 +5430,21 @@
       "samples": 38784,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93ca65d305d30d9bfd3f.pcm",
+        "sha256": "21015c55294cd007f796c9fcb533db4c32442f147ad5bb8c80755e4d6bed3dd4",
+        "samples": 38784,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2453,7 +5457,33 @@
       "samples": 38784,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，维拉",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "93ca65d305d30d9bfd3f.pcm",
+        "sha256": "21015c55294cd007f796c9fcb533db4c32442f147ad5bb8c80755e4d6bed3dd4",
+        "samples": 38784,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 504,
+          "source_pcm": "93ca65d305d30d9bfd3f.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 0,
+          "variant": 31,
+          "rate": 1.034293216039068,
+          "gain": 0.06506563799584002,
+          "echo": 0.19329150031529507,
+          "snr_db": 15.620823349706141,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -2466,7 +5496,21 @@
       "samples": 36096,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "b0e7a1e930748189b9ec.pcm",
+        "sha256": "4bc6d705d5b86778d635e91f865190df93dd9415117608073466ba6551cc7876",
+        "samples": 36096,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2479,7 +5523,21 @@
       "samples": 36096,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "b0e7a1e930748189b9ec.pcm",
+        "sha256": "4bc6d705d5b86778d635e91f865190df93dd9415117608073466ba6551cc7876",
+        "samples": 36096,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2492,7 +5550,21 @@
       "samples": 36096,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenAI",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "b0e7a1e930748189b9ec.pcm",
+        "sha256": "4bc6d705d5b86778d635e91f865190df93dd9415117608073466ba6551cc7876",
+        "samples": 36096,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2505,7 +5577,21 @@
       "samples": 43776,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，打开这个",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7888bc362f4476d8ab62.pcm",
+        "sha256": "0881004f635428910234199c89b5bbf6391bf805cc94f44797be4bb21e14ff26",
+        "samples": 43776,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2518,7 +5604,33 @@
       "samples": 43776,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，好久不见",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "46e170a73ccb01868805.pcm",
+        "sha256": "b539b3a0e0d7876e5f96f39534925bd3272b74e04abc59b6b4536948940dd4b0",
+        "samples": 45696,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "medoid fitted on expanded training audio",
+        "augmentation": {
+          "source_index": 483,
+          "source_pcm": "46e170a73ccb01868805.pcm",
+          "speaker": "zh-TW-YunJheNeural",
+          "label": 0,
+          "variant": 25,
+          "rate": 0.8915880881620888,
+          "gain": 0.051252693552738156,
+          "echo": 0.37740919738722994,
+          "snr_db": 25.048251775072398,
+          "blur": 1
+        }
+      }
     },
     {
       "split": "train",
@@ -2531,7 +5643,21 @@
       "samples": 43776,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，打开这个",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "7888bc362f4476d8ab62.pcm",
+        "sha256": "0881004f635428910234199c89b5bbf6391bf805cc94f44797be4bb21e14ff26",
+        "samples": 43776,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2544,7 +5670,21 @@
       "samples": 48384,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，朋友们大家好",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9da2184ecc1e3ac59b59.pcm",
+        "sha256": "16b303217c2d74c037c708848436e951614ad75a50e77cc6d5b86e154d9f2e11",
+        "samples": 48384,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2557,7 +5697,21 @@
       "samples": 48384,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，朋友们大家好",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9da2184ecc1e3ac59b59.pcm",
+        "sha256": "16b303217c2d74c037c708848436e951614ad75a50e77cc6d5b86e154d9f2e11",
+        "samples": 48384,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2570,7 +5724,21 @@
       "samples": 48384,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好，朋友们大家好",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "9da2184ecc1e3ac59b59.pcm",
+        "sha256": "16b303217c2d74c037c708848436e951614ad75a50e77cc6d5b86e154d9f2e11",
+        "samples": 48384,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2583,7 +5751,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "8c53be7e3b01cd6a942f.pcm",
+        "sha256": "2f1dd9515d1c3b389d538b35387c5d724beb99dd6a4f5d579def6f840f34bae4",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2596,7 +5778,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "playback"
+      "acoustic_profile": "playback",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "8c53be7e3b01cd6a942f.pcm",
+        "sha256": "2f1dd9515d1c3b389d538b35387c5d724beb99dd6a4f5d579def6f840f34bae4",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2609,7 +5805,21 @@
       "samples": 37632,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "echo"
+      "acoustic_profile": "echo",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "你好 OpenWeather",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "8c53be7e3b01cd6a942f.pcm",
+        "sha256": "2f1dd9515d1c3b389d538b35387c5d724beb99dd6a4f5d579def6f840f34bae4",
+        "samples": 37632,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2622,7 +5832,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1,
-      "acoustic_profile": "clean"
+      "acoustic_profile": "clean",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.0,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "播放音乐",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0289007d86761ef137cd.pcm",
+        "sha256": "f7958e284d617fb83b0c6f5ac3058b81b7267ba0aed682f350af6e99a8f7847a",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2635,7 +5859,21 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 0.85,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "播放音乐",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0289007d86761ef137cd.pcm",
+        "sha256": "f7958e284d617fb83b0c6f5ac3058b81b7267ba0aed682f350af6e99a8f7847a",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     },
     {
       "split": "train",
@@ -2648,10 +5886,92 @@
       "samples": 32640,
       "source": "synthetic Edge TTS",
       "template_resample_rate": 1.15,
-      "acoustic_profile": "noise_20db"
+      "acoustic_profile": "noise_20db",
+      "prototype_source": "expanded-data medoid fit with fixed clean anchors",
+      "training_blend": 0.05,
+      "fitted_medoid": {
+        "split": "train",
+        "speaker": "zh-TW-YunJheNeural",
+        "text": "播放音乐",
+        "label": 0,
+        "rate": "+0%",
+        "pcm": "0289007d86761ef137cd.pcm",
+        "sha256": "f7958e284d617fb83b0c6f5ac3058b81b7267ba0aed682f350af6e99a8f7847a",
+        "samples": 32640,
+        "source": "synthetic Edge TTS",
+        "prototype_source": "clean training anchor"
+      }
     }
   ],
   "room_augmentation": true,
+  "training_expansion": {
+    "multiplier": 10,
+    "base_variants_per_training_clip": 6,
+    "variants_per_training_clip": 60,
+    "base_training_examples": 2412,
+    "training_examples": 24120,
+    "unique_training_clips": 402,
+    "synthetic_augmented": true,
+    "new_human_recordings": 0,
+    "seed": 2026101910,
+    "fit_splits": [
+      "train"
+    ],
+    "validation_test_used_for_fitting": false,
+    "template_budget": {
+      "positive": 54,
+      "negative": 144
+    },
+    "fits": [
+      {
+        "label": 1,
+        "training_examples": 3240,
+        "budget": 54,
+        "fixed_clean_anchors": 18,
+        "epoch_loss": [
+          144.73800659179688,
+          89.17462158203125,
+          84.85682678222656,
+          83.5033950805664,
+          82.63954162597656,
+          82.11770629882812,
+          81.74359893798828,
+          81.56012725830078,
+          81.4299545288086,
+          81.29668426513672,
+          81.15864562988281,
+          81.0589599609375
+        ]
+      },
+      {
+        "label": 0,
+        "training_examples": 20880,
+        "budget": 144,
+        "fixed_clean_anchors": 48,
+        "epoch_loss": [
+          365.5078430175781,
+          228.54095458984375,
+          216.64353942871094,
+          212.71182250976562,
+          210.6948699951172,
+          209.4075164794922,
+          207.89382934570312,
+          206.91029357910156,
+          206.212890625,
+          205.23434448242188,
+          204.52001953125,
+          204.1089630126953
+        ]
+      }
+    ],
+    "prototype_trust_region": 0.05,
+    "trainer_sha256": "d4918b80d0edf1698f23f533b80a304c5abe93780f2e026bb97042ca153497f5",
+    "sha256": {
+      "training-features.npy": "cb4002790f2018516d8ab50bf82b3f81bd1c7dad92bbe61a04c36fc11c7e5693",
+      "training-labels.npy": "1904bc76a8c07a4a138bab52e7e75a278cce56e36d5ba6c11fc171cfce5581a6",
+      "training-examples.jsonl": "c8c6ccad8c0d6d6c00dcf5d4ed853c805ce460a6572b6700b6c6dbb42e2d1db6"
+    }
+  },
   "validation_scenarios": {
     "clean": {
       "samples": 134,
@@ -2661,8 +5981,8 @@
       "false_positive": 0,
       "recall": 1.0,
       "false_positive_fraction": 0.0,
-      "min_negative_ratio": 0.9495123624801636,
-      "max_positive_ratio": 0.8562723398208618,
+      "min_negative_ratio": 0.9574783444404602,
+      "max_positive_ratio": 0.8582733273506165,
       "clean_recall": 1.0
     },
     "quiet": {
@@ -2673,8 +5993,8 @@
       "false_positive": 0,
       "recall": 1.0,
       "false_positive_fraction": 0.0,
-      "min_negative_ratio": 0.9489619135856628,
-      "max_positive_ratio": 0.8538139462471008,
+      "min_negative_ratio": 0.9561607241630554,
+      "max_positive_ratio": 0.8574320077896118,
       "clean_recall": 1.0
     },
     "noise_20db": {
@@ -2685,21 +6005,21 @@
       "false_positive": 0,
       "recall": 0.9444444444444444,
       "false_positive_fraction": 0.0,
-      "min_negative_ratio": 0.926376223564148,
-      "max_positive_ratio": 0.9240812063217163,
+      "min_negative_ratio": 0.9236446619033813,
+      "max_positive_ratio": 0.9312177896499634,
       "clean_recall": 0.9444444444444444
     },
     "noise_10db": {
       "samples": 134,
       "positive": 18,
       "negative": 116,
-      "true_positive": 17,
+      "true_positive": 16,
       "false_positive": 0,
-      "recall": 0.9444444444444444,
+      "recall": 0.8888888888888888,
       "false_positive_fraction": 0.0,
-      "min_negative_ratio": 0.9331051707267761,
-      "max_positive_ratio": 0.9324833154678345,
-      "clean_recall": 0.9444444444444444
+      "min_negative_ratio": 0.940888524055481,
+      "max_positive_ratio": 0.9341050982475281,
+      "clean_recall": 0.8888888888888888
     },
     "echo": {
       "samples": 134,
@@ -2709,8 +6029,8 @@
       "false_positive": 1,
       "recall": 1.0,
       "false_positive_fraction": 0.008620689655172414,
-      "min_negative_ratio": 0.9040243029594421,
-      "max_positive_ratio": 0.8973005414009094,
+      "min_negative_ratio": 0.9033147692680359,
+      "max_positive_ratio": 0.8977864980697632,
       "clean_recall": 1.0
     },
     "playback": {
@@ -2721,23 +6041,23 @@
       "false_positive": 0,
       "recall": 1.0,
       "false_positive_fraction": 0.0,
-      "min_negative_ratio": 0.9377752542495728,
-      "max_positive_ratio": 0.88671875,
+      "min_negative_ratio": 0.9383446574211121,
+      "max_positive_ratio": 0.8944001197814941,
       "clean_recall": 1.0
     }
   },
   "calibration_policy": "Training-only templates; offline and production-VAD validation threshold; test is synthetic development evidence, not an untouched final evaluation",
   "corpus_sha256": "bccb5320221f218329cb6af8395488027631e75814c43f6804bc7b9fa8eb405b",
   "source_sha256": {
-    "train_custom_wake.py": "e454e3df8dd72045bd0c038323eb77aedbe01a9182e932b7756e6edde273c88e",
+    "train_custom_wake.py": "c08e4d6aefce1e3531259cf4d4b9d1b4eecdcb85511f898c099bb7d3211c7b14",
     "wake_streaming.py": "8e1f3dc3ce70f729dec4fab39ef332f5fb0cca5f8cdd4a800cb09ff7346e43e7",
     "wake_augmentation.py": "954a97ec18efe3038eeff3e5693623795ad994e6a509b852881a6b793fc8758c",
-    "glass_custom_wake.c": "3e6c74d9a01622786ebec6718b93ef5a3902d544c1beb86fac4c2991597df65f",
+    "glass_custom_wake.c": "9cc028c3965686f9f7ce659e452a1da5d3178a611a70e04118760976a299fca6",
     "glass_custom_wake.h": "4ab3a56a5e6d7550216854115d9d7e91af7889cc15632a09e11506247a0c7e08",
     "glass_wake_features.c": "2deccee35d8c75320840500d02ca25b5f0698c3f1ae1684997fb790578d23d22",
     "glass_wake_features.h": "b8400f7fe7e366854511b6557a4137febc989a50edf83b351bae750231ba5db8"
   },
   "synthetic_gate_passed": true,
   "model_bytes": 329504,
-  "model_sha256": "8720bc6df0267e03303aae483c181e58967553dde702665f8d942ae2c11e724d"
+  "model_sha256": "639825a51cce04aa69cc047f9b7b064af2c09e8093106b03d4ec0d9dfbba1dc6"
 }

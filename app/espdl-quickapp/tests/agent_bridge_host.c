@@ -14,6 +14,7 @@ esp_err_t claw_core_add_context_provider(claw_core_handle_t core,const claw_core
     assert((strstr(context.content,"skill_read")!=NULL)==(expected_mode!=AGENT_MODE_CHAT));
     assert((strstr(context.content,"mcp_call_tool")!=NULL)==(expected_mode==AGENT_MODE_ASSISTANT));}
   if(context.kind==CLAW_CORE_CONTEXT_KIND_SYSTEM_PROMPT){
+    assert(strstr(context.content,"Harness 运行契约"));
     assert(strstr(context.content,glass_agent_mode_title(expected_mode)));
     assert((strstr(context.content,"Validated quick app guide")!=NULL)==(expected_mode==AGENT_MODE_CREATE));
     if(expected_mode==AGENT_MODE_ASSISTANT){assert(strstr(context.content,"本轮完整原话优先"));assert(strstr(context.content,"不发送猜测的控制参数"));}
@@ -48,6 +49,7 @@ static char *fake_home_call(const char *tool,const cJSON *args,atomic_bool *canc
   if(!strcmp(tool,"music_test"))return strdup("{\"ok\":true,\"accepted\":true,\"card\":{\"entity\":\"music.player\",\"kind\":\"music\",\"name\":\"测试歌曲\",\"state\":\"已请求播放\",\"level\":-1,\"on\":false}}");
   if(!strcmp(tool,"home_status"))return strdup("{\"ok\":true,\"configured\":true}");
   if(!strcmp(tool,"assistant_status"))return strdup("{\"ok\":true,\"storage\":\"device_local\"}");
+  if(!strcmp(tool,"assistant_observe"))return strdup("{\"ok\":true,\"observation\":\"fixture camera observation\"}");
   return strdup("{\"ok\":false,\"error\":\"fixture_failure\"}");
 }
 static const struct glass_board_home fake_home={fake_home_catalog,fake_home_call};
@@ -64,6 +66,9 @@ int main(void)
   assert(config.call_cap("qpk_write_draft",input,NULL,&out,config.cap_user_ctx)==ESP_OK&&legacy_called);free(input);free(out);
   atomic_store(&cancel,true);unsigned before=events;assert(config.call_cap("skill_list","{}",NULL,&out,config.cap_user_ctx)!=ESP_OK&&events==before);free(out);
   claw_qpk_close(&session);assert(!session.agent);atomic_store(&cancel,false);
+  claw_qpk_configure(&config,&session);session.tool_calls=session.tool_budget;
+  before=events;assert(config.call_cap("skill_list","{}",NULL,&out,config.cap_user_ctx)!=ESP_OK);
+  assert(strstr(out,"tool_budget_exhausted")&&events==before);free(out);claw_qpk_close(&session);
   for(unsigned mode=0;mode<AGENT_MODE_COUNT;mode++){
     expected_mode=mode;session.mode=mode;memset(&config,0,sizeof(config));
     claw_qpk_configure(&config,&session);assert(session.agent);
@@ -103,7 +108,7 @@ int main(void)
   assert(config.call_cap("home_test","{\"x\":1,\"x\":2}",NULL,&out,config.cap_user_ctx)!=ESP_OK);free(out);
   /* Native assistant tools work directly and large board catalogs paginate. */
   char *catalog=malloc(strlen(assistant_tool_catalog)+3);assert(catalog);sprintf(catalog,"[%s]",assistant_tool_catalog);
-  cJSON *entries=cJSON_Parse(catalog);free(catalog);assert(cJSON_GetArraySize(entries)==8);
+  cJSON *entries=cJSON_Parse(catalog);free(catalog);assert(cJSON_GetArraySize(entries)==10);
   char padding[9001];memset(padding,'x',9000);padding[9000]=0;
   for(unsigned i=0;i<2;i++){
     cJSON *t=cJSON_CreateObject();char name[40];snprintf(name,sizeof(name),"assistant_padding_%u",i);
@@ -115,6 +120,8 @@ int main(void)
   struct glass_board_home assistant={expanded,fake_home_call};glass_agent_set_board_assistant(&assistant);
   char *advertised=glass_agent_tools(session.agent,"[]");assert(strstr(advertised,"assistant_records")&&strstr(advertised,"assistant_camera"));free(advertised);
   assert(config.call_cap("assistant_status","{}",NULL,&out,config.cap_user_ctx)==ESP_OK&&strstr(out,"device_local"));free(out);
+  assert(config.call_cap("assistant_observe","{\"question\":\"what is visible?\",\"upload\":true}",NULL,&out,config.cap_user_ctx)==ESP_OK&&strstr(out,"fixture camera observation"));free(out);
+  assert(config.call_cap("mcp_call_tool","{\"server\":\"board\",\"tool\":\"assistant_observe\",\"arguments\":{\"question\":\"what is visible?\",\"upload\":true}}",NULL,&out,config.cap_user_ctx)==ESP_OK&&strstr(out,"fixture camera observation"));free(out);
   assert(config.call_cap("assistant_records","{\"kind\":\"note\",\"kind\":\"todo\"}",NULL,&out,config.cap_user_ctx)!=ESP_OK&&strstr(out,"invalid_arguments"));free(out);
   unsigned pages=0,total=0;char cursor[32]="";
   do{
@@ -124,7 +131,7 @@ int main(void)
     const cJSON *next=cJSON_GetObjectItem(page,"nextCursor");snprintf(cursor,sizeof(cursor),"%s",cJSON_IsString(next)?next->valuestring:"");
     cJSON_Delete(page);pages++;assert(pages<=4);
   }while(cursor[0]);
-  assert(pages>1&&total==24);
+  assert(pages>1&&total==26);
   assert(config.call_cap("mcp_list_tools","{\"server\":\"board\",\"cursor\":123}",NULL,&out,config.cap_user_ctx)!=ESP_OK);free(out);
   glass_agent_set_board_assistant(NULL);free(expanded);
   puts("ASSISTANT_BRIDGE_OK: direct native tools, duplicate-field rejection, mode boundaries and bounded board discovery pagination");

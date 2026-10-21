@@ -11,6 +11,7 @@ static struct {
   size_t speech_cursor;
   bool result_pending,speech_owned;
   bool visible,voice_owned,heard,busy;
+  char pending_prompt[CHAT_PROMPT_BYTES+1];
 } g_wake_mini;
 #if LV_USE_SNAPSHOT
 static lv_draw_buf_t *wake_mini_frame;
@@ -203,7 +204,8 @@ static void wake_mini_service(void)
        * other page's recording. Drop the previous mini's output ownership. */
       if(g_wake_mini.speech_owned)glass_speech_stop_request(g_wake_mini.speech_request);
       struct chat_activity_snapshot previous;glass_chat_activity_get(&previous);
-      if(g_wake_mini.turn&&previous.turn_id==g_wake_mini.turn&&previous.phase!=CHAT_IDLE)glass_chat_cancel();
+      if(previous.phase!=CHAT_IDLE)glass_chat_cancel();
+      g_wake_mini.pending_prompt[0]=0;
       g_wake_mini.speech_owned=g_wake_mini.result_pending=false;
       if(!ball_page)wake_mini_present(speech.wake_event,now);
       else g_wake_mini.shown_at=now;
@@ -250,18 +252,28 @@ static void wake_mini_service(void)
     }else if(!voice.active){
       g_wake_mini.voice_owned=false;
       if(voice.phase==GLASS_VOICE_DONE&&voice.text[0]){
-        int ret=glass_chat_send_mode(voice.text,AGENT_MODE_ASSISTANT);
-        if(!ret){
-          struct chat_result_snapshot result;
-          if(glass_chat_result_get(&result,0,AGENT_MODE_ASSISTANT,0)){
-            g_wake_mini.turn=result.turn_id;g_wake_mini.result_pending=true;g_wake_mini.speech_cursor=0;
-            g_wake_mini.result_signature=0;g_wake_mini.speech_retry_at=g_wake_mini.speech_wait_at=0;
-          }
-        }
-        if(g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,ret?"AI 正忙，请稍后重新唤醒":voice.text);
+        /* A wake can finish ASR before the old HTTP/tool cancellation drains.
+         * Retain this new request until it can be accepted once. */
+        glass_chat_copy_utf8(g_wake_mini.pending_prompt,sizeof(g_wake_mini.pending_prompt),voice.text);
+        if(g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,voice.text);
       }else if(g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,voice.phase==GLASS_VOICE_ERROR?
         glass_voice_error_text(voice.error):"没有听清，请再说一次唤醒词");
       g_wake_mini.retry_at=now+1500;
+    }
+  }
+  if(g_wake_mini.pending_prompt[0]){
+    struct chat_activity_snapshot activity;glass_chat_activity_get(&activity);
+    if(activity.phase==CHAT_IDLE){
+      int ret=glass_chat_send_bot(g_wake_mini.pending_prompt,AGENT_MODE_ASSISTANT);
+      if(!ret){
+        struct chat_result_snapshot result;
+        if(glass_chat_result_get(&result,0,AGENT_MODE_ASSISTANT,0)){
+          g_wake_mini.turn=result.turn_id;g_wake_mini.result_pending=true;g_wake_mini.speech_cursor=0;
+          g_wake_mini.result_signature=0;g_wake_mini.speech_retry_at=g_wake_mini.speech_wait_at=0;
+        }
+      }
+      if(ret!=-EBUSY){g_wake_mini.pending_prompt[0]=0;
+        if(ret&&g_wake_mini.visible)lv_label_set_text(g_wake_mini.text,"AI 暂不可用，请检查配置");}
     }
   }
   wake_mini_result_service(&speech,&voice,now,ball_page);
@@ -271,7 +283,7 @@ static void wake_mini_service(void)
     bool speech_input=voice.active&&voice.phase==GLASS_VOICE_LISTENING&&
       (voice.level>650||(voice.text[0]&&voice.revision!=g_wake_mini.voice_revision));
     bool was_busy=g_wake_mini.busy;
-    g_wake_mini.busy=g_wake_mini.result_pending||activity.phase!=CHAT_IDLE||speech_input||
+    g_wake_mini.busy=g_wake_mini.pending_prompt[0]||g_wake_mini.result_pending||activity.phase!=CHAT_IDLE||speech_input||
       (voice.active&&voice.phase!=GLASS_VOICE_LISTENING)||
       (speech.active&&!speech.background_wake&&speech.phase!=SPEECH_WAKE)||
       speech_ui_command_pending();

@@ -12,11 +12,34 @@
 #include <sys/stat.h>
 #include <time.h>
 #include "qpk_mjpeg.h"
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI
+#include <nuttx/video/camera_timing.h>
+#endif
+
+void qpk_camera_timing_log(void)
+{
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI
+  struct esp_camera_timing stats;esp_camera_timing_read(&stats);
+#ifdef CONFIG_ESP32P4_FLASH_AUTO_SUSPEND
+  extern void esp32p4_flash_auto_diagnostics(void);
+  esp32p4_flash_auto_diagnostics();
+#endif
+  printf("[display-time] frames=%lu irq_gap_max_us=%lu pans=%lu pan_max_us=%lu pan_errors=%lu flash_guard_frames=%lu\n",
+    (unsigned long)stats.display_frames,(unsigned long)stats.display_gap_max_us,
+    (unsigned long)stats.pan_count,(unsigned long)stats.pan_max_us,(unsigned long)stats.pan_errors,
+    (unsigned long)stats.display_guard_frames);
+  printf("[flash-time] active=%lu ops(r/w/e)=%lu/%lu/%lu max_us=%lu/%lu/%lu total_us=%llu/%llu/%llu\n",
+    (unsigned long)stats.flash_active,(unsigned long)stats.flash_ops[0],(unsigned long)stats.flash_ops[1],(unsigned long)stats.flash_ops[2],
+    (unsigned long)stats.flash_max_us[0],(unsigned long)stats.flash_max_us[1],(unsigned long)stats.flash_max_us[2],
+    (unsigned long long)stats.flash_total_us[0],(unsigned long long)stats.flash_total_us[1],(unsigned long long)stats.flash_total_us[2]);
+#endif
+}
 
 int qpk_camera_probe(int argc, char **argv)
 {
   extern void qpk_camera_diagnostics(void);
   qpk_camera_diagnostics();
+  qpk_camera_timing_log();
   struct uvc_camera_list list;
   int fd = open("/dev/uvcctl", O_RDONLY);
   if (fd < 0) { printf("camera: USB host unavailable errno=%d\n", errno); return 1; }

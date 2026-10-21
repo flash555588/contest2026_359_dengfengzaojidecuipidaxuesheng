@@ -86,13 +86,58 @@ static void chat_ball_face_toggle(lv_event_t *event)
   LV_UNUSED(event);
   if(g_chat_ui.voice_face_request){
     qpk_dl_cancel_request(g_chat_ui.voice_face_request);g_chat_ui.voice_face_request=0;
-    chat_ui_label(g_chat_ui.voice_face_label,"人脸跟随已关闭");return;
+    chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 已关闭");return;
+  }
+  glass_chat_get_mode(g_chat_ui.snapshot,g_chat_ui.mode);
+  if(g_chat_ui.voice_camera_pending||g_chat_ui.voice_session||g_chat_ui.snapshot->phase!=CHAT_IDLE){
+    show_toast("AI 任务结束后可开启端侧识别");return;
   }
   int ret=qpk_runtime_camera_busy()?-EBUSY:qpk_dl_face_start_default();
   if(ret>0){
     g_chat_ui.voice_face_request=(uint32_t)ret;g_chat_ui.voice_face_frame=0;
-    g_chat_ui.voice_face_seen=lv_tick_get();chat_ui_label(g_chat_ui.voice_face_label,"摄像头开启 · 寻找人脸");
-  }else chat_ui_label(g_chat_ui.voice_face_label,ret==-EBUSY?"摄像头正忙 · 点此重试":"未找到可用摄像头 · 点此重试");
+    g_chat_ui.voice_face_seen=lv_tick_get();chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 寻找人脸");
+  }else chat_ui_label(g_chat_ui.voice_face_label,ret==-EBUSY?"端侧 · 摄像头忙":"端侧 · 无 USB 相机");
+}
+
+static void chat_ball_local_stop(void)
+{
+  if(g_chat_ui.voice_face_request)qpk_dl_cancel_request(g_chat_ui.voice_face_request);
+  g_chat_ui.voice_face_request=0;chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 已关闭");
+}
+static void chat_ball_listen(void);
+static void chat_ball_camera_toggle(lv_event_t *event)
+{
+  LV_UNUSED(event);
+  struct chat_snapshot *s=g_chat_ui.snapshot;glass_chat_get_mode(s,g_chat_ui.mode);
+  if(g_chat_ui.voice_camera_pending){g_chat_ui.voice_camera_pending=false;chat_ui_label(g_chat_ui.voice_camera_label,"AI · 采集并上传");return;}
+  if(g_chat_ui.voice_camera_turn&&s->count&&s->turns[s->count-1].id==g_chat_ui.voice_camera_turn&&s->phase!=CHAT_IDLE){
+    glass_chat_cancel();chat_ui_label(g_chat_ui.voice_camera_label,"AI · 正在停止");return;
+  }
+  if(g_chat_ui.voice_session||s->phase!=CHAT_IDLE){show_toast("请先结束当前对话，再采集上传");return;}
+  if(!s->configured){chat_ui_config(NULL);return;}
+  if(g_chat_ui.mode==AGENT_MODE_CREATE){show_toast("请切换到聊天或助手后采集");return;}
+  chat_ball_local_stop();g_chat_ui.external_result_turn=0;
+  g_chat_ui.voice_camera_armed=true;
+  chat_ui_label(g_chat_ui.voice_camera_label,"请告诉我看什么");
+#ifdef GLASS_LOCAL_SPEECH
+  g_chat_ui.voice_session=true;chat_ball_listen();
+#else
+  chat_ui_editor_open(NULL);
+#endif
+  chat_ball_hint("你想让我看什么？说完后开始录制",35);
+}
+static void chat_ball_camera_poll(void)
+{
+  struct chat_snapshot *s=g_chat_ui.snapshot;
+  if(g_chat_ui.voice_camera_turn&&s->count&&s->turns[s->count-1].id==g_chat_ui.voice_camera_turn){
+    const struct chat_turn *t=&s->turns[s->count-1];
+    chat_ui_label(g_chat_ui.voice_camera_label,t->state==CHAT_WAITING?"AI · 处理中，点此停止":
+      t->state==CHAT_DONE?"AI · 继续看什么":t->state==CHAT_CANCELLED?"AI · 已停止，再次提问":"AI · 未完成，再次提问");
+    if(t->state==CHAT_WAITING)chat_ball_hint(t->progress,32);
+    else if(!g_chat_ui.voice_session)chat_ball_hint(t->state==CHAT_DONE?
+      (t->camera_save_error?"分析完成 · 仅本次会话，SD 保存失败":"分析完成 · 已存 SD，完整结果见 ESPClaw"):
+      t->state==CHAT_CANCELLED?"录制或分析已停止":t->progress,t->state==CHAT_DONE?2:34);
+  }
 }
 
 static void chat_ball_face_poll(void)
@@ -101,10 +146,10 @@ static void chat_ball_face_poll(void)
   if(g_chat_ui.voice_face_request){
     struct qpk_dl_result result;qpk_dl_status(&result);
     if(result.request!=g_chat_ui.voice_face_request){
-      g_chat_ui.voice_face_request=0;chat_ui_label(g_chat_ui.voice_face_label,"人脸跟随已结束 · 点此重试");
+      g_chat_ui.voice_face_request=0;chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 已结束");
     }else if(result.error||!result.busy){
       qpk_dl_cancel_request(g_chat_ui.voice_face_request);g_chat_ui.voice_face_request=0;
-      chat_ui_label(g_chat_ui.voice_face_label,"人脸跟随不可用 · 点此重试");
+      chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 识别不可用");
     }else{
       if(result.frame!=g_chat_ui.voice_face_frame){
         g_chat_ui.voice_face_frame=result.frame;g_chat_ui.voice_face_seen=now;
@@ -113,8 +158,8 @@ static void chat_ball_face_poll(void)
       if(fresh&&result.track.state==QPK_DL_TRACKING){
         x=result.track.offset_x;y=result.track.offset_y;
         if(x<-1000)x=-1000;if(x>1000)x=1000;if(y<-1000)y=-1000;if(y>1000)y=1000;
-        chat_ui_label(g_chat_ui.voice_face_label,"摄像头开启 · 正在看着你");
-      }else chat_ui_label(g_chat_ui.voice_face_label,"摄像头开启 · 寻找人脸");
+        chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 检测到人脸");
+      }else chat_ui_label(g_chat_ui.voice_face_label,"端侧 · 寻找人脸");
     }
   }
   /* Existing geometric tracker selects one face; ease its target and recenter
@@ -127,6 +172,7 @@ static void chat_ball_face_poll(void)
 static void chat_ball_stop(void)
 {
   g_chat_ui.voice_session=false;
+  g_chat_ui.voice_camera_armed=false;
   if(g_chat_ui.voice_owned)glass_voice_stop_request(g_chat_ui.voice_request);
 #ifdef GLASS_LOCAL_SPEECH
   if(g_chat_ui.speech_owned)glass_speech_stop_request(g_chat_ui.voice_speech_request);
@@ -150,6 +196,7 @@ static void chat_ball_error(const char *text)
 
 static void chat_ball_listen(void)
 {
+  chat_ball_local_stop();
   g_chat_ui.external_result_turn=0;
   struct glass_voice_snapshot v;glass_voice_get(&v);
   int ret=glass_voice_start_request(&g_chat_ui.voice_request);
@@ -179,11 +226,12 @@ static void chat_ball_show_result(uint32_t id)
 static bool chat_ball_adopt_wake_capture(void)
 {
 #ifdef GLASS_LOCAL_SPEECH
-  if(!chat_ball_is_present()||g_chat_ui.voice_session)return false;
+  if(!chat_ball_is_present()||g_chat_ui.voice_session||g_chat_ui.voice_camera_pending)return false;
   struct glass_voice_snapshot voice;glass_voice_get(&voice);
   if(!voice.active&&voice.phase!=GLASS_VOICE_DONE)return false;
   struct chat_snapshot *s=g_chat_ui.snapshot;glass_chat_get_mode(s,g_chat_ui.mode);
   if(!s->configured||s->phase!=CHAT_IDLE)return false;
+  chat_ball_local_stop();
   g_chat_ui.voice_session=g_chat_ui.voice_from_wake=g_chat_ui.voice_owned=true;
   g_chat_ui.external_result_turn=0;
   g_chat_ui.voice_heard=false;g_chat_ui.voice_listen_at=0;
@@ -199,9 +247,17 @@ static bool chat_ball_accept_wake(void)
 {
 #ifdef GLASS_LOCAL_SPEECH
   if(!chat_ball_is_present())return false;
+  if(g_chat_ui.voice_camera_pending)return false;
   if(g_chat_ui.voice_session)chat_ball_stop();
   struct chat_snapshot *s=g_chat_ui.snapshot;glass_chat_get_mode(s,g_chat_ui.mode);
   if(!s->configured){chat_ball_hint("请先配置联网 AI 服务",34);return false;}
+  if(s->phase!=CHAT_IDLE){
+    /* Keep this fresh wake while the previous tool/network request drains. */
+    glass_chat_cancel();g_chat_ui.voice_session=true;g_chat_ui.voice_from_wake=true;
+    g_chat_ui.voice_turn=0;g_chat_ui.voice_phase=BALL_DRAIN;
+    g_chat_ui.voice_ready_at=lv_tick_get()+120;g_chat_ui.voice_started=lv_tick_get();
+    chat_ball_hint("我在 · 正在停止上一轮",41);return true;
+  }
   g_chat_ui.voice_session=true;g_chat_ui.voice_from_wake=true;
   chat_ball_listen();return true;
 #endif
@@ -218,7 +274,7 @@ static bool chat_ball_end_phrase(const char *text)
        !memcmp(text+n-3,"？",3)||!memcmp(text+n-3,"，",3))){n-=3;continue;}
     break;
   }
-  const char *phrases[]={"结束对话","停止对话","退出对话","停止聆听"};
+  const char *phrases[]={"结束对话","停止对话","退出对话","停止聆听","停止","停一下","别说了","打断一下"};
   for(unsigned i=0;i<sizeof(phrases)/sizeof(*phrases);i++)
     if(n==strlen(phrases[i])&&!memcmp(text,phrases[i],n))return true;
   return false;
@@ -232,6 +288,7 @@ static void chat_ball_tap(lv_event_t *e)
   chat_ball_error("此固件未启用语音播报");return;
 #else
   if(!g_chat_ui.voice_session){
+    if(g_chat_ui.voice_camera_pending){show_toast("相机采集准备中，请稍候");return;}
     struct speech_snapshot speech;glass_speech_get(&speech);
 
     if(g_chat_ui.snapshot->phase!=CHAT_IDLE){chat_ball_hint("ESPClaw 正在回复，请稍候再开始",30);return;}
@@ -270,7 +327,11 @@ static size_t chat_ball_chunk(char *out,size_t capacity,const char *text)
 
 static void chat_ball_refresh(void)
 {
+  if(glass_ai_config_active())return;
   struct chat_snapshot *s=g_chat_ui.snapshot;glass_chat_get_mode(s,g_chat_ui.mode);
+  chat_ball_camera_poll();
+  /* Local inference and network/history work are separate channels. */
+  if(g_chat_ui.voice_face_request&&s->phase!=CHAT_IDLE)chat_ball_local_stop();
   struct chat_result_snapshot result={0};
   bool have_result=!g_chat_ui.voice_session&&g_chat_ui.external_result_turn&&
     glass_chat_result_get(&result,g_chat_ui.external_result_turn,AGENT_MODE_ASSISTANT,0);
@@ -317,7 +378,7 @@ static void chat_ball_refresh(void)
           g_chat_ui.voice_heard=true;g_chat_ui.voice_last_sound=now;
         }
         g_chat_ui.voice_revision=v.revision;
-        chat_ball_hint("我在听 · 说完会自动发送",35);
+        chat_ball_hint(g_chat_ui.voice_camera_armed?"你想让我看什么？说完后开始录制":"我在听 · 说完会自动发送",35);
         if((g_chat_ui.voice_heard&&now-g_chat_ui.voice_last_sound>=2000&&now-g_chat_ui.voice_listen_at>=1000)||
            (!g_chat_ui.voice_heard&&now-g_chat_ui.voice_listen_at>=6000)){glass_voice_stop_request(g_chat_ui.voice_request);chat_ball_hint("正在识别…",32);}
       }else chat_ball_hint(v.phase==GLASS_VOICE_FINISHING?"正在识别…":"正在连接麦克风…",v.phase==GLASS_VOICE_FINISHING?32:36);
@@ -335,15 +396,24 @@ static void chat_ball_refresh(void)
       chat_ball_error(v.phase==GLASS_VOICE_ERROR?glass_voice_error_text(v.error):"没有听清 · 轻点小球再试一次");return;
     }
     if(chat_ball_end_phrase(v.text)){chat_ball_end(NULL);return;}
-    int ret=glass_chat_send_mode(v.text,g_chat_ui.mode);
+    struct qpk_dl_result local;qpk_dl_status(&local);
+    if(local.busy){
+      if(now-g_chat_ui.voice_started>20000){chat_ball_error("相机仍在结束，请稍后再试");return;}
+      chat_ball_hint("等待端侧相机关闭…",32);return;
+    }
+    bool camera=g_chat_ui.voice_camera_armed&&g_chat_ui.mode!=AGENT_MODE_ASSISTANT;
+    int ret=g_chat_ui.voice_camera_armed?glass_chat_send_bot_camera(v.text,g_chat_ui.mode):glass_chat_send_bot(v.text,g_chat_ui.mode);
     if(ret){chat_ball_error(ret==-EBUSY?"ESPClaw 正在回复，请稍候再试":"发送失败 · 轻点小球重试");return;}
+    g_chat_ui.voice_camera_armed=false;
     glass_chat_get_mode(s,g_chat_ui.mode);g_chat_ui.voice_turn=s->count?s->turns[s->count-1].id:0;
-    g_chat_ui.voice_phase=BALL_REPLY;chat_ball_hint("让我想一想…",30);return;
+    if(camera)g_chat_ui.voice_camera_turn=g_chat_ui.voice_turn;
+    g_chat_ui.voice_phase=BALL_REPLY;chat_ball_hint(camera?"准备录制并保存 SD…":"让我想一想…",30);return;
   }
   const struct chat_turn *turn=s->count?&s->turns[s->count-1]:NULL;
   if(!turn||turn->id!=g_chat_ui.voice_turn){chat_ball_error("对话已更新 · 轻点小球继续");return;}
   if(g_chat_ui.voice_phase==BALL_REPLY){
     if(s->phase!=CHAT_IDLE){
+      if(turn->camera_samples||turn->camera_tool_used){chat_ball_hint(turn->progress,32);return;}
       /* Read the real service event projection. Voice mode must not mask
        * connect / reasoning / tool / text events with one fixed thinking face. */
       struct chat_activity_snapshot activity;glass_chat_activity_get(&activity);
@@ -355,6 +425,7 @@ static void chat_ball_refresh(void)
     if(turn->state!=CHAT_DONE||!turn->reply[0]){
       chat_ball_error(turn->state==CHAT_FAILED?glass_chat_error_text(turn->error):"回复已停止 · 轻点小球继续");return;
     }
+    if(turn->session_history&&turn->camera_save_error)show_toast("SD 保存失败 · 回复仅保留本次会话");
     g_chat_ui.speech_cursor=0;g_chat_ui.voice_phase=BALL_SPEAK;
   }
 #ifdef GLASS_LOCAL_SPEECH
@@ -390,8 +461,10 @@ static void chat_ball_create(lv_obj_t *card)
   chat_ui_button(card,glass_agent_mode_title(g_chat_ui.mode),120,20,170,40,false,chat_ui_modes,NULL);
   chat_ui_button(card,"ESPClaw",786,20,110,40,false,chat_ui_open_espclaw,NULL);
   chat_ui_button(card,"设置",910,20,88,40,false,chat_ui_config,NULL);
-  lv_obj_t *face=chat_ui_button(card,"人脸跟随",356,20,312,40,false,chat_ball_face_toggle,NULL);
+  lv_obj_t *face=chat_ui_button(card,"端侧 · 人脸跟随",308,20,210,40,false,chat_ball_face_toggle,NULL);
   g_chat_ui.voice_face_label=lv_obj_get_child(face,0);
+  lv_obj_t *camera=chat_ui_button(card,"AI · 让你看一看",530,20,242,40,false,chat_ball_camera_toggle,NULL);
+  g_chat_ui.voice_camera_label=lv_obj_get_child(camera,0);
   g_chat_ui.ball_mount=glass_box(card,332,56,360,360,g_chat_ui.background,0);
   lv_obj_remove_flag(g_chat_ui.ball_mount,LV_OBJ_FLAG_SCROLLABLE);
   g_chat_ui.ball=glass_grok_create_sprite(g_chat_ui.ball_mount,0,0,360,360,220,!g_desktop.light_theme,zh_font);
@@ -415,6 +488,5 @@ static void chat_ball_create(lv_obj_t *card)
   g_chat_ui.voice_wave_timer=lv_timer_create(chat_ball_wave_tick,100,NULL);
   if(g_chat_ui.voice_wave_timer)lv_timer_pause(g_chat_ui.voice_wave_timer);
   glass_chat_refresh_config();
-  chat_ball_face_toggle(NULL);
   g_chat_ui.timer=lv_timer_create(chat_ui_refresh,250,NULL);chat_ball_refresh();
 }

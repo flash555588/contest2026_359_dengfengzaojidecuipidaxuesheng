@@ -8,7 +8,11 @@ static const char *const qpk_hw_operations[] = {
   "uart.open", "uart.read", "uart.write", "uart.close",
   "pwm.write", "pwm.stop", "servo.write", "servo.stop",
   "audio.record", "audio.play", "audio.tone", "audio.save", "audio.info", "audio.remove", "audio.list",
-  "ble.start", "ble.scan", "ble.connect", "ble.disconnect", "ble.cancel", "ble.status"
+  "ble.start", "ble.scan", "ble.connect", "ble.disconnect", "ble.cancel", "ble.status", "ble.services", "ble.characteristics", "ble.descriptors",
+  "ble.read", "ble.write", "ble.subscribe", "ble.notification", "ble.pair", "ble.mtu", "net.status",
+  "usb.list", "usb.info", "usb.mode", "usb.hidRead", "usb.hidReport",
+  "usb.audioStart", "usb.audioRead", "usb.audioWrite", "usb.audioStop", "usb.cdcRead", "usb.cdcWrite",
+  "usb.mount", "usb.unmount", "usb.files", "usb.readFile", "usb.writeFile"
 };
 static JSValue js_hw_submit(JSContext *c, JSValueConst self, int argc, JSValueConst *argv, int magic)
 {
@@ -43,7 +47,7 @@ static JSValue js_hw_control(JSContext *c, JSValueConst self, int argc, JSValueC
 }
 static void qpk_hw_install(JSContext *c, JSValue system)
 {
-  const char *families[] = {"gpio", "i2c", "spi", "uart", "pwm", "servo", "audio", "ble"};
+  const char *families[] = {"gpio", "i2c", "spi", "uart", "pwm", "servo", "audio", "ble", "usb", "net"};
   for (unsigned f = 0; f < sizeof(families) / sizeof(families[0]); f++) {
     JSValue object = JS_NewObject(c); size_t length = strlen(families[f]);
     for (unsigned i = 0; i < sizeof(qpk_hw_operations) / sizeof(qpk_hw_operations[0]); i++) {

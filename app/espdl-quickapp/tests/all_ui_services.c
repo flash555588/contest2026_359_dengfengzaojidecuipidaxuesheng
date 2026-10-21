@@ -17,6 +17,8 @@ static void review_grok_chat(struct chat_snapshot *out){
 }
 static unsigned review_music_position=42000,review_music_duration=204000,review_music_revision;
 static const char *review_draft_source;
+static enum qpk_volume review_draft_volume;
+void review_qpk_volume_fixture(enum qpk_volume volume){review_draft_volume=volume;}
 static uint32_t review_previewed_revision;
 void review_qpk_fixture(const char *source){review_draft_source=source;review_previewed_revision=0;}
 void review_music_fixture(int mode){review_music_mode=mode;review_music_position=42000;review_music_duration=204000;review_music_revision++;}
@@ -56,6 +58,8 @@ int glass_chat_send_mode(const char *prompt,enum glass_agent_mode mode)
   review_dialogue_activity=CHAT_ACTIVITY_THINK;review_dialogue_state.phase=CHAT_REQUESTING;review_dialogue_state.revision++;return 0;
 }
 int glass_chat_send(const char *prompt){return glass_chat_send_mode(prompt,AGENT_MODE_CREATE);}
+int glass_chat_send_bot(const char *prompt,enum glass_agent_mode mode){return glass_chat_send_mode(prompt,mode);}
+int glass_chat_send_bot_camera(const char *prompt,enum glass_agent_mode mode){return glass_chat_send_mode(prompt,mode);}
 int glass_chat_retry_mode(enum glass_agent_mode mode){(void)mode;return 0;}
 int glass_chat_clear_mode(enum glass_agent_mode mode)
 {
@@ -103,6 +107,8 @@ void review_voice_text_fixture(const char *text)
   review_dialogue_voice.phase=GLASS_VOICE_DONE;review_dialogue_voice.active=false;review_dialogue_voice.revision++;
 }
 void glass_speech_get(struct speech_snapshot *out){*out=review_speech;}
+int glass_speech_say_request(const char *text,uint32_t *request)
+{int ret=glass_speech_say(text);if(!ret&&request)*request=review_speech.request;return ret;}
 int glass_speech_say(const char *text)
 {
   assert(!review_dialogue_voice.active);assert(strlen(text)<=240);for(const unsigned char *p=(const unsigned char *)text;*p;){unsigned n=*p<128?1:*p<224?2:*p<240?3:4;assert(*p<128||*p>=194);for(unsigned j=1;j<n;j++)assert(p[j]&&(p[j]&192)==128);p+=n;}
@@ -272,7 +278,7 @@ int hass_poll(uint32_t client,struct hass_result_s *result)
 void hass_result_free(struct hass_result_s *result){free(result->body);memset(result,0,sizeof(*result));}
 int portal_session_open(char *code,size_t cap){snprintf(code,cap,"246810");return 0;}
 unsigned portal_session_seconds(void){return 240;}
-void glass_qpk_get(struct qpk_draft_info *out){memset(out,0,sizeof(*out));out->loaded=true;if(review_draft_source){out->revision=1;out->previewed_revision=review_previewed_revision;strcpy(out->name,"你好快应用（审核示例草稿）");strcpy(out->slug,"hello");}}
+void glass_qpk_get(struct qpk_draft_info *out){memset(out,0,sizeof(*out));out->loaded=true;out->draft_volume=review_draft_volume;if(review_draft_source){out->revision=1;out->previewed_revision=review_previewed_revision;strcpy(out->name,"你好快应用（审核示例草稿）");strcpy(out->slug,"hello");}}
 const char *glass_qpk_error_text(int error){(void)error;return "离线审核服务";}
 const char *glass_chat_error_text(enum chat_error error){(void)error;return "离线审核服务";}
 struct glass_file_job {struct glass_file_result result;unsigned polls;int error;};

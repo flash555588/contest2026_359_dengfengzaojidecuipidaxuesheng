@@ -13,9 +13,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include "qpk_photo_storage.h"
 
 #ifndef ASSISTANT_DATA_ROOT
 #define ASSISTANT_DATA_ROOT "/data/assistant"
+#endif
+#ifndef ASSISTANT_SD_ROOT
+#define ASSISTANT_SD_ROOT "/sdcard/espclaw-assistant"
 #endif
 #define ASSISTANT_PACKAGE "com.openvela.assistant"
 #define ITEMS_MAX 16
@@ -26,6 +31,23 @@ static pthread_mutex_t tick_lock=PTHREAD_MUTEX_INITIALIZER;
 static bool scheduler_started;
 static int scheduler_error;
 static double schedule_next_scan;
+/* Accessed only under data_lock; one load/save transaction pins its medium. */
+static const char *data_root=ASSISTANT_DATA_ROOT;
+static int select_data_root(void)
+{
+  int ret=qpk_volume_mounted(QPK_VOLUME_SD);
+  const char *next=ASSISTANT_DATA_ROOT;
+  if(!ret){
+    char parent[128];struct stat st;
+    ret=qpk_photo_parent(ASSISTANT_SD_ROOT,parent,sizeof(parent));if(ret)return ret;
+    if(!lstat(ASSISTANT_SD_ROOT,&st)){
+      if(!S_ISDIR(st.st_mode)||S_ISLNK(st.st_mode))return -EPERM;
+    }else if(errno!=ENOENT)return -errno;
+    next=ASSISTANT_SD_ROOT;
+  }else if(ret!=-ENODEV&&ret!=-ENOENT&&ret!=-ENXIO)return ret;
+  if(strcmp(data_root,next))schedule_next_scan=0;
+  data_root=next;return 0;
+}
 static pthread_mutex_t notice_lock=PTHREAD_MUTEX_INITIALIZER;
 static char (*notices)[256];
 static unsigned notice_first,notice_count;
@@ -132,13 +154,13 @@ static bool document_valid(const cJSON *doc,const char *kind)
   return valid;
 }
 /* Two independent slots survive SmartFS's unlink-before-rename behavior. */
-static cJSON *load(const char *kind)
+static cJSON *load_at(const char *kind,const char *root,bool legacy)
 {
   char *buffer=malloc(QPK_STORAGE_VALUE_MAX+1);if(!buffer)return NULL;
   cJSON *latest=NULL;unsigned missing=0;bool corrupt=false;
   for(unsigned slot=0;slot<2;slot++){
     char key[24];snprintf(key,sizeof(key),"%s%u",kind,slot);size_t size=0;
-    int ret=qpk_storage_read(ASSISTANT_DATA_ROOT,ASSISTANT_PACKAGE,key,buffer,QPK_STORAGE_VALUE_MAX+1,&size);
+    int ret=qpk_storage_read(root,ASSISTANT_PACKAGE,key,buffer,QPK_STORAGE_VALUE_MAX+1,&size);
     if(ret==-ENOENT){missing++;continue;}
     cJSON *doc=NULL;
     if(!ret&&size<=QPK_STORAGE_VALUE_MAX&&!memchr(buffer,0,size)){buffer[size]=0;doc=glass_agent_json(buffer);}
@@ -147,20 +169,32 @@ static cJSON *load(const char *kind)
     else{if(num(doc,"sequence")==num(latest,"sequence")&&!cJSON_Compare(doc,latest,true))corrupt=true;cJSON_Delete(doc);}
   }
   free(buffer);
+  /* Notes/aliases remain readable without deleting old files. Schedules are
+   * separate per medium: copying a pending task could execute its effect twice. */
+  if(!latest&&missing==2&&legacy&&strcmp(kind,"schedules"))return load_at(kind,ASSISTANT_DATA_ROOT,false);
   /* Never fall back to a possibly pending pre-effect snapshot of schedules. */
   if(corrupt&&!strcmp(kind,"schedules")){cJSON_Delete(latest);return NULL;}
   if(!latest&&missing==2){latest=cJSON_CreateObject();if(latest){cJSON_AddNumberToObject(latest,"version",1);
     cJSON_AddNumberToObject(latest,"sequence",0);cJSON_AddNumberToObject(latest,"next_id",1);cJSON_AddArrayToObject(latest,"items");}}
   return latest;
 }
+static cJSON *load(const char *kind)
+{
+  if(select_data_root())return NULL;
+  return load_at(kind,data_root,!strcmp(data_root,ASSISTANT_SD_ROOT));
+}
 static int save(const char *kind,cJSON *doc)
 {
+  if(!strcmp(data_root,ASSISTANT_SD_ROOT)){
+    int ret=qpk_volume_mounted(QPK_VOLUME_SD);if(ret)return ret;
+    char directory[128];ret=qpk_photo_directory(directory,sizeof(directory),QPK_STORAGE_VALUE_MAX+1024,ASSISTANT_SD_ROOT);if(ret)return ret;
+  }
   if(num(doc,"sequence")>=9007199254740990.0)return -EOVERFLOW;
   set_number(doc,"sequence",num(doc,"sequence")+1);
   char *buffer=cJSON_PrintUnformatted(doc);if(!buffer)return -ENOMEM;
   char key[24];snprintf(key,sizeof(key),"%s%u",kind,(unsigned)fmod(num(doc,"sequence"),2));
   size_t size=strlen(buffer);int ret=size>QPK_STORAGE_VALUE_MAX?-EFBIG:
-    qpk_storage_write_sync(ASSISTANT_DATA_ROOT,ASSISTANT_PACKAGE,key,buffer,size);
+    qpk_storage_write_sync(data_root,ASSISTANT_PACKAGE,key,buffer,size);
   if(!strcmp(kind,"schedules"))schedule_next_scan=0;
   free(buffer);return ret;
 }
@@ -346,9 +380,10 @@ int glass_assistant_tick(time_t now)
 {
   if(now<ASSISTANT_TIME_MIN||now>ASSISTANT_TIME_MAX)return -EAGAIN;
   if(pthread_mutex_trylock(&tick_lock))return -EBUSY;
-  int ret=0;
+  int ret=0;const char *job_root=NULL;
   /* One effect per iteration keeps each execution bounded and cancellable. */
   pthread_mutex_lock(&data_lock);
+  ret=select_data_root();if(ret){pthread_mutex_unlock(&data_lock);pthread_mutex_unlock(&tick_lock);return ret;}
   if(schedule_next_scan>(double)now){pthread_mutex_unlock(&data_lock);pthread_mutex_unlock(&tick_lock);return 0;}
   cJSON *doc=load("schedules"),*selected=NULL,*job=NULL;
   if(!doc){ret=-EIO;goto unlock;}
@@ -361,7 +396,7 @@ int glass_assistant_tick(time_t now)
     if((double)now-num(r,"due_at")>120){set_string(r,"state","missed");next_run(r,now);dirty=true;continue;}
     if(!selected)selected=r;
   }
-  if(selected){set_string(selected,"state","executing");set_number(selected,"last_run",(double)now);job=cJSON_Duplicate(selected,true);dirty=true;}
+  if(selected){set_string(selected,"state","executing");set_number(selected,"last_run",(double)now);job=cJSON_Duplicate(selected,true);job_root=data_root;dirty=true;}
   if(dirty)ret=save("schedules",doc);
   if(!ret&&!selected){
     schedule_next_scan=ASSISTANT_TIME_MAX+1.0;
@@ -376,8 +411,9 @@ unlock:
     cJSON *result=response?glass_agent_json(response):NULL;free(response);
     bool success=result&&cJSON_IsTrue(field(result,"ok"))&&!field(result,"error");
     pthread_mutex_lock(&data_lock);doc=load("schedules");
+    if(strcmp(data_root,job_root)){cJSON_Delete(doc);doc=NULL;}
     cJSON *r=doc?find(doc,(unsigned)num(job,"id")):NULL;
-    if(!r){ret=-EIO;}else{
+    if(!r||strcmp(str(r,"request_id"),str(job,"request_id"))){ret=-EIO;}else{
       set_string(r,"state",success?"done":"failed");next_run(r,now);
       cJSON_DeleteItemFromObjectCaseSensitive(r,"result");
       /* Result payload is bounded and stripped of service-provided secrets. */

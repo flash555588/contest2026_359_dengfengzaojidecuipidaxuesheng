@@ -49,8 +49,13 @@
 #include "qpk_limits.h"
 #include "glass_qpk_builder.h"
 #include "glass_portal.h"
+#include "glass_ai_config.h"
 #include "glass_board_music.h"
 #include "glass_assistant.h"
+#include "glass_agent.h"
+#include "qpk_hardware.h"
+#include "qpk_espdl.h"
+#include "qpk_camera_clip.h"
 #ifdef CONFIG_SYSTEM_HASS
 #include "hass_portal.h"
 #include "hass_service.h"
@@ -1680,6 +1685,20 @@ static uint32_t desktop_loop_once(void)
   enum desktop_camera_command_e command;
   uint32_t idle = 10;
 
+  if(glass_ai_config_ui_pending()){
+    /* Only the desktop task may retire LVGL session owners. Ack even when
+     * another page is visible; this barrier must not depend on UI timers. */
+    chat_ball_stop();chat_ball_local_stop();g_chat_ui.external_result_turn=0;
+    g_wake_mini.voice_owned=g_wake_mini.speech_owned=g_wake_mini.result_pending=false;
+    g_wake_mini.pending_prompt[0]=0;g_wake_mini.turn=0;
+#ifdef GLASS_LOCAL_SPEECH
+    struct speech_snapshot speech;glass_speech_get(&speech);
+    g_wake_mini.event=speech.wake_event;g_wake_mini.command_event=speech.command_event;
+    g_speech_ui.recording=false;g_speech_ui.turn=0;
+#endif
+    wake_mini_hide();glass_ai_config_ui_ack();
+  }
+
   int font_change=glass_sd_font_poll();
   if(font_change) {
     lv_font_t *primary[]={g_desktop.font16,g_desktop.font20,g_desktop.font28,
@@ -1697,7 +1716,7 @@ static uint32_t desktop_loop_once(void)
   }
   desktop_ui_probe_service();
   glass_board_ui_service();
-  wake_mini_service();
+  if(!glass_ai_config_active())wake_mini_service();
   if(!qpk_runtime_camera_active()){
     char notice[256];if(glass_assistant_take_notice(notice,sizeof(notice)))show_toast(notice);
   }
@@ -1790,6 +1809,10 @@ int main(int argc, FAR char *argv[])
     extern int qpk_hw_probe(bool);
     return qpk_hw_probe(argc > 2 && !strcmp(argv[2], "audio"));
   }
+  if(argc>=4&&!strcmp(argv[1],"hardware-call")){
+    extern int qpk_hw_call(int,char **);
+    return qpk_hw_call(argc-2,argv+2);
+  }
 #ifdef GLASS_LOCAL_SPEECH
   if(argc>1&&!strcmp(argv[1],"speech")){
     /* A temporary NSH task must not own the recognition worker. */
@@ -1820,6 +1843,61 @@ int main(int argc, FAR char *argv[])
     extern int qpk_dl_probe(int,char **);
     return qpk_dl_probe(argc,argv);
   }
+  if(argc==2&&!strcmp(argv[1],"interfaces")){
+    char *text=qpk_hw_capabilities();if(!text)return -ENOMEM;puts(text);free(text);return 0;
+  }
+  if(argc==3&&!strcmp(argv[1],"camera-agent")){
+    atomic_bool cancel=false;cJSON *args=glass_agent_json(argv[2]);if(!args)return -EINVAL;
+    const cJSON *operation=cJSON_GetObjectItemCaseSensitive(args,"operation");
+    bool capture=cJSON_IsString(operation)&&!strcmp(operation->valuestring,"capture");
+    bool recognize=cJSON_IsString(operation)&&!strcmp(operation->valuestring,"recognize");
+    char *text=glass_assistant_platform("assistant_camera",args,&cancel);cJSON_Delete(args);
+    if(!text)return -ENOMEM;
+    puts(text);cJSON *reply=glass_agent_json(text);free(text);
+    const cJSON *ticket=reply?cJSON_GetObjectItemCaseSensitive(reply,"request_id"):NULL;
+    unsigned request=cJSON_IsNumber(ticket)?ticket->valueint:0;
+    bool accepted=reply&&cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(reply,"accepted"));cJSON_Delete(reply);
+    /* NuttX kills a CLI task's pthreads on exit. Retain the diagnostic owner
+     * until the USB worker has closed its stream, even after cancellation. */
+    if(accepted&&request&&(capture||recognize)){
+      struct qpk_dl_result status;qpk_dl_status(&status);
+      unsigned worker=status.request,ticks=0;
+      do{usleep(100000);qpk_dl_status(&status);
+        if(++ticks==200)qpk_dl_cancel_request(worker);
+      }while(status.busy&&status.request==worker);
+      args=cJSON_CreateObject();if(!args)return -ENOMEM;
+      cJSON_AddStringToObject(args,"operation",recognize?"recognition_status":"photo_status");
+      cJSON_AddNumberToObject(args,"request_id",request);
+      text=glass_assistant_platform("assistant_camera",args,&cancel);cJSON_Delete(args);
+      if(!text)return -ENOMEM;
+      puts(text);free(text);
+    }
+    return 0;
+  }
+  if (argc > 1 && strcmp(argv[1], "camera-sample") == 0)
+    {
+      /* Acquisition-only diagnostic; never submits camera data to a model. */
+      struct qpk_camera_clip clip={0};atomic_bool abort=false;
+      int ret=qpk_camera_clip_capture(&clip,&abort);
+      printf("[camera-sample] result=%d frames=%u duration_ms=%lu camera_closed=1\n",ret,clip.count,(unsigned long)clip.duration_ms);
+      for(unsigned i=0;i<clip.count;i++)printf("[camera-sample] frame=%u offset_ms=%lu jpeg_bytes=%u\n",i+1,(unsigned long)clip.frames[i].offset_ms,(unsigned)clip.frames[i].size);
+      qpk_camera_clip_free(&clip);return ret?1:0;
+    }
+#ifdef CONFIG_ESP32P4_DSI_FLASH_RELOAD
+  if (argc > 1 && strcmp(argv[1], "scanout-hold") == 0)
+    {
+      extern int esp_mipi_dsi_flash_probe(void);
+      return esp_mipi_dsi_flash_probe();
+    }
+#endif
+#ifdef CONFIG_ESP32P4_PSRAM_XIP
+  if (argc == 2 && strcmp(argv[1], "xip") == 0)
+    {
+      extern void esp32p4_psram_xip_status(void);
+      esp32p4_psram_xip_status();
+      return 0;
+    }
+#endif
   if (argc > 1 && strcmp(argv[1], "cameras") == 0)
     {
       extern int qpk_camera_probe(int, char **);
@@ -1944,6 +2022,9 @@ int main(int argc, FAR char *argv[])
     fprintf(stderr, "desktop: data volume not mounted: %d\n", errno);
 #endif
 
+  extern int qpk_photo_store_initialize(void);
+  int photo_init=qpk_photo_store_initialize();
+  if(photo_init<0)fprintf(stderr,"desktop: photo writer unavailable: %d\n",photo_init);
   desktop_ui_create();
 #ifdef GLASS_LOCAL_SPEECH
   glass_speech_prepare();

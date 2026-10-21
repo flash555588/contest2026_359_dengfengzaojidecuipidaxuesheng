@@ -179,3 +179,7 @@ home_* 与 music_* 的完整 schema 已随助手首轮请求提供，优先直�
 `tools/test_agent.py --apps <prepared-apps> --output <test-output>` 使用 ASan／UBSan 执行真实技能、配置、JSON-RPC、字节分片 SSE 解析、ESPClaw 工具桥接、对话线程及双槽存储；覆盖跨模式工具拒绝、上下文隔离、旧历史迁移、模式标记持久化、局部清空、重试和请求模式固定。其中 `board-home-host` 用真实 home_* 工具、真实共享 HA 服务和脚本化 HTTP 传输验证卡片字段、状态缓存、确认／未确认控制、白名单与参数注入拒绝。HTTP 对端和模型调用由确定性测试替身提供。配置页另有 `portal_frontend.test.cjs`，原生 LVGL 界面和连续语音流程由 `render_grok_conversation.c` 验证。
 
 尚未配置用户的实际 MCP 地址和令牌；本机测试不代表实机网络、第三方服务或模型端已验证。固件构建结果和烧录状态见本次输出目录的 `verification.json`。
+
+## Harness 与多模态摄像头
+
+工程入口见 [agent.md](agent.md)，执行边界、循环／调用预算、模式提示词和回执语义见 [HARNESS.md](HARNESS.md)。默认 CSI 与完整 USB 摄像头选择、拍照、本地分类、已授权云端问答／OCR，以及候选固件的构建与部署见 [MULTIMODAL-CAMERA.md](MULTIMODAL-CAMERA.md)。

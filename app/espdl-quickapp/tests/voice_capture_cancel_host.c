@@ -57,13 +57,14 @@ static int fake_mq_close(mqd_t mq){assert(mq==(mqd_t)7);return 0;}
 #define mq_close fake_mq_close
 struct voice_ws {bool started,failed,closed;};
 static atomic_bool voice_stop;
+static atomic_bool voice_cancel;
 static int receive_mode,receives;
 static int64_t fake_ms;
 static int64_t glass_https_milliseconds(void){return fake_ms;}
 static int ws_receive(struct voice_ws *ws,int timeout)
 {
   fake_ms+=timeout;receives++;
-  if(receive_mode==1){atomic_store(&voice_stop,true);ws->started=true;}
+  if(receive_mode==1){atomic_store(&voice_cancel,true);ws->started=true;}
   else if(!receive_mode&&receives==2)ws->started=true;
   return 0;
 }
@@ -78,9 +79,11 @@ int main(void)
     capture_close(&capture);assert(!opened&&!started&&!allocated&&!locked);
   }
   struct voice_ws ws={0};assert(!ws_wait_start(&ws)&&ws.started);
-  atomic_store(&voice_stop,true);assert(ws_wait_start(&ws)==-ECANCELED);
+  atomic_store(&voice_cancel,true);assert(ws_wait_start(&ws)==-ECANCELED);
+  atomic_store(&voice_cancel,false);
   atomic_store(&voice_stop,false);ws=(struct voice_ws){0};receive_mode=1;
   assert(ws_wait_start(&ws)==-ECANCELED&&ws.started);
+  atomic_store(&voice_cancel,false);
   atomic_store(&voice_stop,false);ws=(struct voice_ws){0};receive_mode=2;
   assert(ws_wait_start(&ws)==-ETIMEDOUT);
   puts("VOICE_CAPTURE_CANCEL_OK: cancellation before capture, after music wait, after ownership lock and before driver start releases every resource");

@@ -27,6 +27,38 @@ extern void review_chat_phase_fixture(enum chat_phase),review_chat_error_fixture
 extern void review_face_fixture(int,int,bool),review_face_available_fixture(bool);
 extern unsigned review_face_cancel_count(void);
 static void tap(void){lv_obj_send_event(glass_grok_root(g_chat_ui.ball),LV_EVENT_CLICKED,NULL);frames(4);}
+static void run_preview_volume_cases(void)
+{
+  extern void review_qpk_fixture(const char *),review_qpk_volume_fixture(enum qpk_volume);
+  extern const char *review_qpk_filename(void);
+  review_chat_dialog_fixture(false);chat_interface_modes[0]=AGENT_MODE_CREATE;
+  for(unsigned volume=0;volume<2;volume++){
+    review_qpk_volume_fixture((enum qpk_volume)volume);
+    review_qpk_fixture("ui.text('preview storage test',20,20,20,ui.primary);");
+    glass_chat_show(false);frames(2);chat_ui_preview_app(NULL);
+    assert(chat_qpk_preview_active);
+    assert(qpk_volume_from_filename(review_qpk_filename())==(enum qpk_volume)volume);
+    assert(strstr(review_qpk_filename(),"/.draft/hello.js"));
+    chat_qpk_preview_back();frames(2);panel_hide(NULL);
+  }
+  review_qpk_fixture(NULL);review_qpk_volume_fixture(QPK_VOLUME_INTERNAL);
+  puts("PREVIEW_VOLUME_UI_OK: real native preview launcher carries SD/internal draft identity into runtime storage selection");
+}
+static void run_bot_text_cases(void)
+{
+  review_chat_dialog_fixture(true);glass_chat_ball_open(NULL);frames(4);
+  /* The Bot has no workbench composer label. Its shared editor must still
+   * support sending, closing and reopening without touching a NULL object. */
+  assert(g_chat_ui.ball_mode&&!g_chat_ui.draft_label);
+  send_text("请用一句话说明你能做什么。");assert(review_chat_send_count()==1);
+  review_chat_reply_fixture("可以帮助你完成任务。",true);frames(4);
+  chat_ui_editor_open(NULL);lv_textarea_set_text(g_chat_ui.input,"保留草稿");
+  chat_ui_editor_close(NULL);assert(!g_chat_ui.editor&&!strcmp(chat_draft,"保留草稿"));
+  send_text("继续测试。");assert(review_chat_send_count()==2);
+  review_chat_reply_fixture("已完成。",true);frames(4);
+  panel_hide(NULL);chat_draft[0]=0;
+  puts("BOT_TEXT_EDITOR_OK: Bot without composer label; send/close/reopen; draft preservation; no microphone or real network");
+}
 static void run_voice_cases(lv_display_t *display)
 {
   for(unsigned theme=0;theme<2;theme++){
@@ -113,7 +145,7 @@ static void run_voice_cases(lv_display_t *display)
     assert(review_chat_send_count()==3&&!g_chat_ui.voice_session&&review_speech_count()==calls);
     assert(glass_grok_current(ball)==2&&g_chat_ui.voice_wave==BALL_WAVE_OFF&&lv_timer_get_paused(g_chat_ui.voice_wave_timer));
     review_capture(display,"voice-ended","语音小球 · 已结束");
-    chat_ui_open_espclaw(NULL);assert(!g_chat_ui.ball_mode&&g_chat_ui.mode==AGENT_MODE_CREATE&&g_chat_ui.snapshot->count==0);
+    chat_ui_open_espclaw(NULL);assert(!g_chat_ui.ball_mode&&g_chat_ui.mode==AGENT_MODE_CHAT&&g_chat_ui.snapshot->count>0);
     frames(4); /* Capture the loaded native avatar, not its async placeholder. */
     review_capture(display,"mode-create","ESPClaw · 独立创作模式");
     chat_ui_modes(NULL);review_capture(display,"mode-selector","选择聊天、创作或助手");
@@ -161,6 +193,7 @@ static void run_voice_cases(lv_display_t *display)
     unsigned sends=review_chat_send_count();tap();panel_hide(NULL);review_voice_text_fixture("退出后的结果");frames(4);
     assert(!g_chat_ui.root&&review_chat_send_count()==sends);
     review_face_available_fixture(true);launch_builtin_ouo_qapp(NULL);
+    assert(!g_chat_ui.voice_face_request);chat_ball_face_toggle(NULL);
     assert(g_chat_ui.voice_face_request);cancels=review_face_cancel_count();panel_hide(NULL);
     assert(review_face_cancel_count()==cancels+1);review_face_available_fixture(false);
     launch_builtin_ouo_qapp(NULL);chat_ui_config(NULL);assert(chat_portal_return_ball);
@@ -195,7 +228,8 @@ static void run_wake_cases(lv_display_t *display)
     assert(!label_present(g_chat_ui.root,"唤醒对话")&&!label_present(g_chat_ui.root,"唤醒已开启"));
     assert(label_present(g_chat_ui.root,"全局唤醒默认开启"));
     review_capture(display,"voice-global-wake-default","全局唤醒默认开启，无页面开关");
-    review_speech_replace_fixture();assert(!chat_ball_accept_wake());
+    /* The dispatcher accepts only a fresh microphone wake. A foreground
+     * replacement alone is not a wake event and must not call this hook. */
     review_wake_fixture(true);assert(chat_ball_accept_wake());frames(4);
     assert(g_chat_ui.voice_from_wake&&g_chat_ui.voice_phase==BALL_LISTEN&&review_voice_start_count()==1);
     review_voice_text_fixture("帮我安排今天的学习");frames(4);assert(review_chat_send_count()==1);
@@ -295,7 +329,7 @@ int main(int argc,char **argv)
   lv_obj_add_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN);
   char path[1024];snprintf(path,sizeof(path),"%s/screens.json",review_out);review_manifest=fopen(path,"w");assert(review_manifest);fputs("[\n",review_manifest);
   glass_edge_back_create();glass_status_create();
-  run_voice_cases(display);
+  run_preview_volume_cases();run_bot_text_cases();run_voice_cases(display);
   run_wake_cases(display);
   review_chat_dialog_fixture(false);fputs("\n]\n",review_manifest);fclose(review_manifest);
   printf("GROK_VOICE_CHAT_OK: %u captures; shared ESPClaw; continuous voice, silence/send/TTS/drain/relisten/interrupt/errors/lifecycle\n",review_count);return 0;

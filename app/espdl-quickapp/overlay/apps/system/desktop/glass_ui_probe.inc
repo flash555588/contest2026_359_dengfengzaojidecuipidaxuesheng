@@ -10,7 +10,8 @@ static pthread_mutex_t g_ui_probe_lock = PTHREAD_MUTEX_INITIALIZER;
 static char g_ui_probe_command[64];
 static bool g_ui_probe_pending;
 static bool g_ui_probe_done;
-static char g_ui_probe_report[32768];
+#define UI_PROBE_REPORT_BYTES 32768
+static char *g_ui_probe_report;
 static size_t g_ui_probe_length;
 static unsigned g_ui_probe_id;
 uint16_t *g_ui_probe_frame;
@@ -62,7 +63,8 @@ static int desktop_ui_probe_frame(void)
 
 static void desktop_ui_probe_print(const char *format, ...)
 {
-  size_t available = sizeof(g_ui_probe_report) - g_ui_probe_length;
+  if (!g_ui_probe_report) return;
+  size_t available = UI_PROBE_REPORT_BYTES - g_ui_probe_length;
   va_list args;
   va_start(args, format);
   int size = vsnprintf(g_ui_probe_report + g_ui_probe_length, available, format, args);
@@ -322,6 +324,8 @@ static void desktop_ui_probe_service(void)
         (unsigned long)(t ? t->text_bytes : 0), (unsigned long)(t ? t->reasoning_bytes : 0),
         (unsigned long)(t ? t->reasoning_tokens : 0), t ? t->has_reasoning_tokens : 0, t ? t->stream_round : 0,
         g_chat_ui.rebuilds, g_chat_ui.live_updates, (unsigned long)g_chat_ui.refresh_max_ms, (unsigned)strlen(chat_draft));
+      if(t)desktop_ui_probe_print("chat-camera turn=%lu source=%u session_only=%u sd_saved=%u sd_error=%d\n",
+        (unsigned long)t->id,t->camera_samples,t->session_history,t->camera_observation[0]!=0,t->camera_save_error);
       free(s);
     }
   }
@@ -612,6 +616,9 @@ static int desktop_ui_probe_request(const char *command)
   pthread_mutex_lock(&g_ui_probe_lock);
   if (g_ui_probe_pending)
     { pthread_mutex_unlock(&g_ui_probe_lock); puts("desktop: UI request busy"); return 1; }
+  if (!g_ui_probe_report) g_ui_probe_report = malloc(UI_PROBE_REPORT_BYTES);
+  if (!g_ui_probe_report)
+    { pthread_mutex_unlock(&g_ui_probe_lock); puts("desktop: UI report allocation failed"); return 1; }
   strlcpy(g_ui_probe_command, command, sizeof(g_ui_probe_command));
   g_ui_probe_pending = true;
   g_ui_probe_done = false;
@@ -622,7 +629,8 @@ static int desktop_ui_probe_request(const char *command)
       pthread_mutex_lock(&g_ui_probe_lock);
       if (g_ui_probe_done)
         {
-          char *report = strdup(g_ui_probe_report);
+          char *report = g_ui_probe_report;
+          g_ui_probe_report = NULL;
           g_ui_probe_pending = false;
           pthread_mutex_unlock(&g_ui_probe_lock);
           if (!report) return 1;

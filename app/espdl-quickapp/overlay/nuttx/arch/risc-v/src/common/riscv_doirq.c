@@ -179,6 +179,13 @@ static uintreg_t *riscv_doirq_top(int irq, uintreg_t *regs)
  ****************************************************************************/
 
 volatile uintreg_t g_first_fault[2][8];
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+/* P4 may report an asynchronous bus error at a later, unrelated MEPC.
+ * Preserve the vendor diagnostic CSRs without replacing the trap context.
+ * Snapshot MEXSTATUS before reading the store/load PC queues.
+ */
+volatile uintreg_t g_first_bus_fault[2][6];
+#endif
 
 uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
 {
@@ -195,6 +202,21 @@ uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
       g_first_fault[cpu][4] = regs[REG_RA];
       g_first_fault[cpu][5] = cause;
       g_first_fault[cpu][6] = value;
+#ifdef CONFIG_ARCH_CHIP_ESP32P4
+      uintreg_t mexstatus, stpc0, stpc1, stpc2, ldpc0, ldpc1;
+      __asm__ volatile("csrr %0, 0x7e1" : "=r"(mexstatus));
+      __asm__ volatile("csrr %0, 0xbf2" : "=r"(stpc2));
+      __asm__ volatile("csrr %0, 0xbf1" : "=r"(stpc1));
+      __asm__ volatile("csrr %0, 0xbf0" : "=r"(stpc0));
+      __asm__ volatile("csrr %0, 0xbe1" : "=r"(ldpc1));
+      __asm__ volatile("csrr %0, 0xbe0" : "=r"(ldpc0));
+      g_first_bus_fault[cpu][0] = mexstatus;
+      g_first_bus_fault[cpu][1] = stpc2;
+      g_first_bus_fault[cpu][2] = stpc1;
+      g_first_bus_fault[cpu][3] = stpc0;
+      g_first_bus_fault[cpu][4] = ldpc1;
+      g_first_bus_fault[cpu][5] = ldpc0;
+#endif
     }
   }
   if (up_interrupt_context())

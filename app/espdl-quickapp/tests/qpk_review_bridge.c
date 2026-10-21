@@ -141,10 +141,13 @@ const char *qpk_runtime_last_error(void){return review_error;}
 unsigned qpk_runtime_widget_count(void){return g_qpk.widget_hint;}
 int qpk_runtime_select_espdl_mode(unsigned mode){return qpk_review_eval(mode?"EspDlApp.selectMode(1)":"EspDlApp.selectMode(0)");}
 #include "production_qpk_ha_navigation.inc"
+static char review_launch_filename[256];
+const char *review_qpk_filename(void){return review_launch_filename;}
 int qpk_runtime_launch(lv_obj_t *root,const char *name,const char *package,const char *version,
  const char *filename,const char *source,size_t source_len,qpk_font_cb_t font,qpk_message_cb_t toast,qpk_message_cb_t dialog,qpk_unresponsive_cb_t unresponsive)
 {
   (void)source_len;(void)name;(void)package;(void)version;(void)filename;(void)unresponsive;
+  snprintf(review_launch_filename,sizeof(review_launch_filename),"%s",filename?filename:"");
   qpk_runtime_stop();snprintf(g_qpk.package,sizeof(g_qpk.package),"%s",package);review_error[0]=0;g_qpk.root=root;g_qpk.font_cb=font;g_qpk.toast_cb=toast;g_qpk.dialog_cb=dialog;
   uint32_t background=lv_color_to_u32(lv_obj_get_style_bg_color(root,0));
   bool light=((background>>16)&255)+((background>>8)&255)+(background&255)>384;

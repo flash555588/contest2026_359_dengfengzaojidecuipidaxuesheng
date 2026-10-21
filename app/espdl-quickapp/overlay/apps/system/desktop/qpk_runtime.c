@@ -28,6 +28,7 @@
 #include <nuttx/video/video.h>
 #include <nuttx/video/uvc_camera.h>
 #include "qpk_mjpeg.h"
+#include "qpk_camera_present.h"
 #include "qpk_espdl.h"
 #include <lvgl/lvgl.h>
 #include "glass_ui_visibility.h"
@@ -40,6 +41,7 @@
 #include "glass_ime.h"
 #include "glass_icons.h"
 #include "qpk_storage.h"
+#include "qpk_photo_store.h"
 #include "qpk_limits.h"
 #include "glass_portal.h"
 #include "qpk_homeassistant.h"
@@ -95,6 +97,7 @@
 
 #ifdef CONFIG_ESPRESSIF_MIPI_DSI
 FAR void *esp_mipi_dsi_noncache_addr(FAR void *addr);
+int esp_camera_invalidate_framebuffer(void *addr,size_t bytes);
 #endif
 
 enum qpk_widget_type_e
@@ -257,6 +260,14 @@ static uint64_t g_camera_retry_at;
 static unsigned int g_camera_cleanup_attempts;
 static bool g_camera_cleanup_blocked;
 static bool g_camera_redraw;
+static struct qpk_camera_start_s
+{
+  bool pending;
+  int x,y,usb_id;
+  uint32_t generation,interval;
+  unsigned mode;
+} g_camera_start;
+static int qpk_camera_clean_frame(uint16_t *pixels,size_t bytes);
 static int g_camera_last_error;
 static bool g_photo_pending;
 static int g_photo_status;
@@ -272,7 +283,12 @@ static unsigned qpk_camera_style(void);
 int qpk_runtime_camera_video_action(unsigned action)
 {
   if(action==0)return qpk_video_mode(true)?0:-EBUSY;
-  if(action==1)return qpk_runtime_camera_active()&&qpk_video_selected()?qpk_video_start():-EPERM;
+  if(action==1){
+    pthread_mutex_lock(&g_camera_lock);
+    bool capturing=g_camera_state==QPK_CAMERA_ACTIVE&&g_camera.thread_alive&&!g_camera.stop_requested;
+    pthread_mutex_unlock(&g_camera_lock);
+    return capturing&&qpk_video_selected()?qpk_video_start():-EPERM;
+  }
   if(action==2){qpk_video_stop();return 0;}
   return -EINVAL;
 }
@@ -286,87 +302,59 @@ static void qpk_camera_set_photo_status(int status)
   g_photo_status = status;
   g_photo_status_ms = qpk_now_ms();
 }
-static unsigned int g_photo_sequence;
-
+static uint32_t g_photo_job;
 #ifndef QPK_PHOTO_DIR
-#define QPK_PHOTO_DIR "/data/photos"
+#define QPK_PHOTO_DIR NULL
 #endif
 
-/* Only the capture worker writes files, using the dequeued page before UI
- * composition. No snapshot pointer escapes the page's ownership interval. */
+/* Caller holds g_camera_lock. The store never takes this lock. */
+static void qpk_camera_photo_poll_locked(void)
+{
+  if(!g_photo_job)return;
+  struct qpk_photo_result result;
+  int ret=qpk_photo_store_status(QPK_PHOTO_PREVIEW,g_photo_job,&result);
+  if(ret){qpk_camera_set_photo_status(ret);g_photo_job=0;return;}
+  if(!result.done)return;
+  qpk_camera_set_photo_status(result.error?result.error:2);
+  snprintf(g_photo_path,sizeof(g_photo_path),"%s",result.path);
+  g_photo_job=0;
+}
+
+/* Copy ownership before any display page or JPEG input can be reused.
+ * No filesystem operation runs on the capture thread. */
+static void qpk_camera_stage_photo(const struct qpk_photo_input *input)
+{
+  pthread_mutex_lock(&g_camera_lock);
+  qpk_camera_photo_poll_locked();
+  bool pending=g_photo_pending;
+  g_photo_pending=false;
+  pthread_mutex_unlock(&g_camera_lock);
+  if(!pending)return;
+  uint32_t ticket=0;
+  int ret=qpk_photo_store_submit(QPK_PHOTO_PREVIEW,input,&ticket);
+  pthread_mutex_lock(&g_camera_lock);
+  if(ret)qpk_camera_set_photo_status(ret);
+  else{
+    g_photo_job=ticket;
+    if(g_camera.stop_requested)qpk_photo_store_cancel(QPK_PHOTO_PREVIEW,ticket);
+    qpk_camera_photo_poll_locked();
+  }
+  pthread_mutex_unlock(&g_camera_lock);
+}
+
 static void qpk_camera_save(const uint16_t *pixels,unsigned source_width)
 {
-  uint8_t header[66] = {0};
-  uint8_t row[1024];
-  char path[128];
-  FILE *file = NULL;
-  int error = 0;
-  unsigned int x;
-  unsigned int y;
-  pthread_mutex_lock(&g_camera_lock);
-  bool pending = g_photo_pending;
-  g_photo_pending = false;
-  pthread_mutex_unlock(&g_camera_lock);
-  if (!pending) return;
-  unsigned zoom=qpk_camera_zoom_percent(),style=qpk_camera_style();
-  unsigned height=600*512/source_width;
-  unsigned crop_width=source_width*100/zoom,crop_height=600*100/zoom;
-  unsigned crop_x=(source_width-crop_width)/2,crop_y=(600-crop_height)/2;
-
-  if (mkdir(QPK_PHOTO_DIR, 0755) < 0 && errno != EEXIST)
-    error = errno;
-  if (!error)
-    {
-      /* Exclusive creation never overwrites a photo from an earlier boot. */
-      do
-        {
-          snprintf(path, sizeof(path), QPK_PHOTO_DIR "/camera-%08u.bmp",
-                   ++g_photo_sequence);
-          file = fopen(path, "wbx");
-        }
-      while (!file && errno == EEXIST && g_photo_sequence < 100000);
-      if (!file) error = errno ? errno : EIO;
-    }
-  if (file)
-    {
-      const uint32_t values[] = {66+1024*height, 66, 40, 512, (uint32_t)-height,
-                                 3, 1024*height, 0xf800, 0x07e0, 0x001f};
-      const unsigned int offsets[] = {2, 10, 14, 18, 22, 30, 34, 54, 58, 62};
-      header[0] = 'B'; header[1] = 'M'; header[26] = 1; header[28] = 16;
-      for (x = 0; x < 10; x++)
-        for (y = 0; y < 4; y++)
-          header[offsets[x] + y] = values[x] >> (8 * y);
-      if (fwrite(header, 1, sizeof(header), file) != sizeof(header)) error = EIO;
-      for (y = 0; !error && y < height; y++)
-        {
-          if (qpk_runtime_camera_busy())
-            {
-              pthread_mutex_lock(&g_camera_lock);
-              bool cancelled = g_camera.stop_requested;
-              pthread_mutex_unlock(&g_camera_lock);
-              if (cancelled) { error = ECANCELED; break; }
-            }
-          for (x = 0; x < 512; x++)
-            {
-              uint16_t pixel = camera_color_pixel(pixels[(crop_y+y*crop_height/height)*1024+crop_x+x*crop_width/512],style);
-              row[x * 2] = pixel;
-              row[x * 2 + 1] = pixel >> 8;
-            }
-          if (fwrite(row, 1, sizeof(row), file) != sizeof(row)) error = EIO;
-        }
-      if (!error && (fflush(file) != 0 || fsync(fileno(file)) != 0)) error = EIO;
-      if (fclose(file) != 0 && !error) error = EIO;
-      if (error) unlink(path);
-    }
-  pthread_mutex_lock(&g_camera_lock);
-  qpk_camera_set_photo_status(error ? -error : 2);
-  if (!error) snprintf(g_photo_path, sizeof(g_photo_path), "%s", path);
-  pthread_mutex_unlock(&g_camera_lock);
+  struct qpk_photo_input input={.format=QPK_PHOTO_BMP565,.data=pixels,
+    .bytes=QPK_CAMERA_FRAME_SIZE,.width=source_width,.height=QPK_CAMERA_RAW_HEIGHT,
+    .stride=QPK_CAMERA_RAW_WIDTH,.zoom=qpk_camera_zoom_percent(),
+    .style=qpk_camera_style(),.root_override=QPK_PHOTO_DIR};
+  qpk_camera_stage_photo(&input);
 }
 
 bool qpk_runtime_camera_capture_request(uint32_t *request)
 {
   pthread_mutex_lock(&g_camera_lock);
+  qpk_camera_photo_poll_locked();
   bool ready = g_camera_state == QPK_CAMERA_ACTIVE &&
                g_camera.thread_alive && !g_camera.stop_requested &&
                g_photo_status != 1;
@@ -389,6 +377,7 @@ int qpk_runtime_camera_photo_status(uint32_t request,char *path,size_t cap)
 {
   if(!path||!cap)return -EINVAL;
   pthread_mutex_lock(&g_camera_lock);path[0]=0;
+  qpk_camera_photo_poll_locked();
   int status=request&&request==g_photo_request?g_photo_status:-ESTALE;
   if(status==2)snprintf(path,cap,"%s",g_photo_path);
   pthread_mutex_unlock(&g_camera_lock);return status;
@@ -474,6 +463,7 @@ static int qpk_camera_bar_status(void)
   int status;
   uint64_t changed;
   pthread_mutex_lock(&g_camera_lock);
+  qpk_camera_photo_poll_locked();
   status = g_photo_status;
   changed = g_photo_status_ms;
   pthread_mutex_unlock(&g_camera_lock);
@@ -545,13 +535,19 @@ static void qpk_camera_reference_prepare_view(uint16_t *pixels,unsigned source_w
 }
 
 /* The atlas is shared with the LVGL entry screen: no alternate icon family. */
-static int qpk_camera_bar_blit(uint16_t *pixels,unsigned source_width)
+static int qpk_camera_bar_draw(uint16_t *pixels,unsigned source_width,bool prepared)
 {
   unsigned zoom=qpk_camera_zoom_percent();
   unsigned style=qpk_camera_style();
   bool selected_video=qpk_video_selected();
   int zoom_index=camera_reference_zoom_index(zoom);
-  qpk_camera_reference_prepare_view(pixels,source_width,zoom);
+  if (!prepared) qpk_camera_reference_prepare_view(pixels,source_width,zoom);
+  else {
+    unsigned width=CAMERA_REFERENCE_VIEW_RIGHT-CAMERA_REFERENCE_VIEW_LEFT;
+    unsigned height=600*width/source_width,top=22+(556-height)/2;
+    for(unsigned y=0;y<600;y++)if(y<top||y>=top+height)
+      memset(pixels+y*1024+CAMERA_REFERENCE_VIEW_LEFT,0,width*sizeof(*pixels));
+  }
   int status=qpk_camera_bar_status();
   for(int y=0;y<600;y++){
     if(y<22||y>=578){memset(pixels+y*1024,0,1024*sizeof(uint16_t));continue;}
@@ -594,6 +590,9 @@ static int qpk_camera_bar_blit(uint16_t *pixels,unsigned source_width)
                qpk_camera_rgb565(status<0?0xe34f4f:0x2fbf8f));
   return status;
 }
+
+static int qpk_camera_bar_blit(uint16_t *pixels,unsigned source_width)
+{ return qpk_camera_bar_draw(pixels,source_width,false); }
 
 static uint64_t qpk_now_ms(void)
 {
@@ -2855,7 +2854,10 @@ static bool qpk_camera_cancelled(void)
 /* Called with g_camera_lock held, only after all device work has finished. */
 static void qpk_camera_released(void)
 {
-  if (g_photo_status == 1) qpk_camera_set_photo_status(-ECANCELED);
+  if(g_photo_job){
+    qpk_photo_store_cancel(QPK_PHOTO_PREVIEW,g_photo_job);
+    qpk_camera_photo_poll_locked();
+  }else if(g_photo_status==1)qpk_camera_set_photo_status(-ECANCELED);
   g_photo_pending = false;
   g_camera_redraw |= g_camera.direct_preview;
   memset(&g_camera, 0, sizeof(g_camera));
@@ -2958,6 +2960,19 @@ static void *qpk_camera_cleanup(pthread_addr_t arg)
 
   if (camera->fb_fd >= 0)
     {
+      if(camera->direct_preview)
+        {
+          uint64_t started=qpk_now_ms();
+          ret=qpk_camera_park_scanout(camera->fb_fd,&camera->fb_plane,
+              QPK_CAMERA_RAW_HEIGHT,QPK_CAMERA_FRAME_SIZE,qpk_camera_clean_frame);
+          printf("[display-owner] camera return page=2 result=%d ms=%lu\n",
+                 ret,(unsigned long)(qpk_now_ms()-started));
+          if(ret<0)
+            {
+              qpk_camera_cleanup_failed(-errno,true);
+              return NULL;
+            }
+        }
       fd = camera->fb_fd;
       camera->fb_fd = -1;
       if (close(fd) < 0)
@@ -2975,6 +2990,9 @@ static void *qpk_camera_cleanup(pthread_addr_t arg)
 
 static void qpk_camera_stop(void)
 {
+  pthread_mutex_lock(&g_camera_lock);
+  g_camera_start.pending=false;
+  pthread_mutex_unlock(&g_camera_lock);
   qpk_video_stop();
   struct qpk_camera_canvas_s *camera = &g_qpk.camera_canvas;
   pthread_attr_t attr;
@@ -3080,6 +3098,8 @@ static void qpk_camera_profile(FAR struct qpk_camera_s *camera)
          (unsigned long)samples);
 
   camera->profile_started_us = qpk_now_us();
+  extern void qpk_camera_timing_log(void);
+  qpk_camera_timing_log();
   camera->profile_dq_us = 0;
   camera->profile_invalidate_us = 0;
   camera->profile_convert_us = 0;
@@ -3244,8 +3264,13 @@ static void *qpk_camera_thread(pthread_addr_t arg)
       started = qpk_now_us();
       if (camera->memory_type == V4L2_MEMORY_USERPTR)
         {
+#ifdef CONFIG_ESPRESSIF_MIPI_DSI
+          ret=esp_camera_invalidate_framebuffer(target,QPK_CAMERA_FRAME_SIZE);
+          if(ret<0){fatal_error=ret;break;}
+#else
           up_invalidate_dcache((uintptr_t)target,
                                (uintptr_t)target + QPK_CAMERA_FRAME_SIZE);
+#endif
         }
       else
         {
@@ -3273,8 +3298,7 @@ static void *qpk_camera_thread(pthread_addr_t arg)
       camera->fb_plane.xoffset = 0;
       camera->fb_plane.yoffset =
         next_page * QPK_CAMERA_RAW_HEIGHT;
-      ret = ioctl(camera->fb_fd, FBIOPAN_DISPLAY,
-                  (uintptr_t)&camera->fb_plane);
+      ret = qpk_camera_present(camera->fb_fd,&camera->fb_plane);
       if (ret < 0)
         {
           pan_error = errno;
@@ -3283,6 +3307,10 @@ static void *qpk_camera_thread(pthread_addr_t arg)
           pan_failures++;
           printf("[qpk] framebuffer pan failed: %d (%u/%u)\n",
                  pan_error, pan_failures, QPK_CAMERA_MAX_PAN_ERRORS);
+          /* Never return a possibly active page to CSI after an uncertain
+           * flip. Stop the stream before any page can be overwritten. */
+          fatal_error=-pan_error;
+          break;
         }
       else
         {
@@ -3315,14 +3343,8 @@ static void *qpk_camera_thread(pthread_addr_t arg)
 
       if (camera->memory_type == V4L2_MEMORY_USERPTR)
         {
-          /* On a successful flip, only the page that just left scanout may
-           * return to CSI.  If the flip failed, the newly captured page was
-           * never displayed and remains the safe capture target.
-           */
-
-          released = ret == OK ?
-            (FAR uint8_t *)camera->fb_plane.fbmem + old_page * page_size :
-            target;
+          /* Only the page confirmed to have left scanout returns to CSI. */
+          released = (FAR uint8_t *)camera->fb_plane.fbmem + old_page * page_size;
           camera->mmap_buffers[buffer.index] = released;
           buffer.m.userptr = (uintptr_t)released;
           buffer.length = QPK_CAMERA_FRAME_SIZE;
@@ -3476,7 +3498,7 @@ error:
   return ret;
 }
 
-static int qpk_camera_start_source(int x, int y, int usb_id, uint32_t generation,
+static int qpk_camera_start_source_now(int x, int y, int usb_id, uint32_t generation,
                                     unsigned mode, uint32_t interval)
 {
   struct qpk_camera_s *camera = &g_camera;
@@ -3707,6 +3729,49 @@ error:
   return ret;
 }
 
+/* JS can request a camera from inside lv_timer_handler(). Starting DMA there
+ * would race a refresh timer later in that same pass. Only queue here; the UI
+ * loop consumes this after the complete LVGL pass has returned.
+ */
+static int qpk_camera_start_source(int x,int y,int usb_id,uint32_t generation,
+                                   unsigned mode,uint32_t interval)
+{
+  pthread_mutex_lock(&g_camera_lock);
+  bool queued=g_camera_start.pending;
+  pthread_mutex_unlock(&g_camera_lock);
+  if(queued)return -EBUSY;
+  qpk_camera_stop();
+  pthread_mutex_lock(&g_camera_lock);
+  if(g_camera_state!=QPK_CAMERA_IDLE||g_camera_redraw)
+    {
+      pthread_mutex_unlock(&g_camera_lock);
+      return -EBUSY;
+    }
+  g_camera_start=(struct qpk_camera_start_s){.pending=true,.x=x,.y=y,
+      .usb_id=usb_id,.generation=generation,.mode=mode,.interval=interval};
+  pthread_mutex_unlock(&g_camera_lock);
+  printf("[display-owner] camera start queued source=%s\n",usb_id<0?"csi":"usb");
+  return 0;
+}
+
+static void qpk_camera_service_start(void)
+{
+  struct qpk_camera_start_s start;
+  pthread_mutex_lock(&g_camera_lock);
+  start=g_camera_start;
+  g_camera_start.pending=false;
+  pthread_mutex_unlock(&g_camera_lock);
+  if(!start.pending)return;
+  /* Complete any pending render/flush while GUI still owns both draw pages.
+   * The NuttX fbdev flush/pan is synchronous on this board.
+   */
+  lv_refr_now(NULL);
+  int ret=qpk_camera_start_source_now(start.x,start.y,start.usb_id,
+      start.generation,start.mode,start.interval);
+  if(ret<0)g_camera_last_error=ret;
+  printf("[display-owner] camera start boundary result=%d\n",ret);
+}
+
 static int qpk_camera_start(int x, int y)
 { return qpk_camera_start_source(x, y, -1, 1, 0, 0); }
 
@@ -3760,6 +3825,7 @@ static JSValue js_camera_photo_status(JSContext *context, JSValueConst self,
   char path[sizeof(g_photo_path)];
   int status;
   pthread_mutex_lock(&g_camera_lock);
+  qpk_camera_photo_poll_locked();
   status = g_photo_status;
   snprintf(path, sizeof(path), "%s", g_photo_path);
   pthread_mutex_unlock(&g_camera_lock);
@@ -4573,7 +4639,7 @@ bool qpk_runtime_camera_active(void)
   bool active;
 
   pthread_mutex_lock(&g_camera_lock);
-  active = g_camera.direct_preview;
+  active = g_camera.direct_preview || g_camera_redraw;
   pthread_mutex_unlock(&g_camera_lock);
   return active;
 }
@@ -4583,13 +4649,14 @@ bool qpk_runtime_camera_busy(void)
   bool busy;
 
   pthread_mutex_lock(&g_camera_lock);
-  busy = g_camera_state != QPK_CAMERA_IDLE;
+  busy = g_camera_state != QPK_CAMERA_IDLE || g_camera_start.pending || g_camera_redraw;
   pthread_mutex_unlock(&g_camera_lock);
   return busy;
 }
 
 bool qpk_runtime_camera_poll(void)
 {
+  qpk_camera_service_start();
   static bool armed;
   static int pressed,zoom_start,zoom_down;
   static lv_point_t point;

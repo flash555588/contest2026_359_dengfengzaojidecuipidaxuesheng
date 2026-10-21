@@ -57,7 +57,7 @@ int main(int argc,char **argv)
     assert(effects==0);puts("ASSISTANT_RESTART_OK: retained notes; interrupted tasks never replay");return 0;
   }
   char *catalog=malloc(strlen(binding->catalog)+3);sprintf(catalog,"[%s]",binding->catalog);cJSON *schemas=cJSON_Parse(catalog);
-  assert(cJSON_GetArraySize(schemas)==8);free(catalog);cJSON_Delete(schemas);assert(!glass_assistant_start());
+  assert(cJSON_GetArraySize(schemas)==10);free(catalog);cJSON_Delete(schemas);assert(!glass_assistant_start());
   cJSON *r=record("{\"operation\":\"add\",\"kind\":\"note\",\"request_id\":\"n1\",\"title\":\"购物\",\"text\":\"牛奶\\n面包\"}",false);
   unsigned id=(unsigned)num(field(r,"item"),"id");assert(id==1);cJSON_Delete(r);
   r=record("{\"operation\":\"add\",\"kind\":\"note\",\"request_id\":\"n1\",\"title\":\"购物\",\"text\":\"牛奶\\n面包\"}",false);
@@ -118,5 +118,21 @@ int main(int argc,char **argv)
   puts("ASSISTANT_SCHEDULES_OK: no-chat execution, one-shot/daily, no duplicate effects, cancellation, missed deadlines, before/after-effect storage failures, interrupted recovery, execution-time permission");
   atomic_bool cancel=true;cJSON *empty=cJSON_CreateObject();char *out=binding->call("assistant_records",empty,&cancel);assert(out&&strstr(out,"cancelled"));free(out);cJSON_Delete(empty);
   assert(glass_assistant_tick(1)==-EAGAIN);
+  char sdparent[128],away[160];snprintf(sdparent,sizeof(sdparent),"%s",ASSISTANT_SD_ROOT);*strrchr(sdparent,'/')=0;
+  assert(!mkdir(sdparent,0700));
+  r=record("{\"operation\":\"list\",\"kind\":\"note\",\"query\":\"updated\"}",false);assert(num(r,"total")==1);cJSON_Delete(r);
+  cJSON_Delete(record("{\"operation\":\"add\",\"kind\":\"note\",\"request_id\":\"sd-only\",\"title\":\"SD only\"}",false));
+  assert(!strcmp(data_root,ASSISTANT_SD_ROOT));
+  r=schedule("{\"operation\":\"list\"}",false);assert(!cJSON_GetArraySize(field(r,"items")));cJSON_Delete(r);
+  unsigned prior_effects=effects;unsigned sdjob=add_schedule("sd-job",1,"music_stop","{}");
+  assert(!glass_assistant_tick(time(NULL)+2)&&effects==prior_effects+1);item_state(sdjob,"done");
+  snprintf(away,sizeof(away),"%s-away",sdparent);assert(!rename(sdparent,away));
+  r=record("{\"operation\":\"list\",\"kind\":\"note\",\"query\":\"SD only\"}",false);assert(num(r,"total")==0);cJSON_Delete(r);
+  assert(!rename(away,sdparent));
+  snprintf(away,sizeof(away),"%s-away",ASSISTANT_SD_ROOT);assert(!rename(ASSISTANT_SD_ROOT,away));
+  assert(!symlink(ASSISTANT_DATA_ROOT,ASSISTANT_SD_ROOT));
+  cJSON_Delete(record("{\"operation\":\"add\",\"kind\":\"note\",\"request_id\":\"bad-sd\",\"title\":\"must fail\"}",true));
+  assert(!unlink(ASSISTANT_SD_ROOT)&&!rename(away,ASSISTANT_SD_ROOT));
+  puts("ASSISTANT_SD_OK: SD-first updates preserve legacy records, no Flash spill on SD fault; schedules isolated per medium and not copied/replayed");
   puts("ASSISTANT_SERVICE_OK");return 0;
 }

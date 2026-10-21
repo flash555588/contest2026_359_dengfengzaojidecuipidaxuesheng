@@ -5,6 +5,7 @@
  */
 #include "usbh_core.h"
 #include "usbh_hub.h"
+#include <nuttx/kmalloc.h>
 
 #undef USB_DBG_TAG
 #define USB_DBG_TAG "usbh_hub"
@@ -28,12 +29,18 @@ extern void usbh_hubport_release(struct usbh_hubport *hport);
 static const char *speed_table[] = { "error-speed", "low-speed", "full-speed", "high-speed", "wireless-speed", "super-speed", "superplus-speed" };
 
 #if CONFIG_USBHOST_MAX_EXTHUBS > 0
-static struct usbh_hub g_hub_class[CONFIG_USBHOST_MAX_EXTHUBS];
+/* One bounded pool lives as long as the host. Hotplug reuses its slots. */
+static struct usbh_hub *g_hub_class;
 static uint32_t g_devinuse = 0;
 
 static struct usbh_hub *usbh_hub_class_alloc(void)
 {
     uint8_t devno;
+
+    if (!g_hub_class) {
+        g_hub_class = kumm_zalloc(sizeof(*g_hub_class) * CONFIG_USBHOST_MAX_EXTHUBS);
+        if (!g_hub_class) return NULL;
+    }
 
     for (devno = 0; devno < CONFIG_USBHOST_MAX_EXTHUBS; devno++) {
         if ((g_devinuse & (1U << devno)) == 0) {
@@ -699,7 +706,7 @@ static void usbh_hub_thread(CONFIG_USB_OSAL_THREAD_SET_ARGV)
         usbh_hubport_release(hport);
     }
     usb_hc_deinit(bus);
-    usb_osal_mq_delete(bus->hub_mq);
+    /* The joining caller owns and deletes hub_mq after this handshake. */
     usb_osal_sem_give(bus->hub_sem);
     usb_osal_thread_delete(NULL);
 }

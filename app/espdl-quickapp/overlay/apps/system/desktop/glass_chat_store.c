@@ -10,6 +10,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "qpk_photo_storage.h"
+#ifndef CHAT_SD_ARCHIVE_ROOT
+#define CHAT_SD_ARCHIVE_ROOT "/sdcard/espclaw-observations"
+#endif
+#ifndef CHAT_SD_HISTORY_ROOT
+#define CHAT_SD_HISTORY_ROOT "/sdcard/espclaw-history"
+#endif
 
 #ifndef CHAT_DATA_ROOT
 #define CHAT_DATA_ROOT "/data/config"
@@ -28,17 +35,39 @@
  * commits that slot. history.tmp also preserves interrupted existing saves. */
 static const char *const store_slots[] = {CHAT_FILE, CHAT_TEMP};
 static int load_file(const char *path, struct chat_snapshot *out, uint32_t *sequence);
+static int sd_history_paths(char paths[2][256],bool writing)
+{
+  int ret=qpk_volume_mounted(QPK_VOLUME_SD);if(ret)return ret;
+  char root[128];
+  if(writing){ret=qpk_photo_directory(root,sizeof(root),CHAT_STORE_LIMIT,CHAT_SD_HISTORY_ROOT);if(ret)return ret;}
+  else{
+    char parent[128];struct stat st;
+    ret=qpk_photo_parent(CHAT_SD_HISTORY_ROOT,parent,sizeof(parent));if(ret)return ret;
+    if(lstat(CHAT_SD_HISTORY_ROOT,&st))return -errno;
+    if(!S_ISDIR(st.st_mode)||S_ISLNK(st.st_mode))return -EPERM;
+    if(strlen(CHAT_SD_HISTORY_ROOT)>=sizeof(root))return -ENAMETOOLONG;
+    strcpy(root,CHAT_SD_HISTORY_ROOT);
+  }
+  snprintf(paths[0],256,"%s/history.json",root);
+  snprintf(paths[1],256,"%s/history.tmp",root);
+  return 0;
+}
 
-int glass_chat_archive(const char *text, uint32_t id, char name[48], uint32_t *bytes)
+static int archive_save(const char *text,uint32_t id,char name[48],uint32_t *bytes,bool sd)
 {
   name[0] = 0; *bytes = 0;
   if (!text || !glass_chat_utf8(text, 2 * 1024 * 1024, true)) return -EINVAL;
-  if (mkdir(CHAT_ARCHIVE_PARENT, 0700) && errno != EEXIST) return -errno;
-  if (mkdir(CHAT_ARCHIVE_ROOT, 0700) && errno != EEXIST) return -errno;
+  char directory[128];const char *root=CHAT_ARCHIVE_ROOT;
+  if(sd){int ret=qpk_volume_mounted(QPK_VOLUME_SD);if(ret)return ret;
+    ret=qpk_photo_directory(directory,sizeof(directory),strlen(text),CHAT_SD_ARCHIVE_ROOT);if(ret)return ret;root=directory;
+  }else{
+    if (mkdir(CHAT_ARCHIVE_PARENT, 0700) && errno != EEXIST) return -errno;
+    if (mkdir(CHAT_ARCHIVE_ROOT, 0700) && errno != EEXIST) return -errno;
+  }
   char path[256]; int fd = -1;
   for (unsigned n = 0; n < 1000; n++) {
-    snprintf(name, 48, "reply-%lu-%u.txt", (unsigned long)id, n);
-    snprintf(path, sizeof(path), "%s/%s", CHAT_ARCHIVE_ROOT, name);
+    snprintf(name, 48, "%sreply-%lu-%u.txt",sd?"sd-":"", (unsigned long)id, n);
+    snprintf(path, sizeof(path), "%s/%s", root, name);
     fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
     if (fd >= 0 || errno != EEXIST) break;
   }
@@ -52,9 +81,13 @@ int glass_chat_archive(const char *text, uint32_t id, char name[48], uint32_t *b
   }
   if (!error && fsync(fd)) error = -errno;
   if (close(fd) && !error) error = -errno;
-  if (error) { name[0] = 0; return error; } /* Preserve partial data on failure. */
+  if (error) { if(sd)unlink(path);name[0] = 0; return error; } /* Preserve legacy partial archives. */
   *bytes = length; return 0;
 }
+int glass_chat_archive(const char *text,uint32_t id,char name[48],uint32_t *bytes)
+{return archive_save(text,id,name,bytes,true);}
+int glass_chat_archive_session(const char *text,uint32_t id,char name[48],uint32_t *bytes)
+{return archive_save(text,id,name,bytes,true);}
 
 static pthread_mutex_t page_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct chat_page page_state;
@@ -67,9 +100,24 @@ static void *page_worker(void *arg)
     pthread_mutex_lock(&page_lock); page_state.busy = false; page_state.error = -ENOMEM; page_state.revision++;
     pthread_mutex_unlock(&page_lock); free(job); return NULL;
   }
-  char path[256]; snprintf(path, sizeof(path), "%s/%s", CHAT_ARCHIVE_ROOT, job->name);
-  int fd = open(path, O_RDONLY); struct stat st;
-  if (fd < 0) result->error = -errno;
+  bool sd=!strncmp(job->name,"sd-reply-",9);
+  char path[256];snprintf(path,sizeof(path),"%s/%s",sd?CHAT_SD_ARCHIVE_ROOT:CHAT_ARCHIVE_ROOT,job->name);
+  int fd=-1;struct stat st;
+  if(sd){
+    result->error=qpk_volume_mounted(QPK_VOLUME_SD);
+    char parent[128];
+    if(!result->error)result->error=qpk_photo_parent(CHAT_SD_ARCHIVE_ROOT,parent,sizeof(parent));
+    if(!result->error&&lstat(CHAT_SD_ARCHIVE_ROOT,&st))result->error=-errno;
+    if(!result->error&&(!S_ISDIR(st.st_mode)||S_ISLNK(st.st_mode)))result->error=-EPERM;
+    if(!result->error&&lstat(path,&st))result->error=-errno;
+    if(!result->error&&!S_ISREG(st.st_mode))result->error=-EPERM;
+  }
+  int flags=O_RDONLY;
+#ifdef O_NOFOLLOW
+  if(sd)flags|=O_NOFOLLOW;
+#endif
+  if(!result->error){fd=open(path,flags);if(fd<0)result->error=-errno;}
+  if(result->error){} /* Preserve a failed mount/path validation. */
   else if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size < 1 || st.st_size > 2 * 1024 * 1024) result->error = -EINVAL;
   else {
     const unsigned stride = CHAT_PAGE_BYTES - 4;
@@ -196,12 +244,18 @@ static cJSON *turns_json(const struct chat_snapshot *state)
   if (!array) return NULL;
   for (unsigned i = 0; i < state->count; i++) {
     const struct chat_turn *t = &state->turns[i];
+    /* A new camera observation has its own SD receipt. Preserve all legacy
+     * Flash turns; never serialize these session-only turns into Flash. */
+    if(t->session_history)continue;
     if(t->card_count>CHAT_CARD_COUNT){cJSON_Delete(array);return NULL;}
     cJSON *item = cJSON_CreateObject();
     if (!item || !cJSON_AddNumberToObject(item, "id", t->id) ||
         !cJSON_AddNumberToObject(item, "mode", t->mode) ||
+        !cJSON_AddBoolToObject(item, "camera_samples", t->camera_samples) ||
+        !cJSON_AddBoolToObject(item, "camera_capture_error", t->error==CHAT_ERROR_CAMERA) ||
         !cJSON_AddNumberToObject(item, "state", t->state) ||
-        !cJSON_AddNumberToObject(item, "error", t->error) ||
+        /* Keep the numeric error range readable by the recovery firmware. */
+        !cJSON_AddNumberToObject(item, "error", t->error==CHAT_ERROR_CAMERA?CHAT_ERROR_RESPONSE:t->error) ||
         !cJSON_AddBoolToObject(item, "clipped", t->clipped) ||
         !cJSON_AddStringToObject(item, "archive", t->archive) ||
         !cJSON_AddNumberToObject(item, "archive_bytes", t->archive_bytes) ||
@@ -237,18 +291,21 @@ static cJSON *turns_json(const struct chat_snapshot *state)
 int glass_chat_store_save(const struct chat_snapshot *state)
 {
   if (!state || state->count > CHAT_MAX_TURNS) return -EINVAL;
+  /* Optional history is SD-only; an unavailable card leaves the live session
+   * usable without a cache-off Flash snapshot. */
+  char paths[2][256];int path_error=sd_history_paths(paths,true);if(path_error)return path_error;
   /* Never truncate the only valid copy, including a recovered staging file.
    * Re-evaluate on each save so a transient read failure cannot latch forever. */
   struct chat_snapshot *check = calloc(1, sizeof(*check));
   if (!check) return -ENOMEM;
   int errors[2]; uint32_t sequence[2] = {0};
-  for (unsigned i = 0; i < 2; i++) errors[i] = load_file(store_slots[i], check, &sequence[i]);
+  for (unsigned i = 0; i < 2; i++) errors[i] = load_file(paths[i], check, &sequence[i]);
   free(check);
   int latest = latest_slot(errors, sequence);
   if (latest < 0 && load_error(errors)) return load_error(errors);
   uint32_t next = latest < 0 ? 1 : sequence[latest] + 1;
   if (!next) return -EOVERFLOW;
-  const char *target = store_slots[latest < 0 ? 0 : 1 - latest];
+  const char *target = paths[latest < 0 ? 0 : 1 - latest];
   cJSON *doc = cJSON_CreateObject(), *turns = turns_json(state);
   if (!doc || !turns || !cJSON_AddNumberToObject(doc, "version", 1) ||
       !cJSON_AddNumberToObject(doc, "sequence", next)) {
@@ -259,8 +316,6 @@ int glass_chat_store_save(const struct chat_snapshot *state)
   if (!text) return -ENOMEM;
   int ret = 0, fd = -1; size_t size = strlen(text), offset = 0;
   if (size > CHAT_STORE_LIMIT) { ret = -EFBIG; goto done; }
-  if (mkdir(CHAT_DATA_ROOT, 0700) && errno != EEXIST) { ret = -errno; goto done; }
-  if (mkdir(CHAT_DIRECTORY, 0700) && errno != EEXIST) { ret = -errno; goto done; }
   fd = open(target, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (fd < 0) { ret = -errno; goto done; }
   while (offset < size) {
@@ -317,7 +372,7 @@ static int load_file(const char *path, struct chat_snapshot *out, uint32_t *sequ
     cJSON *prompt = cJSON_GetObjectItemCaseSensitive(item, "prompt");
     cJSON *reply = cJSON_GetObjectItemCaseSensitive(item, "reply");
     if (!integer(item, "id", 1, UINT32_MAX) || !integer(item, "state", CHAT_WAITING, CHAT_CANCELLED) ||
-        !integer(item, "error", CHAT_ERROR_NONE, CHAT_ERROR_STREAM) ||
+        !integer(item, "error", CHAT_ERROR_NONE, CHAT_ERROR_CAMERA_STORAGE) ||
         !cJSON_IsString(prompt) || !prompt->valuestring[0] ||
         !glass_chat_utf8(prompt->valuestring, CHAT_PROMPT_BYTES, true) ||
         !cJSON_IsString(reply) || !glass_chat_utf8(reply->valuestring, CHAT_REPLY_BYTES, true)) goto done;
@@ -325,11 +380,20 @@ static int load_file(const char *path, struct chat_snapshot *out, uint32_t *sequ
     if(mode&&!integer(item,"mode",AGENT_MODE_CREATE,AGENT_MODE_COUNT-1))goto done;
     struct chat_turn *turn = &out->turns[count++];
     turn->mode=mode?mode->valueint:AGENT_MODE_CREATE;
+    cJSON *samples=cJSON_GetObjectItemCaseSensitive(item,"camera_samples");
+    if(samples&&!cJSON_IsBool(samples))goto done;
+    turn->camera_samples=cJSON_IsTrue(samples);
     turn->id = cJSON_GetObjectItemCaseSensitive(item, "id")->valuedouble;
     if (turn->id <= previous) goto done;
     previous = turn->id;
     turn->state = cJSON_GetObjectItemCaseSensitive(item, "state")->valueint;
     turn->error = cJSON_GetObjectItemCaseSensitive(item, "error")->valueint;
+    cJSON *capture_error=cJSON_GetObjectItemCaseSensitive(item,"camera_capture_error");
+    if(capture_error&&!cJSON_IsBool(capture_error))goto done;
+    if(cJSON_IsTrue(capture_error)){
+      if(!turn->camera_samples||turn->error!=CHAT_ERROR_RESPONSE)goto done;
+      turn->error=CHAT_ERROR_CAMERA;
+    }
     turn->clipped = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(item, "clipped"));
     cJSON *archive = cJSON_GetObjectItemCaseSensitive(item, "archive");
     if (cJSON_IsString(archive) && strlen(archive->valuestring) < sizeof(turn->archive) &&
@@ -385,11 +449,20 @@ done:
 int glass_chat_store_load(struct chat_snapshot *out)
 {
   if (!out) return -EINVAL;
+  char paths[2][256];int mount_error=sd_history_paths(paths,false);
+  if(mount_error&&mount_error!=-ENODEV&&mount_error!=-ENOENT&&mount_error!=-ENXIO)return mount_error;
+  const char *slots[2]={mount_error?store_slots[0]:paths[0],mount_error?store_slots[1]:paths[1]};
   struct chat_snapshot *other = calloc(1, sizeof(*other));
   if (!other) return -ENOMEM;
   uint32_t sequence[2] = {0};
-  int errors[2] = {load_file(store_slots[0], out, &sequence[0]),
-                   load_file(store_slots[1], other, &sequence[1])};
+  int errors[2] = {load_file(slots[0], out, &sequence[0]),
+                   load_file(slots[1], other, &sequence[1])};
+  /* Legacy Flash is read-only. Once an SD snapshot exists, even empty or
+   * corrupt SD data must not resurrect an older Flash conversation. */
+  if(!mount_error&&errors[0]==-ENOENT&&errors[1]==-ENOENT){
+    errors[0]=load_file(store_slots[0],out,&sequence[0]);
+    errors[1]=load_file(store_slots[1],other,&sequence[1]);
+  }
   int latest = latest_slot(errors, sequence);
   if (latest == 1) {
     out->count = other->count;
