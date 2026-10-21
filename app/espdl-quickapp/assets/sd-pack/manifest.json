@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "target": "/sdcard/",
+  "scope": "Only the five application asset groups specified by the user. No test logs, screenshots, runtime user data, credentials, firmware or source snapshots.",
+  "packages": [
+    {
+      "name": "espdl",
+      "archive": "espdl.zip",
+      "bytes": 3060998,
+      "sha256": "12f5a25ed5ee28d6a02942dea43a82fac359d9bd3ceb5be41089d0db3a030729",
+      "files": [
+        {
+          "path": "espdl/imagenet_cls_mobilenetv2_s8_v1.espdl",
+          "bytes": 3611584,
+          "sha256": "04ecb03fa36b5dadf012e51aa2b8f5ac85ff8b48dc61a501152199d9de429b82"
+        },
+        {
+          "path": "espdl/human_face_detect_msr_s8_v1.espdl",
+          "bytes": 61248,
+          "sha256": "2bbaaf17f39ce9ee547abf5ffdc6d8fcd1844009a0d26878d7bfb33451f16211"
+        },
+        {
+          "path": "espdl/human_face_detect_mnp_s8_v1.espdl",
+          "bytes": 129968,
+          "sha256": "5b7fedcff59dbe69d1935d6d206bf371fc18b5dd9176320ef69c9f05ee83af55"
+        },
+        {
+          "path": "espdl/ESP-DL-LICENSE",
+          "bytes": 1116,
+          "sha256": "e1f5faf085b2292ed14651ef4cfa8709b6752c28001a3b282905c906feaf01e2"
+        },
+        {
+          "path": "espdl/manifest.json",
+          "bytes": 1037,
+          "sha256": "d8c0054f6e2060cc79dfae7594c747a4289e73dcd20846816d2dddf94bf0c924"
+        }
+      ]
+    },
+    {
+      "name": "fonts",
+      "archive": "fonts.zip",
+      "bytes": 7386909,
+      "sha256": "39f70afdd93425119bf857ed8161e7f2f63f8f511d3d674b447f6adf1a6041d3",
+      "files": [
+        {
+          "path": "fonts/VelaGlobal-Regular.ttf",
+          "bytes": 13157208,
+          "sha256": "14dd7f027fa425d34ab6794f46c590f05d11bf4e51623cff73c24ed358c44337"
+        },
+        {
+          "path": "fonts/manifest.json",
+          "bytes": 1229,
+          "sha256": "9cb2f0df249aa4ac8b71400fc8641e73e640934ca2a7d5a39ae7a5ed0a33a031"
+        },
+        {
+          "path": "fonts/notosans-OFL.txt",
+          "bytes": 4396,
+          "sha256": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a"
+        },
+        {
+          "path": "fonts/notosansjp-OFL.txt",
+          "bytes": 4388,
+          "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+        },
+        {
+          "path": "fonts/notosanskr-OFL.txt",
+          "bytes": 4388,
+          "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+        },
+        {
+          "path": "fonts/notosanssc-OFL.txt",
+          "bytes": 4388,
+          "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+        }
+      ]
+    },
+    {
+      "name": "grok",
+      "archive": "grok.zip",
+      "bytes": 12022051,
+      "sha256": "83c75210dc9134917bd9b63f4f1fffad4d6a72ae2cda020e9047b9690520da37",
+      "files": [
+        {
+          "path": "grok/home-white.gbs",
+          "bytes": 125829536,
+          "sha256": "212c0c195872404d345c847b92a200ffc04b596acefe0b3361e30df00f435095"
+        },
+        {
+          "path": "grok/home-black.gbs",
+          "bytes": 125829536,
+          "sha256": "3355910f6798c2472c12e56f416b5fb04ff61c4651293c151abb3a386dd9ecc8"
+        },
+        {
+          "path": "grok/mini-white.gbs",
+          "bytes": 31457696,
+          "sha256": "1e58de88a62c1372aa3f9c45a475f37343740a31c01d1fad61b8be01c74c8b05"
+        },
+        {
+          "path": "grok/app-white.gbs",
+          "bytes": 165151256,
+          "sha256": "a97ccefca62f26d754eb148b7d96b7949c5d42d6f2b7bef36d19953d6f9338e3"
+        },
+        {
+          "path": "grok/app-black.gbs",
+          "bytes": 165151256,
+          "sha256": "c617b656305edd8f526c7b50a2cdc226eab6e38f2e9043b6e9b3db04a3a94c35"
+        },
+        {
+          "path": "grok/manifest.json",
+          "bytes": 3638,
+          "sha256": "f68b242e255fd1d8da6903d6d8e11a7b2cebb03c65a8fc149a37463604e75670"
+        },
+        {
+          "path": "grok/LICENSE.upstream",
+          "bytes": 1086,
+          "sha256": "628de66f2b2ea320fa234e8bdfe1818c9f1f9ae57f6dcdf7424d5b3f0405c9c4"
+        }
+      ]
+    },
+    {
+      "name": "jizura",
+      "archive": "jizura.zip",
+      "bytes": 53551185,
+      "sha256": "0cf49346e9a0c430450c3dddb1709f2be467dd6eea88459cbefcf64efa2ac513",
+      "files": [
+        {
+          "path": "jizura/LICENSE",
+          "bytes": 1086,
+          "sha256": "e06f8ce76d69c5a8f3e438a3ca8cc81c6621c93bac22aaaeec1f4c36330cbe99"
+        },
+        {
+          "path": "jizura/THIRD_PARTY_NOTICES.md",
+          "bytes": 1766,
+          "sha256": "2b31e9c75ec9c243167aa41b7daad265cde6207ed2e6927adf2b219a76473c3d"
+        },
+        {
+          "path": "jizura/engine.js",
+          "bytes": 2318176,
+          "sha256": "849c7b3c768d9283966d51801cbb8dc75a8e62197d88148fa6ca8371b746e297"
+        },
+        {
+          "path": "jizura/fonts.css",
+          "bytes": 1497,
+          "sha256": "0a1c1eb70a7c4285ee88cba5aeeac4b77d3524d07765267e9c1510773eb26d78"
+        },
+        {
+          "path": "jizura/fonts/ibmplexmono/IBMPlexMono-Medium.ttf",
+          "bytes": 136704,
+          "sha256": "a9b4c49bb299e05b5f6c481e7fb5e78943d2793249a0c8874ab574a2d1ea6755"
+        },
+        {
+          "path": "jizura/fonts/ibmplexmono/IBMPlexMono-SemiBold.ttf",
+          "bytes": 140216,
+          "sha256": "d3c38e55c78f5b0f28009fddba4834ec503278936a5986032424c9bd2d23aa46"
+        },
+        {
+          "path": "jizura/fonts/ibmplexmono/OFL.txt",
+          "bytes": 4456,
+          "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+        },
+        {
+          "path": "jizura/fonts/mashanzheng/MaShanZheng-Regular.ttf",
+          "bytes": 5857936,
+          "sha256": "6d2546bb189c732a8ca29af9e22457b152387d158aa459e4ac2ce1e51788b7fb"
+        },
+        {
+          "path": "jizura/fonts/mashanzheng/OFL.txt",
+          "bytes": 4397,
+          "sha256": "d7bdb1cee215b689e23c2f95672a6084c790542170648267a55114103d756a08"
+        },
+        {
+          "path": "jizura/fonts/notosansjp/NotoSansJP[wght].ttf",
+          "bytes": 9589900,
+          "sha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f"
+        },
+        {
+          "path": "jizura/fonts/notosansjp/OFL.txt",
+          "bytes": 4388,
+          "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+        },
+        {
+          "path": "jizura/fonts/notosanssc/NotoSansSC[wght].ttf",
+          "bytes": 17772300,
+          "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+        },
+        {
+          "path": "jizura/fonts/notosanssc/OFL.txt",
+          "bytes": 4388,
+          "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+        },
+        {
+          "path": "jizura/fonts/notoserifjp/NotoSerifJP[wght].ttf",
+          "bytes": 13574352,
+          "sha256": "2fd527ba12b6a44ec30d796d633360da0aeba6c5d4af1304ce12bb4dc15a7dfc"
+        },
+        {
+          "path": "jizura/fonts/notoserifjp/OFL.txt",
+          "bytes": 4350,
+          "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
+        },
+        {
+          "path": "jizura/fonts/notoserifsc/NotoSerifSC[wght].ttf",
+          "bytes": 25125512,
+          "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9"
+        },
+        {
+          "path": "jizura/fonts/notoserifsc/OFL.txt",
+          "bytes": 4350,
+          "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
+        },
+        {
+          "path": "jizura/fonts/zcoolkuaile/OFL.txt",
+          "bytes": 4398,
+          "sha256": "538078469839b4a2e7ad22bef4ebe41681a4e53749bb2a072144024f1d6d703d"
+        },
+        {
+          "path": "jizura/fonts/zcoolkuaile/ZCOOLKuaiLe-Regular.ttf",
+          "bytes": 1514968,
+          "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d"
+        },
+        {
+          "path": "jizura/fonts/zcoolqingkehuangyou/OFL.txt",
+          "bytes": 4419,
+          "sha256": "f1bce31b817dee01c1e4ef8bc45d8ecb95f01f4abbf0a985007cb3cd0fd8123d"
+        },
+        {
+          "path": "jizura/fonts/zcoolqingkehuangyou/ZCOOLQingKeHuangYou-Regular.ttf",
+          "bytes": 8328684,
+          "sha256": "54f0c0df4308cd74cd0f2fd3494ae054dbc4a1fd6fa7d71f4807eb4cdd8b4136"
+        },
+        {
+          "path": "jizura/fonts/zcoolxiaowei/OFL.txt",
+          "bytes": 4400,
+          "sha256": "a094514ca57cf8f9c5e8d8d1adab5d8cd3a377297ff016f9df2c05b3ecd77f0a"
+        },
+        {
+          "path": "jizura/fonts/zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf",
+          "bytes": 6313808,
+          "sha256": "a42b620140f493db42f741351dfbf343c0936d58588ee8004b8b2a218d997ff1"
+        },
+        {
+          "path": "jizura/index.html",
+          "bytes": 3567,
+          "sha256": "bbf6464f5209c31d06e2245c1abf21d69993fda69033125877055251d50dc5c1"
+        },
+        {
+          "path": "jizura/player.js",
+          "bytes": 4988,
+          "sha256": "c01a23929347121c1f8b9d0ca8602bf7a8aa29c77f1d23a9467789f1ac5ff4fb"
+        },
+        {
+          "path": "jizura/projects/demo.json",
+          "bytes": 234,
+          "sha256": "3e5e99f10bcdcbbf84a142bbc71df6da0ea6cb9d6b303361618fa0affb2a8feb"
+        },
+        {
+          "path": "jizura/styles.json",
+          "bytes": 7844,
+          "sha256": "b49963b153dc9813e184b30fa2f3ce13a3c614f26174203622409a5e642c3a0c"
+        },
+        {
+          "path": "jizura/textures/README.txt",
+          "bytes": 125,
+          "sha256": "acc5e5975a5307362687f0cd2eaa0a9898f55bcc8daf8a589c7596fc2c262602"
+        },
+        {
+          "path": "jizura/vendor/mp4-muxer.min.js",
+          "bytes": 31822,
+          "sha256": "897ef9a394df3bd56a216d698672189b9d2c0c4d9e9528c6028601b21689ca39"
+        },
+        {
+          "path": "jizura/manifest.json",
+          "bytes": 5554,
+          "sha256": "736e57307d74075891253a33d438621792a9ba064aec75fb3ce1afbfef8ef8a1"
+        }
+      ]
+    },
+    {
+      "name": "dafeiyu",
+      "archive": "dafeiyu.zip",
+      "bytes": 89608,
+      "sha256": "a043c0b9e7077929486aaa4694ce61fa15dfc0eec66e95f563c34d5055ded2c3",
+      "files": [
+        {
+          "path": "dafeiyu/dafeiyu.lvbin",
+          "bytes": 203214,
+          "sha256": "0e955c871239d5f7d2bd33a7d7896bbc721534752a291e0eab4c9c93f4ab1f84"
+        },
+        {
+          "path": "dafeiyu/LICENSE.upstream",
+          "bytes": 1077,
+          "sha256": "5ca2920d4f56954100c8f365461aba7b6c6154da49734f7b2703d9275ad49d11"
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "espdl": {
+      "source_manifest": "app/espdl-quickapp/models/manifest.json"
+    },
+    "fonts": {
+      "source_lock": "app/espdl-quickapp/assets/music-fonts.lock.json",
+      "runtime_path": "/sdcard/fonts/VelaGlobal-Regular.ttf"
+    },
+    "grok": {
+      "sdk_sha256": "72960b6398032d45c8e4ca4386dfb2a9b6f286d67af0d3c2692dcffeab273fbb",
+      "runtime_path": "/sdcard/grok/",
+      "format": "RGB565A8 raw / GROKSD1"
+    },
+    "jizura": {
+      "upstream_commit": "fc16bfe43ea4a6c25a21f1caf04d17326de14f00",
+      "font_commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+      "styles": 27,
+      "scope": "Offline full-engine preview and fonts; not legacy rendered PV frame banks. Current native music UI has removed legacy SD PV playback."
+    },
+    "dafeiyu": {
+      "commit": "5b0e01856116bd2bae82df1f43c32faa5f056196",
+      "files": [
+        {
+          "file": "正面.png",
+          "url": "https://raw.githubusercontent.com/1190fasheqi/dafeiyu-pet/5b0e01856116bd2bae82df1f43c32faa5f056196/sprites/%E6%AD%A3%E9%9D%A2.png",
+          "bytes": 152590,
+          "sha256": "d2960fb24e13222b64467cd82e594bbe755bde15121677fcbd873f48bb0e0812"
+        },
+        {
+          "file": "背面.png",
+          "url": "https://raw.githubusercontent.com/1190fasheqi/dafeiyu-pet/5b0e01856116bd2bae82df1f43c32faa5f056196/sprites/%E8%83%8C%E9%9D%A2.png",
+          "bytes": 123394,
+          "sha256": "cad4d2394df308333e36f71648e5f4daaa8d083d19d2ae0880bb1f5b42d818a4"
+        },
+        {
+          "file": "侧面.png",
+          "url": "https://raw.githubusercontent.com/1190fasheqi/dafeiyu-pet/5b0e01856116bd2bae82df1f43c32faa5f056196/sprites/%E4%BE%A7%E9%9D%A2.png",
+          "bytes": 119771,
+          "sha256": "956e49e1a24fcf7d899667fe18f29d63a0e6e56bd72a3306f7ba3569132fd695"
+        }
+      ],
+      "converter": "app/espdl-quickapp/tools/convert_dafeiyu_sprites.py",
+      "converter_sha256": "87dc5e662d2d7800acbcbca7dc7a31c465eb68daeaa95502aa4b2d328596f4a7"
+    }
+  }
+}
