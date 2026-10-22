@@ -5,6 +5,9 @@
 
 ## 镜像
 
+- [2026-10-22 在线音乐网络优先级补丁](../../docs/MUSIC_NETWORK_PRIORITY_PATCH_2026-10-22.md)：音频缓冲、歌词／封面请求启动优先级及缓存即时命中；已编译烧录为 `f45999a6…`，浏览器保持原状。
+- [2026-10-22 烧录前差异与当前整合状态](../../docs/UNFLASHED_FEATURES_2026-10-22.md)：更新非浏览器功能已烧录状态，并保留最初差异审计及待验收项目。
+- [2026-10-22 新特性与现有固件更新说明](../../docs/NEW_FEATURES_FIRMWARE_2026-10-22.md)：汇总 AI 多模态、语音、PSRAM XIP 与最新桌面改动，区分已有实板候选和尚未整机验收的源码更新，提供本机镜像摘要索引。
 - [`esp32p4-desktop-v3.2-candidate/`](esp32p4-desktop-v3.2-candidate/)：桌面/LVGL v3.2 构建候选，含 `nuttx.bin`、解析配置、构建元数据和 SHA-256 清单。
 - [`esp32p4-nsh-v3.2/`](esp32p4-nsh-v3.2/)：v3.2 UART NSH 构建产物。
 - [`esp32p4-nsh-v3.2-usb/`](esp32p4-nsh-v3.2-usb/)：v3.2 USB Serial/JTAG 控制台构建产物。
@@ -14,7 +17,7 @@
 
 `esp32p4-desktop-v3.2-candidate` 是 2026-08-27 的独立旧构建候选，仍按其目录说明保留“未完成实板验收”的边界。在此之后，2026-09-19 的本地 v3 应用镜像已经在 v3.2 实板上完成烧录、启动、Home Assistant UI、连接服务和 BLE 触摸板验证；两者不是同一个二进制文件。所有镜像仍禁止烧录到 v1.0/ECO2 板。
 
-当前本地已验证的 v3 应用版本是源码优先的交付基线：Home Assistant 卡片 UI、QuickJS 原生服务桥接、BLE HID/触摸板和 C6 入口均在
+2026-09-19 已验证的 v3 应用版本是当时源码优先的交付基线：Home Assistant 卡片 UI、QuickJS 原生服务桥接、BLE HID/触摸板和 C6 入口均在
 [`app/espdl-quickapp/`](../../app/espdl-quickapp/README.md)，实板烧录和 UI 证据在
 [`logs/2026-09-19/`](../../logs/2026-09-19/)。
 

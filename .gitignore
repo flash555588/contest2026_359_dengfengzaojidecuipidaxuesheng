@@ -28,3 +28,6 @@ __pycache__/
 
 # Configure-generated board link; its target is local-workspace specific
 board/esp32p4-common/board
+
+# Local browser integration copies are maintained separately.
+/app/netsurf-browser*/
