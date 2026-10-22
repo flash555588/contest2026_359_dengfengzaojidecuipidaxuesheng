@@ -38,6 +38,19 @@ python3 tools/check_submission.py
 前者检查交付结构、固件摘要、补丁及仓库卫生；后者还检查 README 和真实 AI 日志清单。
 二者不能代替构建、硬件测试或完整法律合规审查。
 
+## 复杂人声唤醒回放
+
+`test_wake_babble.py` 使用带摘要的开发语料，生成确定性的单人／重叠人声，
+经生产唤醒检测器检查负样本触发及背景人声中的正样本检出。需要 Linux/WSL、GCC、NumPy
+和包含 `corpus.json` 的已准备语料目录，例如：
+
+```bash
+python3 tools/test_wake_babble.py --corpus /path/to/corpus --output out/wake-babble --seconds 60 --streams 4
+```
+
+工具不采集麦克风、不访问网络、不训练模型、不写设备。结果仅为合成开发夹具证据，
+不能推导真实房间误唤醒率；本次没有修改或交付新的唤醒模型。
+
 ## 烧录与可选无线
 
 [flash_p4_nsh.ps1](flash_p4_nsh.ps1)必须提供 `-Port` 和 `-Transport`；先使用 `-DryRun`
