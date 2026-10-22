@@ -1,0 +1,4 @@
+interface:
+  display_name: "ESPClaw Flash 与 SD 策略"
+  short_description: "维护配置、历史、照片和草稿的介质身份与失败时保存语义"
+  default_prompt: "使用 $espclaw-storage-policy 检查当前 Flash/SD 路径，修复拔卡回退和草稿预览存储身份。"

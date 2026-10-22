@@ -1,0 +1,4 @@
+interface:
+  display_name: "openvela 固件候选验收"
+  short_description: "关联源码、准备树、镜像和实板证据，交付可追溯固件候选"
+  default_prompt: "使用 $openvela-firmware-acceptance 核对当前固件候选，整理构建、烧录、回退和真实功能验收边界。"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ESPClaw Agent 工具契约"
+  short_description: "补全 Agent、Harness、MCP 工具和多模态续答的执行契约"
+  default_prompt: "使用 $espclaw-agent-tools 排查当前 ESPClaw 工具调用失败，修复 schema、权限、回执与同轮续答。"
