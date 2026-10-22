@@ -1,0 +1,4 @@
+interface:
+  display_name: "ESPClaw 语音资源交接"
+  short_description: "修复唤醒到播报的请求归属、音频资源交接及实际并行打断"
+  default_prompt: "使用 $espclaw-voice-lifecycle 修复语音连续对话与播报打断，验证新旧请求隔离和麦克风回收。"

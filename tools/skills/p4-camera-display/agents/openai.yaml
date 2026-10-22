@@ -1,0 +1,4 @@
+interface:
+  display_name: "P4 相机与显示诊断"
+  short_description: "定位 CSI/UVC、DMA 所有权和 Flash 写擦引发的显示故障"
+  default_prompt: "使用 $p4-camera-display 排查当前 P4 相机闪屏，建立缓冲所有权及 Flash 写擦的对照证据。"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "LVGL 页面性能与生命周期"
+  short_description: "保留既有效果，检查页面遮挡刷新、动画读盘与退出资源残留"
+  default_prompt: "使用 $lvgl-page-performance 检查当前界面卡顿，定位实际刷新开销并验证页面退出与恢复。"
