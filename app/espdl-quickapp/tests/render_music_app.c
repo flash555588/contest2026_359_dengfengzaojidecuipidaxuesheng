@@ -205,7 +205,9 @@ int main(int argc,char **argv)
     assert(lv_bar_get_value(g_home_music.progress)==0);
     for(unsigned round=0;round<30;round++){
       glass_apps(NULL);music_app_click(g_apps_grid,glass_music);
+      assert(g_music_ui.snapshot); /* Large metadata belongs to this page. */
       music_app_click(g_music_ui.root,music_ui_back);assert(g_desktop.apps_page&&!g_music_ui.timer);
+      assert(!g_music_ui.snapshot); /* Release it on every exit/reopen. */
       panel_hide(NULL);glass_rebuild();assert(g_home_music.root&&g_home_music.valid);
     }
   }

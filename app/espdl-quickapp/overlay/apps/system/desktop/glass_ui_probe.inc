@@ -248,6 +248,22 @@ static void desktop_ui_probe_service(void)
       }
       desktop_ui_probe_print("music-lyrics lines=%u translated=%u bilingual=%d\n",total,translated,!g_glass.music_original_only);
     }
+  else if (!strcmp(command,"lyric-font-status"))
+    {
+      desktop_ui_probe_print("lyric-font selected=%u requested=%u\n",music_font_selected,music_font_requested);
+      for(unsigned i=1;i<glass_lyric_font_count();i++)
+        desktop_ui_probe_print("lyric-font family=%u state=%d\n",i,glass_lyric_font_state(i));
+    }
+  else if (!strncmp(command,"lyric-font-test:",16))
+    {
+      char *end;unsigned long index=strtoul(command+16,&end,10);
+      int ret=-EINVAL;
+      if(command[16]&&!*end&&index<glass_lyric_font_count()&&g_glass.lyric_font_dropdown){
+        lv_dropdown_set_selected(g_glass.lyric_font_dropdown,(unsigned)index);
+        lv_obj_send_event(g_glass.lyric_font_dropdown,LV_EVENT_VALUE_CHANGED,NULL);ret=0;
+      }
+      desktop_ui_probe_print("lyric-font select=%lu result=%d\n",index,ret);
+    }
   else if (!strcmp(command,"font-status"))
     {
       int state,error;glass_sd_font_status(&state,&error);
@@ -295,6 +311,12 @@ static void desktop_ui_probe_service(void)
         now.lyrics_state,window.total,now.cover_url[0]!=0,g_music_ui.cover.canvas!=NULL,
         g_music_ui.full&&g_music_ui.full->cover.canvas!=NULL);
     }
+  else if (!strcmp(command,"music-stream-status"))
+    {
+      struct music_stream_stats s;glass_music_stream_stats(&s);
+      desktop_ui_probe_print("music-stream generation=%u received=%u ring=%u waits=%u wait_ms=%u frames=%u decode_max_ms=%u write_max_ms=%u rate=%u\n",
+        s.generation,s.received,s.ring_bytes,s.waits,s.wait_ms,s.frames,s.decode_max_ms,s.write_max_ms,s.rate);
+    }
   else if (!strcmp(command, "music-status"))
     {
       struct music_snapshot *s = malloc(sizeof(*s));
@@ -306,7 +328,7 @@ static void desktop_ui_probe_service(void)
       }
     }
   else if (!strcmp(command, "music-play-result"))
-    { if (g_music_ui.snapshot.has_result) glass_music_play(&g_music_ui.snapshot.result); }
+    { if (g_music_ui.snapshot && g_music_ui.snapshot->has_result) glass_music_play(&g_music_ui.snapshot->result); }
   else if (!strcmp(command, "navigation-status"))
     desktop_ui_probe_print("navigation page=%s return=%s\n",
       lv_obj_has_flag(g_desktop.panel,LV_OBJ_FLAG_HIDDEN)?"home":g_desktop.apps_page?"apps":g_desktop.chat_page?"chat":g_desktop.qapp_page?"qapp":"panel",
@@ -580,7 +602,7 @@ static int desktop_ui_probe_request(const char *command)
     "speech-esp-tts", "speech-esp-tts-play", "speech-esp-tts-export",
     "speech-p4tts-scalar", "speech-p4tts-pie", "speech-p4tts-dual",
     "speech-zh-q8", "speech-zh-q8-play", "speech-zh-q8-pie", "speech-zh-q8-dual",
-    "music", "music-status", "music-metadata-status", "music-pv-demo", "music-pv-status", "font-status", "music-language-demo", "music-lyrics-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
+    "music", "music-status", "music-stream-status", "music-metadata-status", "music-pv-demo", "music-pv-status", "font-status", "lyric-font-status", "music-language-demo", "music-lyrics-status", "music-play-result", "music-toggle", "music-stop", "current", "apps", "about", "environment", "hello", "2048", "ouo", "ha", "dropdown", "grok-status",
     "files-new", "light", "dark", "audit", "frame", "frame-free", "wifi-scan", "ble-scan", "dialog",
     "ha-settings", "ha-address", "ha-status", "render-metrics", "render-metrics-reset", "toast", "camera-start", "camera-photo", "camera-mode",
     "espdl", "espdl-start", "espdl-stop", "espdl-classify", "espdl-photo", "speech", "speech-listen", "speech-probe", "speech-nano-scalar", "speech-nano-pie", "speech-nano-play", "speech-start", "speech-stop", "speech-status",
@@ -602,6 +624,7 @@ static int desktop_ui_probe_request(const char *command)
                (!strncmp(command,"huya-play:",10) && bili_valid_room(command+10)) ||
                (!strncmp(command,"cc-play:",8) && bili_valid_room(command+8)) ||
 #endif
+               (!strncmp(command,"lyric-font-test:",16) && command[16]!='\0') ||
                (!strncmp(command, "click:", 6) && command[6] != '\0') ||
                (!strncmp(command,"click-at:",9) && command[9]!='\0') ||
                (!strncmp(command, "music-key:", 10) && command[10] != '\0') ||

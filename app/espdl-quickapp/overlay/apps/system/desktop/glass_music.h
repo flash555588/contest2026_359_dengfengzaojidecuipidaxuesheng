@@ -51,6 +51,13 @@ void glass_music_lyrics_read(unsigned first, struct music_lyrics_window *out);
 int glass_music_skip(int direction);
 void glass_music_start(void);
 void glass_music_get(struct music_snapshot *out);
+/* Numeric stream diagnostics; never expose source URLs or credentials. */
+struct music_stream_stats {
+  unsigned generation, received, ring_bytes, waits, wait_ms;
+  unsigned frames, decode_max_ms, write_max_ms, rate;
+  bool download_done;
+};
+void glass_music_stream_stats(struct music_stream_stats *out);
 int glass_music_search(const char *query);
 int glass_music_play(const struct music_song *song);
 /* Play the latest search result once, within 60s, without a second lookup.
@@ -69,5 +76,8 @@ int music_search_url(const char *query, const char *key, char *url, size_t cap);
 
 typedef bool (*music_cancel_cb)(void *);
 typedef int (*music_data_cb)(void *, const unsigned char *, size_t);
+/* Background metadata only: bounded wait for the current audio reserve.
+ * Cache hits must be handled before calling this; never call from the UI. */
+int glass_music_metadata_wait(music_cancel_cb cancelled, void *context);
 int music_http_get(const char *url, music_data_cb sink, void *ctx,
                    music_cancel_cb cancelled, unsigned *status);

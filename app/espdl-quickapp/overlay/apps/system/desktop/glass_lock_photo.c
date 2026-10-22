@@ -46,6 +46,9 @@ static int image_read(struct image_job *job)
       job->input=music_cache_read('c',job->url,COVER_JPEG_MAX,512,&job->used);
       if(job->input){job->cached=true;job->capacity=job->used;return 0;}
     }
+    /* Optional artwork yields network startup to audio; cached pixels above
+     * remain immediately available. This runs on photo_worker, never LVGL. */
+    int ready=glass_music_metadata_wait(image_cancelled,job);if(ready)return ready;
     job->capacity=65536;job->input=malloc(job->capacity+512);if(!job->input)return -ENOMEM;
     return music_http_get(job->url,image_receive,job,image_cancelled,NULL);
   }
@@ -58,7 +61,8 @@ static int image_read(struct image_job *job)
   if(fread(job->input,1,size,f)!=(size_t)size)goto done;
   job->used=size;ret=0;
 done:
-  if(fclose(f) && !ret)ret=-EIO;return ret;
+  if(fclose(f) && !ret)ret=-EIO;
+  return ret;
 }
 static void *photo_worker(void *arg)
 {

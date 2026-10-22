@@ -2,6 +2,7 @@
 /* Real service workers, HTTP/codec boundary mocked; never contacts a device. */
 #include <assert.h>
 #include <stdatomic.h>
+#define MUSIC_METADATA_WAIT_MS 60
 #include "music_service_under_test.c"
 #include "glass_agent.h"
 #include "glass_board_music.h"
@@ -61,6 +62,27 @@ static atomic_uint opens,closes;
 static atomic_uint metadata_fetches;
 static atomic_uint search_requests;
 static atomic_bool has_music_key=true;
+
+static bool metadata_cancel(void *ctx){return atomic_load((atomic_bool *)ctx);}
+static void metadata_priority_checks(void)
+{
+  atomic_bool cancel=false;
+  player_active=true;play_generation=42;strcpy(state.current.url,"https://fixture/audio");
+  stream_stats=(struct music_stream_stats){.generation=42};
+  assert(glass_music_metadata_wait(metadata_cancel,&cancel)==-EAGAIN);
+  atomic_store(&cancel,true);
+  assert(glass_music_metadata_wait(metadata_cancel,&cancel)==-ECANCELED);
+  atomic_store(&cancel,false);stream_stats.ring_bytes=PREFILL;
+  assert(!glass_music_metadata_wait(metadata_cancel,&cancel));
+  stream_stats.ring_bytes=0;stream_stats.download_done=true;
+  assert(!glass_music_metadata_wait(metadata_cancel,&cancel));
+  stream_stats.generation=41; /* A prior track cannot admit optional traffic. */
+  assert(glass_music_metadata_wait(metadata_cancel,&cancel)==-EAGAIN);
+  player_active=false;state.current=(struct music_song){0};play_generation=0;
+  stream_stats=(struct music_stream_stats){0};
+  assert(!glass_music_metadata_wait(metadata_cancel,&cancel));
+  puts("MUSIC_METADATA_PRIORITY_OK: reserve, bounded wait, cancellation, short-file EOF and track generation");
+}
 
 int portal_music_key(char *out,size_t cap)
 {if(!atomic_load(&has_music_key)){out[0]=0;return -ENOENT;}snprintf(out,cap,"offline-fixture");return 0;}
@@ -325,7 +347,7 @@ static void selected_result_checks(void)
 int main(int argc,char **argv)
 {
   if(argc==4 && !strcmp(argv[1],"--lyrics-response"))return live_response(argv[2],argv[3]);
-  assert(argc==2);mp3_path=argv[1];parser_checks();bilingual_checks();stream_checks();cache_checks();
+  assert(argc==2);mp3_path=argv[1];parser_checks();bilingual_checks();stream_checks();cache_checks();metadata_priority_checks();
   /* Test the public bounded view against the real retained lyric store. */
   assert(!lyrics);lyrics=calloc(1,sizeof(*lyrics));assert(lyrics);
   lyrics->count=MUSIC_LRC_LINES;lyrics_state=MUSIC_LYRICS_READY;

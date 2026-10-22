@@ -28,8 +28,11 @@
 #define MINIMP3_NO_SIMD
 #include "music_vendor/minimp3.h"
 
-#define RING_CAP (256 * 1024)
-#define PREFILL (48 * 1024)
+#define RING_CAP (1024 * 1024)
+#define PREFILL (128 * 1024)
+#ifndef MUSIC_METADATA_WAIT_MS
+#define MUSIC_METADATA_WAIT_MS 15000
+#endif
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t wake = PTHREAD_COND_INITIALIZER;
 static struct music_snapshot state = {.volume = 40};
@@ -46,12 +49,37 @@ static struct music_song pending_song, pending_favorite;
 static char pending_query[128];
 static uint64_t result_deadline, pending_result_deadline;
 static unsigned consumed_result;
+static pthread_mutex_t stream_stats_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct music_stream_stats stream_stats;
+
+void glass_music_stream_stats(struct music_stream_stats *out)
+{
+  if(!out)return;
+  pthread_mutex_lock(&stream_stats_lock);*out=stream_stats;pthread_mutex_unlock(&stream_stats_lock);
+}
 
 static uint64_t music_now_ms(void)
 {
   struct timespec t;
   if (clock_gettime(CLOCK_MONOTONIC, &t)) return 0;
   return (uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000;
+}
+
+int glass_music_metadata_wait(music_cancel_cb cancelled, void *context)
+{
+  uint64_t deadline=music_now_ms()+MUSIC_METADATA_WAIT_MS;
+  for(;;) {
+    if(cancelled&&cancelled(context))return -ECANCELED;
+    pthread_mutex_lock(&lock);
+    bool online=player_active&&!strncmp(state.current.url,"https://",8);
+    unsigned generation=play_generation;
+    pthread_mutex_unlock(&lock);
+    if(!online)return 0;
+    struct music_stream_stats s;glass_music_stream_stats(&s);
+    if(s.generation==generation&&(s.download_done||s.ring_bytes>=PREFILL))return 0;
+    if(music_now_ms()>=deadline)return -EAGAIN;
+    usleep(20000);
+  }
 }
 
 struct transfer {
@@ -219,6 +247,9 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
   /* Cover fetching is independent of lyric availability. Prefer a small exact
    * metadata cover, but keep the official cover endpoint when JSON has none. */
   if(music_cover_url(song,cover,1024))cover[0]=0;
+  /* Publish an exact local sidecar immediately. Its fallback cover has its
+   * own cache/worker and must not hold the lyric clock behind an HTTP call. */
+  if(local_lyrics)return 0;
   struct lyric_transfer stream={.transfer={.generation=generation},.song=song,.out=out,.cover=cover,.local_lyrics=local_lyrics};
   stream.transfer.body=malloc(LYRIC_OBJECT_MAX+1);
   if(!stream.transfer.body)return -ENOMEM;
@@ -233,6 +264,9 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
       stream=(struct lyric_transfer){.transfer={.generation=generation,.body=body},.song=song,.out=out,.cover=cover,.local_lyrics=local_lyrics};
     }
   }
+  /* Cache hits above publish immediately. A cache miss must not race the
+   * audio connection's initial prefill on a congested hosted network. */
+  if(!ret)ret=glass_music_metadata_wait(transfer_cancelled,&stream);
   if(!ret)ret=music_http_get(url,collect_lyrics,&stream,transfer_cancelled,&status);
   if(ret==-EALREADY && stream.found && status==200){
     ret=stream.lyric_error;
@@ -438,6 +472,9 @@ static int stream_sink(void *ctx, const unsigned char *data, size_t size)
     if (take > RING_CAP-pos) take = RING_CAP-pos;
     if (take > size) take = size;
     memcpy(s->ring+pos, data, take); s->used += take;
+    pthread_mutex_lock(&stream_stats_lock);
+    stream_stats.received+=take;stream_stats.ring_bytes=s->used;
+    pthread_mutex_unlock(&stream_stats_lock);
     pthread_cond_broadcast(&s->condition);
     pthread_mutex_unlock(&s->mutex);
     data += take; size -= take;
@@ -454,6 +491,7 @@ static void *network_worker(void *ctx)
     music_http_get(s->url, stream_sink, s, stream_cancelled, NULL);
   pthread_mutex_lock(&s->mutex);
   s->error = ret; s->done = true;
+  pthread_mutex_lock(&stream_stats_lock);stream_stats.download_done=true;pthread_mutex_unlock(&stream_stats_lock);
   pthread_cond_broadcast(&s->condition);
   pthread_mutex_unlock(&s->mutex);
   return NULL;
@@ -470,6 +508,9 @@ static int spawn(pthread_t *thread, void *(*entry)(void *), void *arg, size_t st
 
 static int play_stream(struct music_song *song, unsigned generation)
 {
+  pthread_mutex_lock(&stream_stats_lock);
+  memset(&stream_stats,0,sizeof(stream_stats));stream_stats.generation=generation;
+  pthread_mutex_unlock(&stream_stats_lock);
   struct stream s = {.transfer = {.generation = generation},
     .mutex = PTHREAD_MUTEX_INITIALIZER, .condition = PTHREAD_COND_INITIALIZER, .url = song->url};
   s.ring = malloc(RING_CAP);
@@ -509,11 +550,25 @@ static int play_stream(struct music_song *song, unsigned generation)
     pthread_cond_broadcast(&s.condition);
     bool eof = s.done && !s.used;
     int network_error = s.error;
-    if (buffered < 16384 && !eof) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
+    pthread_mutex_lock(&stream_stats_lock);stream_stats.ring_bytes=s.used;pthread_mutex_unlock(&stream_stats_lock);
+    if (buffered < 16384 && !eof) {
+      uint64_t began=music_now_ms();stream_wait(&s);
+      pthread_mutex_lock(&stream_stats_lock);
+      stream_stats.waits++;stream_stats.wait_ms+=music_now_ms()-began;
+      pthread_mutex_unlock(&stream_stats_lock);
+      pthread_mutex_unlock(&s.mutex);continue;
+    }
     pthread_mutex_unlock(&s.mutex);
     if (!buffered) { ret = network_error; break; }
     mp3dec_frame_info_t info = {0};
+    uint64_t decode_began=music_now_ms();
     int frames = mp3dec_decode_frame(decoder, input, buffered, samples, &info);
+    unsigned decode_ms=music_now_ms()-decode_began;
+    pthread_mutex_lock(&stream_stats_lock);
+    stream_stats.frames++;
+    if(decode_ms>stream_stats.decode_max_ms)stream_stats.decode_max_ms=decode_ms;
+    if(info.hz>0)stream_stats.rate=info.hz;
+    pthread_mutex_unlock(&stream_stats_lock);
     if (info.frame_bytes < 0 || (size_t)info.frame_bytes > buffered) { ret = -EINVAL; break; }
     if (!duration_checked && info.hz > 0 && info.layer == 3 &&
         info.frame_offset >= 0 && info.frame_offset < info.frame_bytes) {
@@ -536,7 +591,12 @@ static int play_stream(struct music_song *song, unsigned generation)
     }
     if (pcm.rate != (unsigned)info.hz) { ret = -EINVAL; break; }
     if (volume != desired_volume) { ret = music_pcm_volume(&pcm, desired_volume); if (ret) break; volume = desired_volume; }
+    uint64_t write_began=music_now_ms();
     ret = music_pcm_write(&pcm, samples, frames, info.channels);
+    unsigned write_ms=music_now_ms()-write_began;
+    pthread_mutex_lock(&stream_stats_lock);
+    if(write_ms>stream_stats.write_max_ms)stream_stats.write_max_ms=write_ms;
+    pthread_mutex_unlock(&stream_stats_lock);
     if (ret) break;
     pthread_mutex_lock(&lock);
     if (generation == play_generation) {

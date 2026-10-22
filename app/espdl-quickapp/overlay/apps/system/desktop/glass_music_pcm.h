@@ -6,8 +6,9 @@
 #include <nuttx/audio/audio.h>
 #define MUSIC_PCM_BUFFERS 4
 /* The I2S bus runs two 16-bit slots per frame, so one frame is four bytes. */
-/* Four APBs plus two lower-half DMA copies must fit the small kernel heap. */
-#define MUSIC_PCM_FRAMES 576
+/* The music UI snapshot lives in PSRAM. Two 1152-frame DMA submissions give
+ * 52 ms of runway at 44.1 kHz, with four APBs absorbing decoder jitter. */
+#define MUSIC_PCM_FRAMES 1152
 struct music_pcm {
   int fd;
   mqd_t mq;

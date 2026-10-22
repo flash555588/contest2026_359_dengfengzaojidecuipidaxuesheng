@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-22",
+  "source_base_revision": "ec220163d7172d34d53a308348d8da2035a329de",
+  "source_sha256": {
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_lock_photo.c": "db42c932e3d482fe961c7a1f65e625ab5c4d92b68e0c85cd6142284023dd6463",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music.h": "9d39c3f3323cbddb14c71eded48c1f126c8140b390209cb2a86a37944fa62681",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_pcm.h": "bb19d98c7757e361b4135449087f5e6bbc3cc92fce19ba54a4a56f93b6f9ed1c",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_service.c": "32b990d03ef05b79bbf3b0b11a72fd3daaf9d791593df67f44647517d22be0f4",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_music_ui.inc": "19461f3d153b69c3a3e3490eff6f1b6f4dd00321c5f3c7fafda1fe7ace1be76f",
+    "app/espdl-quickapp/overlay/apps/system/desktop/glass_ui_probe.inc": "1cf40b026f47433815e1ed2a8d8b97b2f5e91777a249ac3394cdeb10aa2126dc"
+  },
+  "source_line_endings": "LF-normalized",
+  "firmware_sha256": "f45999a63499d6ea4bab3c1f74cb43de836c87eb176c2e6b7256a8e5757d742c",
+  "firmware_bytes": 10451072,
+  "flash_verified": true,
+  "warm_reset": true,
+  "power_off_cold_boot": false,
+  "application_offset": "0x2000",
+  "data_offset": "0xc00000",
+  "data_size": "0x400000",
+  "runtime_xip_ready": true,
+  "runtime_protected_cpus": 3,
+  "internal_static_margin_bytes": 67808,
+  "offline_tests": {
+    "music_background": true,
+    "metadata_priority": true,
+    "pcm_framing_cases": 90,
+    "speech_buffer": true,
+    "cover_syntax": true
+  },
+  "browser_implementation_included": false,
+  "browser_module_updated": false,
+  "browser_imports_resolved": 222,
+  "browser_sources_and_config_preserved": true,
+  "online_audio_physical_acceptance": "pending",
+  "physical_display_observation": "pending for this image"
+}
