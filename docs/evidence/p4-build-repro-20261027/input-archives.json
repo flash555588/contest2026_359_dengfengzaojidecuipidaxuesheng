@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "profile": "p4-rev3.2-xip-20261027",
+  "hardware": "P4 Function EV Board rev3.2, Simple Boot, 32 MiB PSRAM, 16 MiB Flash",
+  "reference_image_sha256": "32e718bfe1eaca246393065fc35602809fc170ecf73b962dc6c2b41631eb3404",
+  "inputs": [
+    {
+      "name": "ble-foundations-20261025",
+      "archive": "ble-foundations-20261025.tar.gz",
+      "bytes": 302854046,
+      "sha256": "7f086c2c664b0cfa468b1dd66397f47309b31d905f16a1219884312080d4b3c1",
+      "files": 49146,
+      "unpacked_bytes": 847382543,
+      "role": "baseline",
+      "url": "https://github.com/flash555588/contest2026_359_dengfengzaojidecuipidaxuesheng/releases/download/p4-build-inputs-20261027/ble-foundations-20261025.tar.gz"
+    },
+    {
+      "name": "speech-port-20261015-prepared",
+      "archive": "speech-port-20261015-prepared.tar.gz",
+      "bytes": 9382702,
+      "sha256": "a4fc47cd218ce13fb25fda51f8b173c33e424bf7be767c281dee7c33db43027c",
+      "files": 89,
+      "unpacked_bytes": 19820222,
+      "role": "speech_runtime",
+      "url": "https://github.com/flash555588/contest2026_359_dengfengzaojidecuipidaxuesheng/releases/download/p4-build-inputs-20261027/speech-port-20261015-prepared.tar.gz"
+    },
+    {
+      "name": "esp-tts-20261017",
+      "archive": "esp-tts-20261017.tar.gz",
+      "bytes": 13868888,
+      "sha256": "73f1de25b822f03e43c63c004e868c4fde68250ccedced8739daba8fa01a8209",
+      "files": 14,
+      "unpacked_bytes": 16296726,
+      "role": "esp_tts",
+      "url": "https://github.com/flash555588/contest2026_359_dengfengzaojidecuipidaxuesheng/releases/download/p4-build-inputs-20261027/esp-tts-20261017.tar.gz"
+    }
+  ],
+  "generated_ble_identity_changes_image_digest": true,
+  "not_flash_or_upgrade_instructions": true
+}
