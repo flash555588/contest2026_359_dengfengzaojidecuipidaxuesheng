@@ -16,5 +16,11 @@
   "no_serial_access": true,
   "flash_written": false,
   "physical_flicker_acceptance": false,
-  "first_attempt_note": "Image creation initially stopped because the host esptool.py environment was absent. The profile now checks esptool 5.2.0 before building, and the documented environment completed the build."
+  "first_attempt_note": "Image creation initially stopped because the host esptool.py environment was absent. The profile now checks esptool 5.2.0 before building, and the documented environment completed the build.",
+  "public_download_smoke": {
+    "role": "esp_tts",
+    "bytes": 13868888,
+    "sha256_matched": true
+  },
+  "all_three_release_asset_server_sha256_matched": true
 }
