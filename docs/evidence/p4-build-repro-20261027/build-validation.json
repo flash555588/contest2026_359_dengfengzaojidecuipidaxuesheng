@@ -1,0 +1,20 @@
+{
+  "source_commit": "dc9793b95192859d63419d809688f64475d6ab45",
+  "uses_exported_baseline": true,
+  "baseline_config_matches_reference": true,
+  "offline_build_completed": true,
+  "image_sha256": "e2d2cc28ef213ece1358c507a3e558f603a538f6f9ec22a9b818a86c1579c7be",
+  "elf_sha256": "c2f4087f34239b3de0a1b6e7e447038a277286d2fdeb761a8d4b9042d37e9a0b",
+  "boundaries_checked": true,
+  "source_hashes_match": true,
+  "early_psram_code": [],
+  "ebss": "0x4ffa0840",
+  "psram_xip_enabled": true,
+  "data_offset": "0xc00000",
+  "data_size": "0x400000",
+  "ble_identity": "F8:37:EF:7D:A3:A5",
+  "no_serial_access": true,
+  "flash_written": false,
+  "physical_flicker_acceptance": false,
+  "first_attempt_note": "Image creation initially stopped because the host esptool.py environment was absent. The profile now checks esptool 5.2.0 before building, and the documented environment completed the build."
+}

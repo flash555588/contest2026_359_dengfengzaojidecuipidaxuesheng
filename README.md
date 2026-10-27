@@ -93,6 +93,10 @@ repo sync -c -j8
 构建环境以 Linux/WSL 为主，需要 Python 3、Git、构建依赖和匹配的 `riscv32-esp-elf`
 工具链。Node.js 用于宿主 JavaScript 测试。这里不把宿主测试通过称为固件构建通过。
 
+### 当前 P4 rev3.2 复现入口
+
+完整准备输入、SHA256 校验和同参数编译见 [P4 构建复现资料](docs/P4_BUILD_REPRO_2026-10-27.md)。该入口显式启用本轮 PSRAM XIP 配置，不依赖作者电脑上的旧目录。
+
 ### 板级 NSH 与开发 overlay
 
 `tools/wsl_build_p4_nsh.py` 接受 `nsh`、`nsh-v3`、`nsh-v3-usb`，通过
