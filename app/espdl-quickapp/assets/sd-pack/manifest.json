@@ -2,7 +2,7 @@
   "schema_version": 1,
   "date": "2026-10-19",
   "target": "/sdcard/",
-  "scope": "Only the five application asset groups specified by the user. No test logs, screenshots, runtime user data, credentials, firmware or source snapshots.",
+  "scope": "Application runtime assets only: recognition models, global/lyric fonts, offline JIZURA, Grok, Dafeiyu, current ESP-TTS/MultiNet/custom wake resources and a public Mozilla CA bundle. No photos, videos, conversations, recordings, private configuration/trust roots, tests, caches, rollback files or firmware.",
   "packages": [
     {
       "name": "espdl",
@@ -293,6 +293,160 @@
           "sha256": "5ca2920d4f56954100c8f365461aba7b6c6154da49734f7b2703d9275ad49d11"
         }
       ]
+    },
+    {
+      "name": "speech",
+      "archive": "speech.zip",
+      "bytes": 11552564,
+      "sha256": "8feecc7f20cb7810adc3ffe7855a03117b31bb0dd437ec8d5483cbc5d166b70f",
+      "files": [
+        {
+          "path": "speech/custom/nihao_openvela.gkw",
+          "bytes": 329504,
+          "sha256": "639825a51cce04aa69cc047f9b7b064af2c09e8093106b03d4ec0d9dfbba1dc6"
+        },
+        {
+          "path": "speech/esp-sr/fst/commands_cn.txt",
+          "bytes": 164,
+          "sha256": "5e948b9abaae648277af7ca903a31bd066c9fda12d3a8fb6fca1ba685a113da1"
+        },
+        {
+          "path": "speech/esp-sr/mn7_cn/_MODEL_INFO_",
+          "bytes": 158,
+          "sha256": "251cee555d800867c5279cb5c88ef2cca10d0d250a17baf48f87830d502244aa"
+        },
+        {
+          "path": "speech/esp-sr/mn7_cn/mn7_data",
+          "bytes": 2659972,
+          "sha256": "21bf13f3dc4792bdac9a9d6d6d3e69c782ded4071bba24df3da98ee14151120f"
+        },
+        {
+          "path": "speech/esp-sr/mn7_cn/mn7_index",
+          "bytes": 4656,
+          "sha256": "8a018cc23671dcee23a80ff343c37e87f3b893f144198a2dba09bcb9f745af75"
+        },
+        {
+          "path": "speech/esp-sr/mn7_cn/vocab",
+          "bytes": 6601,
+          "sha256": "7505578a7543455554a3d0a45cad7e2fd2f258097ba3b5f381d18d20d3f7ed51"
+        },
+        {
+          "path": "speech/esp-tts/LICENSE",
+          "bytes": 1187,
+          "sha256": "7d916fb00bc0742c47cafb0d0144b67f826d76779730b1cb8796045ea6ba1b9a"
+        },
+        {
+          "path": "speech/esp-tts/voice-small.dat",
+          "bytes": 2913777,
+          "sha256": "cc9a81fd716b3c07fae3ca2f802dc026081896f2e34db9b9db117d4de5a85c01"
+        },
+        {
+          "path": "speech/esp-tts/voice-xiaole.dat",
+          "bytes": 2938039,
+          "sha256": "e4aaadc1566b984e3ffc47f654ff52ed3fb8f5af420ffb187bd8a8741706d382"
+        },
+        {
+          "path": "speech/esp-tts/voice.dat",
+          "bytes": 3821311,
+          "sha256": "b0b9ad9fdaa4a560ee839ce6a4659f08af3fded7c72d0784d83186859a081e55"
+        },
+        {
+          "path": "speech/licenses/ESP-SR.txt",
+          "bytes": 1187,
+          "sha256": "7d916fb00bc0742c47cafb0d0144b67f826d76779730b1cb8796045ea6ba1b9a"
+        }
+      ]
+    },
+    {
+      "name": "lyric-fonts",
+      "archive": "lyric-fonts.zip",
+      "bytes": 23801441,
+      "sha256": "51092152c449724e06fbd7e2df4021e15303fe9f104ad64f6956664d42f69686",
+      "files": [
+        {
+          "path": "fonts/lyrics/Brush-OFL.txt",
+          "bytes": 4397,
+          "sha256": "d7bdb1cee215b689e23c2f95672a6084c790542170648267a55114103d756a08"
+        },
+        {
+          "path": "fonts/lyrics/Butter-OFL.txt",
+          "bytes": 4419,
+          "sha256": "f1bce31b817dee01c1e4ef8bc45d8ecb95f01f4abbf0a985007cb3cd0fd8123d"
+        },
+        {
+          "path": "fonts/lyrics/Happy-OFL.txt",
+          "bytes": 4398,
+          "sha256": "538078469839b4a2e7ad22bef4ebe41681a4e53749bb2a072144024f1d6d703d"
+        },
+        {
+          "path": "fonts/lyrics/Sans-OFL.txt",
+          "bytes": 4388,
+          "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+        },
+        {
+          "path": "fonts/lyrics/Serif-OFL.txt",
+          "bytes": 4350,
+          "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
+        },
+        {
+          "path": "fonts/lyrics/VelaLyricBrush-Regular.ttf",
+          "bytes": 5782260,
+          "sha256": "337f47a3644ea3d35354c80ad38905bc4ef89fdc0c6564c4913736c27628bb61"
+        },
+        {
+          "path": "fonts/lyrics/VelaLyricButter-Regular.ttf",
+          "bytes": 5733636,
+          "sha256": "5580b3595d7ba2191425d37579f30c111b091db69bd8e71efdb00c36e265ded2"
+        },
+        {
+          "path": "fonts/lyrics/VelaLyricHappy-Regular.ttf",
+          "bytes": 1444224,
+          "sha256": "5e732b74fae5a5e98fabb5f8622c616aeb686d1de88a326eb717c6d57ccb7918"
+        },
+        {
+          "path": "fonts/lyrics/VelaLyricSans-Regular.ttf",
+          "bytes": 10272572,
+          "sha256": "28756373701c31b6791687f5a047feabdacd6c9f3fd3bdcb4f62a9b8c9825843"
+        },
+        {
+          "path": "fonts/lyrics/VelaLyricSerif-Regular.ttf",
+          "bytes": 14444680,
+          "sha256": "41e2735f8e385fdb41eb249d81169190c95fc83827f03779b904b736f500bcd4"
+        },
+        {
+          "path": "fonts/lyrics/VelaLyricXiaoWei-Regular.ttf",
+          "bytes": 3840316,
+          "sha256": "04efcea35be69eb952b33da84b9fe02464c4755b62a0cca748e4b2d2dde68046"
+        },
+        {
+          "path": "fonts/lyrics/XiaoWei-OFL.txt",
+          "bytes": 4400,
+          "sha256": "a094514ca57cf8f9c5e8d8d1adab5d8cd3a377297ff016f9df2c05b3ecd77f0a"
+        },
+        {
+          "path": "fonts/lyrics/manifest.json",
+          "bytes": 2563,
+          "sha256": "fbca26f9058435754079e4836c9a5cad22482e74e7df8df6bd295af66c524b54"
+        }
+      ]
+    },
+    {
+      "name": "browser-ca",
+      "archive": "browser-ca.zip",
+      "bytes": 134603,
+      "sha256": "49c3f63d90588566e916ac811a927ded5fad415e9c86f107ed0f3cd01ab756a9",
+      "files": [
+        {
+          "path": "netsurf/LICENSE.certifi",
+          "bytes": 989,
+          "sha256": "e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7"
+        },
+        {
+          "path": "netsurf/ca-bundle.pem",
+          "bytes": 240216,
+          "sha256": "9cc2a774b5198dcff14d9be1e66091f538975d867ce029a96bce15a55dfd730f"
+        }
+      ]
     }
   ],
   "provenance": {
@@ -338,6 +492,88 @@
       ],
       "converter": "app/espdl-quickapp/tools/convert_dafeiyu_sprites.py",
       "converter_sha256": "87dc5e662d2d7800acbcbca7dc7a31c465eb68daeaa95502aa4b2d328596f4a7"
+    },
+    "speech": {
+      "esp_sr_revision": "cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143",
+      "source_locks": [
+        "app/espdl-quickapp/speech/upstream.lock.json",
+        "app/espdl-quickapp/speech/esp-tts/upstream.lock.json"
+      ],
+      "runtime_backend": "esp-tts",
+      "wake_model": "Identical to the existing repository model; no retraining or baseline replacement.",
+      "capture": "Read-only download of allowlisted files from the attached ESP SD card; every packaged file verified against repository locks or exact HEAD bytes."
+    },
+    "lyric-fonts": {
+      "source_lock": "app/espdl-quickapp/assets/lyric-fonts.lock.json",
+      "generator": "tools/prepare_lyric_fonts.py",
+      "font_commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+      "capture": "Device font catalog, notices and four fonts read through the file portal. Two large fonts use complete existing generated local output because the portal has a 120-second request deadline; all six match device catalog SHA-256 and committed firmware length/FNV. OFL notices match pinned upstream inputs."
+    },
+    "browser-ca": {
+      "repository": "https://github.com/certifi/python-certifi",
+      "revision": "f4bc676bc101fe2235846e37044e8c693d6cbaf4",
+      "tag": "2026.07.22",
+      "source_url": "https://raw.githubusercontent.com/certifi/python-certifi/f4bc676bc101fe2235846e37044e8c693d6cbaf4/certifi/cacert.pem",
+      "license": "MPL-2.0; upstream LICENSE retained in the archive",
+      "certificates": 121,
+      "scope": "Public Mozilla roots from pinned certifi, fetched and verified directly from upstream. This is not a copy of the device Windows-exported trust store. Device configuration and certificates were not changed.",
+      "validation": "Host X.509 parse and 256 KiB loader size bound verified; not deployed or tested against live sites on this board."
     }
+  },
+  "updated": "2026-10-27",
+  "supplement_sources": {
+    "speech/esp-sr/mn7_cn/mn7_data": "https://github.com/espressif/esp-sr/blob/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/model/multinet_model/mn7_cn/mn7_data",
+    "speech/esp-sr/mn7_cn/mn7_index": "https://github.com/espressif/esp-sr/blob/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/model/multinet_model/mn7_cn/mn7_index",
+    "speech/esp-sr/mn7_cn/vocab": "https://github.com/espressif/esp-sr/blob/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/model/multinet_model/mn7_cn/vocab",
+    "speech/esp-sr/mn7_cn/_MODEL_INFO_": "https://github.com/espressif/esp-sr/blob/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/model/multinet_model/mn7_cn/_MODEL_INFO_",
+    "speech/esp-tts/LICENSE": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/LICENSE",
+    "speech/esp-tts/voice-small.dat": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaoxin_small.dat",
+    "speech/esp-tts/voice.dat": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaoxin.dat",
+    "speech/esp-tts/voice-xiaole.dat": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/esp-tts/esp_tts_chinese/esp_tts_voice_data_xiaole.dat",
+    "speech/esp-sr/fst/commands_cn.txt": {
+      "repository_path": "app/espdl-quickapp/speech/commands_cn.txt"
+    },
+    "speech/custom/nihao_openvela.gkw": {
+      "repository_path": "app/espdl-quickapp/models/nihao_openvela.gkw"
+    },
+    "speech/licenses/ESP-SR.txt": "https://raw.githubusercontent.com/espressif/esp-sr/cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143/LICENSE",
+    "fonts/lyrics/VelaLyricSans-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+      "generator": "tools/prepare_lyric_fonts.py",
+      "input": "Existing generated local font; verified against the device catalog SHA-256 and committed firmware length/FNV; no truncated downloads used."
+    },
+    "fonts/lyrics/Sans-OFL.txt": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notosanssc/OFL.txt",
+    "fonts/lyrics/VelaLyricSerif-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf",
+      "generator": "tools/prepare_lyric_fonts.py",
+      "input": "Existing generated local font; verified against the device catalog SHA-256 and committed firmware length/FNV; no truncated downloads used."
+    },
+    "fonts/lyrics/Serif-OFL.txt": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/notoserifsc/OFL.txt",
+    "fonts/lyrics/VelaLyricBrush-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/mashanzheng/MaShanZheng-Regular.ttf",
+      "generator": "tools/prepare_lyric_fonts.py"
+    },
+    "fonts/lyrics/Brush-OFL.txt": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/mashanzheng/OFL.txt",
+    "fonts/lyrics/VelaLyricHappy-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolkuaile/ZCOOLKuaiLe-Regular.ttf",
+      "generator": "tools/prepare_lyric_fonts.py"
+    },
+    "fonts/lyrics/Happy-OFL.txt": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolkuaile/OFL.txt",
+    "fonts/lyrics/VelaLyricButter-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolqingkehuangyou/ZCOOLQingKeHuangYou-Regular.ttf",
+      "generator": "tools/prepare_lyric_fonts.py"
+    },
+    "fonts/lyrics/Butter-OFL.txt": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolqingkehuangyou/OFL.txt",
+    "fonts/lyrics/VelaLyricXiaoWei-Regular.ttf": {
+      "url": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf",
+      "generator": "tools/prepare_lyric_fonts.py"
+    },
+    "fonts/lyrics/XiaoWei-OFL.txt": "https://raw.githubusercontent.com/google/fonts/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/zcoolxiaowei/OFL.txt",
+    "fonts/lyrics/manifest.json": {
+      "generator": "tools/prepare_lyric_fonts.py",
+      "verified_against": "glass_lyric_font_assets.h"
+    },
+    "netsurf/ca-bundle.pem": "https://raw.githubusercontent.com/certifi/python-certifi/f4bc676bc101fe2235846e37044e8c693d6cbaf4/certifi/cacert.pem",
+    "netsurf/LICENSE.certifi": "https://raw.githubusercontent.com/certifi/python-certifi/f4bc676bc101fe2235846e37044e8c693d6cbaf4/LICENSE"
   }
 }

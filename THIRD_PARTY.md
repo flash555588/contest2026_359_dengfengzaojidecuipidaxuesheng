@@ -149,6 +149,31 @@ separately from this P1 provenance record.
   sources with private entry-point names; their upstream notices stay in those
   dependencies. Global LVGL font configuration is unchanged.
 
+## SD speech and lyric font supplements (2026-10-27)
+
+- `app/espdl-quickapp/assets/sd-pack/speech.zip` contains the three official
+  ESP-TTS voices and MultiNet7 Chinese model from ESP-SR v2.4.6, revision
+  `cfdbb52172d4f1b3e5f7469d6c3c6e5dd0738143`. The original ESP-SR license is
+  retained in the archive; each upstream binary is checked against the existing
+  `speech/upstream.lock.json` or `speech/esp-tts/upstream.lock.json`.
+- The same archive includes the existing repository's bootstrap command grammar
+  and custom wake model, without replacing or retraining the model. Model and
+  training provenance remain under `app/espdl-quickapp/models/`.
+- `app/espdl-quickapp/assets/sd-pack/lyric-fonts.zip` contains six renamed,
+  static Vela Lyric fonts derived from Noto Sans SC, Noto Serif SC, Ma Shan Zheng,
+  ZCOOL KuaiLe, ZCOOL QingKe HuangYou and ZCOOL XiaoWei. Source commit
+  `47d54ca1ebb14fd864695f1d39dc734f39017c33`, hashes and URLs are pinned in
+  `assets/lyric-fonts.lock.json`; generation is implemented in
+  `tools/prepare_lyric_fonts.py`. Each font's original SIL OFL 1.1 notice is
+  retained alongside the derivative. Runtime sizes and FNV checksums match the
+  existing generated `glass_lyric_font_assets.h`.
+- `app/espdl-quickapp/assets/sd-pack/browser-ca.zip` contains the unmodified
+  public Mozilla CA bundle and original MPL-2.0 notice from certifi tag
+  `2026.07.22`, commit `f4bc676bc101fe2235846e37044e8c693d6cbaf4` at
+  `https://github.com/certifi/python-certifi`. Both files were fetched from
+  that immutable revision and checked by SHA-256. The device's Windows-exported
+  trust store and additional local trust certificates are not published.
+
 ## Album PNG decoder
 
 - LodePNG: https://github.com/lvandeve/lodepng, commit

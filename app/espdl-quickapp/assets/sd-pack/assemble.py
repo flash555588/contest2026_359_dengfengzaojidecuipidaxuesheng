@@ -1,4 +1,4 @@
-"""Verify the five app asset ZIPs and optionally assemble an empty SD staging tree."""
+"""Verify all manifest-listed app asset ZIPs and assemble an empty SD staging tree."""
 import argparse
 import hashlib
 import json
