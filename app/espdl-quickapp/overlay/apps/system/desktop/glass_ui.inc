@@ -18,14 +18,7 @@ static void glass_status_visibility(bool locked);
 #include "glass_weather.h"
 #include "glass_ime.h"
 #include "glass_sd_font.h"
-#if defined(CONFIG_ESPRESSIF_LEDC_TIMER0) && \
-    CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN == 26 && CONFIG_PWM_NCHANNELS == 1
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <nuttx/timers/pwm.h>
-#define GLASS_PWM_BACKLIGHT 1
-static int g_backlight_fd = -1;
-#endif
+#include "glass_backlight.h"
 
 static int g_screen_brightness = 100;
 
@@ -37,6 +30,15 @@ static void glass_brightness_preview(lv_event_t *e)
                     g_screen_brightness : lv_slider_get_value(slider);
   if (lv_event_get_code(e) == LV_EVENT_PRESS_LOST)
     lv_slider_set_value(slider, value, LV_ANIM_OFF);
+#ifdef GLASS_PWM_BACKLIGHT
+  if(glass_backlight_set((unsigned)value)<0)
+    {
+      struct glass_backlight_status state;glass_backlight_read(&state);
+      lv_slider_set_value(slider,state.percent,LV_ANIM_OFF);
+      lv_label_set_text(label,"调节失败");
+      return;
+    }
+#endif
   lv_label_set_text_fmt(label, "%d%%", value);
 }
 
@@ -46,16 +48,7 @@ static void glass_brightness_changed(lv_event_t *e)
   lv_obj_t *slider = lv_event_get_target(e);
   lv_obj_t *label = lv_event_get_user_data(e);
   int value = lv_slider_get_value(slider);
-  struct pwm_info_s info;
-  memset(&info, 0, sizeof(info));
-  info.frequency = 5000;
-  info.channels[0].channel = 0;
-  info.channels[0].duty = (uint32_t)value * 65536 / 100;
-  if (g_backlight_fd < 0) g_backlight_fd = open("/dev/pwm0", O_RDWR);
-  bool success = g_backlight_fd >= 0 &&
-    ioctl(g_backlight_fd, PWMIOC_SETCHARACTERISTICS, (unsigned long)&info) >= 0 &&
-    ioctl(g_backlight_fd, PWMIOC_START, 0) >= 0;
-  if (!success)
+  if (glass_backlight_set((unsigned)value)<0)
     {
       lv_slider_set_value(slider, g_screen_brightness, LV_ANIM_OFF);
       lv_label_set_text(label, "调节失败");
@@ -63,6 +56,7 @@ static void glass_brightness_changed(lv_event_t *e)
     }
   g_screen_brightness = value;
   lv_label_set_text_fmt(label, "%d%%", value);
+  printf("BACKLIGHT pin=26 frequency=5000 percent=%d result=0\n",value);
 #else
   LV_UNUSED(e);
 #endif
@@ -1263,6 +1257,8 @@ static int pet_fill_weather(char *buf, size_t size)
 
 static void desktop_ui_create(void)
 {
+  /* The resident desktop owns the PWM fd for the lifetime of the display. */
+  (void)glass_backlight_set(100);
   size_t size = (size_t)(g_desktop_font_end - g_desktop_font_start);
   memset(&g_desktop, 0, sizeof(g_desktop));
   memset(&g_glass, 0, sizeof(g_glass));

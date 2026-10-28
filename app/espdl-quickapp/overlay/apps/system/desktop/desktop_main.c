@@ -26,6 +26,7 @@
 #include <nuttx/sched.h>
 #include <lvgl/lvgl.h>
 #include "glass_ui_visibility.h"
+#include "glass_backlight.h"
 #ifdef CONFIG_SYSTEM_C6PROBE
 #  include "../c6probe/c6_wifi_phy.h"
 #endif
@@ -1786,6 +1787,13 @@ static uint32_t desktop_loop_once(void)
 
 int main(int argc, FAR char *argv[])
 {
+  if(argc==2&&!strcmp(argv[1],"backlight-status"))
+    {
+      struct glass_backlight_status state;glass_backlight_read(&state);
+      printf("BACKLIGHT available=%u applied=%u pin=26 frequency=5000 percent=%u duty=%u error=%d\n",
+             state.available,state.applied,state.percent,state.duty,state.error);
+      return state.applied&&state.error==0?0:1;
+    }
   glass_board_music_register();
   glass_board_assistant_register();
 #ifdef CONFIG_SYSTEM_C6PROBE

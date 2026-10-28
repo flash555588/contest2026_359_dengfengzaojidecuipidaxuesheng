@@ -61,6 +61,7 @@ def main():
     p.add_argument('--source-revision',help='Explicit 40-hex source revision for Windows-mounted Git worktrees')
     p.add_argument('--usb-camera',action='store_true',help='Include the dedicated P4 HS/UTMI UVC MJPEG host alongside the existing CSI camera')
     p.add_argument('--psram-xip',action='store_true',help='Opt-in experimental P4 Simple Boot text/rodata PSRAM XIP; requires dedicated trial workspace and physical validation')
+    p.add_argument('--lcd-backlight',action='store_true',help='Reserve PWM0/GPIO26 for factory LCD J6 PWM brightness (5 kHz, single channel)')
     p.add_argument('--hardware-jpeg',action='store_true',help='Opt-in native P4 JPEG decoder with shared PPA/DMA2D ownership; requires image and display validation')
     p.add_argument('--ethernet-share',action='store_true',help='Opt-in eth0 to SoftAP NAT44 with resident wired DHCP ownership')
     p.add_argument('--share-forward-slots',type=int,choices=[4,8,16],default=4,help='Bounded static forwarding pool; requires --ethernet-share for non-default values')
@@ -239,10 +240,16 @@ def main():
         if n!=1:p.error('Prepared NimBLE connection capacity missing or duplicated')
         cfg.write_text(s)
     if a.factory_header:
-        for key,value in [('ESPRESSIF_I2C1_SDAPIN',2),('ESPRESSIF_I2C1_SCLPIN',3),('ESPRESSIF_SPI2_CSPIN',6),('ESPRESSIF_LEDC_CHANNEL0_PIN',2)]:
+        for key,value in [('ESPRESSIF_I2C1_SDAPIN',2),('ESPRESSIF_I2C1_SCLPIN',3),('ESPRESSIF_SPI2_CSPIN',6),('ESPRESSIF_LEDC_CHANNEL0_PIN',26 if a.lcd_backlight else 2)]:
             name='CONFIG_'+key;pattern=r'^'+name+r'=.*$'
             if re.search(pattern,s,re.M):s=re.sub(pattern,name+'='+str(value),s,flags=re.M)
             else:s+='\n'+name+'='+str(value)+'\n'
+        if cfg.read_text()!=s:cfg.write_text(s)
+    if a.lcd_backlight:
+        for key,value in [('PWM','y'),('ESPRESSIF_LEDC','y'),('ESPRESSIF_LEDC_TIMER0','y'),('ESPRESSIF_LEDC_TIMER0_CHANNELS','1'),('ESPRESSIF_LEDC_TIMER0_RESOLUTION','13'),('ESPRESSIF_LEDC_CHANNEL0_PIN','26')]:
+            name='CONFIG_'+key;pattern=r'^(?:'+name+r'=.*|# '+name+r' is not set)$'
+            s=re.sub(pattern,name+'='+value,s,flags=re.M) if re.search(pattern,s,re.M) else s+'\n'+name+'='+value+'\n'
+        if 'CONFIG_PWM_MULTICHAN=y' in s:p.error('LCD backlight requires the prepared single-channel PWM ABI')
         if cfg.read_text()!=s:cfg.write_text(s)
     if a.usb_camera:
         s=re.sub(r'^(?:CONFIG_ESP32P4_CAMERA_USB=.*|# CONFIG_ESP32P4_CAMERA_USB is not set)$','CONFIG_ESP32P4_CAMERA_USB=y',s,flags=re.M)
@@ -262,8 +269,12 @@ def main():
     if a.ble_connections is not None and f'CONFIG_NIMBLE_BLE_MAX_CONN={a.ble_connections}\n' not in config:
         raise RuntimeError('Requested NimBLE connection capacity disabled by Kconfig')
     if a.factory_header:
-        for value in ['CONFIG_ESPRESSIF_I2C1_SDAPIN=2','CONFIG_ESPRESSIF_I2C1_SCLPIN=3','CONFIG_ESPRESSIF_SPI2_CSPIN=6','CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN=2']:
+        for value in ['CONFIG_ESPRESSIF_I2C1_SDAPIN=2','CONFIG_ESPRESSIF_I2C1_SCLPIN=3','CONFIG_ESPRESSIF_SPI2_CSPIN=6','CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN='+('26' if a.lcd_backlight else '2')]:
             if value not in config:raise RuntimeError('Factory J1 pin configuration missing: '+value)
+    if a.lcd_backlight:
+        for value in ['CONFIG_PWM=y','CONFIG_ESPRESSIF_LEDC_TIMER0=y','CONFIG_ESPRESSIF_LEDC_TIMER0_CHANNELS=1','CONFIG_ESPRESSIF_LEDC_CHANNEL0_PIN=26']:
+            if value+'\n' not in config:raise RuntimeError('LCD backlight disabled by Kconfig: '+value)
+        if 'CONFIG_PWM_MULTICHAN=y\n' in config:raise RuntimeError('LCD backlight PWM ABI mismatch')
     if a.usb_camera and 'CONFIG_ESP32P4_CAMERA_USB=y' not in config:raise RuntimeError('USB camera disabled by Kconfig')
     for option in ['NETUTILS_DHCPD','NET_BINDTODEVICE','SCHED_WAITPID']:
         if 'CONFIG_'+option+'=y\n' not in config:raise RuntimeError('SoftAP recovery dependency not enabled: '+option)
@@ -394,6 +405,7 @@ def main():
               'tts_backend':a.tts_backend if a.speech_runtime else None,'ebss':hex(int(bss.group(1),16)),
               'usb_camera':a.usb_camera,
               'factory_header':a.factory_header,
+              'lcd_backlight':{'enabled':a.lcd_backlight,'pin':26 if a.lcd_backlight else None,'device':'/dev/pwm0' if a.lcd_backlight else None,'frequency':5000,'minimum_percent':10,'startup_percent':100},
               'esp_tts_voice_storage':a.esp_tts_storage if a.esp_tts_prepared else None,
               'compiler':subprocess.check_output([str(tc/'riscv32-esp-elf-gcc'),'--version'],text=True).splitlines()[0],
               'flash_offset':'0x2000','program_limit':hex(program_limit),'vision_models_sd_only':True,'data_offset':hex(data_offset),'data_size':hex(data_size),'flash_layout':f'{data_offset//0x100000}m-firmware-{data_size//0x100000}m-data','board_tested':False,'l2_cache_kb':a.l2_kb,

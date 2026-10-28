@@ -38,6 +38,7 @@ CSRCS += glass_status_power.c
 CSRCS += glass_system_platform.c
 
 CSRCS += glass_settings_service.c glass_icons.c
+CSRCS += glass_backlight.c
 CSRCS += glass_weather.c glass_weather_parse.c glass_weather_https.c glass_weather_http.c glass_https.c
 # Dependency generation needs the same headers as compilation.
 CFLAGS += -I$(APPDIR)/netutils/cjson/cJSON $(ESPCLAW_TLS_CFLAGS)
