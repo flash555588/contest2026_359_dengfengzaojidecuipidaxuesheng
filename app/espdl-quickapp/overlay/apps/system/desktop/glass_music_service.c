@@ -414,16 +414,34 @@ struct stream {
   const char *url;
   unsigned seek;
   struct music_audio_cache cache;
+  /* Retain the downloaded prefix for decoder rewinds. The HTTP producer and
+   * its ring stay alive across seeks; only the decoder/PCM cursor restarts. */
+  FILE *history;
+  char history_path[264];
+  long history_start;
+  bool ready, history_usable;
 };
 
 static bool stream_cancelled(void *ctx)
 {
   struct stream *s = ctx;
-  pthread_mutex_lock(&s->mutex); bool abort = s->abort; pthread_mutex_unlock(&s->mutex);
+  pthread_mutex_lock(&s->mutex); bool abort = s->abort; unsigned seek = s->seek; pthread_mutex_unlock(&s->mutex);
   pthread_mutex_lock(&lock);
-  bool stale = s->seek != seek_revision;
+  bool stale = seek != seek_revision;
   pthread_mutex_unlock(&lock);
   return abort || stale || transfer_cancelled(&s->transfer);
+}
+
+static bool network_cancelled(void *ctx)
+{
+  struct stream *s = ctx;
+  pthread_mutex_lock(&s->mutex);
+  bool abort = s->abort;
+  pthread_mutex_unlock(&s->mutex);
+  /* A seek belongs to the decoder. Without readable history its teardown
+   * sets abort before joining this producer; it still cannot cancel a newer
+   * target merely because a request arrived during source initialization. */
+  return abort || transfer_cancelled(&s->transfer);
 }
 
 static void stream_wait(struct stream *s)
@@ -437,9 +455,19 @@ static void stream_wait(struct stream *s)
 static int stream_sink(void *ctx, const unsigned char *data, size_t size)
 {
   struct stream *s = ctx;
-  music_audio_cache_append(&s->cache, data, size);
+  if (network_cancelled(s)) return -ECANCELED;
+  if (s->cache.file) {
+    music_audio_cache_append(&s->cache, data, size);
+    /* Publish only bytes visible to the independent prefix reader. A cache
+     * limit/SD failure disables future rewinds, not ordinary ring playback. */
+    bool readable = s->cache.file && !fflush(s->cache.file);
+    if (!readable) music_audio_cache_finish(&s->cache, false);
+    pthread_mutex_lock(&s->mutex);
+    if (!readable) s->history_usable = false;
+    pthread_mutex_unlock(&s->mutex);
+  }
   while (size) {
-    if (stream_cancelled(s)) return -ECANCELED;
+    if (network_cancelled(s)) return -ECANCELED;
     pthread_mutex_lock(&s->mutex);
     if (s->used == RING_CAP) { stream_wait(s); pthread_mutex_unlock(&s->mutex); continue; }
     size_t pos = (s->read + s->used) % RING_CAP;
@@ -460,6 +488,33 @@ static void *network_worker(void *ctx)
   pthread_setname_np(pthread_self(), "music_net");
   bool local = !strncmp(s->url, MUSIC_SD_ROOT, sizeof(MUSIC_SD_ROOT)-1);
   FILE *cached = local ? NULL : music_audio_cache_open(s->url);
+  FILE *history = NULL;
+  long history_start = 0;
+  char history_path[264] = {0};
+  if (cached) {
+    history_start = ftell(cached);
+    if (history_start >= 0 && !music_audio_cache_path(s->url, history_path, sizeof(history_path)))
+      history = fopen(history_path, "rb");
+  } else if (local) {
+    if (music_sd_path(s->url)) {
+      snprintf(history_path, sizeof(history_path), "%s", s->url);
+      history = fopen(history_path, "rb");
+    }
+  } else {
+    music_audio_cache_begin(&s->cache, s->url);
+    if (s->cache.file && !fflush(s->cache.file)) {
+      history_start = ftell(s->cache.file);
+      snprintf(history_path, sizeof(history_path), "%s", s->cache.temporary);
+      if (history_start >= 0) history = fopen(history_path, "rb");
+    }
+  }
+  if (history && fseek(history, history_start, SEEK_SET)) { fclose(history); history = NULL; }
+  pthread_mutex_lock(&s->mutex);
+  s->history = history; s->history_start = history_start;
+  memcpy(s->history_path, history_path, sizeof(history_path));
+  s->history_usable = history != NULL; s->ready = true;
+  pthread_cond_broadcast(&s->condition);
+  pthread_mutex_unlock(&s->mutex);
   int ret = 0;
   if (cached) {
     unsigned char bytes[4096]; size_t got;
@@ -468,10 +523,8 @@ static void *network_worker(void *ctx)
     if (!ret && ferror(cached)) ret = -EIO;
     fclose(cached);
   } else {
-    if (!local) music_audio_cache_begin(&s->cache, s->url);
-    ret = local ? music_sd_stream(s->url, stream_sink, s, stream_cancelled) :
-      music_http_get(s->url, stream_sink, s, stream_cancelled, NULL);
-    music_audio_cache_finish(&s->cache, !ret && !stream_cancelled(s));
+    ret = local ? music_sd_stream(s->url, stream_sink, s, network_cancelled) :
+      music_http_get(s->url, stream_sink, s, network_cancelled, NULL);
   }
   pthread_mutex_lock(&s->mutex);
   s->error = ret; s->done = true;
@@ -490,8 +543,9 @@ static int spawn(pthread_t *thread, void *(*entry)(void *), void *arg, size_t st
 }
 
 static int play_stream(struct music_song *song, unsigned generation,
-                       unsigned seek, unsigned target_ms)
+                       unsigned *completed_seek, unsigned target_ms)
 {
+  unsigned seek = *completed_seek;
   struct stream s = {.transfer = {.generation = generation},
     .mutex = PTHREAD_MUTEX_INITIALIZER, .condition = PTHREAD_COND_INITIALIZER,
     .url = song->url, .seek = seek};
@@ -503,10 +557,20 @@ static int play_stream(struct music_song *song, unsigned generation,
   int ret = -ENOMEM; bool network_started = false, paused = false;
   pthread_t network;
   if (!s.ring || !input || !decoder || !samples) goto done;
-  mp3dec_init(decoder);
   ret = spawn(&network, network_worker, &s, 32768);
   if (ret) goto done;
   network_started = true;
+  pthread_mutex_lock(&s.mutex);
+  while (!s.ready) stream_wait(&s);
+  pthread_mutex_unlock(&s.mutex);
+  size_t downloaded_read = 0, replay_remaining = 0;
+restart_decoder:
+  pthread_mutex_lock(&lock);
+  seek = seek_revision; target_ms = seek_position_ms;
+  pthread_mutex_unlock(&lock);
+  pthread_mutex_lock(&s.mutex); s.seek = seek; pthread_mutex_unlock(&s.mutex);
+  mp3dec_init(decoder);
+  ret = 0; paused = false;
   size_t buffered = 0, skipped = 0;
   bool prefilled = false, duration_checked = false;
   bool rebuffering = false;
@@ -523,17 +587,24 @@ static int play_stream(struct music_song *song, unsigned generation,
     /* Decode silently to a seek target even when the user paused playback. */
     if (pause && !target_ms) { usleep(20000); continue; }
     pthread_mutex_lock(&s.mutex);
-    if (!prefilled && s.used < PREFILL && !s.done) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
+    if (!prefilled && replay_remaining + s.used < PREFILL && !s.done) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
     prefilled = true;
+    if (replay_remaining) {
+      size_t take = replay_remaining < 32768-buffered ? replay_remaining : 32768-buffered;
+      size_t got = fread(input+buffered, 1, take, s.history);
+      if (got != take) { pthread_mutex_unlock(&s.mutex); ret = -EIO; break; }
+      replay_remaining -= got; buffered += got;
+    }
     while (s.used && buffered < 32768) {
       size_t take = RING_CAP-s.read;
       if (take > s.used) take = s.used;
       if (take > 32768-buffered) take = 32768-buffered;
       memcpy(input+buffered, s.ring+s.read, take);
       buffered += take; s.read = (s.read+take)%RING_CAP; s.used -= take;
+      downloaded_read += take;
     }
     pthread_cond_broadcast(&s.condition);
-    bool eof = s.done && !s.used;
+    bool eof = s.done && !s.used && !replay_remaining;
     int network_error = s.error;
     /* Keep complete MP3 lookahead, but never block a running DMA queue on a
      * fixed 16 KiB network read. Pause before starvation and refill with
@@ -621,13 +692,36 @@ static int play_stream(struct music_song *song, unsigned generation,
     }
     pthread_mutex_unlock(&lock);
   }
+  /* A newer seek interrupts silent decoding and refill waits immediately.
+   * Rewind only the prefix already copied from the producer's ring; bytes
+   * still in that ring must be consumed exactly once after replay catches up.
+   * Complete/partial cache identity is fixed for this track's whole lifetime. */
+  pthread_mutex_lock(&lock);
+  bool seek_again = generation == play_generation && seek != seek_revision;
+  pthread_mutex_unlock(&lock);
+  pthread_mutex_lock(&s.mutex); bool rewindable = s.history_usable; pthread_mutex_unlock(&s.mutex);
+  if (seek_again && rewindable) {
+    music_pcm_close(&pcm);
+    /* FAT readers may snapshot the file length at open. Reopen after the
+     * producer flushed this prefix instead of reusing an early EOF length. */
+    fclose(s.history);
+    s.history = fopen(s.history_path, "rb");
+    if (s.history && !fseek(s.history, s.history_start, SEEK_SET)) {
+      replay_remaining = downloaded_read;
+      goto restart_decoder;
+    }
+    ret = -EIO;
+  }
   if (!ret && pcm.fd < 0) ret = target_ms && decoded ? 0 : -ENODATA;
 done:
   pthread_mutex_lock(&s.mutex); s.abort = true; pthread_cond_broadcast(&s.condition); pthread_mutex_unlock(&s.mutex);
   music_pcm_close(&pcm);
   if (network_started) pthread_join(network, NULL);
+  if (s.history) fclose(s.history);
+  music_audio_cache_finish(&s.cache, s.done && !s.error);
   free(s.ring); free(input); free(decoder); free(samples);
   pthread_cond_destroy(&s.condition); pthread_mutex_destroy(&s.mutex);
+  *completed_seek = seek;
   return ret;
 }
 
@@ -658,7 +752,7 @@ static void *player_worker(void *unused)
       while (generation == play_generation) {
         unsigned seek = seek_revision, target = seek_position_ms;
         pthread_mutex_unlock(&lock);
-        ret = play_stream(&song, generation, seek, target);
+        ret = play_stream(&song, generation, &seek, target);
         pthread_mutex_lock(&lock);
         if (seek == seek_revision) break;
       }
