@@ -65,6 +65,9 @@ static atomic_uint audio_requests, pcm_pauses;
 static atomic_bool hold_audio, audio_held;
 static atomic_bool capture_pcm, captured_pcm;
 static int16_t captured_samples[128];
+static atomic_bool verify_pcm;
+static const int16_t *expected_pcm;
+static size_t expected_offset, expected_count;
 static atomic_bool has_music_key=true;
 
 int portal_music_key(char *out,size_t cap)
@@ -121,6 +124,13 @@ int music_pcm_open(struct music_pcm *pcm,unsigned rate,unsigned volume)
 int music_pcm_write(struct music_pcm *pcm,const int16_t *samples,unsigned frames,unsigned channels)
 {
  assert(samples && (channels==1||channels==2));
+ if(atomic_load(&verify_pcm)){
+   if(channels!=1||expected_offset+frames>expected_count)
+     fprintf(stderr,"PCM oracle bounds: offset=%zu frames=%u total=%zu channels=%u\n",expected_offset,frames,expected_count,channels);
+   assert(channels==1&&expected_offset+frames<=expected_count);
+   assert(!memcmp(samples,expected_pcm+expected_offset,frames*sizeof(*samples)));
+   expected_offset+=frames;
+ }
  if(atomic_exchange(&capture_pcm,false)){
    assert(frames*channels>=128);memcpy(captured_samples,samples,sizeof(captured_samples));
    atomic_store(&captured_pcm,true);
@@ -411,10 +421,66 @@ static void seek_buffer_checks(void)
   assert(!glass_music_seek(track,0));
   s=wait_for("Local",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);assert(s.position_ms<1000);
   assert(!glass_music_stop_wait(3000));assert(glass_music_seek(track,10)==-ESTALE);
-  free(oracle);
   puts("MUSIC_SEEK_OK: sample-exact oracle at 2s/9s, stale track rejection, rapid last request wins, backward/forward/zero seek, pause retained, sample clock rebased");
 
   char path[256];assert(!music_audio_cache_path("https://fixture/audio",path,sizeof(path)));unlink(path);
+  /* The server stops after the first 64 KiB. Seek into its missing tail,
+   * then back to an already downloaded sample without releasing the server.
+   * A seek must not cancel/reconnect that healthy, deliberately stalled GET. */
+  atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
+  unsigned loading_requests=atomic_load(&audio_requests);
+  play("LoadingSeek");
+  s=wait_for("LoadingSeek",MUSIC_PLAYING,MUSIC_LYRICS_READY);track=s.track_id;
+  for(unsigned i=0;i<3000&&!atomic_load(&audio_held);i++)usleep(1000);
+  assert(atomic_load(&audio_held));
+  assert(!glass_music_seek(track,14000));
+  usleep(100000);glass_music_now_playing(&s);
+  assert(s.state==MUSIC_LOADING&&s.position_ms==14000);
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  assert(!glass_music_set_paused(true));
+  assert(!glass_music_seek(track,2000));
+  usleep(80000);glass_music_now_playing(&s);
+  assert(s.state==MUSIC_PAUSED&&s.position_ms==2000);
+  expected_pcm=oracle;expected_offset=44100;expected_count=total;
+  atomic_store(&verify_pcm,true);
+  atomic_store(&captured_pcm,false);atomic_store(&capture_pcm,true);
+  assert(!glass_music_set_paused(false));
+  for(unsigned i=0;i<3000&&!atomic_load(&captured_pcm);i++)usleep(1000);
+  s=wait_for("LoadingSeek",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  assert(s.position_ms>=2000&&s.position_ms<3000);
+  assert(atomic_load(&captured_pcm)&&!memcmp(captured_samples,oracle+44100,sizeof(captured_samples)));
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  /* Catch the replay/ring seam and continue through the still-live GET. */
+  atomic_store(&hold_audio,false);
+  wait_for("LoadingSeek",MUSIC_ENDED,MUSIC_LYRICS_READY);
+  assert(!glass_music_stop_wait(1000));atomic_store(&verify_pcm,false);
+  assert(expected_offset==total);
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  FILE *completed=music_audio_cache_open("https://fixture/audio");assert(completed);fclose(completed);
+  unlink(path);
+  puts("MUSIC_SEEK_SEAM_OK: every PCM sample from backward target through cached prefix, live ring and EOF matches whole-track decode; cache committed");
+
+  atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
+  loading_requests=atomic_load(&audio_requests);
+  play("LoadingSeek");
+  s=wait_for("LoadingSeek",MUSIC_PLAYING,MUSIC_LYRICS_READY);track=s.track_id;
+  for(unsigned i=0;i<3000&&!atomic_load(&audio_held);i++)usleep(1000);
+  assert(atomic_load(&audio_held));
+  assert(!glass_music_seek(track,14000));usleep(100000);
+  assert(!glass_music_seek(track,12000));
+  assert(!glass_music_seek(track,0));
+  for(unsigned i=0;i<3000;i++){
+    glass_music_now_playing(&s);
+    if(s.state==MUSIC_PLAYING&&s.position_ms<1000)break;
+    usleep(1000);
+  }
+  assert(s.state==MUSIC_PLAYING&&s.position_ms<1000);
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  assert(!glass_music_stop_wait(1000));
+  atomic_store(&hold_audio,false);
+  free(oracle);
+  puts("MUSIC_LOADING_SEEK_OK: missing-tail seek then paused/sample-exact backward/rapid/zero seeks reuse one stalled GET; stop cancels it");
+
   atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
   unsigned pauses=atomic_load(&pcm_pauses),requests=atomic_load(&audio_requests);
   play("BufferTest");
@@ -441,7 +507,13 @@ static void seek_buffer_checks(void)
   FILE *blocked=fopen(MUSIC_CACHE_ROOT,"wb");assert(blocked);fclose(blocked);
   requests=atomic_load(&audio_requests);
   play("NoCache");wait_for("NoCache",MUSIC_PLAYING,MUSIC_LYRICS_READY);
-  assert(atomic_load(&audio_requests)==requests+1);assert(!glass_music_stop_wait(3000));
+  assert(atomic_load(&audio_requests)==requests+1);
+  glass_music_now_playing(&s);track=s.track_id;
+  assert(!glass_music_seek(track,3000));
+  s=wait_for("NoCache",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  assert(s.position_ms>=3000&&s.position_ms<4000);
+  assert(atomic_load(&audio_requests)==requests+2);
+  assert(!glass_music_stop_wait(3000));
   assert(!unlink(MUSIC_CACHE_ROOT)&&!rename(saved,MUSIC_CACHE_ROOT));
   puts("MUSIC_AUDIO_CACHE_UNAVAILABLE_OK: real streaming and teardown survive inaccessible SD cache");
 }
