@@ -1,0 +1,20 @@
+{
+  "netsurf": {
+    "buildsystem": "e429a19d922b52e470fd8a2fd7e84a64b17175c9",
+    "libwapcaplet": "c7c128d3eb3223b216c974471f82e9337fbcf4ba",
+    "libparserutils": "6b0cbf086ca8eb8fe74b69f0c9ecf274eb2397ca",
+    "libhubbub": "6651b8cf87a4aa87bcdb2ff024a02659cd3f9402",
+    "libdom": "f69781e1f062444b5af3f62d431d7d94018da53b",
+    "libcss": "bc6a32fe373954a67ea30e42f08a9f4f7d1db9af",
+    "libnsutils": "0bd39060740b6163bd50875326654a722df97eb2",
+    "libnsbmp": "3e5409942cc8a7ea7ef705b035394c6089cef4f8",
+    "libnsgif": "c26c7aa4765e4a40b5f2a1e7941368286ca88e32",
+    "netsurf": "d06cd9d71783330729fc87fc210e48b3258c194c"
+  },
+  "zlib": {
+    "url": "https://github.com/madler/zlib/releases/download/v1.3/zlib13.zip",
+    "archive": "zlib13.zip",
+    "dir": "zlib-1.3",
+    "sha256": "c561d09347f674f0d72692e7c75d9898919326c532aab7f8c07bb43b07efeb38"
+  }
+}

@@ -1,0 +1,35 @@
+# ----------------------------------------------------------------------------
+# openvela-specific options (dynamically loaded native module)
+# ----------------------------------------------------------------------------
+
+# Fetching uses the firmware's webclient + mbedTLS (openvela/http.c)
+NETSURF_USE_CURL := NO
+NETSURF_USE_OPENSSL := NO
+
+# JPEG/PNG use system decoders (openvela/image.c); GIF/BMP use NetSurf libs
+NETSURF_USE_JPEG := NO
+NETSURF_USE_PNG := NO
+NETSURF_USE_BMP := YES
+NETSURF_USE_GIF := YES
+NETSURF_USE_JPEGXL := NO
+NETSURF_USE_WEBP := NO
+NETSURF_USE_RSVG := NO
+NETSURF_USE_NSSVG := NO
+NETSURF_USE_ROSPRITE := NO
+NETSURF_USE_VIDEO := NO
+NETSURF_USE_HARU_PDF := NO
+
+# No JavaScript engine in this simple browser
+NETSURF_USE_DUKTAPE := NO
+
+# NuttX libc provides iconv; no separate libiconv
+NETSURF_USE_LIBICONV_PLUG := YES
+NETSURF_USE_UTF8PROC := NO
+NETSURF_USE_NSPSL := NO
+NETSURF_USE_NSLOG := NO
+
+NETSURF_FS_BACKING_STORE := NO
+NETSURF_HOMEPAGE := "about:welcome"
+NETSURF_LOG_LEVEL := ERROR
+
+CFLAGS += -Os

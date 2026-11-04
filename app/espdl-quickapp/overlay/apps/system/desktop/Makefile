@@ -35,10 +35,12 @@ CFLAGS += -I$(TOPDIR)/arch/risc-v/src/common
 CSRCS += glass_system_monitor.c
 CSRCS += glass_network_recovery.c
 CSRCS += glass_status_power.c
+CSRCS += glass_status_storage.c
 CSRCS += glass_system_platform.c
 
 CSRCS += glass_settings_service.c glass_icons.c
-CSRCS += glass_backlight.c
+CSRCS += glass_backlight.c glass_backlight_compat.c
+CSRCS += glass_video_blit.c
 CSRCS += glass_weather.c glass_weather_parse.c glass_weather_https.c glass_weather_http.c glass_https.c
 # Dependency generation needs the same headers as compilation.
 CFLAGS += -I$(APPDIR)/netutils/cjson/cJSON $(ESPCLAW_TLS_CFLAGS)
@@ -61,6 +63,14 @@ CSRCS += glass_pinyin_resource.c
 CSRCS += glass_portal_config.c glass_portal_files.c glass_portal_http.c glass_portal_resource.c
 CSRCS += glass_ai_config.c
 CFLAGS += -DGLASS_AI_CONFIG_ENABLED
+ifeq ($(GLASS_LOCAL_VOICE),1)
+CFLAGS += -DGLASS_LOCAL_VOICE
+CSRCS += glass_local_model.c glass_local_sha.c glass_local_assets.c glass_local_tokenizer.c
+CSRCS += glass_local_llm.c glass_local_frontend.c glass_local_tts.c glass_local_voice.c glass_local_platform.c
+glass_local_model.c_CFLAGS += -O2 -ffp-contract=off
+glass_local_llm.c_CFLAGS += -O2 -ffp-contract=off
+glass_local_tts.c_CFLAGS += -O2 -ffp-contract=off
+endif
 CSRCS += glass_chat_service.c glass_chat_store.c glass_agent.c glass_agent_config.c glass_mcp_http.c
 CSRCS += glass_board_music.c
 CSRCS += glass_board_assistant.c glass_assistant_platform.c
@@ -68,6 +78,7 @@ CSRCS += glass_vision.c qpk_camera_clip.c glass_camera_observation.c
 CSRCS += glass_grok.c glass_grok_state.c
 CSRCS += glass_code_font.c
 CSRCS += glass_sd_font.c
+CSRCS += glass_i18n.c
 CSRCS += pet_engine.c pet_sprites.c qpk_pet.c pet_lvgl.c dafeiyu_resource.c
 CXXSRCS += glass_pinyin.cpp $(wildcard music_vendor/googlepinyin/src/*.cpp)
 CXXEXT = .cpp

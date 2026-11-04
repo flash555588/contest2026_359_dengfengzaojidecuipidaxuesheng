@@ -1,0 +1,6 @@
+numpy>=2.0,<3
+scipy==1.16.3
+soundfile==0.13.1
+pypinyin==0.55.0
+praat-parselmouth==0.4.7
+# Prosody training additionally uses PyTorch; use the host's matching CUDA build.

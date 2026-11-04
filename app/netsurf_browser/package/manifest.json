@@ -1,0 +1,6 @@
+{
+  "name": "NetSurf 浏览器",
+  "package": "com.netsurf.browser",
+  "versionName": "0.6.0",
+  "entry": "app.js"
+}

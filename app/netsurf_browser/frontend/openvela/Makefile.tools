@@ -1,0 +1,10 @@
+# -*- mode: makefile-gmake -*-
+##
+## openvela target tool setup
+##
+## build.py passes CC (riscv32-esp-elf-gcc) and points PKG_CONFIG_LIBDIR at
+## the cross prefix containing the NetSurf libraries built for NuttX.
+
+PKG_CONFIG := pkg-config
+STRIP := riscv32-esp-elf-strip
+BUILD_CC := gcc

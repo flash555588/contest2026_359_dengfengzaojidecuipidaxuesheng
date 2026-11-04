@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "glass_app_theme.h"
+#include "glass_icons.h"
 /* Shared geometry for app navigation; data panels keep their own heights. */
 #define GLASS_SIDEBAR_WIDTH 164
 #define GLASS_SIDEBAR_PAD 12
@@ -113,6 +114,7 @@ static void glass_sidebar_surface(lv_obj_t *sidebar)
 
 static void glass_sidebar_item(lv_obj_t *item,bool selected)
 {
+  glass_icon_set_active(item,selected);
   glass_sidebar_track(item);
   lv_obj_set_x(item,GLASS_SIDEBAR_PAD);
   lv_obj_set_size(item,GLASS_SIDEBAR_ITEM_WIDTH,GLASS_SIDEBAR_ITEM_HEIGHT);
@@ -123,7 +125,7 @@ static void glass_sidebar_item(lv_obj_t *item,bool selected)
   lv_obj_set_style_bg_color(item,lv_color_hex(selected?detail_soft():detail_paper()),0);
   lv_obj_set_style_bg_color(item,lv_color_hex(detail_soft()),LV_STATE_PRESSED);
   lv_obj_t *label=lv_obj_get_child(item,0);
-  if(label&&lv_obj_check_type(label,&lv_label_class)){
+  if(label&&lv_obj_has_class(label,&lv_label_class)){
     lv_obj_set_style_text_font(label,home_font(14),0);
     lv_obj_set_style_text_color(label,lv_color_hex(selected?detail_accent():detail_ink()),0);
     lv_obj_set_width(label,GLASS_SIDEBAR_ITEM_WIDTH-24);
