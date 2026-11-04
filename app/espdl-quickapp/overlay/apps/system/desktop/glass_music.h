@@ -17,6 +17,9 @@ struct music_snapshot {
   struct music_song current, result;
   struct music_song favorites[MUSIC_FAVORITES_MAX];
   unsigned revision, search_revision, position_ms, duration_ms, volume, favorite_count;
+  unsigned offline_ready_count;
+  bool offline_caching;
+  int offline_error;
   enum music_state state;
   bool searching, has_result, initialized;
   int error, search_error, storage_error;
@@ -66,6 +69,10 @@ int glass_music_stop_wait(unsigned timeout_ms);
 /* Set the shared system speaker volume (clamped to 0..100). */
 void glass_music_volume(unsigned volume);
 int glass_music_favorite(const struct music_song *song);
+int glass_music_artwork_url(const struct music_song *song,char *url,size_t capacity);
+/* Pause background caching without cancelling playback or changing favorites. */
+int glass_music_offline_suspend(unsigned timeout_ms);
+void glass_music_offline_resume(void);
 bool glass_music_is_favorite(const struct music_snapshot *state, const struct music_song *song);
 int music_song_parse(const char *body, size_t size, const char *query, struct music_song *song);
 int music_search_url(const char *query, const char *key, char *url, size_t cap);

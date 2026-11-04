@@ -9,6 +9,32 @@ import shutil
 import subprocess
 import re
 
+def prepare_asr_dsp_vendor(vendor, destination):
+    """Keep dependency scanning self-contained without global IDF headers."""
+    vendor, destination = Path(vendor), Path(destination)
+    if vendor.resolve() == destination.resolve():
+        raise ValueError('ESP-DSP preparation must not modify the pinned input')
+    lock = json.loads((vendor/'UPSTREAM.json').read_text())
+    for row in lock['files']:
+        if hashlib.sha256((vendor/row['path']).read_bytes()).hexdigest() != row['sha256']:
+            raise RuntimeError('Pinned ESP-DSP source changed: '+row['path'])
+    # NuttX's dependency scan omits per-source CFLAGS. Quoted includes inside
+    # the private DSP directory must therefore resolve there as well.
+    for name in ('esp_err.h', 'sdkconfig.h'):
+        if (vendor/name).exists():
+            raise RuntimeError('ESP-DSP compatibility header conflicts with upstream: '+name)
+    shutil.copytree(vendor, destination, dirs_exist_ok=True)
+    for name in ('esp_err.h', 'sdkconfig.h'):
+        shutil.copy2(vendor/'compat'/name, destination/name)
+    for op in ('add', 'sub', 'mul'):
+        name = 'dsps_'+op+'_f32_ansi.c'
+        # Include from the private directory so quoted vendor headers also
+        # work for -M, which does not receive the per-file include flags.
+        (destination.parent/name).write_text(
+            '/* Generated ESP-DSP source wrapper; upstream bytes unchanged. */\n'
+            '#include "esp_dsp/'+name+'"\n')
+    return lock
+
 def storage_layout(config,requested='preserve'):
     layouts={'12m-4m':(0xc00000,0x400000),'14m-2m':(0xe00000,0x200000)}
     if requested!='preserve':
@@ -57,6 +83,9 @@ def main():
     p.add_argument('--esp-tts-prepared',type=Path,help='Pinned ESP-TTS libraries/voice; use as the normal Chinese speech backend')
     p.add_argument('--local-voice-sdk',type=Path,help='Prepared SD-externalized EI SDK; enable the independent offline voice app')
     p.add_argument('--local-asr-evaluation',action='store_true',help='Include fixed Zipformer C runtime and worker-only SD sample gate; microphone ASR stays unready')
+    p.add_argument('--local-asr-streaming',action='store_true',help='RAM-only concurrent capture, incremental Zipformer, provisional transcript and bounded backlog')
+    p.add_argument('--local-asr-accel',action='store_true',help='ASR packed blocks, persistent dual-core helper and guarded two-piece S16 PIE; requires ASR and TTS PIE kernel')
+    p.add_argument('--local-asr-official-dsp',action='store_true',help='Pinned ESP-DSP float vector kernels and coalesced ASR broadcasting; no HWLP or model requantization')
     p.add_argument('--local-asr-microphone',action='store_true',help='Enable RAM-only microphone -> Zipformer -> local dialogue pipeline (requires ASR evaluation)')
     p.add_argument('--local-q4-pie',action='store_true',help='Include opt-in Q4/A16 PIE backend; default remains scalar, runtime selftest required')
     p.add_argument('--local-tts-pie',action='store_true',help='Experimental native V2 W8A16 vocoder; weights stay on SD, selftest per request')
@@ -64,6 +93,8 @@ def main():
     p.add_argument('--local-sha-hw',action='store_true',help='Opt-in P4 hardware SHA model verification with per-request known-answer selftest')
     p.add_argument('--local-tts-parallel',action='store_true',help='Opt-in bounded dual-core FP32 acoustic/upsample operators')
     p.add_argument('--local-tts-fma',action='store_true',help='Default-off diagnostic FMA upsample; requires parallel dispatcher')
+    p.add_argument('--sd-spi-hz',type=int,choices=[20000000,40000000,50000000],default=20000000,help='Board SD SPI ceiling; above 25 MHz requires CMD6 negotiation')
+    p.add_argument('--sd-spi-dma',action='store_true',help='SPI3 internal bounce-buffer GDMA; keep SPI2 polling and SD clock unchanged')
     p.add_argument('--sd-read-diagnostics',action='store_true',help='Log failed SD SPI token waits with actual ticks and poll count; no retries or clock changes')
     p.add_argument('--sd-spi-highspeed',action='store_true',help='Negotiate SD v2 high speed before 40 MHz reads; keep the existing write clock and SPI3 polling path')
     p.add_argument('--local-session-guard',action='store_true',help='Track FAT mutations/mounts and SPI block writes for safe retained local-model sessions')
@@ -85,6 +116,9 @@ def main():
     p.add_argument('--dsi-flash-reload',action='store_true',help='Rejected physical experiment; retained to reject old deployment commands')
     p.add_argument('--factory-header',action='store_true',help='Use factory P4X J1 pins, reserving GPIO0/1 for XTAL32K: I2C1=2/3, SPI2=6/3/4/5, PWM0=2')
     a=p.parse_args();repo=Path(__file__).resolve().parent.parent
+    if a.local_asr_official_dsp and not a.local_asr_accel:p.error('--local-asr-official-dsp requires --local-asr-accel')
+    if a.sd_spi_hz>25000000:
+        p.error('40 MHz SD SPI failed native card mounting; production builds remain at 20 MHz. The isolated candidate61 experiment is retained for diagnosis.')
     if a.ble_connections==8 and not a.ble_eight_test:
         p.error('Eight host slots require explicit --ble-eight-test; current C6 firmware is not qualified for eight links')
     if a.ble_eight_test:
@@ -99,6 +133,8 @@ def main():
     if a.esp_tts_prepared and not a.speech_runtime:p.error('--esp-tts-prepared requires --speech-runtime')
     if a.local_voice_sdk and not a.speech_runtime:p.error('--local-voice-sdk requires --speech-runtime for shared audio ownership')
     if a.local_asr_evaluation and not a.local_voice_sdk:p.error('--local-asr-evaluation requires --local-voice-sdk')
+    if a.local_asr_streaming and not a.local_asr_microphone:p.error('--local-asr-streaming requires --local-asr-microphone')
+    if a.local_asr_accel and not (a.local_asr_evaluation and a.local_tts_pie):p.error('--local-asr-accel requires --local-asr-evaluation and --local-tts-pie')
     if a.local_asr_microphone and not a.local_asr_evaluation:p.error('--local-asr-microphone requires --local-asr-evaluation')
     if a.local_q4_pie and not a.local_voice_sdk:p.error('--local-q4-pie requires --local-voice-sdk')
     if a.local_tts_pie and not a.local_voice_sdk:p.error('--local-tts-pie requires --local-voice-sdk')
@@ -143,6 +179,8 @@ def main():
                for f in folder.rglob('*') if f.is_file()]+radio_sources
         if a.local_asr_evaluation:
             files.extend(f for f in (repo/'app/espdl-quickapp/experimental').iterdir() if f.name.startswith('local_asr') and f.suffix in ('.c','.h'))
+        if a.local_asr_official_dsp:
+            files.extend(f for f in (repo/'app/espdl-quickapp/experimental/esp_dsp').rglob('*') if f.is_file())
         if a.local_q4_pie:
             files.extend(repo/'app/espdl-quickapp/experimental'/n for n in ('local_q4_pie.c','local_q4_pie.h','local_q4_dot_p4.S','local_q8_pie.c','local_q8_pie.h'))
         if a.local_tts_pie:
@@ -197,8 +235,11 @@ def main():
     video_blit_sources=prepare_video_blit(root/'apps',a.video_blit)
     from prepare_lvgl_event_dispatch import apply as prepare_lvgl_event_dispatch
     lvgl_event_sources=prepare_lvgl_event_dispatch(root/'apps')
+    from prepare_sd_spi_dma import apply as prepare_sd_spi_dma
+    prepare_sd_spi_dma(root/'nuttx',False)
     from prepare_sd_read_diagnostics import apply as prepare_sd_read_diagnostics
     sd_read_diagnostics=prepare_sd_read_diagnostics(root/'nuttx',a.sd_read_diagnostics)
+    sd_spi_dma=prepare_sd_spi_dma(root/'nuttx',a.sd_spi_dma,a.sd_spi_hz>25000000)
     from prepare_local_session_guard import apply as prepare_local_session_guard
     local_session_guard=prepare_local_session_guard(root/'nuttx',a.local_session_guard)
     from prepare_sd_spi_highspeed import apply as prepare_sd_spi_highspeed
@@ -246,12 +287,26 @@ def main():
         make='GLASS_LOCAL_VOICE = 1\n'+make+'\nCFLAGS += -DGLASS_LOCAL_VOICE\n'
     if a.local_asr_evaluation:
         experimental=repo/'app/espdl-quickapp/experimental'
-        for name in ('local_asr','local_asr_graph','local_asr_fbank','local_asr_ops'):
+        asr_names=('local_asr','local_asr_graph','local_asr_fbank','local_asr_ops')+(('local_asr_accel','local_asr_parallel') if a.local_asr_accel else ())
+        for name in asr_names:
             for suffix in ('.c','.h'):shutil.copy2(experimental/(name+suffix),desktop_make.parent/(name+suffix))
         block='\nCFLAGS += -DGLV_ASR_EVALUATION\nCSRCS += glass_local_asr.c local_asr.c local_asr_graph.c local_asr_fbank.c local_asr_ops.c\n'
+        if a.local_asr_accel:block+='CFLAGS += -DGLV_ASR_ACCEL_ENABLED\nCSRCS += local_asr_accel.c local_asr_parallel.c\n'
+        if a.local_asr_official_dsp:
+            vendor=experimental/'esp_dsp'
+            dsp_lock=prepare_asr_dsp_vendor(vendor,desktop_make.parent/'esp_dsp')
+            for name in ('local_asr_dsp.c','local_asr_dsp.h'):shutil.copy2(experimental/name,desktop_make.parent/name)
+            block+='CFLAGS += -DGLV_ASR_OFFICIAL_DSP\nCSRCS += local_asr_dsp.c dsps_add_f32_ansi.c dsps_sub_f32_ansi.c dsps_mul_f32_ansi.c\n'
+            private=' -I$(CURDIR)/esp_dsp/compat -I$(CURDIR)/esp_dsp -O3 -fno-fast-math -ffp-contract=off'
+            block+='local_asr_dsp.c_CFLAGS +='+private+'\n'
+            renamed=' -Ddsps_add_f32_ansi=glv_esp_dsp_add_f32_ansi -Ddsps_sub_f32_ansi=glv_esp_dsp_sub_f32_ansi -Ddsps_mul_f32_ansi=glv_esp_dsp_mul_f32_ansi'
+            for op in ('add','sub','mul'):
+                name='dsps_'+op+'_f32_ansi.c'
+                block+=name+'_CFLAGS +='+private+renamed+'\n'
         if a.local_asr_microphone:
             block+='CFLAGS += -DGLV_ASR_MICROPHONE\nCSRCS += glass_local_capture.c glass_local_capture_device.c\n'
-        for name in ('local_asr','local_asr_graph','local_asr_fbank','local_asr_ops'):
+        if a.local_asr_streaming:block+='CFLAGS += -DGLV_ASR_STREAMING\nCSRCS += glass_local_capture_stream.c\n'
+        for name in asr_names:
             block+=name+'.c_CFLAGS += -O2 -ffp-contract=off\n'
         anchor='include $(APPDIR)/Application.mk'
         if make.count(anchor)!=1:raise RuntimeError('Cannot locate desktop application source-rule expansion')
@@ -395,6 +450,15 @@ def main():
         s=re.sub(r'^(?:CONFIG_ESP32P4_CAMERA_USB=.*|# CONFIG_ESP32P4_CAMERA_USB is not set)$','CONFIG_ESP32P4_CAMERA_USB=y',s,flags=re.M)
         if 'CONFIG_ESP32P4_CAMERA_USB=y' not in s:s+='\nCONFIG_ESP32P4_CAMERA_USB=y\n'
         if cfg.read_text()!=s:cfg.write_text(s)
+    if a.sd_spi_dma:
+        run(['kconfig-tweak','--file',cfg,'--enable','ESPRESSIF_SPI3_DMA',
+             '--disable','ESPRESSIF_SPI2_DMA',
+             '--set-val','ESPRESSIF_SPI3_DMADESC_NUM','2',
+             '--set-val','ESPRESSIF_SPI3_DMATHRESHOLD','64',
+             '--set-val','MMCSD_SPICLOCK',str(a.sd_spi_hz)])
+    else:
+        run(['kconfig-tweak','--file',cfg,'--disable','ESPRESSIF_SPI3_DMA',
+             '--set-val','MMCSD_SPICLOCK',str(a.sd_spi_hz)])
     tc=a.toolchain.resolve();cross=f'CROSSDEV={tc}/riscv32-esp-elf-'
     tls=base/'standalone-tls'
     includes=f'-I{tls}/include -I{tls}/tf-psa-crypto/include -I{tls}/tf-psa-crypto/drivers/builtin/include -DMBEDTLS_THREADING_C -DMBEDTLS_THREADING_PTHREAD'
@@ -406,6 +470,15 @@ def main():
         libs.append(Path(subprocess.check_output([str(tc/'riscv32-esp-elf-g++'),*abi,'-print-file-name='+name],text=True).strip()))
     run(['make','olddefconfig',cross],cwd=root/'nuttx')
     config=cfg.read_text()
+    if a.sd_spi_dma:
+        required=['CONFIG_ESPRESSIF_SPI3_DMA=y',f'CONFIG_MMCSD_SPICLOCK={a.sd_spi_hz}',
+                  'CONFIG_ESPRESSIF_SPI3_CSPIN=42','CONFIG_ESPRESSIF_SPI3_CLKPIN=43',
+                  'CONFIG_ESPRESSIF_SPI3_MOSIPIN=44','CONFIG_ESPRESSIF_SPI3_MISOPIN=39',
+                  '# CONFIG_ESPRESSIF_SPI2_DMA is not set']
+        for value in required:
+            if value+'\n' not in config:raise RuntimeError('SPI3 DMA configuration mismatch: '+value)
+    if 'CONFIG_OV_NATIVE_TEXT_POOL=y\n' not in config:
+        raise RuntimeError('Native modules require the executable alias window (OV_NATIVE_TEXT_POOL)')
     if a.local_sha_hw and 'CONFIG_ESPRESSIF_SHA_ACCELERATOR=y\n' not in config:
         raise RuntimeError('Requested hardware SHA disabled by Kconfig')
     if a.ble_connections is not None and f'CONFIG_NIMBLE_BLE_MAX_CONN={a.ble_connections}\n' not in config:
@@ -542,6 +615,11 @@ def main():
     metadata={'native_modules':{'enabled':True,'reserved_pool_bytes':0,'executable_window_bytes':0x2000000,'resident_slots':8,'memory_policy':'application-owned; loader bounds only by executable alias window','allocation':'on-demand PSRAM with executable virtual alias; ordinary heap remains RW','loader_sha256':sha(native_loader),'pool_sources':{str(path.relative_to(root/'nuttx')):sha(path) for path in native_pool_sources},'webclient_sha256':sha(webclient)},'camera_timing':camera_timing_sources,
               'lvgl_event_dispatch':{'sources':lvgl_event_sources,
                 'tool_sha256':sha(repo/'tools/prepare_lvgl_event_dispatch.py')},
+              'spi3_dma':{**sd_spi_dma,'enabled':a.sd_spi_dma,'spi2_dma':False,'clock_hz_requested':a.sd_spi_hz,
+                'source_sha256':{n:sha(root/'nuttx'/n) for n in (
+                 'arch/risc-v/src/common/espressif/esp_spi.c',
+                 'arch/risc-v/src/common/espressif/esp_spi_dma.inc',
+                 'include/nuttx/spi/esp_spidma.h')} if a.sd_spi_dma else {}},
               'sd_read_diagnostics':{**sd_read_diagnostics,
                 'tool_sha256':sha(repo/'tools/prepare_sd_read_diagnostics.py')},
               'sd_spi_highspeed':sd_spi_highspeed,
@@ -596,7 +674,8 @@ def main():
               'sha256':{name:sha(out/name) for name in ['nuttx.bin','nuttx.elf','resolved.config']},
               'reused_libraries':{str(lib):sha(Path(lib)) for lib in libs if Path(lib).is_file()},
               'source_sha256':copied_source_hashes,
-              'local_asr':{'evaluation_enabled':a.local_asr_evaluation,'microphone_enabled':a.local_asr_microphone,'plan_abi':'GLA1-1','tokens_abi':'GLT1-1','microphone_ready':False,'board_tested':False},
+              'local_asr':{'evaluation_enabled':a.local_asr_evaluation,'microphone_enabled':a.local_asr_microphone,'streaming_enabled':a.local_asr_streaming,'plan_abi':'GLA1-2','compatible_plan_abis':['GLA1-1','GLA1-2'],'model_quantization':'published dynamic UINT8/INT8 with retained FP32 tensors','tokens_abi':'GLT1-1','microphone_ready':False,'board_tested':False,'packed_blocks':a.local_asr_accel,'persistent_parallel_worker':a.local_asr_accel,'acceleration_enabled':a.local_asr_accel,'pie_activation':'S16 high plus S16 residual, guarded FP32 fallback'},
+              'local_asr_official_dsp':{'included':a.local_asr_official_dsp,'upstream_revision':dsp_lock['revision'] if a.local_asr_official_dsp else None,'kernel_set':['dsps_add_f32_ansi','dsps_sub_f32_ansi','dsps_mul_f32_ansi'] if a.local_asr_official_dsp else [],'hwlp_enabled':False,'model_requantized':False},
               'local_q8_pie':{'included':a.local_q4_pie,'activation_bits':16,'selftest_required':True,'default_enabled':False,'bulk_rows':True,'board_tested':False},
               'local_q4_pie':{'included':a.local_q4_pie,'default_bits':0,'selftest_required':True,'board_tested':False},
               'local_tts_pie':{'included':a.local_tts_pie,'activation_bits':16,'weight_bits':8,'selftest_required':True,'board_tested':False,'batch_default':True,'guarded_reciprocal':True,'polyphase_upsample':True,'dot_unroll':4,'interleaved_output_positions':4,'bitwise_finite':True,'fused_mac_load':True},
@@ -635,6 +714,13 @@ def main():
                            'sd_manifest_sha256':sha(prepared/'sdcard/speech/manifest.json'),
                            'compile':json.loads((out/'speech/compile.json').read_text()),
                            'tools':{str(f.relative_to(repo)):sha(f) for f in [repo/'tools/build_bilibili_v3.py',repo/'tools/build_speech_runtime.py',repo/'tools/prepare_speech_runtime.py',repo/'tools/prepare_esp_tts.py',repo/'tools/esp_tts_inputs.py']}}
+    if a.local_asr_official_dsp:
+        metadata['local_asr_official_dsp']['dependency_compatibility_headers']={
+            name:sha(desktop_make.parent/'esp_dsp'/name)
+            for name in ('esp_err.h','sdkconfig.h')}
+        metadata['local_asr_official_dsp']['dependency_scoped_sources']={
+            'dsps_'+op+'_f32_ansi.c':sha(desktop_make.parent/('dsps_'+op+'_f32_ansi.c'))
+            for op in ('add','sub','mul')}
     (out/'BUILD-METADATA.json').write_text(json.dumps(metadata,indent=2)+'\n')
     print('Build verified:',out,metadata['sha256']['nuttx.bin'])
 if __name__=='__main__':main()

@@ -2,6 +2,7 @@
 /* Real service workers, HTTP/codec boundary mocked; never contacts a device. */
 #include <assert.h>
 #include <stdatomic.h>
+#define MUSIC_CACHE_COORDINATION_TEST 1
 #include "music_service_under_test.c"
 #include "speaker_under_test.c"
 #include "glass_agent.h"
@@ -56,15 +57,33 @@ static void mcp_checks(void)
   puts("MUSIC_MCP_OK: real service search/play/state, idempotent pause/resume, volume/skip/stop, URL redaction, argument rejection, cancellation; no UI linked");
 }
 
-static const char *mp3_path;
+static const char *mp3_path,*jpeg_path;
+static bool cancel_cache_validation(void *context)
+{return ++*(unsigned *)context>=2;}
+static void prime_replaceable_cache(const struct music_song *song)
+{
+  struct music_audio_cache audio;music_audio_cache_begin(&audio,"https://fixture/audio");assert(audio.file);
+  FILE *f=fopen(mp3_path,"rb");assert(f);unsigned char block[4096];size_t got;
+  while((got=fread(block,1,sizeof(block),f)))music_audio_cache_append(&audio,block,got);
+  assert(!ferror(f));fclose(f);music_audio_cache_finish(&audio,true);
+  char url[1024];assert(!music_cover_url(song,url,sizeof(url)));
+  f=fopen(jpeg_path,"rb");assert(f);assert(!fseek(f,0,SEEK_END));long size=ftell(f);assert(size>4);rewind(f);
+  unsigned char *bytes=malloc(size);assert(bytes&&fread(bytes,1,size,f)==(size_t)size);fclose(f);
+  music_cache_write('c',url,bytes,size,MUSIC_FAVORITE_COVER_MAX);free(bytes);
+}
+static atomic_bool offline_network;
 static atomic_bool hold_lyrics,lyrics_entered;
 static atomic_uint opens,closes;
 static atomic_uint metadata_fetches;
 static atomic_uint search_requests;
 static atomic_uint audio_requests, pcm_pauses;
+static atomic_uint total_http_requests;
 static atomic_bool hold_audio, audio_held;
 static atomic_bool capture_pcm, captured_pcm;
 static int16_t captured_samples[128];
+static atomic_bool verify_pcm;
+static const int16_t *expected_pcm;
+static size_t expected_offset, expected_count;
 static atomic_bool has_music_key=true;
 
 int portal_music_key(char *out,size_t cap)
@@ -76,6 +95,8 @@ int qpk_storage_write(const char *root,const char *package,const char *key,const
 
 int music_http_get(const char *url,music_data_cb sink,void *ctx,music_cancel_cb cancel,unsigned *status)
 {
+  atomic_fetch_add(&total_http_requests,1);
+  if(atomic_load(&offline_network))return -ENETDOWN;
   if(status)*status=200;
   if(strstr(url,"jkapi.com")) {
     atomic_fetch_add(&search_requests,1);
@@ -85,6 +106,12 @@ int music_http_get(const char *url,music_data_cb sink,void *ctx,music_cancel_cb 
     return sink(ctx,(const unsigned char *)json,strlen(json));
   }
   if(strstr(url,"api.lrc.cx")) {
+    if(strstr(url,"/cover?")) {
+      FILE *cover=fopen(jpeg_path,"rb");assert(cover);
+      unsigned char bytes[4096];size_t n;int ret=0;
+      while((n=fread(bytes,1,sizeof(bytes),cover))&&!ret)ret=sink(ctx,bytes,n);
+      fclose(cover);return ret;
+    }
     atomic_fetch_add(&metadata_fetches,1);
     const char *name=strstr(url,"title=");assert(name);name+=6;
     char title[128];size_t n=strcspn(name,"&");assert(n<sizeof(title));memcpy(title,name,n);title[n]=0;
@@ -121,6 +148,13 @@ int music_pcm_open(struct music_pcm *pcm,unsigned rate,unsigned volume)
 int music_pcm_write(struct music_pcm *pcm,const int16_t *samples,unsigned frames,unsigned channels)
 {
  assert(samples && (channels==1||channels==2));
+ if(atomic_load(&verify_pcm)){
+   if(channels!=1||expected_offset+frames>expected_count)
+     fprintf(stderr,"PCM oracle bounds: offset=%zu frames=%u total=%zu channels=%u\n",expected_offset,frames,expected_count,channels);
+   assert(channels==1&&expected_offset+frames<=expected_count);
+   assert(!memcmp(samples,expected_pcm+expected_offset,frames*sizeof(*samples)));
+   expected_offset+=frames;
+ }
  if(atomic_exchange(&capture_pcm,false)){
    assert(frames*channels>=128);memcpy(captured_samples,samples,sizeof(captured_samples));
    atomic_store(&captured_pcm,true);
@@ -411,10 +445,66 @@ static void seek_buffer_checks(void)
   assert(!glass_music_seek(track,0));
   s=wait_for("Local",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);assert(s.position_ms<1000);
   assert(!glass_music_stop_wait(3000));assert(glass_music_seek(track,10)==-ESTALE);
-  free(oracle);
   puts("MUSIC_SEEK_OK: sample-exact oracle at 2s/9s, stale track rejection, rapid last request wins, backward/forward/zero seek, pause retained, sample clock rebased");
 
   char path[256];assert(!music_audio_cache_path("https://fixture/audio",path,sizeof(path)));unlink(path);
+  /* The server stops after the first 64 KiB. Seek into its missing tail,
+   * then back to an already downloaded sample without releasing the server.
+   * A seek must not cancel/reconnect that healthy, deliberately stalled GET. */
+  atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
+  unsigned loading_requests=atomic_load(&audio_requests);
+  play("LoadingSeek");
+  s=wait_for("LoadingSeek",MUSIC_PLAYING,MUSIC_LYRICS_READY);track=s.track_id;
+  for(unsigned i=0;i<3000&&!atomic_load(&audio_held);i++)usleep(1000);
+  assert(atomic_load(&audio_held));
+  assert(!glass_music_seek(track,14000));
+  usleep(100000);glass_music_now_playing(&s);
+  assert(s.state==MUSIC_LOADING&&s.position_ms==14000);
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  assert(!glass_music_set_paused(true));
+  assert(!glass_music_seek(track,2000));
+  usleep(80000);glass_music_now_playing(&s);
+  assert(s.state==MUSIC_PAUSED&&s.position_ms==2000);
+  expected_pcm=oracle;expected_offset=44100;expected_count=total;
+  atomic_store(&verify_pcm,true);
+  atomic_store(&captured_pcm,false);atomic_store(&capture_pcm,true);
+  assert(!glass_music_set_paused(false));
+  for(unsigned i=0;i<3000&&!atomic_load(&captured_pcm);i++)usleep(1000);
+  s=wait_for("LoadingSeek",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  assert(s.position_ms>=2000&&s.position_ms<3000);
+  assert(atomic_load(&captured_pcm)&&!memcmp(captured_samples,oracle+44100,sizeof(captured_samples)));
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  /* Catch the replay/ring seam and continue through the still-live GET. */
+  atomic_store(&hold_audio,false);
+  wait_for("LoadingSeek",MUSIC_ENDED,MUSIC_LYRICS_READY);
+  assert(!glass_music_stop_wait(1000));atomic_store(&verify_pcm,false);
+  assert(expected_offset==total);
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  FILE *completed=music_audio_cache_open("https://fixture/audio");assert(completed);fclose(completed);
+  unlink(path);
+  puts("MUSIC_SEEK_SEAM_OK: every PCM sample from backward target through cached prefix, live ring and EOF matches whole-track decode; cache committed");
+
+  atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
+  loading_requests=atomic_load(&audio_requests);
+  play("LoadingSeek");
+  s=wait_for("LoadingSeek",MUSIC_PLAYING,MUSIC_LYRICS_READY);track=s.track_id;
+  for(unsigned i=0;i<3000&&!atomic_load(&audio_held);i++)usleep(1000);
+  assert(atomic_load(&audio_held));
+  assert(!glass_music_seek(track,14000));usleep(100000);
+  assert(!glass_music_seek(track,12000));
+  assert(!glass_music_seek(track,0));
+  for(unsigned i=0;i<3000;i++){
+    glass_music_now_playing(&s);
+    if(s.state==MUSIC_PLAYING&&s.position_ms<1000)break;
+    usleep(1000);
+  }
+  assert(s.state==MUSIC_PLAYING&&s.position_ms<1000);
+  assert(atomic_load(&audio_requests)==loading_requests+1);
+  assert(!glass_music_stop_wait(1000));
+  atomic_store(&hold_audio,false);
+  free(oracle);
+  puts("MUSIC_LOADING_SEEK_OK: missing-tail seek then paused/sample-exact backward/rapid/zero seeks reuse one stalled GET; stop cancels it");
+
   atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
   unsigned pauses=atomic_load(&pcm_pauses),requests=atomic_load(&audio_requests);
   play("BufferTest");
@@ -441,7 +531,13 @@ static void seek_buffer_checks(void)
   FILE *blocked=fopen(MUSIC_CACHE_ROOT,"wb");assert(blocked);fclose(blocked);
   requests=atomic_load(&audio_requests);
   play("NoCache");wait_for("NoCache",MUSIC_PLAYING,MUSIC_LYRICS_READY);
-  assert(atomic_load(&audio_requests)==requests+1);assert(!glass_music_stop_wait(3000));
+  assert(atomic_load(&audio_requests)==requests+1);
+  glass_music_now_playing(&s);track=s.track_id;
+  assert(!glass_music_seek(track,3000));
+  s=wait_for("NoCache",MUSIC_PLAYING,MUSIC_LYRICS_READY);
+  assert(s.position_ms>=3000&&s.position_ms<4000);
+  assert(atomic_load(&audio_requests)==requests+2);
+  assert(!glass_music_stop_wait(3000));
   assert(!unlink(MUSIC_CACHE_ROOT)&&!rename(saved,MUSIC_CACHE_ROOT));
   puts("MUSIC_AUDIO_CACHE_UNAVAILABLE_OK: real streaming and teardown survive inaccessible SD cache");
 }
@@ -464,10 +560,31 @@ static void volume_checks(void)
   glass_music_volume(40);
   puts("MUSIC_MASTER_VOLUME_OK: real shared speaker state; settings/music bidirectional updates; snapshot/now-playing; mute/range; single master gain");
 }
+static void large_favorite_cache_checks(void)
+{
+  struct music_song song={0};strcpy(song.name,"Large pinned fixture");strcpy(song.artist,"Cache test");
+  struct music_audio_cache cache;music_favorite_audio_begin(&cache,&song);assert(cache.file&&!cache.error);
+  unsigned char block[4096];for(unsigned i=0;i<sizeof(block);i++)block[i]=(unsigned char)(i*17u);
+  size_t total=MUSIC_AUDIO_CACHE_MAX+sizeof(block);
+  for(size_t offset=0;offset<total;offset+=sizeof(block)){
+    music_audio_cache_append(&cache,block,sizeof(block));assert(cache.file&&!cache.error);
+  }
+  music_audio_cache_finish(&cache,true);assert(!cache.error&&!cache.admitted);
+  FILE *f=music_favorite_audio_open(&song);assert(f);
+  unsigned char actual[4096];size_t read=0,got;
+  while((got=fread(actual,1,sizeof(actual),f))){assert(got==sizeof(block)&&!memcmp(actual,block,got));read+=got;}
+  assert(!ferror(f)&&read==total);fclose(f);
+  char key[256],id[33],path[256];assert(!music_favorite_key(&song,key));music_favorite_id(&song,id);
+  assert(!music_favorite_path(id,'a',path));assert(!music_audio_cache_open_path(key,path));
+  music_favorite_cache_forget(&song);assert(!music_favorite_audio_open(&song));
+  assert(!music_cache_writers);
+  puts("MUSIC_LARGE_FAVORITE_OK: streamed pinned audio beyond 16MiB verifies byte-for-byte; replaceable cache retains its 16MiB bound; no writer lease leaked");
+}
 int main(int argc,char **argv)
 {
+  setvbuf(stdout,NULL,_IONBF,0);
   if(argc==4 && !strcmp(argv[1],"--lyrics-response"))return live_response(argv[2],argv[3]);
-  assert(argc==2);mp3_path=argv[1];volume_checks();parser_checks();bilingual_checks();stream_checks();cache_checks();audio_cache_checks();
+  assert(argc==3);mp3_path=argv[1];jpeg_path=argv[2];volume_checks();parser_checks();bilingual_checks();stream_checks();cache_checks();audio_cache_checks();large_favorite_cache_checks();
   /* Test the public bounded view against the real retained lyric store. */
   assert(!lyrics);lyrics=calloc(1,sizeof(*lyrics));assert(lyrics);
   lyrics->count=MUSIC_LRC_LINES;lyrics_state=MUSIC_LYRICS_READY;
@@ -515,15 +632,46 @@ int main(int argc,char **argv)
   assert(atomic_load(&lyrics_entered));play("C");glass_music_now_playing(&s);
   assert(!s.lyrics[1][0] && !s.cover_url[0] && s.state==MUSIC_LOADING);atomic_store(&hold_lyrics,false);
   s=wait_for("C",MUSIC_PLAYING,MUSIC_LYRICS_READY);assert(strstr(s.lyrics[1],"C ") && !strstr(s.lyrics[1],"A "));
-  struct music_song favorite={0};strcpy(favorite.name,"B");strcpy(favorite.artist,"Demo");strcpy(favorite.query,"B");assert(!glass_music_favorite(&favorite));
+  struct music_song favorite={0};strcpy(favorite.name,"B");strcpy(favorite.artist,"Demo");strcpy(favorite.query,"B");
+  struct music_lrc *favorite_lyrics=calloc(1,sizeof(*favorite_lyrics));assert(favorite_lyrics);char favorite_art[1024];
+  assert(!fetch_lyrics(&favorite,play_generation,favorite_lyrics,favorite_art));free(favorite_lyrics);
+  assert(!glass_music_favorite(&favorite));
+  assert(!glass_music_set_paused(true));
+  struct music_snapshot paused_favorites;
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_get(&paused_favorites);
+    if(paused_favorites.favorite_count==1&&!paused_favorites.offline_caching&&paused_favorites.offline_ready_count==1)break;
+    usleep(1000);
+  }
+  assert(paused_favorites.offline_ready_count==1&&!paused_favorites.offline_error);
+  struct music_song cached_favorite=favorite;music_favorite_audio_url(&favorite,cached_favorite.url);
+  favorite_lyrics=calloc(1,sizeof(*favorite_lyrics));assert(favorite_lyrics);
+  assert(!fetch_lyrics(&cached_favorite,play_generation,favorite_lyrics,favorite_art));free(favorite_lyrics);
+  assert(!strncmp(favorite_art,MUSIC_FAVORITE_COVER_SCHEME,sizeof(MUSIC_FAVORITE_COVER_SCHEME)-1));
+  puts("MUSIC_FAVORITE_WHILE_PAUSED_OK: favorite audio and cover complete without waiting for playback to finish");
   for(unsigned i=0;i<3000;i++){glass_music_now_playing(&s);if(s.can_skip)break;usleep(1000);}assert(s.can_skip);
   assert(!glass_music_skip(1));wait_for("B",MUSIC_PLAYING,MUSIC_LYRICS_READY);assert(glass_music_skip(0)==-EINVAL);
   play("CoverOnly");s=wait_for("CoverOnly",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);assert(s.cover_url[0]);
+  char stopped_cover[1024];strcpy(stopped_cover,s.cover_url);
+  assert(!glass_music_stop_wait(3000));glass_music_now_playing(&s);
+  assert(s.state==MUSIC_STOPPED&&!s.lyrics[1][0]&&!strcmp(s.cover_url,stopped_cover));
+  play("CoverOnly");s=wait_for("CoverOnly",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);
+  glass_music_stop();glass_music_now_playing(&s);
+  assert(s.state==MUSIC_STOPPED&&!strcmp(s.cover_url,stopped_cover));
+  assert(!glass_music_stop_wait(3000));
+  puts("MUSIC_STOP_PRESERVES_COVER_OK: asynchronous and draining stop keep selected artwork; lyrics still retire");
   play("NoLyrics");wait_for("NoLyrics",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);
   play("Missing");wait_for("Missing",MUSIC_ERROR,MUSIC_LYRICS_NONE);
   assert(!glass_music_stop_wait(3000));glass_music_now_playing(&s);assert(s.state==MUSIC_STOPPED && !s.lyrics[1][0]);
   assert(atomic_load(&opens)>2 && atomic_load(&opens)==atomic_load(&closes));
   printf("MUSIC_BACKGROUND_SERVICE_OK: real MP3 decoder/workers, pause freezes clock, resume, stale lyric cancellation, skip, missing lyrics, network failure and %u/%u PCM teardown\n",atomic_load(&opens),atomic_load(&closes));
+  struct music_snapshot snapshot;
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_get(&snapshot);
+    if(!snapshot.offline_caching&&snapshot.offline_ready_count==1)break;
+    usleep(1000);
+  }
+  assert(snapshot.offline_ready_count==1&&!snapshot.offline_error);
   missing_key_checks();mcp_checks();selected_result_checks();seek_buffer_checks();
   struct music_song local={0};strcpy(local.name,"Local");strcpy(local.artist,"Demo");snprintf(local.url,sizeof(local.url),"%s",mp3_path);
   assert(!glass_music_play(&local));wait_for("Local",MUSIC_PLAYING,MUSIC_LYRICS_MISSING);
@@ -531,6 +679,125 @@ int main(int argc,char **argv)
   usleep(50000);glass_music_now_playing(&s);assert(s.state==MUSIC_PAUSED&&s.position_ms==frozen);
   assert(!glass_music_set_paused(false));usleep(50000);glass_music_now_playing(&s);assert(s.position_ms>frozen);
   assert(!glass_music_stop_wait(3000));assert(atomic_load(&opens)==atomic_load(&closes));
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_get(&snapshot);
+    if(!snapshot.offline_caching&&snapshot.offline_ready_count==1)break;
+    usleep(1000);
+  }
+  if(snapshot.offline_ready_count!=1||snapshot.offline_error)
+    fprintf(stderr,"favorite cache: ready=%u caching=%d error=%d favorites=%u\n",
+      snapshot.offline_ready_count,snapshot.offline_caching,snapshot.offline_error,snapshot.favorite_count);
+  assert(snapshot.offline_ready_count==1&&!snapshot.offline_error);
+  FILE *pinned=music_favorite_audio_open(&favorite);assert(pinned);fclose(pinned);
+  assert(music_favorite_cover_available(&favorite));
+  /* Simulate an earlier complete stream and a reboot: volatile source URLs
+   * are absent, but the identity-bound SD source hint remains. Both assets
+   * must be pinned without even attempting an HTTP call. */
+  prime_replaceable_cache(&favorite);
+  char validate_path[256];assert(!music_audio_cache_path("https://fixture/audio",validate_path,sizeof(validate_path)));
+  unsigned validate_polls=0;
+  assert(!music_audio_cache_open_path_cancelled("https://fixture/audio",validate_path,cancel_cache_validation,&validate_polls));
+  assert(validate_polls==2);
+  FILE *validated=music_audio_cache_open("https://fixture/audio");assert(validated);fclose(validated);
+  puts("MUSIC_AUDIO_VALIDATE_CANCEL_OK: checksum scan yields between blocks without changing the committed audio");
+  struct music_song hint=favorite;strcpy(hint.url,"https://fixture/audio");music_favorite_source_write(&hint);
+  char id[33],asset[256];music_favorite_id(&favorite,id);
+  assert(!music_favorite_path(id,'a',asset));assert(!unlink(asset));
+  assert(!music_favorite_path(id,'c',asset));assert(!unlink(asset));
+  atomic_store(&offline_network,true);
+  unsigned offline_http=atomic_load(&total_http_requests),revision;
+  pthread_mutex_lock(&lock);revision=state.revision;
+  state.current.url[0]=state.result.url[0]=pending_song.url[0]=pending_favorite.url[0]=0;
+  for(unsigned i=0;i<state.favorite_count;i++)state.favorites[i].url[0]=0;
+  favorite_cache_revision++;pthread_cond_broadcast(&wake);pthread_mutex_unlock(&lock);
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_get(&snapshot);
+    if(snapshot.revision>revision&&!snapshot.offline_caching&&snapshot.offline_ready_count==1)break;
+    usleep(1000);
+  }
+  assert(snapshot.offline_ready_count==1&&!snapshot.offline_error);
+  assert(atomic_load(&total_http_requests)==offline_http);
+  pinned=music_favorite_audio_open(&favorite);assert(pinned);fclose(pinned);
+  assert(music_favorite_cover_available(&favorite));
+  puts("MUSIC_FAVORITE_PROMOTION_OK: complete replaceable SD audio and cover promoted after volatile URLs reset, with zero HTTP calls");
+  unsigned before=atomic_load(&audio_requests);
+  atomic_store(&offline_network,true);
+  assert(!glass_music_play(&favorite));
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_now_playing(&s);
+    if(!strcmp(s.name,"B")&&s.state==MUSIC_ENDED&&s.lyrics_state!=MUSIC_LYRICS_LOADING)break;
+    usleep(1000);
+  }
+  glass_music_get(&snapshot);
+  assert(s.state==MUSIC_ENDED&&s.position_ms>0&&snapshot.error==0);
+  assert(!strncmp(s.cover_url,MUSIC_FAVORITE_COVER_SCHEME,sizeof(MUSIC_FAVORITE_COVER_SCHEME)-1));
+  size_t cover_size=0;
+  unsigned char *cover=music_favorite_cover_read(s.cover_url,512,&cover_size);
+  assert(cover&&cover_size>4&&cover[0]==0xff&&cover[1]==0xd8);free(cover);
+  char wrong_cover[1024];strcpy(wrong_cover,s.cover_url);
+  wrong_cover[strlen(wrong_cover)-1]=wrong_cover[strlen(wrong_cover)-1]=='0'?'1':'0';
+  assert(!music_favorite_cover_read(wrong_cover,0,&cover_size));
+  assert(atomic_load(&audio_requests)==before);
+  assert(!glass_music_stop_wait(3000));
+  assert(!glass_music_favorite(&favorite));
+  for(unsigned i=0;i<3000;i++){glass_music_get(&snapshot);if(!snapshot.favorite_count)break;usleep(1000);}
+  assert(snapshot.favorite_count==0);
+  for(unsigned i=0;i<3000;i++) {
+    pinned=music_favorite_audio_open(&favorite);
+    if(!pinned&&!music_favorite_cover_available(&favorite))break;
+    if(pinned)fclose(pinned);
+    usleep(1000);
+  }
+  assert(!pinned&&!music_favorite_cover_available(&favorite));
+  atomic_store(&offline_network,false);
+  char ordinary_audio[256];assert(!music_audio_cache_path("https://fixture/audio",ordinary_audio,sizeof(ordinary_audio)));
+  assert(!unlink(ordinary_audio));
+  atomic_store(&hold_audio,true);atomic_store(&audio_held,false);
+  assert(!glass_music_favorite(&favorite));
+  for(unsigned i=0;i<5000&&!atomic_load(&audio_held);i++)usleep(1000);
+  assert(atomic_load(&audio_held));
+  assert(!glass_music_offline_suspend(2000));
+  assert(glass_music_cache_write_enter()==-EBUSY);
+  const char paused_data[]="writer-gate";char gate_path[256];
+  snprintf(gate_path,sizeof(gate_path),MUSIC_CACHE_ROOT "/ai-gate.bin");unlink(gate_path);
+  music_cache_write_path(gate_path,"ai-gate",paused_data,sizeof(paused_data),64);
+  size_t gate_size=0;assert(!music_cache_read_path(gate_path,"ai-gate",64,0,&gate_size));
+  glass_music_get(&snapshot);assert(snapshot.favorite_count==1&&!snapshot.offline_caching);
+  assert(music_favorite_cover_available(&favorite));
+  assert(!music_favorite_audio_open(&favorite));
+  atomic_store(&audio_held,false);glass_music_offline_resume();
+  music_cache_write_path(gate_path,"ai-gate",paused_data,sizeof(paused_data),64);
+  unsigned char *gate_data=music_cache_read_path(gate_path,"ai-gate",64,0,&gate_size);
+  assert(gate_data&&gate_size==sizeof(paused_data)&&!memcmp(gate_data,paused_data,gate_size));free(gate_data);unlink(gate_path);
+  for(unsigned i=0;i<5000&&!atomic_load(&audio_held);i++)usleep(1000);
+  assert(atomic_load(&audio_held));
+  puts("MUSIC_FAVORITE_PREEMPT_OK: suspended stalled background HTTP is closed, committed cover and favorite preserved, resume restarts pending cache");
+  puts("MUSIC_CACHE_WRITER_GATE_OK: lyric/cover/source cache writes are blocked during model admission and work again after resume");
+  assert(!glass_music_favorite(&favorite));
+  atomic_store(&hold_audio,false);
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_get(&snapshot);
+    if(!snapshot.favorite_count&&!snapshot.offline_caching)break;
+    usleep(1000);
+  }
+  assert(!snapshot.favorite_count&&!music_favorite_audio_open(&favorite));
+  assert(!music_favorite_cover_available(&favorite));
+  puts("MUSIC_FAVORITE_OFFLINE_OK: complete pinned MP3 and cover, disconnected playback, no HTTP, un-favorite removal");
+  struct music_song missing={0};strcpy(missing.name,"Missing");strcpy(missing.artist,"Demo");strcpy(missing.query,"Missing");
+  prime_replaceable_cache(&missing);
+  assert(!glass_music_favorite(&missing));
+  for(unsigned i=0;i<5000;i++) {
+    glass_music_get(&snapshot);
+    if(snapshot.favorite_count==1&&!snapshot.offline_caching&&snapshot.offline_error)break;
+    usleep(1000);
+  }
+  assert(snapshot.offline_error==-EIO&&!music_favorite_audio_open(&missing));
+  assert(music_favorite_cover_available(&missing));
+  assert(!glass_music_play(&missing));
+  s=wait_for("Missing",MUSIC_ERROR,MUSIC_LYRICS_NONE);
+  assert(!strncmp(s.cover_url,MUSIC_FAVORITE_COVER_SCHEME,sizeof(MUSIC_FAVORITE_COVER_SCHEME)-1));
+  puts("MUSIC_FAVORITE_INDEPENDENT_COVER_OK: artwork retained despite audio lookup failure");
+  assert(!glass_music_favorite(&missing));
   assert(music_sd_stream(MUSIC_SD_ROOT "../escape.mp3",NULL,NULL,NULL)==-EINVAL);
   assert(music_sd_stream(MUSIC_SD_ROOT "nested/escape.mp3",NULL,NULL,NULL)==-EINVAL);
   puts("MUSIC_SD_SERVICE_OK: real SD source and MP3 decoder, pause/resume clock, cancellation/PCM teardown and path rejection");

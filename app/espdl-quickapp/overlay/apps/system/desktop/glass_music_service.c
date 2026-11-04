@@ -11,6 +11,11 @@
 #include "glass_music_lyrics.h"
 #include "glass_music_cache.h"
 #include "glass_music_audio_cache.h"
+#include "glass_music_favorite_cache.h"
+#include "glass_music_artwork_cache.h"
+#ifdef GLASS_LOCAL_VOICE
+#include "glass_local_voice.h"
+#endif
 #include "qpk_storage.h"
 #include <cJSON.h>
 #include <errno.h>
@@ -32,10 +37,24 @@
 
 #define RING_CAP (256 * 1024)
 #define PREFILL (48 * 1024)
+#ifdef __NuttX__
+#define MUSIC_SEARCH_STACK 32768
+#define MUSIC_FAVORITE_STACK 32768
+#else
+/* Host sanitizers add large red zones around the lyric and download frames. */
+#define MUSIC_SEARCH_STACK 131072
+#define MUSIC_FAVORITE_STACK 131072
+#endif
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t wake = PTHREAD_COND_INITIALIZER;
 static struct music_snapshot state;
-static bool search_started, player_started, want_play, want_pause, want_search, want_favorite;
+static bool search_started, player_started, favorite_started;
+static bool want_play, want_pause, want_search, want_favorite;
+static unsigned favorite_cache_revision;
+static unsigned favorite_pauses;
+static bool favorite_active;
+static bool favorite_retry_pending;
+static unsigned music_cache_writers;
 static bool want_lyrics;
 static struct music_song pending_lyrics;
 static unsigned lyrics_generation;
@@ -94,6 +113,182 @@ static int lookup(const char *query, struct music_song *song, unsigned generatio
   if (!ret) ret = music_song_parse(t.body, t.used, query, song);
 done:
   free(t.body); free(url);
+  return ret;
+}
+
+/* Favorite downloads use a separate worker and cancellation identity. Search,
+ * playback and lyric requests keep their own generation and never wait here. */
+struct favorite_job {
+  struct transfer transfer; /* collect_json expects this first. */
+  struct music_song identity;
+  struct music_audio_cache audio;
+  unsigned char *cover;
+  size_t cover_used,cover_capacity;
+};
+
+static bool favorite_cancelled(void *ctx)
+{
+  struct favorite_job *job=ctx;
+  pthread_mutex_lock(&lock);
+  bool cancelled=favorite_pauses||!glass_music_is_favorite(&state,&job->identity);
+  pthread_mutex_unlock(&lock);
+  return cancelled;
+}
+
+static int favorite_lookup(struct favorite_job *job,struct music_song *resolved)
+{
+  char *url=malloc(2048);
+  job->transfer.body=malloc(16385);job->transfer.used=0;
+  int ret=-ENOMEM;
+  if(!url||!job->transfer.body)goto done;
+  char custom_key[129];
+  ret=music_search_url(job->identity.query[0]?job->identity.query:job->identity.name,
+    portal_music_key(custom_key,sizeof(custom_key))==0?custom_key:GLASS_MUSIC_API_KEY,url,2048);
+  if(!ret)ret=music_http_get(url,collect_json,job,favorite_cancelled,NULL);
+  if(!ret)ret=music_song_parse(job->transfer.body,job->transfer.used,
+    job->identity.query[0]?job->identity.query:job->identity.name,resolved);
+  if(!ret&&(strcmp(resolved->name,job->identity.name)||
+            strcmp(resolved->artist,job->identity.artist)))ret=-ESTALE;
+done:
+  free(url);free(job->transfer.body);job->transfer.body=NULL;return ret;
+}
+
+static int favorite_audio_sink(void *ctx,const unsigned char *data,size_t size)
+{
+  struct favorite_job *job=ctx;
+  if(favorite_cancelled(job))return -ECANCELED;
+  pthread_mutex_lock(&lock);
+  while(player_active&&state.state==MUSIC_LOADING&&!favorite_pauses) {
+    struct timespec deadline;clock_gettime(CLOCK_REALTIME,&deadline);
+    deadline.tv_nsec+=100000000L;if(deadline.tv_nsec>=1000000000L){deadline.tv_sec++;deadline.tv_nsec-=1000000000L;}
+    pthread_cond_timedwait(&wake,&lock,&deadline);
+    if(!glass_music_is_favorite(&state,&job->identity))break;
+  }
+  bool foreground=player_active&&state.state==MUSIC_PLAYING;
+  pthread_mutex_unlock(&lock);
+  if(favorite_cancelled(job))return -ECANCELED;
+  music_audio_cache_append(&job->audio,data,size);
+  /* Foreground playback needs only its encoded bitrate. Rate-limit the
+   * second download while it plays; a paused track can cache at full speed. */
+  if(foreground)usleep(((size+4095)/4096)*15000);
+  return job->audio.file?0:job->audio.error?job->audio.error:-EIO;
+}
+
+static int favorite_cover_sink(void *ctx,const unsigned char *data,size_t size)
+{
+  struct favorite_job *job=ctx;
+  if(favorite_cancelled(job))return -ECANCELED;
+  if(size>MUSIC_FAVORITE_COVER_MAX-job->cover_used)return -EFBIG;
+  size_t needed=job->cover_used+size;
+  if(needed>job->cover_capacity) {
+    size_t capacity=job->cover_capacity?job->cover_capacity:65536;
+    while(capacity<needed)capacity*=2;
+    if(capacity>MUSIC_FAVORITE_COVER_MAX)capacity=MUSIC_FAVORITE_COVER_MAX;
+    unsigned char *next=realloc(job->cover,capacity);
+    if(!next)return -ENOMEM;
+    job->cover=next;job->cover_capacity=capacity;
+  }
+  memcpy(job->cover+job->cover_used,data,size);job->cover_used=needed;
+  return 0;
+}
+
+static int favorite_cache_one(const struct music_song *song)
+{
+  struct favorite_job job={.identity=*song};
+  FILE *existing=music_favorite_audio_open_cancelled(song,favorite_cancelled,&job);
+  if(favorite_cancelled(&job)){if(existing)fclose(existing);return -ECANCELED;}
+  bool need_audio=existing==NULL;
+  if(existing)fclose(existing);
+  bool need_cover=!music_favorite_cover_available(song);
+  bool need_prepared=!music_artwork_available(song);
+  if(!need_audio&&!need_cover&&!need_prepared)return 0;
+#ifdef GLASS_LOCAL_VOICE
+  /* The retained model owns a read-only FAT lease. Ask its owner to retire an
+   * idle session before SD mutations; an active request is never cancelled. */
+  int admission=glass_local_voice_yield_idle_model(1000);
+  if(admission)return admission;
+#endif
+  int ret=0,cover_error=0,prepared_error=0;unsigned status=0;
+  /* Artwork is independent of audio. A network/audio failure must not hide
+   * an already downloaded cover or prevent its own bounded download. */
+  if(need_cover) {
+    char url[1024];cover_error=music_cover_url(song,url,sizeof(url));
+    if(!cover_error) {
+      char known[1024]={0};
+      pthread_mutex_lock(&lock);
+      if(!strcmp(state.current.name,song->name)&&!strcmp(state.current.artist,song->artist)&&
+         !strncmp(current_cover,"https://",8))memcpy(known,current_cover,sizeof(known));
+      pthread_mutex_unlock(&lock);
+      if(known[0])job.cover=music_cache_read('c',known,MUSIC_FAVORITE_COVER_MAX,0,&job.cover_used);
+      if(!job.cover)job.cover=music_cache_read('c',url,MUSIC_FAVORITE_COVER_MAX,0,&job.cover_used);
+      if(!job.cover) {
+        status=0;
+        cover_error=music_http_get(url,favorite_cover_sink,&job,favorite_cancelled,&status);
+        if(!cover_error&&status!=200)cover_error=-EIO;
+      }
+      if(!cover_error&&(job.cover_used<4||job.cover[0]!=0xff||job.cover[1]!=0xd8||
+         job.cover[job.cover_used-2]!=0xff||job.cover[job.cover_used-1]!=0xd9))cover_error=-EINVAL;
+      if(!cover_error&&!music_favorite_cover_write(song,job.cover,job.cover_used))cover_error=-EIO;
+      free(job.cover);job.cover=NULL;job.cover_used=job.cover_capacity=0;
+    }
+  }
+  if(!cover_error&&!favorite_cancelled(&job))prepared_error=glass_music_artwork_prepare(song,favorite_cancelled,&job);
+  if(need_audio) {
+    struct music_song resolved=*song;
+    if(strncmp(resolved.url,"https://",8)) {
+      pthread_mutex_lock(&lock);
+      const struct music_song *known[]={&state.current,&state.result,&pending_song,&pending_favorite};
+      for(unsigned i=0;i<4;i++)if(!strcmp(known[i]->name,song->name)&&
+        !strcmp(known[i]->artist,song->artist)&&!strncmp(known[i]->url,"https://",8)) {
+        memcpy(resolved.url,known[i]->url,sizeof(resolved.url));break;
+      }
+      pthread_mutex_unlock(&lock);
+    }
+    if(strncmp(resolved.url,"https://",8))music_favorite_source_read(&resolved);
+    if(strncmp(resolved.url,"https://",8))ret=favorite_lookup(&job,&resolved);
+    if(ret)goto done;
+    music_favorite_source_write(&resolved);
+    /* Reuse a complete stream download instead of looking it up and fetching
+     * it again. This also works after reboot and without a network. */
+    char source_path[256];
+    FILE *source=music_audio_cache_path(resolved.url,source_path,sizeof(source_path))?NULL:
+      music_audio_cache_open_path_cancelled(resolved.url,source_path,favorite_cancelled,&job);
+    if(favorite_cancelled(&job)){if(source)fclose(source);ret=-ECANCELED;goto done;}
+    music_favorite_audio_begin(&job.audio,song);
+    if(!job.audio.file){if(source)fclose(source);ret=job.audio.error?job.audio.error:-EIO;goto done;}
+    status=0;
+    if(source) {
+      unsigned char block[4096];size_t got;
+      while(!ret&&(got=fread(block,1,sizeof(block),source)))ret=favorite_audio_sink(&job,block,got);
+      if(!ret&&ferror(source))ret=-EIO;
+      fclose(source);if(!ret)status=200;
+    }else {
+      ret=music_http_get(resolved.url,favorite_audio_sink,&job,favorite_cancelled,&status);
+      if(ret&&(status==401||status==403||status==404||status==410)&&!favorite_cancelled(&job)) {
+        music_audio_cache_finish(&job.audio,false);
+        ret=favorite_lookup(&job,&resolved);
+        if(!ret) {
+          music_favorite_source_write(&resolved);
+          music_favorite_audio_begin(&job.audio,song);
+          if(!job.audio.file)ret=job.audio.error?job.audio.error:-EIO;
+          else ret=music_http_get(resolved.url,favorite_audio_sink,&job,favorite_cancelled,&status);
+        }
+      }
+    }
+    bool complete=!ret&&status==200&&!favorite_cancelled(&job);
+    music_audio_cache_finish(&job.audio,complete);
+    if(!complete){if(!ret)ret=-EIO;goto done;}
+    existing=music_favorite_audio_open_cancelled(song,favorite_cancelled,&job);
+    if(favorite_cancelled(&job)){if(existing)fclose(existing);ret=-ECANCELED;goto done;}
+    if(!existing){ret=-EIO;goto done;}
+    fclose(existing);
+  }
+  if(!ret)ret=cover_error;
+  if(!ret)ret=prepared_error;
+done:
+  free(job.cover);
+  pthread_mutex_lock(&lock);bool removed=!glass_music_is_favorite(&state,song);pthread_mutex_unlock(&lock);
+  if(removed)music_favorite_cache_forget(song);
   return ret;
 }
 
@@ -169,7 +364,8 @@ static int collect_lyrics(void *ctx,const unsigned char *data,size_t size)
       if(match) {
         char candidate[1024];music_metadata_cover(item,candidate);
         artwork=candidate[0]!=0;
-        if(t->cover&&artwork)memcpy(t->cover,candidate,strlen(candidate)+1);
+        bool pinned=!strncmp(t->song->url,MUSIC_FAVORITE_AUDIO_SCHEME,sizeof(MUSIC_FAVORITE_AUDIO_SCHEME)-1);
+        if(t->cover&&artwork&&!pinned)memcpy(t->cover,candidate,strlen(candidate)+1);
         ret=t->local_lyrics?0:cJSON_IsString(lrc)?music_lrc_parse(lrc->valuestring,strlen(lrc->valuestring),t->out):-ENODATA;
         if(!ret){
           const cJSON *translated=cJSON_GetObjectItemCaseSensitive(item,"translated_lyrics");
@@ -218,10 +414,16 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
   free(t.body);
   /* Offline audio must not wait on an artwork API before publishing its
    * local sidecar. A disconnected router cannot stall an SD-only player. */
+  bool favorite_offline=!strncmp(song->url,MUSIC_FAVORITE_AUDIO_SCHEME,
+                                 sizeof(MUSIC_FAVORITE_AUDIO_SCHEME)-1);
+  if(favorite_offline) {
+    if(music_favorite_cover_available(song))
+      (void)music_favorite_cover_url(song,cover);
+  }
   if(!strncmp(song->url,MUSIC_SD_ROOT,sizeof(MUSIC_SD_ROOT)-1))return local_lyrics?0:-ENOENT;
   /* Cover fetching is independent of lyric availability. Prefer a small exact
    * metadata cover, but keep the official cover endpoint when JSON has none. */
-  if(music_cover_url(song,cover,1024))cover[0]=0;
+  if(!favorite_offline&&music_cover_url(song,cover,1024))cover[0]=0;
   struct lyric_transfer stream={.transfer={.generation=generation},.song=song,.out=out,.cover=cover,.local_lyrics=local_lyrics};
   stream.transfer.body=malloc(LYRIC_OBJECT_MAX+1);
   if(!stream.transfer.body)return -ENOMEM;
@@ -236,7 +438,8 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
       stream=(struct lyric_transfer){.transfer={.generation=generation,.body=body},.song=song,.out=out,.cover=cover,.local_lyrics=local_lyrics};
     }
   }
-  if(!ret)ret=music_http_get(url,collect_lyrics,&stream,transfer_cancelled,&status);
+  if(!ret&&!favorite_offline)ret=music_http_get(url,collect_lyrics,&stream,transfer_cancelled,&status);
+  if(favorite_offline&&!stream.found){free(stream.transfer.body);return local_lyrics?0:-ENOENT;}
   if(ret==-EALREADY && stream.found && status==200){
     ret=stream.lyric_error;
     /* Cache successful timed lyrics, not transient empty/not-found responses. */
@@ -247,7 +450,7 @@ static int fetch_lyrics(const struct music_song *song,unsigned generation,struct
 
 static void clear_lyrics_locked(void)
 {
-  free(lyrics);lyrics=NULL;want_lyrics=false;lyrics_state=MUSIC_LYRICS_NONE;current_cover[0]=0;
+  free(lyrics);lyrics=NULL;want_lyrics=false;lyrics_state=MUSIC_LYRICS_NONE;
 }
 
 /* A translated sidecar is optional and must match the original timestamps.
@@ -338,6 +541,7 @@ static void *search_worker(void *unused)
   pthread_setname_np(pthread_self(), "music_search");
   pthread_mutex_lock(&lock);
   load_favorites();
+  if(state.favorite_count){favorite_cache_revision++;pthread_cond_broadcast(&wake);}
   state.initialized = true; state.revision++;
   pthread_mutex_unlock(&lock);
   for (;;) {
@@ -368,18 +572,22 @@ static void *search_worker(void *unused)
       if (songs) memcpy(songs, state.favorites, sizeof(state.favorites));
       pthread_mutex_unlock(&lock);
       int ret = -ENOMEM;
+      bool removed=false;
       if (songs) {
         unsigned i;
         for (i = 0; i < count; i++) if (!strcmp(songs[i].name, song.name) && !strcmp(songs[i].artist, song.artist)) break;
-        if (i < count) { memmove(songs+i, songs+i+1, (count-i-1)*sizeof(*songs)); count--; ret = 0; }
+        if (i < count) { memmove(songs+i, songs+i+1, (count-i-1)*sizeof(*songs)); count--; ret = 0; removed=true; }
         else if (count >= MUSIC_FAVORITES_MAX) ret = -ENOSPC;
-        else { memmove(songs+1, songs, count*sizeof(*songs)); songs[0] = song; songs[0].url[0] = 0; count++; ret = 0; }
+        else { memmove(songs+1, songs, count*sizeof(*songs)); songs[0] = song; count++; ret = 0; }
         if (!ret) ret = save_favorites(songs, count);
       }
       pthread_mutex_lock(&lock);
-      if (!ret) { memcpy(state.favorites, songs, count*sizeof(*songs)); state.favorite_count = count; }
+      if (!ret) { memcpy(state.favorites, songs, count*sizeof(*songs)); state.favorite_count = count;
+        favorite_cache_revision++;pthread_cond_broadcast(&wake); }
       state.storage_error = ret; state.revision++;
       pthread_mutex_unlock(&lock);
+      if(!ret&&removed)music_favorite_cache_forget(&song);
+      else if(!ret)music_favorite_source_write(&song);
       free(songs);
       continue;
     }
@@ -412,18 +620,38 @@ struct stream {
   bool done, abort;
   int error;
   const char *url;
+  const struct music_song *favorite_song;
+  bool favorite_offline;
   unsigned seek;
   struct music_audio_cache cache;
+  /* Retain the downloaded prefix for decoder rewinds. The HTTP producer and
+   * its ring stay alive across seeks; only the decoder/PCM cursor restarts. */
+  FILE *history;
+  char history_path[264];
+  long history_start;
+  bool ready, history_usable;
 };
 
 static bool stream_cancelled(void *ctx)
 {
   struct stream *s = ctx;
-  pthread_mutex_lock(&s->mutex); bool abort = s->abort; pthread_mutex_unlock(&s->mutex);
+  pthread_mutex_lock(&s->mutex); bool abort = s->abort; unsigned seek = s->seek; pthread_mutex_unlock(&s->mutex);
   pthread_mutex_lock(&lock);
-  bool stale = s->seek != seek_revision;
+  bool stale = seek != seek_revision;
   pthread_mutex_unlock(&lock);
   return abort || stale || transfer_cancelled(&s->transfer);
+}
+
+static bool network_cancelled(void *ctx)
+{
+  struct stream *s = ctx;
+  pthread_mutex_lock(&s->mutex);
+  bool abort = s->abort;
+  pthread_mutex_unlock(&s->mutex);
+  /* A seek belongs to the decoder. Without readable history its teardown
+   * sets abort before joining this producer; it still cannot cancel a newer
+   * target merely because a request arrived during source initialization. */
+  return abort || transfer_cancelled(&s->transfer);
 }
 
 static void stream_wait(struct stream *s)
@@ -437,9 +665,19 @@ static void stream_wait(struct stream *s)
 static int stream_sink(void *ctx, const unsigned char *data, size_t size)
 {
   struct stream *s = ctx;
-  music_audio_cache_append(&s->cache, data, size);
+  if (network_cancelled(s)) return -ECANCELED;
+  if (s->cache.file) {
+    music_audio_cache_append(&s->cache, data, size);
+    /* Publish only bytes visible to the independent prefix reader. A cache
+     * limit/SD failure disables future rewinds, not ordinary ring playback. */
+    bool readable = s->cache.file && !fflush(s->cache.file);
+    if (!readable) music_audio_cache_finish(&s->cache, false);
+    pthread_mutex_lock(&s->mutex);
+    if (!readable) s->history_usable = false;
+    pthread_mutex_unlock(&s->mutex);
+  }
   while (size) {
-    if (stream_cancelled(s)) return -ECANCELED;
+    if (network_cancelled(s)) return -ECANCELED;
     pthread_mutex_lock(&s->mutex);
     if (s->used == RING_CAP) { stream_wait(s); pthread_mutex_unlock(&s->mutex); continue; }
     size_t pos = (s->read + s->used) % RING_CAP;
@@ -459,7 +697,40 @@ static void *network_worker(void *ctx)
   struct stream *s = ctx;
   pthread_setname_np(pthread_self(), "music_net");
   bool local = !strncmp(s->url, MUSIC_SD_ROOT, sizeof(MUSIC_SD_ROOT)-1);
-  FILE *cached = local ? NULL : music_audio_cache_open(s->url);
+  FILE *cached = s->favorite_offline ? music_favorite_audio_open(s->favorite_song) :
+    local ? NULL : music_audio_cache_open(s->url);
+  FILE *history = NULL;
+  long history_start = 0;
+  char history_path[264] = {0};
+  if (cached) {
+    history_start = ftell(cached);
+    if (history_start >= 0) {
+      if(s->favorite_offline) {
+        char id[33];music_favorite_id(s->favorite_song,id);
+        (void)music_favorite_path(id,'a',history_path);
+      } else (void)music_audio_cache_path(s->url,history_path,sizeof(history_path));
+      if(history_path[0])history=fopen(history_path,"rb");
+    }
+  } else if (local) {
+    if (music_sd_path(s->url)) {
+      snprintf(history_path, sizeof(history_path), "%s", s->url);
+      history = fopen(history_path, "rb");
+    }
+  } else if (!s->favorite_offline) {
+    music_audio_cache_begin(&s->cache, s->url);
+    if (s->cache.file && !fflush(s->cache.file)) {
+      history_start = ftell(s->cache.file);
+      snprintf(history_path, sizeof(history_path), "%s", s->cache.temporary);
+      if (history_start >= 0) history = fopen(history_path, "rb");
+    }
+  }
+  if (history && fseek(history, history_start, SEEK_SET)) { fclose(history); history = NULL; }
+  pthread_mutex_lock(&s->mutex);
+  s->history = history; s->history_start = history_start;
+  memcpy(s->history_path, history_path, sizeof(history_path));
+  s->history_usable = history != NULL; s->ready = true;
+  pthread_cond_broadcast(&s->condition);
+  pthread_mutex_unlock(&s->mutex);
   int ret = 0;
   if (cached) {
     unsigned char bytes[4096]; size_t got;
@@ -468,10 +739,9 @@ static void *network_worker(void *ctx)
     if (!ret && ferror(cached)) ret = -EIO;
     fclose(cached);
   } else {
-    if (!local) music_audio_cache_begin(&s->cache, s->url);
-    ret = local ? music_sd_stream(s->url, stream_sink, s, stream_cancelled) :
-      music_http_get(s->url, stream_sink, s, stream_cancelled, NULL);
-    music_audio_cache_finish(&s->cache, !ret && !stream_cancelled(s));
+    ret = s->favorite_offline ? -ENOENT :
+      local ? music_sd_stream(s->url, stream_sink, s, network_cancelled) :
+      music_http_get(s->url, stream_sink, s, network_cancelled, NULL);
   }
   pthread_mutex_lock(&s->mutex);
   s->error = ret; s->done = true;
@@ -489,12 +759,76 @@ static int spawn(pthread_t *thread, void *(*entry)(void *), void *arg, size_t st
   return ret ? -ret : 0;
 }
 
-static int play_stream(struct music_song *song, unsigned generation,
-                       unsigned seek, unsigned target_ms)
+static void *favorite_worker(void *unused)
 {
+  (void)unused;pthread_setname_np(pthread_self(),"music_offline");
+  unsigned seen=0;
+  pthread_mutex_lock(&lock);
+  for(;;) {
+    while(seen==favorite_cache_revision||favorite_pauses)pthread_cond_wait(&wake,&lock);
+    seen=favorite_cache_revision;
+    favorite_retry_pending=false;
+    unsigned count=state.favorite_count;
+    struct music_song *songs=malloc(sizeof(state.favorites));
+    if(!songs){state.offline_error=-ENOMEM;state.offline_caching=false;state.revision++;continue;}
+    memcpy(songs,state.favorites,count*sizeof(*songs));
+    favorite_active=true;
+    state.offline_ready_count=0;state.offline_error=0;
+    state.offline_caching=count!=0;state.revision++;
+    pthread_mutex_unlock(&lock);
+    bool retry=false;
+    for(unsigned i=0;i<count;i++) {
+      struct favorite_job probe={.identity=songs[i]};
+      pthread_mutex_lock(&lock);
+      pthread_mutex_unlock(&lock);
+      if(favorite_cancelled(&probe)) {
+        pthread_mutex_lock(&lock);
+        if(favorite_pauses&&glass_music_is_favorite(&state,&songs[i]))favorite_retry_pending=true;
+        pthread_mutex_unlock(&lock);continue;
+      }
+      int ret=favorite_cache_one(&songs[i]);
+      printf("[music] offline item=%08lx result=%d\n",(unsigned long)music_track_key(songs[i].name,songs[i].artist),ret);
+      bool artwork_ready=music_favorite_cover_available(&songs[i]);
+      pthread_mutex_lock(&lock);
+      if(glass_music_is_favorite(&state,&songs[i])) {
+        if((ret==-ECANCELED||ret==-EBUSY)&&favorite_pauses)favorite_retry_pending=true;
+        if(artwork_ready&&!strcmp(state.current.name,songs[i].name)&&
+           !strcmp(state.current.artist,songs[i].artist))
+          (void)music_favorite_cover_url(&songs[i],current_cover);
+        if(!ret)state.offline_ready_count++;
+        else if(ret!=-ECANCELED) {
+          state.offline_error=ret;
+          if(ret!=-ESTALE&&ret!=-EFBIG&&ret!=-EINVAL)retry=true;
+        }
+        state.revision++;
+      }
+      pthread_mutex_unlock(&lock);
+    }
+    free(songs);
+    pthread_mutex_lock(&lock);
+    favorite_active=false;pthread_cond_broadcast(&wake);
+    state.offline_caching=false;state.revision++;
+    if(retry&&seen==favorite_cache_revision) {
+      struct timespec deadline;
+      clock_gettime(CLOCK_REALTIME,&deadline);deadline.tv_sec+=30;
+      int waited=0;
+      while(seen==favorite_cache_revision&&waited==0)
+        waited=pthread_cond_timedwait(&wake,&lock,&deadline);
+      if(waited==ETIMEDOUT&&seen==favorite_cache_revision)
+        favorite_cache_revision++;
+    }
+  }
+  return NULL;
+}
+
+static int play_stream(struct music_song *song, unsigned generation, bool favorite_offline,
+                       unsigned *completed_seek, unsigned target_ms)
+{
+  unsigned seek = *completed_seek;
   struct stream s = {.transfer = {.generation = generation},
     .mutex = PTHREAD_MUTEX_INITIALIZER, .condition = PTHREAD_COND_INITIALIZER,
-    .url = song->url, .seek = seek};
+    .url = song->url, .favorite_song=song, .favorite_offline=favorite_offline,
+    .seek = seek};
   s.ring = malloc(RING_CAP);
   unsigned char *input = malloc(32768);
   mp3dec_t *decoder = calloc(1, sizeof(*decoder));
@@ -503,10 +837,20 @@ static int play_stream(struct music_song *song, unsigned generation,
   int ret = -ENOMEM; bool network_started = false, paused = false;
   pthread_t network;
   if (!s.ring || !input || !decoder || !samples) goto done;
-  mp3dec_init(decoder);
   ret = spawn(&network, network_worker, &s, 32768);
   if (ret) goto done;
   network_started = true;
+  pthread_mutex_lock(&s.mutex);
+  while (!s.ready) stream_wait(&s);
+  pthread_mutex_unlock(&s.mutex);
+  size_t downloaded_read = 0, replay_remaining = 0;
+restart_decoder:
+  pthread_mutex_lock(&lock);
+  seek = seek_revision; target_ms = seek_position_ms;
+  pthread_mutex_unlock(&lock);
+  pthread_mutex_lock(&s.mutex); s.seek = seek; pthread_mutex_unlock(&s.mutex);
+  mp3dec_init(decoder);
+  ret = 0; paused = false;
   size_t buffered = 0, skipped = 0;
   bool prefilled = false, duration_checked = false;
   bool rebuffering = false;
@@ -523,17 +867,24 @@ static int play_stream(struct music_song *song, unsigned generation,
     /* Decode silently to a seek target even when the user paused playback. */
     if (pause && !target_ms) { usleep(20000); continue; }
     pthread_mutex_lock(&s.mutex);
-    if (!prefilled && s.used < PREFILL && !s.done) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
+    if (!prefilled && replay_remaining + s.used < PREFILL && !s.done) { stream_wait(&s); pthread_mutex_unlock(&s.mutex); continue; }
     prefilled = true;
+    if (replay_remaining) {
+      size_t take = replay_remaining < 32768-buffered ? replay_remaining : 32768-buffered;
+      size_t got = fread(input+buffered, 1, take, s.history);
+      if (got != take) { pthread_mutex_unlock(&s.mutex); ret = -EIO; break; }
+      replay_remaining -= got; buffered += got;
+    }
     while (s.used && buffered < 32768) {
       size_t take = RING_CAP-s.read;
       if (take > s.used) take = s.used;
       if (take > 32768-buffered) take = 32768-buffered;
       memcpy(input+buffered, s.ring+s.read, take);
       buffered += take; s.read = (s.read+take)%RING_CAP; s.used -= take;
+      downloaded_read += take;
     }
     pthread_cond_broadcast(&s.condition);
-    bool eof = s.done && !s.used;
+    bool eof = s.done && !s.used && !replay_remaining;
     int network_error = s.error;
     /* Keep complete MP3 lookahead, but never block a running DMA queue on a
      * fixed 16 KiB network read. Pause before starvation and refill with
@@ -621,13 +972,36 @@ static int play_stream(struct music_song *song, unsigned generation,
     }
     pthread_mutex_unlock(&lock);
   }
+  /* A newer seek interrupts silent decoding and refill waits immediately.
+   * Rewind only the prefix already copied from the producer's ring; bytes
+   * still in that ring must be consumed exactly once after replay catches up.
+   * Complete/partial cache identity is fixed for this track's whole lifetime. */
+  pthread_mutex_lock(&lock);
+  bool seek_again = generation == play_generation && seek != seek_revision;
+  pthread_mutex_unlock(&lock);
+  pthread_mutex_lock(&s.mutex); bool rewindable = s.history_usable; pthread_mutex_unlock(&s.mutex);
+  if (seek_again && rewindable) {
+    music_pcm_close(&pcm);
+    /* FAT readers may snapshot the file length at open. Reopen after the
+     * producer flushed this prefix instead of reusing an early EOF length. */
+    fclose(s.history);
+    s.history = fopen(s.history_path, "rb");
+    if (s.history && !fseek(s.history, s.history_start, SEEK_SET)) {
+      replay_remaining = downloaded_read;
+      goto restart_decoder;
+    }
+    ret = -EIO;
+  }
   if (!ret && pcm.fd < 0) ret = target_ms && decoded ? 0 : -ENODATA;
 done:
   pthread_mutex_lock(&s.mutex); s.abort = true; pthread_cond_broadcast(&s.condition); pthread_mutex_unlock(&s.mutex);
   music_pcm_close(&pcm);
   if (network_started) pthread_join(network, NULL);
+  if (s.history) fclose(s.history);
+  music_audio_cache_finish(&s.cache, s.done && !s.error);
   free(s.ring); free(input); free(decoder); free(samples);
   pthread_cond_destroy(&s.condition); pthread_mutex_destroy(&s.mutex);
+  *completed_seek = seek;
   return ret;
 }
 
@@ -640,11 +1014,23 @@ static void *player_worker(void *unused)
     unsigned generation = play_generation;
     struct music_song song = pending_song;
     uint64_t resolved_until = pending_result_deadline;
+    bool favorite=glass_music_is_favorite(&state,&song);
     want_play = false;
     player_active = true;
     pthread_mutex_unlock(&lock);
     bool local=!strncmp(song.url,MUSIC_SD_ROOT,sizeof(MUSIC_SD_ROOT)-1);
-    int ret = resolved_until ? (music_now_ms() < resolved_until ? 0 : -ESTALE) :
+    FILE *offline_file=favorite?music_favorite_audio_open(&song):NULL;
+    bool offline=offline_file!=NULL;
+    if(offline_file){fclose(offline_file);music_favorite_audio_url(&song,song.url);}
+    if(favorite&&music_favorite_cover_available(&song)) {
+      pthread_mutex_lock(&lock);
+      if(generation==play_generation) {
+        (void)music_favorite_cover_url(&song,current_cover);state.revision++;
+      }
+      pthread_mutex_unlock(&lock);
+    }
+    int ret = offline ? 0 :
+      resolved_until ? (music_now_ms() < resolved_until ? 0 : -ESTALE) :
       local ? (music_sd_path(song.url) ? 0 : -EINVAL) :
       lookup(song.query[0] ? song.query : song.name, &song, generation, false);
     pthread_mutex_lock(&lock);
@@ -658,7 +1044,7 @@ static void *player_worker(void *unused)
       while (generation == play_generation) {
         unsigned seek = seek_revision, target = seek_position_ms;
         pthread_mutex_unlock(&lock);
-        ret = play_stream(&song, generation, seek, target);
+        ret = play_stream(&song, generation, offline, &seek, target);
         pthread_mutex_lock(&lock);
         if (seek == seek_revision) break;
       }
@@ -683,12 +1069,17 @@ void glass_music_start(void)
   pthread_mutex_lock(&lock);
   pthread_t thread;int ret=0;
   if(!search_started) {
-    ret=spawn(&thread,search_worker,NULL,32768);
+    ret=spawn(&thread,search_worker,NULL,MUSIC_SEARCH_STACK);
     if(!ret){search_started=true;pthread_detach(thread);}
   }
   if(!ret && !player_started) {
     ret=spawn(&thread,player_worker,NULL,49152);
     if(!ret){player_started=true;pthread_detach(thread);}
+  }
+  if(!ret && !favorite_started) {
+    int background=spawn(&thread,favorite_worker,NULL,MUSIC_FAVORITE_STACK);
+    if(!background){favorite_started=true;pthread_detach(thread);}
+    else {state.offline_error=background;state.revision++;}
   }
   if(ret){state.error=ret;state.state=MUSIC_ERROR;state.revision++;}
   pthread_mutex_unlock(&lock);
@@ -756,6 +1147,8 @@ int glass_music_skip(int direction)
 
 void glass_music_get(struct music_snapshot *out)
 { pthread_mutex_lock(&lock); *out = state; out->volume=glass_speaker_volume(); pthread_mutex_unlock(&lock); }
+int glass_music_artwork_url(const struct music_song *song,char *url,size_t capacity)
+{return !song||!url?-EINVAL:music_cover_url(song,url,capacity);}
 
 int glass_music_search(const char *query)
 {
@@ -770,6 +1163,9 @@ int glass_music_search(const char *query)
 static void music_queue_locked(const struct music_song *song, uint64_t deadline)
 {
   clear_lyrics_locked();
+  /* Only replacing the current track clears its artwork. Stopping audio
+   * retires lyrics/workers but leaves the selected song and cover visible. */
+  current_cover[0]=0;
   pending_result_deadline = deadline;
   pending_song = *song; state.current = *song; play_generation++; want_play = true; want_pause = false;
   seek_position_ms = 0; seek_revision++;
@@ -812,6 +1208,7 @@ void glass_music_toggle(void)
     state.revision++;
   } else if (state.current.name[0]) {
     clear_lyrics_locked();
+    current_cover[0]=0;
     pending_song = state.current; play_generation++; want_play = true; want_pause = false;
     seek_position_ms = 0; seek_revision++;
     pending_result_deadline = 0;
@@ -892,6 +1289,44 @@ int glass_music_favorite(const struct music_song *song)
   if (!song || !song->name[0]) return -EINVAL;
   pthread_mutex_lock(&lock);
   if (want_favorite) { pthread_mutex_unlock(&lock); return -EBUSY; }
+  if (!favorite_started) {
+    pthread_t thread;
+    int ret=spawn(&thread,favorite_worker,NULL,MUSIC_FAVORITE_STACK);
+    if (ret) { pthread_mutex_unlock(&lock); return ret; }
+    favorite_started=true;pthread_detach(thread);
+  }
   pending_favorite = *song; want_favorite = true;
   pthread_cond_broadcast(&wake); pthread_mutex_unlock(&lock); return 0;
+}
+
+int glass_music_cache_write_enter(void)
+{
+  pthread_mutex_lock(&lock);int ret=favorite_pauses?-EBUSY:0;
+  if(!ret)music_cache_writers++;
+  pthread_mutex_unlock(&lock);return ret;
+}
+void glass_music_cache_write_leave(void)
+{
+  pthread_mutex_lock(&lock);if(music_cache_writers)music_cache_writers--;
+  pthread_cond_broadcast(&wake);pthread_mutex_unlock(&lock);
+}
+int glass_music_offline_suspend(unsigned timeout_ms)
+{
+  struct timespec deadline;clock_gettime(CLOCK_REALTIME,&deadline);
+  deadline.tv_sec+=timeout_ms/1000;deadline.tv_nsec+=(timeout_ms%1000)*1000000L;
+  if(deadline.tv_nsec>=1000000000L){deadline.tv_sec++;deadline.tv_nsec-=1000000000L;}
+  pthread_mutex_lock(&lock);favorite_pauses++;pthread_cond_broadcast(&wake);
+  int ret=0;
+  while((favorite_active||music_cache_writers)&&!ret)ret=pthread_cond_timedwait(&wake,&lock,&deadline);
+  if(ret){favorite_pauses--;if(!favorite_pauses&&favorite_retry_pending){favorite_cache_revision++;favorite_retry_pending=false;}pthread_cond_broadcast(&wake);}
+  pthread_mutex_unlock(&lock);return ret==-ETIMEDOUT||ret==ETIMEDOUT?-EBUSY:ret?-ret:0;
+}
+void glass_music_offline_resume(void)
+{
+  pthread_mutex_lock(&lock);
+  if(favorite_pauses&&!--favorite_pauses){
+    if(favorite_retry_pending){favorite_cache_revision++;favorite_retry_pending=false;}
+    pthread_cond_broadcast(&wake);
+  }
+  pthread_mutex_unlock(&lock);
 }

@@ -1,0 +1,95 @@
+{
+  "compiler": "riscv32-esp-elf-gcc (crosstool-NG esp-14.2.0_20251107) 14.2.0",
+  "flash_offset": "0x2000",
+  "program_limit": "0xc00000",
+  "data_offset": "0xc00000",
+  "data_size": "0x400000",
+  "ebss": "0x4ffa3e0c",
+  "local_asr": {
+    "evaluation_enabled": true,
+    "microphone_enabled": true,
+    "streaming_enabled": true,
+    "plan_abi": "GLA1-2",
+    "compatible_plan_abis": [
+      "GLA1-1",
+      "GLA1-2"
+    ],
+    "model_quantization": "published dynamic UINT8/INT8 with retained FP32 tensors",
+    "tokens_abi": "GLT1-1",
+    "microphone_ready": false,
+    "board_tested": false,
+    "packed_blocks": true,
+    "persistent_parallel_worker": true,
+    "acceleration_enabled": true,
+    "pie_activation": "S16 high plus S16 residual, guarded FP32 fallback"
+  },
+  "local_asr_official_dsp": {
+    "included": true,
+    "upstream_revision": "3c8ac0fdfec83740b783e200862c8d0c056de0ad",
+    "kernel_set": [
+      "dsps_add_f32_ansi",
+      "dsps_sub_f32_ansi",
+      "dsps_mul_f32_ansi"
+    ],
+    "hwlp_enabled": false,
+    "model_requantized": false
+  },
+  "local_q4_pie": {
+    "included": true,
+    "default_bits": 0,
+    "selftest_required": true,
+    "board_tested": false
+  },
+  "local_q8_pie": {
+    "included": true,
+    "activation_bits": 16,
+    "selftest_required": true,
+    "default_enabled": false,
+    "bulk_rows": true,
+    "board_tested": false
+  },
+  "local_tts_parallel": {
+    "enabled": true,
+    "default_enabled": true,
+    "stack_bytes": 65536,
+    "stack_charge": 131072,
+    "cpu0_owner_cpu1_helper": false,
+    "dynamic_owner_helper_opposite": true,
+    "helper_priority_below_desktop": true,
+    "mlp_time_slices": true,
+    "fallback_diagnostics": true,
+    "native_tested": false
+  },
+  "local_tts_fma": {
+    "enabled": true,
+    "default_enabled": false,
+    "scope": "packed vocoder upsample only",
+    "one_rounding": true,
+    "packed_allocation_failure": "reject",
+    "native_tested": false
+  },
+  "l2_cache_kb": 256,
+  "ble_identity": {
+    "address": "EA:F4:AC:63:99:13",
+    "address_little_endian": [
+      19,
+      153,
+      99,
+      172,
+      244,
+      234
+    ],
+    "address_type": "static-random",
+    "name": "OpenVela Mouse-AC639913",
+    "store_path": "/data/config/ble_eaf4ac639913.bin",
+    "store_temp": "/data/config/.ble_eaf4ac639913.tmp",
+    "purpose_path": "/data/config/bh_eaf4ac639913.bin",
+    "purpose_temp": "/data/config/.bh_eaf4ac639913.tmp",
+    "header_sha256": "225b8657479e81623c3ac5cf87629d84bbd4da726b86bc46cf7fe7aee50a8cd5"
+  },
+  "sha256": {
+    "nuttx.bin": "09699b5ba452150e913f5062bf8fd9b344410833c85ecc634e7ddcc7c0bb9085",
+    "nuttx.elf": "5384a129b34fa53a496b2ac1b44ba151558afcfa6652b9493be22af844556dd5",
+    "resolved.config": "d23f9f38ea10671f44a7b70148dbee3cd0101a17c08b42e2ed6f97037ffe43e3"
+  }
+}

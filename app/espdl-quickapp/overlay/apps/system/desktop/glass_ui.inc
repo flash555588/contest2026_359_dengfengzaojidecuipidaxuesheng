@@ -74,7 +74,6 @@ static struct
   lv_obj_t *global_font_dropdown;
   lv_obj_t *language_dropdown;
   lv_obj_t *home_cards[GLASS_HOME_CARD_COUNT];
-  lv_obj_t *motion_switch;
   lv_obj_t *brightness_slider;
   lv_obj_t *speaker_slider,*speaker_value;
   lv_font_t *font72;
@@ -434,7 +433,7 @@ static void glass_update(lv_timer_t *timer)
   uint8_t portal_values[4];
   if(portal_desktop_take(portal_values)) {
     g_desktop.light_theme=portal_values[0]; g_glass.palette=portal_values[1];
-    g_glass.widget=portal_values[2]; g_glass.reduced_motion=portal_values[3];
+    g_glass.widget=portal_values[2]; g_glass.reduced_motion=true;
     glass_rebuild(); glass_save_preferences();
   }
   glass_preferences_update();
@@ -655,27 +654,6 @@ static void glass_widget_select(lv_event_t *e)
   glass_save_preferences();
 }
 
-static void glass_motion_changed(lv_event_t *e)
-{
-  g_glass.reduced_motion = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
-  glass_motion_set_reduced(g_glass.reduced_motion);
-  glass_save_preferences();
-  if (g_glass.reduced_motion)
-    {
-      lv_anim_delete(g_glass.home, NULL);
-      lv_obj_set_style_opa(g_glass.home, LV_OPA_COVER, 0);
-      for (int i = 0; i < GLASS_HOME_CARD_COUNT; i++)
-        {
-          lv_anim_delete(g_glass.home_cards[i], NULL);
-          lv_obj_set_style_translate_y(g_glass.home_cards[i], 0, 0);
-        }
-    }
-  lv_obj_set_style_anim_duration(g_glass.settings_switch,
-                                 g_glass.reduced_motion ? 0 : 160, 0);
-  lv_obj_set_style_anim_duration(lv_event_get_target(e),
-                                 g_glass.reduced_motion ? 0 : 160, 0);
-}
-
 static lv_obj_t *g_control_card;
 static bool g_control_close_pending;
 
@@ -892,6 +870,7 @@ static void glass_speech_open(lv_event_t *event);
 #include "glass_speech_ui.inc"
 #include "glass_navigation.inc"
 #include "glass_local_voice_ui.inc"
+#include "glass_app_store_ui.inc"
 
 static void glass_music(lv_event_t *e)
 {
@@ -1057,25 +1036,25 @@ static void glass_apps_render(void)
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 glass_tr("网络直播"), glass_tr("相册"),
 #endif
-glass_tr("ESPClaw AI 助手"), glass_tr("相机"), glass_tr("音乐"), glass_tr("录音机"), glass_tr("智能家居"), glass_tr("无线触摸板"), "Grok Ball", "2048", glass_tr("你好快应用"), glass_tr("ESP-DL 离线识别"), glass_tr("大肥鱼桌宠"), glass_tr("文件管理"), glass_tr("本地语音")};
+glass_tr("ESPClaw AI 助手"), glass_tr("相机"), glass_tr("音乐"), glass_tr("录音机"), glass_tr("智能家居"), glass_tr("无线触摸板"), glass_tr("海鸥表情"), "2048", glass_tr("你好快应用"), glass_tr("ESP-DL 离线识别"), glass_tr("海鸥桌宠"), glass_tr("文件管理"), glass_tr("本地语音"), glass_tr("应用商店")};
   const char *symbols[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 LV_SYMBOL_VIDEO, LV_SYMBOL_IMAGE,
 #endif
 GLASS_ICON_SPARKLES, GLASS_ICON_CAMERA, GLASS_ICON_HEADPHONES, GLASS_ICON_MIC, LV_SYMBOL_HOME, GLASS_ICON_MOUSE,
-                           GLASS_ICON_FACE, LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, GLASS_ICON_FISH, LV_SYMBOL_DIRECTORY, GLASS_ICON_MIC};
+                           GLASS_ICON_FACE, LV_SYMBOL_KEYBOARD, LV_SYMBOL_EDIT, LV_SYMBOL_EYE_OPEN, GLASS_ICON_FISH, LV_SYMBOL_DIRECTORY, GLASS_ICON_MIC, GLASS_ICON_FILE_PACKAGE};
   const char *descriptions[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 glass_tr("观看在线直播"), glass_tr("浏览照片与视频"),
 #endif
 glass_tr("对话、创作与助手"), glass_tr("拍照与实时预览"), glass_tr("听音乐、看歌词"), glass_tr("录制与回放声音"), glass_tr("连接与控制设备"), glass_tr("连接电脑与控制指针"),
-glass_tr("语音与趣味互动"), glass_tr("数字合成小游戏"), glass_tr("探索快应用"), glass_tr("本地模型识别"), glass_tr("陪伴你的桌面伙伴"), glass_tr("浏览设备存储与 SD 卡"), glass_tr("离线对话与 V2 朗读")};
+glass_tr("语音与趣味互动"), glass_tr("数字合成小游戏"), glass_tr("探索快应用"), glass_tr("本地模型识别"), glass_tr("陪伴你的桌面伙伴"), glass_tr("浏览设备存储与 SD 卡"), glass_tr("离线对话与 V2 朗读"), glass_tr("浏览、安装与管理轻量应用")};
   lv_event_cb_t callbacks[] = {
 #ifdef CONFIG_SYSTEM_BILIBILI_LIVE
 launch_bilibili, launch_local_video,
 #endif
 glass_chat_open, launch_builtin_camera_qapp, glass_music, launch_builtin_recorder_qapp, glass_homeassistant,
-    glass_mouse_open, launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp, launch_builtin_dafeiyu_qapp, glass_files_open, glass_local_voice_open};
+    glass_mouse_open, launch_builtin_ouo_qapp, launch_builtin_2048_qapp, launch_builtin_qapp, launch_builtin_espdl_qapp, launch_builtin_dafeiyu_qapp, glass_files_open, glass_local_voice_open, glass_store_app};
   const int builtin_count=sizeof(names)/sizeof(names[0]);
   const int total = builtin_count + g_desktop.nqpk;
   const int pages = (total + 8) / 9;
@@ -1186,6 +1165,7 @@ static bool g_edge_back_pending;
 static bool g_edge_home_pending;
 static lv_style_prop_t g_edge_translate = LV_STYLE_TRANSLATE_X;
 static bool g_edge_tracking;
+static bool g_edge_wake;
 static lv_point_t g_edge_start;
 static lv_obj_t *g_edge_page;
 static void glass_edge_back_async(void *data);
@@ -1198,7 +1178,7 @@ static void glass_edge_deleted(lv_event_t *event)
 {
   if(g_edge_page==lv_event_get_target(event)){
     lv_async_call_cancel(glass_edge_back_async,NULL);
-    g_edge_page=NULL;g_edge_tracking=false;g_edge_back_pending=false;g_edge_home_pending=false;g_edge_offset=0;
+    g_edge_page=NULL;g_edge_wake=false;g_edge_tracking=false;g_edge_back_pending=false;g_edge_home_pending=false;g_edge_offset=0;
   }
 }
 static void glass_edge_restore(bool animate)
@@ -1218,6 +1198,10 @@ static void glass_edge_back_async(void *data)
   bool home = g_edge_home_pending;
   g_edge_back_pending = false;
   g_edge_home_pending = false;
+  /* A wake gesture owns only the overlay, including an overlay that timed
+   * out between release and async dispatch. Never navigate its parent page. */
+  bool wake=g_edge_wake||glass_wake_overlay_active();g_edge_wake=false;
+  if(wake){glass_wake_overlay_close();return;}
   /* Ignore a gesture if another action changed the page before dispatch. */
   if (g_lock_ui.root || g_edge_page != g_desktop.current_card) return;
   if(home){panel_hide(NULL);return;}
@@ -1248,14 +1232,18 @@ static void glass_edge_event(lv_event_t *e)
   lv_obj_t *strip = lv_event_get_target(e);
   if (code == LV_EVENT_PRESSED)
     {
-      if(g_lock_ui.root||!g_desktop.current_card||g_edge_back_pending)return;
+      if(g_edge_back_pending)return;
+      bool wake=glass_wake_overlay_active();
+      if(!wake&&(g_lock_ui.root||!g_desktop.current_card))return;
       if(g_edge_tracking&&g_edge_input!=input)return;
       glass_edge_restore(false);
-      glass_motion_cancel(g_desktop.current_card);
+      if(!wake)glass_motion_cancel(g_desktop.current_card);
       lv_indev_get_point(input, &g_edge_start);
       g_edge_tracking = true;
       g_edge_strip = strip;g_edge_input=input;
       g_edge_page = g_desktop.current_card;g_edge_offset=0;
+      g_edge_wake=wake;
+      if(wake)return;
       g_edge_translate = (uintptr_t)lv_event_get_user_data(e) == 2 ?
         LV_STYLE_TRANSLATE_Y : LV_STYLE_TRANSLATE_X;
       g_edge_had_offset=lv_obj_get_local_style_prop(g_edge_page,g_edge_translate,&g_edge_saved,0)==LV_STYLE_RES_FOUND;
@@ -1277,7 +1265,7 @@ static void glass_edge_event(lv_event_t *e)
       if(g_edge_page!=g_desktop.current_card){g_edge_tracking=false;return;}
       int threshold=side==2?72:48,drift=side==2?48:64;
       bool directed=side==2?inward>2*cross:2*inward>3*cross;
-      if (cross > drift){g_edge_tracking=false;glass_edge_restore(true);}
+      if (cross > drift){g_edge_tracking=false;g_edge_wake=false;glass_edge_restore(true);}
       else if (inward >= threshold && directed)
         {
           g_edge_tracking = false;
@@ -1292,10 +1280,10 @@ static void glass_edge_event(lv_event_t *e)
       /* Keep text and controls stationary while tracking. Translating an
        * entire page on each input sample rerasterizes SD fonts and delays
        * the next touch read. Commit once after the bounded gesture. */
-      else if(code==LV_EVENT_RELEASED){glass_edge_restore(true);g_edge_tracking=false;}
+      else if(code==LV_EVENT_RELEASED){glass_edge_restore(true);g_edge_tracking=false;g_edge_wake=false;}
     }
   else if ((code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) && input==g_edge_input){
-    if(g_edge_tracking)glass_edge_restore(true);
+    if(g_edge_tracking){glass_edge_restore(true);g_edge_wake=false;}
     g_edge_tracking=false;
   }
 }
@@ -1360,14 +1348,16 @@ static void desktop_ui_create(void)
   g_glass.pm25 = -1;
   g_glass.palette = 0;
   g_desktop.light_theme = true;
-  uint8_t preferences[4] = {1, 0, 0, 0};
+  uint8_t preferences[4] = {1, 0, 0, 1};
   if (glass_settings_load(preferences) == 0)
     {
       g_desktop.light_theme = preferences[0];
       g_glass.palette = preferences[1];
       g_glass.widget = preferences[2];
-      g_glass.reduced_motion = preferences[3];
     }
+  /* Desktop motion stays off even with older saved preferences. */
+  preferences[3] = 1;
+  g_glass.reduced_motion = true;
   glass_wallpaper_load();
   portal_desktop_publish(preferences);
 #ifdef CONFIG_SYSTEM_HASS
@@ -1376,26 +1366,29 @@ static void desktop_ui_create(void)
     printf("desktop: HA service configuration unavailable (%d)\n",
            -hass_bootstrap);
 #endif
-  g_desktop.font16 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+  g_desktop.font16 = glass_material_font_create(g_desktop_font_start, size,
     16, LV_FONT_KERNING_NORMAL, DESKTOP_FONT_CACHE_GLYPHS);
-  g_desktop.font20 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+  g_desktop.font20 = glass_material_font_create(g_desktop_font_start, size,
     20, LV_FONT_KERNING_NORMAL, DESKTOP_FONT_CACHE_GLYPHS);
-  g_desktop.font28 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+  g_desktop.font28 = glass_material_font_create(g_desktop_font_start, size,
     28, LV_FONT_KERNING_NORMAL, DESKTOP_FONT_CACHE_GLYPHS);
-  g_glass.font72 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+  g_glass.font72 = glass_material_font_create(g_desktop_font_start, size,
     128, LV_FONT_KERNING_NORMAL, 24);
-  g_glass.font48 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+  g_glass.font48 = glass_material_font_create(g_desktop_font_start, size,
     48, LV_FONT_KERNING_NORMAL, 24);
   /* The home temperature face above is 128 px despite its historical name.
    * Lyrics need their own actual 72 px face for measurement and clipping. */
-  g_glass.music_font72 = lv_tiny_ttf_create_data_ex(g_desktop_font_start, size,
+  g_glass.music_font72 = glass_material_font_create(g_desktop_font_start, size,
     72, LV_FONT_KERNING_NORMAL, 24);
   glass_home_fonts_init(g_desktop_font_start, size);
   if (g_desktop.font16) g_desktop.font16->fallback = glass_icon_font(16);
   if (g_desktop.font20) g_desktop.font20->fallback = glass_icon_font(20);
   if (g_desktop.font28) g_desktop.font28->fallback = glass_icon_font(24);
   glass_global_fonts_init();
+  /* Optional full font checks start after the first frame and early NSH. */
+#ifdef GLASS_HOST_TEST
   glass_sd_font_start();
+#endif
   glass_i18n_start();
   g_desktop.screen = glass_box(lv_screen_active(), 0, GLASS_STATUS_HEIGHT,
                                 1024, GLASS_CONTENT_HEIGHT, theme_card(), 0);
@@ -1417,6 +1410,7 @@ static void desktop_ui_create(void)
   pet_engine_init(lv_obj_get_width(g_desktop.screen),
                   lv_obj_get_height(g_desktop.screen));
   pet_engine_set_weather_cb(pet_fill_weather);
+  pet_engine_set_visible(false);
   if (pet_lvgl_create(g_desktop.screen, zh_font(16)) < 0)
     {
       printf("desktop: pet overlay skipped\n");
