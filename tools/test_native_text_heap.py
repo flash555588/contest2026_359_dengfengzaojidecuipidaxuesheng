@@ -39,58 +39,85 @@ for name,text in headers.items():(stubs/name).write_text('#pragma once\n'+text)
 heap=r'''
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <malloc.h>
 #include <esp_mmu_map.h>
 #define SLOTS 8
-static unsigned fault,allocated,released,maps,unmaps;
-static void *live[64];static esp_paddr_t phys[64];static unsigned count,next_alias;
+#define PAGES 512u /* 32 MiB alias window / 64 KiB */
+static unsigned fault,allocated,released,maps,unmaps,unmap_fail;
+static void *live[4096];static esp_paddr_t phys[4096];static unsigned count;
+static unsigned char used[PAGES];
 struct mallinfo mallinfo(void){return (struct mallinfo){0};}
-void *memalign(size_t a,size_t n){if(fault==1)return NULL;void *p;assert(!posix_memalign(&p,a,n));
- live[count]=p;phys[count]=0x100000u*(count+1);count++;allocated++;return p;}
+/* Physical backing is only ever requested one 64 KiB page at a time. */
+void *memalign(size_t a,size_t n){assert(a==65536&&n==65536);if(fault==1)return NULL;void *p;
+ assert(!posix_memalign(&p,a,n));assert(count<4096);
+ live[count]=p;phys[count]=0x10000u*(count+1);count++;allocated++;return p;}
 static int find(void *p){for(unsigned i=0;i<count;i++)if(live[i]==p)return i;return -1;}
-static void release(void *p){if(!p)return;int i=find(p);assert(i>=0);live[i]=NULL;released++;free(p);}
+static void release(void *p){if(!p)return;int i=find(p);if(i<0){free(p);return;}live[i]=NULL;released++;free(p);}
 int esp_mmu_vaddr_to_paddr(void *v,esp_paddr_t *p,mmu_target_t *t){int i=find(v);assert(i>=0);*p=phys[i];*t=2;return fault==2?-1:0;}
-int esp_cache_msync(void *v,size_t n,int flags){(void)v;(void)n;assert(flags==21);return fault==3?-1:0;}
+int esp_cache_msync(void *v,size_t n,int flags){(void)v;assert(n==65536&&flags==21);return fault==3?-1:0;}
+/* Like the SDK: each mapping goes to the lowest free alias gap. */
 int esp_mmu_map(esp_paddr_t p,size_t n,int target,int caps,int flags,void **o){
- assert(p&&!(n&65535)&&target==2&&caps==3&&!flags);maps++;
- *o=(void *)(uintptr_t)(fault==5?0x48000000u:0x4a000000u+0x100000u*next_alias++);return fault==4?-1:0;}
-static int unmap_fail;
-int esp_mmu_unmap(void *p){(void)p;unmaps++;return fault==6||unmap_fail?-1:0;}
+ assert(p&&n==65536&&target==2&&caps==3&&!flags);maps++;
+ if(fault==4)return -1;
+ if(fault==5){*o=(void *)(uintptr_t)0x48000000u;return 0;}
+ for(unsigned i=0;i<PAGES;i++)if(!used[i]){used[i]=1;*o=(void *)(uintptr_t)(0x4a000000u+i*65536u);return 0;}
+ return -1;}
+int esp_mmu_unmap(void *p){unmaps++;if(fault==6||unmap_fail)return -1;
+ uintptr_t a=(uintptr_t)p;if(a<0x4a000000u)return 0;
+ unsigned i=(a-0x4a000000u)/65536u;assert(used[i]);used[i]=0;return 0;}
 int esp32p4_internal_call(int (*fn)(void *),void *arg){return fn(arg);}
+static unsigned mapped(void){unsigned n=0;for(unsigned i=0;i<PAGES;i++)n+=used[i];return n;}
 __asm__(".globl _native_exec_start\n.set _native_exec_start,0x4a000000\n.globl _native_exec_end\n.set _native_exec_end,0x4c000000\n");
 #define free release
 '''+'#include "'+(native/'native_text_heap.c').as_posix()+'"\n'+r'''
 #undef free
+#define K64 65536u
 int main(void){
  assert(!up_textheap_memalign(0,1)&&!up_textheap_memalign(3,1));
  assert(!up_textheap_memalign(131072,1)&&!up_textheap_memalign(16,0));
  /* Only the 32 MiB executable window bounds a module; no policy cap. */
  assert(!up_textheap_memalign(16,32u*1024u*1024u+1)&&!up_textheap_memalign(16,(size_t)-1));
  assert(!allocated&&!maps);
- for(fault=1;fault<=5;fault++){assert(!up_textheap_memalign(16,65537));assert(allocated==released);}
+ for(fault=1;fault<=5;fault++){assert(!up_textheap_memalign(16,K64+1));assert(allocated==released&&!mapped());}
  fault=0;
- /* Several modules resident at once, each in its own mapping. */
+ /* Several modules resident at once, each one contiguous alias run. */
  void *p[SLOTS];
- for(unsigned i=0;i<SLOTS;i++){p[i]=up_textheap_memalign(16,65537);assert(p[i]);
-  assert(up_textheap_heapmember(p[i])&&up_textheap_heapmember((char *)p[i]+131071));
-  assert(!up_textheap_heapmember((char *)p[i]+131072));}
+ for(unsigned i=0;i<SLOTS;i++){p[i]=up_textheap_memalign(16,K64+1);assert(p[i]);
+  assert(up_textheap_heapmember(p[i])&&up_textheap_heapmember((char *)p[i]+2*K64-1));
+  assert(!up_textheap_heapmember((char *)p[i]+2*K64));}
+ assert(mapped()==2*SLOTS&&allocated-released==2*SLOTS);
  assert(!up_textheap_memalign(16,1)); /* slot table full */
  up_textheap_free((char *)p[3]+1);assert(up_textheap_heapmember(p[3]));
  up_textheap_free(p[3]);assert(!up_textheap_heapmember(p[3])&&up_textheap_heapmember(p[4]));
- void *q=up_textheap_memalign(16,1);assert(q&&up_textheap_heapmember(q)); /* freed slot reused */
- /* Unmap failure keeps the mapping and its backing. */
+ assert(mapped()==2*SLOTS-2);
+ /* A 3-page module does not fit the 2-page hole: the hole is filled
+  * temporarily, the module lands above every other run, and the hole is
+  * free again afterwards. */
+ void *big=up_textheap_memalign(16,2*K64+1);assert(big&&big!=p[3]);
+ assert((uintptr_t)big==0x4a000000u+2*SLOTS*K64);
+ assert(up_textheap_heapmember((char *)big+3*K64-1)&&!up_textheap_heapmember(p[3]));
+ assert(mapped()==2*SLOTS-2+3);
+ assert(!up_textheap_memalign(16,1)); /* 7 + big: slots full */
+ up_textheap_free(p[7]);
+ void *q=up_textheap_memalign(16,1);assert(q==p[3]); /* lowest hole is reused */
+ /* Unmap failure keeps the mapping and its backing; a retry frees it. */
  fault=6;up_textheap_free(q);assert(up_textheap_heapmember(q));
  fault=0;up_textheap_free(q);assert(!up_textheap_heapmember(q));
- for(unsigned i=0;i<SLOTS;i++)if(i!=3)up_textheap_free(p[i]);
- fault=0;assert(allocated==released);
- /* Out-of-window map whose rollback unmap fails: backing is retained and
-  * that slot never reopens; the other slots keep working. */
+ up_textheap_free(big);
+ for(unsigned i=0;i<SLOTS;i++)if(i!=3&&i!=7)up_textheap_free(p[i]);
+ assert(allocated==released&&!mapped());
+ /* Out-of-window map whose rollback unmap fails: that page's backing is
+  * retained; every slot keeps working. */
  fault=5;unmap_fail=1;assert(!up_textheap_memalign(16,1));assert(allocated==released+1);
  fault=0;unmap_fail=0;
- for(unsigned i=0;i<SLOTS-1;i++){p[i]=up_textheap_memalign(16,1);assert(p[i]);}
+ for(unsigned i=0;i<SLOTS;i++){p[i]=up_textheap_memalign(16,1);assert(p[i]);}
  assert(!up_textheap_memalign(16,1));
- for(unsigned i=0;i<SLOTS-1;i++)up_textheap_free(p[i]);
- assert(allocated==released+1);
+ for(unsigned i=0;i<SLOTS;i++)up_textheap_free(p[i]);
+ assert(allocated==released+1&&!mapped());
+ /* A large module needs no large physical block: 20 separate pages. */
+ void *m=up_textheap_memalign(64,1290476);assert(m&&mapped()==20);
+ up_textheap_free(m);assert(!mapped()&&allocated==released+1);
  return 0;
 }
 '''
@@ -171,7 +198,7 @@ subprocess.run([str(out/'host')],check=True)
 (out/'RESULT.json').write_text(json.dumps({'passed':True,
  'scope':'production allocator and host policy with mocked MMU/cache/ELF; no physical MMU/PMP/relocation claim',
  'boot_physical_reservation_bytes':0,'system_policy_caps':'none; executable window only','resident_slots':8,
- 'tested':['bounds','no headroom gate','allocation/translation/cache/map failure','alias range','multiple resident modules',
+ 'tested':['bounds','no headroom gate','page-scattered physical backing','alias hole filler','allocation/translation/cache/map failure','alias range','multiple resident modules',
   'slot reuse','unmap failure retains storage','entry path policy','plain quick app passthrough','host ABI file',
   'struct ABI','package ownership','attach/detach','quiesce unload','quiesce refusal','rmmod failure','no quiesce resident']},indent=2))
 print('NATIVE_LOADER_HOST_OK')

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <malloc.h>
 #include <pthread.h>
 #include <esp_cache.h>
@@ -12,11 +13,16 @@
 #define OV_NATIVE_TEXT_SLOTS 8
 #endif
 
+#define PAGE 65536u
+
 extern unsigned char _native_exec_start[], _native_exec_end[];
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-/* failed: an unmap failed, so the backing must never be reused (it would
- * alias live executable memory). The slot stays closed until reboot. */
-static struct text_slot { void *backing, *mapped; size_t bytes; bool failed; }
+/* One MMU page of module code: physical backing and its executable alias. */
+struct text_page { void *backing, *mapped; };
+/* A module's code is one contiguous alias [base, base+bytes) built from
+ * count independently allocated physical pages, so loading never needs one
+ * large contiguous heap block. */
+static struct text_slot { uint8_t *base; size_t bytes; struct text_page *pages; unsigned count; }
 	slots[OV_NATIVE_TEXT_SLOTS];
 
 /* The SDK's MMU update may disable caches. Run it on the existing internal
@@ -37,48 +43,117 @@ static bool inside_window(uintptr_t address, size_t bytes)
          address <= (uintptr_t)_native_exec_end - bytes;
 }
 
+/* Back one MMU page and map it executable. On success the page is mapped
+ * inside the window. Returns false on failure; a page whose rollback unmap
+ * failed keeps its backing forever (it may still be aliased). */
+static bool map_page(struct text_page *page)
+{
+  void *storage = memalign(PAGE, PAGE);
+  if (!storage) return false;
+  esp_paddr_t physical; mmu_target_t target;
+  if (esp_mmu_vaddr_to_paddr(storage, &physical, &target) != ESP_OK ||
+      target != MMU_TARGET_PSRAM0 || (physical & (PAGE - 1))) goto free_storage;
+  if (esp_cache_msync(storage, PAGE, ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+      ESP_CACHE_MSYNC_FLAG_TYPE_DATA | ESP_CACHE_MSYNC_FLAG_INVALIDATE) != ESP_OK)
+    goto free_storage;
+  struct mapping operation = {.physical=physical, .bytes=PAGE};
+  if (esp32p4_internal_call(map_internal, &operation) != ESP_OK) goto free_storage;
+  if (!inside_window((uintptr_t)operation.address, PAGE)) {
+    operation.remove = true;
+    if (esp32p4_internal_call(map_internal, &operation) != ESP_OK)
+      return false; /* storage retained, never reused */
+    goto free_storage;
+  }
+  page->backing = storage;
+  page->mapped = operation.address;
+  return true;
+free_storage:
+  free(storage);
+  return false;
+}
+
+/* Returns false if the alias is still mapped; the backing is then kept. */
+static bool unmap_page(struct text_page *page)
+{
+  if (esp_cache_msync(page->mapped, PAGE, ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+      ESP_CACHE_MSYNC_FLAG_TYPE_DATA | ESP_CACHE_MSYNC_FLAG_INVALIDATE) != ESP_OK)
+    return false;
+  struct mapping operation = {.address=page->mapped, .remove=true};
+  if (esp32p4_internal_call(map_internal, &operation) != ESP_OK) return false;
+  free(page->backing);
+  page->backing = NULL;
+  page->mapped = NULL;
+  return true;
+}
+
+/* Unmap pages[0..count) from the top; stops at the first failure. */
+static unsigned unmap_pages(struct text_page *pages, unsigned count)
+{
+  while (count && unmap_page(&pages[count - 1])) count--;
+  return count;
+}
+
 /* Module code is backed on demand from ordinary PSRAM and exposed only through
  * the executable alias window. Nothing is reserved at boot. There is no memory
  * policy here: each module budgets itself, and an allocation the heap cannot
- * satisfy simply fails. Several modules may be resident at the same time. */
+ * satisfy simply fails. Several modules may be resident at the same time.
+ *
+ * The physical backing is a set of separate 64 KiB pages, so a fragmented
+ * heap (after an app has run for a while) can still load a module of any size
+ * that fits in free memory. The SDK places each mapping at the lowest free
+ * alias gap, so consecutive pages form one run unless a hole left by another
+ * module ends it. Such a short run stays mapped as a filler while the module
+ * is placed above it, and is released once the module's run is complete. */
 void *up_textheap_memalign(size_t alignment, size_t bytes)
 {
   size_t window = (size_t)(_native_exec_end - _native_exec_start);
   if (!alignment || (alignment & (alignment - 1)) ||
-      alignment > 65536 || !bytes || bytes > window - 65535u)
+      alignment > PAGE || !bytes || bytes > window - (PAGE - 1))
     return NULL;
-  size_t rounded = (bytes + 65535u) & ~(size_t)65535u;
+  unsigned need = (unsigned)((bytes + PAGE - 1) / PAGE);
+  void *result = NULL;
   pthread_mutex_lock(&lock);
   struct text_slot *slot = NULL;
   for (unsigned i = 0; i < OV_NATIVE_TEXT_SLOTS && !slot; i++)
-    if (!slots[i].mapped && !slots[i].failed) slot = &slots[i];
-  void *storage = slot ? memalign(65536, rounded) : NULL;
-  if (!storage) goto unlock;
-  esp_paddr_t physical; mmu_target_t target;
-  if (esp_mmu_vaddr_to_paddr(storage, &physical, &target) != ESP_OK ||
-      target != MMU_TARGET_PSRAM0 || (physical & 65535u)) goto free_storage;
-  if (esp_cache_msync(storage, rounded, ESP_CACHE_MSYNC_FLAG_DIR_C2M |
-      ESP_CACHE_MSYNC_FLAG_TYPE_DATA | ESP_CACHE_MSYNC_FLAG_INVALIDATE) != ESP_OK)
-    goto free_storage;
-  struct mapping operation = {.physical=physical, .bytes=rounded};
-  if (esp32p4_internal_call(map_internal, &operation) != ESP_OK) goto free_storage;
-  if (!inside_window((uintptr_t)operation.address, rounded)) {
-    operation.remove = true;
-    if (esp32p4_internal_call(map_internal, &operation) != ESP_OK) {
-      slot->backing = storage; slot->failed = true; /* retained, never reused */
-      storage = NULL; goto unlock;
+    if (!slots[i].pages) slot = &slots[i];
+  struct text_page *run = slot ? calloc(need, sizeof(*run)) : NULL;
+  struct text_page *fill = NULL;
+  unsigned have = 0, filled = 0, fill_cap = 0;
+  bool ok = run != NULL;
+  while (ok && have < need) {
+    struct text_page page;
+    if (!map_page(&page)) { ok = false; break; }
+    if (have && (uint8_t *)page.mapped != (uint8_t *)run[0].mapped + (size_t)have * PAGE) {
+      /* The run filled a hole; keep it mapped as a filler and restart. */
+      if (filled + have > fill_cap) {
+        unsigned cap = (filled + have) * 2;
+        struct text_page *grown = realloc(fill, cap * sizeof(*grown));
+        if (!grown) { (void)unmap_page(&page); ok = false; break; }
+        fill = grown;
+        fill_cap = cap;
+      }
+      memcpy(&fill[filled], run, have * sizeof(*run));
+      filled += have;
+      have = 0;
     }
-    goto free_storage;
+    run[have++] = page;
   }
-  slot->backing = storage; slot->mapped = operation.address; slot->bytes = rounded;
+  if (ok) {
+    slot->base = run[0].mapped;
+    slot->bytes = (size_t)need * PAGE;
+    slot->pages = run;
+    slot->count = need;
+    result = slot->base;
+  } else if (run) {
+    /* Pages that cannot be unmapped are retained, never reused. */
+    if (unmap_pages(run, have)) run = NULL; /* leaked deliberately */
+    free(run);
+  }
+  /* Fillers are released either way; a failed unmap keeps its backing. */
+  for (unsigned i = 0; i < filled; i++) (void)unmap_page(&fill[i]);
+  free(fill);
   pthread_mutex_unlock(&lock);
-  return operation.address;
-free_storage:
-  free(storage);
-  storage = NULL;
-unlock:
-  pthread_mutex_unlock(&lock);
-  return NULL;
+  return result;
 }
 
 void up_textheap_free(void *ptr)
@@ -87,14 +162,13 @@ void up_textheap_free(void *ptr)
   pthread_mutex_lock(&lock);
   for (unsigned i = 0; i < OV_NATIVE_TEXT_SLOTS; i++) {
     struct text_slot *slot = &slots[i];
-    if (slot->mapped != ptr) continue;
-    if (esp_cache_msync(slot->mapped, slot->bytes, ESP_CACHE_MSYNC_FLAG_DIR_C2M |
-        ESP_CACHE_MSYNC_FLAG_TYPE_DATA | ESP_CACHE_MSYNC_FLAG_INVALIDATE) != ESP_OK)
-      break;
-    struct mapping operation = {.address=slot->mapped, .remove=true};
-    if (esp32p4_internal_call(map_internal, &operation) != ESP_OK) break;
-    free(slot->backing);
-    slot->backing = NULL; slot->mapped = NULL; slot->bytes = 0;
+    if (!slot->pages || slot->base != ptr) continue;
+    /* On an unmap failure the slot stays mapped and can be freed again. */
+    slot->count = unmap_pages(slot->pages, slot->count);
+    if (!slot->count) {
+      free(slot->pages);
+      slot->pages = NULL; slot->base = NULL; slot->bytes = 0;
+    }
     break;
   }
   pthread_mutex_unlock(&lock);
@@ -105,8 +179,8 @@ bool up_textheap_heapmember(void *ptr)
   bool member = false;
   pthread_mutex_lock(&lock);
   for (unsigned i = 0; i < OV_NATIVE_TEXT_SLOTS && !member; i++)
-    member = slots[i].mapped && (uintptr_t)ptr >= (uintptr_t)slots[i].mapped &&
-             (uintptr_t)ptr - (uintptr_t)slots[i].mapped < slots[i].bytes;
+    member = slots[i].pages && (uintptr_t)ptr >= (uintptr_t)slots[i].base &&
+             (uintptr_t)ptr - (uintptr_t)slots[i].base < slots[i].bytes;
   pthread_mutex_unlock(&lock);
   return member;
 }
