@@ -32,6 +32,7 @@
 #include "esp_gpio.h"
 #include "esp_hosted.h"
 #include "c6_rx_burst.h"
+#include "c6_link_health.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -82,6 +83,7 @@
 
 #define C6_TX_RETRY_DELAY_MS    50
 #define C6_TX_RETRIES           10
+#define C6_COUNTER_READ_TRIES   4
 
 /****************************************************************************
  * Private Types
@@ -92,6 +94,12 @@ struct esp_hosted_state_s
   /* The SDIO link is up and the data path is open.  Guarded by lock. */
 
   bool up;
+
+  /* A FIFO transfer failure has uncertain completion. Keep initialization
+   * ownership, but reject further traffic until coordinated owner teardown.
+   */
+
+  bool faulted;
 
   /* Set once the INIT event has been received and decoded. */
 
@@ -171,10 +179,42 @@ int esp_hosted_rx_block_limit(unsigned int blocks)
 static FAR uint8_t *g_frame_buf;
 static uint32_t g_rx_peak;
 static uint32_t g_rx_large_batches;
+static uint32_t g_counter_retries;
+static uint32_t g_counter_exhausted;
+static uint32_t g_hci_tx_packets;
+static uint32_t g_hci_tx_errors;
+static uint32_t g_tx_credit_waits;
+
+/* Published independently of the bus mutex for network carrier/status users.
+ * A successful RX observation clears transient register-read errors only.
+ */
+
+static int g_link_error = -ENOTCONN;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: hosted_link_fault
+ ****************************************************************************/
+
+/* Caller owns g_hosted.lock. Do not clear up: initialize must not reset the
+ * shared controller underneath a live HCI binding or an RPC transaction.
+ */
+
+static int hosted_link_fault(int error)
+{
+  if (!g_hosted.faulted)
+    {
+      syslog(LOG_ERR, "C6 transport fault: %d; owner restart required\n",
+             error);
+    }
+
+  g_hosted.faulted = true;
+  __atomic_store_n(&g_link_error, -ENETRESET, __ATOMIC_RELEASE);
+  return -ENETRESET;
+}
 
 /****************************************************************************
  * Name: hosted_sdio_read_reg32
@@ -207,6 +247,81 @@ static int hosted_sdio_read_reg32(FAR struct sdio_dev_s *sdio,
 
   *value = result;
   return OK;
+}
+
+/****************************************************************************
+ * Name: hosted_sdio_read_counter32
+ *
+ * Description:
+ *   CMD52 reads one byte at a time while the slave updates its cumulative
+ *   counters asynchronously. Guard the low byte with matching upper counter
+ *   bits so a carry cannot invent RX bytes or TX credits. Unrelated register
+ *   bits are excluded by mask. Caller owns the transport mutex.
+ ****************************************************************************/
+
+static int hosted_sdio_read_counter32(FAR struct sdio_dev_s *sdio,
+                                     uint32_t address, uint32_t mask,
+                                     FAR uint32_t *value)
+{
+  uint32_t before;
+  uint32_t after;
+  uint8_t byte;
+  uint8_t low;
+  unsigned int attempt;
+  int i;
+  int ret;
+
+  for (attempt = 0; attempt < C6_COUNTER_READ_TRIES; attempt++)
+    {
+      before = 0;
+      after = 0;
+      for (i = 3; i > 0; i--)
+        {
+          ret = sdio_io_rw_direct(sdio, false, C6_SDIO_FUNCTION,
+                                  (address & 0x3ff) + i, 0, &byte);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          before |= (uint32_t)byte << (i * 8);
+        }
+
+      ret = sdio_io_rw_direct(sdio, false, C6_SDIO_FUNCTION,
+                              address & 0x3ff, 0, &low);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      for (i = 1; i < 4; i++)
+        {
+          ret = sdio_io_rw_direct(sdio, false, C6_SDIO_FUNCTION,
+                                  (address & 0x3ff) + i, 0, &byte);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          after |= (uint32_t)byte << (i * 8);
+        }
+
+      if (((before ^ after) & mask & ~0xffu) == 0)
+        {
+          if ((after | low) == UINT32_MAX)
+            {
+              return -ENODEV;
+            }
+
+          *value = after | low;
+          return OK;
+        }
+
+      g_counter_retries++;
+    }
+
+  g_counter_exhausted++;
+  return -EAGAIN;
 }
 
 /****************************************************************************
@@ -580,12 +695,15 @@ static void hosted_parse_init(FAR const uint8_t *payload, uint16_t len)
  ****************************************************************************/
 
 static int hosted_do_read_block(FAR struct sdio_dev_s *sdio,
-                                uint32_t address, unsigned int blocks)
+                                uint32_t address, unsigned int blocks,
+                                FAR bool *submitted)
 {
   sdio_eventset_t event;
   uint32_t arg;
   uint32_t response;
   int ret;
+
+  *submitted = false;
 
   /* Whole 512-byte blocks only. Never round a short tail into a block. */
 
@@ -613,6 +731,11 @@ static int hosted_do_read_block(FAR struct sdio_dev_s *sdio,
       return ret;
     }
 
+  /* Once submission is attempted, an error cannot prove that no bytes were
+   * consumed. DMA preparation failures above are known not to touch FIFO.
+   */
+
+  *submitted = true;
   ret = SDIO_SENDCMD(sdio, SDIO_CMD53RD, arg);
   if (ret < 0)
     {
@@ -696,7 +819,8 @@ static int hosted_pending_rx_bytes(FAR uint32_t *pending)
   uint32_t len;
   int ret;
 
-  ret = hosted_sdio_read_reg32(g_hosted.sdio, C6_REG_PACKET_LEN, &regval);
+  ret = hosted_sdio_read_counter32(g_hosted.sdio, C6_REG_PACKET_LEN,
+                                  C6_RX_LEN_MASK, &regval);
   if (ret < 0)
     {
       return ret;
@@ -737,7 +861,9 @@ static int hosted_tx_buffers_free(FAR uint32_t *free_count)
   uint32_t count;
   int ret;
 
-  ret = hosted_sdio_read_reg32(g_hosted.sdio, C6_REG_TOKEN_RDATA, &regval);
+  ret = hosted_sdio_read_counter32(g_hosted.sdio, C6_REG_TOKEN_RDATA,
+                                  C6_TX_BUFFER_MASK << C6_TOKEN_SHIFT,
+                                  &regval);
   if (ret < 0)
     {
       return ret;
@@ -872,6 +998,7 @@ static void hosted_dispatch_stream(FAR uint8_t *stream, uint32_t streamlen)
 
 static int hosted_read_frame(FAR uint32_t *framelen)
 {
+  bool submitted;
   uint32_t pending;
   uint32_t data_left;
   uint32_t offset;
@@ -898,7 +1025,7 @@ static int hosted_read_frame(FAR uint32_t *framelen)
   if (pending > C6_RX_BATCH_SIZE)
     {
       syslog(LOG_ERR, "frame too large: %" PRIu32 "\n", pending);
-      return -EMSGSIZE;
+      return hosted_link_fault(-EMSGSIZE);
     }
 
   if (pending > ESP_HOSTED_MAX_FRAME)
@@ -927,12 +1054,17 @@ static int hosted_read_frame(FAR uint32_t *framelen)
 
       bytes = blocks * C6_SDIO_BLOCK_SIZE;
       address = C6_CMD53_END_ADDR - data_left;
-      ret = hosted_do_read_block(g_hosted.sdio, address, blocks);
+      ret = hosted_do_read_block(g_hosted.sdio, address, blocks, &submitted);
       if (ret < 0)
         {
           syslog(LOG_ERR, "block read at %" PRIx32 ": %d\n",
                  address, ret);
-          return ret;
+          if (offset == 0 && !submitted)
+            {
+              return ret;
+            }
+
+          return hosted_link_fault(ret);
         }
 
       memcpy(g_frame_buf + offset, g_dma_block, bytes);
@@ -947,7 +1079,7 @@ static int hosted_read_frame(FAR uint32_t *framelen)
       if (ret < 0)
         {
           syslog(LOG_ERR, "tail read at %" PRIx32 ": %d\n", address, ret);
-          return ret;
+          return hosted_link_fault(ret);
         }
 
       memcpy(g_frame_buf + offset, g_dma_block, data_left);
@@ -961,6 +1093,15 @@ static int hosted_read_frame(FAR uint32_t *framelen)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: esp_hosted_link_error
+ ****************************************************************************/
+
+int esp_hosted_link_error(void)
+{
+  return __atomic_load_n(&g_link_error, __ATOMIC_ACQUIRE);
+}
 
 /****************************************************************************
  * Name: esp_hosted_initialize
@@ -981,8 +1122,9 @@ int esp_hosted_initialize(bool verbose)
 
   if (g_hosted.up)
     {
+      ret = esp_hosted_link_error();
       nxmutex_unlock(&g_hosted.lock);
-      return OK;
+      return ret;
     }
 
   if (g_frame_buf == NULL)
@@ -1067,6 +1209,8 @@ int esp_hosted_initialize(bool verbose)
   g_hosted.tx_buffers = 0;
 
   g_hosted.up = true;
+  g_hosted.faulted = false;
+  __atomic_store_n(&g_link_error, 0, __ATOMIC_RELEASE);
 
   if (verbose)
     {
@@ -1078,6 +1222,7 @@ int esp_hosted_initialize(bool verbose)
 
 errout:
   g_hosted.up = false;
+  __atomic_store_n(&g_link_error, ret, __ATOMIC_RELEASE);
   if (allocated)
     {
       free(g_frame_buf);
@@ -1195,13 +1340,18 @@ int esp_hosted_poll(void)
 
   ret = nxmutex_lock(&g_hosted.lock);
   if (ret < 0) goto out;
-  if (!g_hosted.up)
+  if (!g_hosted.up || g_hosted.faulted)
     {
-      ret = -ENOTCONN;
+      ret = g_hosted.faulted ? -ENETRESET : -ENOTCONN;
       nxmutex_unlock(&g_hosted.lock);
       goto out;
     }
   ret = hosted_read_frame(&framelen);
+  if (!g_hosted.faulted)
+    {
+      __atomic_store_n(&g_link_error, ret < 0 ? ret : 0, __ATOMIC_RELEASE);
+    }
+
   nxmutex_unlock(&g_hosted.lock);
   if (ret < 0) goto out;
   if (framelen == 0)
@@ -1236,11 +1386,6 @@ int esp_hosted_send(uint8_t if_type, uint8_t if_num,
   uint32_t offset;
   int attempt;
   int ret;
-
-  if (!g_hosted.up)
-    {
-      return -ENOTCONN;
-    }
 
   if (if_type >= ESP_HOSTED_IF_MAX)
     {
@@ -1283,9 +1428,26 @@ int esp_hosted_send(uint8_t if_type, uint8_t if_num,
 
   for (attempt = 0; attempt < C6_TX_RETRIES; attempt++)
     {
+      /* Recheck after every wait: another poller may have faulted the link
+       * while this sender temporarily released the bus mutex.
+       */
+
+      if (!g_hosted.up || g_hosted.faulted)
+        {
+          ret = g_hosted.faulted ? -ENETRESET : -ENOTCONN;
+          nxmutex_unlock(&g_hosted.lock);
+          return ret;
+        }
+
       ret = hosted_tx_buffers_free(&free_count);
       if (ret < 0)
         {
+          if (if_type == ESP_HOSTED_IF_HCI)
+            {
+              g_hci_tx_errors++;
+            }
+
+          __atomic_store_n(&g_link_error, ret, __ATOMIC_RELEASE);
           nxmutex_unlock(&g_hosted.lock);
           return ret;
         }
@@ -1295,6 +1457,7 @@ int esp_hosted_send(uint8_t if_type, uint8_t if_num,
           break;
         }
 
+      g_tx_credit_waits++;
       nxmutex_unlock(&g_hosted.lock);
       usleep(C6_TX_RETRY_DELAY_MS * 1000);
       ret = nxmutex_lock(&g_hosted.lock);
@@ -1306,6 +1469,11 @@ int esp_hosted_send(uint8_t if_type, uint8_t if_num,
 
   if (free_count < buffers_needed)
     {
+      if (if_type == ESP_HOSTED_IF_HCI)
+        {
+          g_hci_tx_errors++;
+        }
+
       nxmutex_unlock(&g_hosted.lock);
       return -EAGAIN;
     }
@@ -1425,6 +1593,12 @@ int esp_hosted_send(uint8_t if_type, uint8_t if_num,
         {
           syslog(LOG_ERR, "block write at %08" PRIx32 ": %d\n",
                  address + offset, ret);
+          if (if_type == ESP_HOSTED_IF_HCI)
+            {
+              g_hci_tx_errors++;
+            }
+
+          ret = hosted_link_fault(ret);
           nxmutex_unlock(&g_hosted.lock);
           return ret;
         }
@@ -1432,6 +1606,10 @@ int esp_hosted_send(uint8_t if_type, uint8_t if_num,
 
   g_hosted.tx_buffers = (g_hosted.tx_buffers + buffers_needed)
                         % C6_TX_BUFFER_MODULO;
+  if (if_type == ESP_HOSTED_IF_HCI)
+    {
+      g_hci_tx_packets++;
+    }
 
   nxmutex_unlock(&g_hosted.lock);
   return OK;
@@ -1505,6 +1683,13 @@ int esp_hosted_debug_counters(FAR uint32_t *tokens, FAR uint32_t *pending,
   printf("c6: RX peak=%lu large_batches=%lu capacity=%u\n",
          (unsigned long)g_rx_peak, (unsigned long)g_rx_large_batches,
          C6_RX_BATCH_SIZE);
+  printf("c6: counter_retries=%lu counter_exhausted=%lu hci_tx=%lu "
+         "hci_tx_errors=%lu credit_waits=%lu link_error=%d\n",
+         (unsigned long)g_counter_retries,
+         (unsigned long)g_counter_exhausted,
+         (unsigned long)g_hci_tx_packets,
+         (unsigned long)g_hci_tx_errors,
+         (unsigned long)g_tx_credit_waits, esp_hosted_link_error());
 
   if (tokens != NULL)
     {

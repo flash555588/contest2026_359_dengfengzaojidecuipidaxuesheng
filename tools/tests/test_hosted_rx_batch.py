@@ -17,6 +17,7 @@ def function(name):
 
 harness = r'''
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +40,8 @@ struct esp_hosted_header_s {
   uint16_t len, offset, checksum, sequence;
   uint8_t reserved, type;
 } __attribute__((packed));
-static struct {void *sdio; uint32_t rx_bytes;} g_hosted;
+static struct {void *sdio; uint32_t rx_bytes; bool faulted;} g_hosted;
+static int g_link_error;
 static uint8_t g_dma_block[2048];
 static unsigned int g_rx_block_limit;
 static uint8_t *g_frame_buf;
@@ -53,7 +55,9 @@ static int read_fifo(uint32_t address, uint32_t bytes) {
   assert(bytes<=sizeof(g_dma_block));
   memcpy(g_dma_block,fifo+address-start,bytes);reads++;return 0;
 }
-static int hosted_do_read_block(void *sdio,uint32_t address,unsigned blocks) {
+static int hosted_do_read_block(void *sdio,uint32_t address,unsigned blocks,
+                                bool *submitted) {
+  *submitted=true;
   (void)sdio;assert(blocks>=1 && blocks<=4);return read_fifo(address,512*blocks);
 }
 static int hosted_do_read_tail(void *sdio,uint32_t address,uint32_t bytes) {
@@ -66,6 +70,9 @@ static void hosted_dispatch(uint8_t *frame,uint32_t bytes) {
   dispatched++;
 }
 '''
+start = text.index('static int hosted_link_fault(')
+end = text.index('\n}\n', start) + 3
+harness += text[start:end] + '\n'
 harness += function('hosted_dispatch_stream') + '\n' + function('hosted_read_frame')
 harness += r'''
 int main(void) {
@@ -101,7 +108,8 @@ int main(void) {
   pending_bytes=0;reads=0;uint32_t bytes=123;
   assert(hosted_read_frame(&bytes)==0 && bytes==0 && reads==0);
   pending_bytes=C6_RX_BATCH_SIZE+1;
-  assert(hosted_read_frame(&bytes)==-EMSGSIZE && reads==0);
+  assert(hosted_read_frame(&bytes)==-ENETRESET && reads==0);
+  assert(g_hosted.faulted && g_link_error==-ENETRESET);
   free(g_frame_buf);
   puts("PASS actual SDIO read/dispatch: single/4-block modes, 1..40 frames, 60KB batches, 512/2048 boundaries, tails, counter wrap, empty FIFO and capacity guard");
 }

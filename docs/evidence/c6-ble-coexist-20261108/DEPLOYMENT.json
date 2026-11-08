@@ -1,0 +1,40 @@
+{
+  "candidate_sha256": "40d0d18f83c7e05950803ff6b5b49daf324ef017e8a329021739f029019c3a0d",
+  "original_image_sha256": "7fc37780eda29f108b9f6f5db7e626997ec68e8fa2fa7e7a41fa02175e6f754f",
+  "ble_identity": {
+    "address": "E2:B9:DF:B6:55:F4",
+    "address_little_endian": [
+      244,
+      85,
+      182,
+      223,
+      185,
+      226
+    ],
+    "address_type": "static-random",
+    "name": "OpenVela Mouse-DFB655F4",
+    "store_path": "/data/config/ble_e2b9dfb655f4.bin",
+    "store_temp": "/data/config/.ble_e2b9dfb655f4.tmp",
+    "purpose_path": "/data/config/bh_e2b9dfb655f4.bin",
+    "purpose_temp": "/data/config/.bh_e2b9dfb655f4.tmp",
+    "header_sha256": "1251e2d1c0f71e1a5569a6afb40de7605939ac5c0dd10a4f4c60902ab51edb11"
+  },
+  "app_written": true,
+  "independent_readback": true,
+  "data_preserved_before_boot": true,
+  "runtime_verified": true,
+  "physical_screen_accepted": false,
+  "cold_power_cycle_tested": false,
+  "data_sha256_pre_write": "1f202c9441eb07bbf8b7128469e865654f1cd48a202bfe6229dba983bd070458",
+  "boot_fault_detected": false,
+  "boot_status": "desktop boot-status\nBOOT_STATUS active=1 ui_ready=1 events=23\nBOOT_STAGE ms=0 delta=0 stage=desktop-entry result=0\nBOOT_STAGE ms=0 delta=0 stage=console-created result=0\nBOOT_STAGE ms=0 delta=0 stage=console-running result=0\nBOOT_STAGE ms=0 delta=0 stage=touch-init-begin result=0\nBOOT_STAGE ms=0 delta=0 stage=lvgl-init-begin result=0\nBOOT_STAGE ms=0 delta=0 stage=lvgl-init-end result=0\nBOOT_STAGE ms=0 delta=0 stage=display-init-begin result=0\nBOOT_STAGE ms=530 delta=530 stage=display-init-end result=0\nBOOT_STAGE ms=530 delta=0 stage=photo-store-init-begin result=0\nBOOT_STAGE ms=530 delta=0 stage=photo-store-init-end result=0\nBOT_STAGE ms=530 delta=0 stage=basic-ui-create-begin result=0\nBOOT_STAGE ms=680 delta=150 stage=basic-ui-create-end result=0\nBOOT_STAGE ms=870 delta=190 stage=first-frame-ready result=0\nBOOT_STAGE ms=890 delta=20 stage=network-start-begin result=0\nBOOT_STAGE ms=890 delta=0 stage=network-start-end result=0\nBOOT_STAGE ms=920 delta=30 stage=storage-weather-start-begin result=0\nBOOT_STAGE ms=920 delta=0 stage=storage-weather-start-end result=0\nBOOT_STAGE ms=940 delta=20 stage=assistant-start-begin result=0\nBOOT_STAGE ms=940 delta=0 stage=assistant-start-end result=0\nBOOT_STAGE ms=960 delta=20 stage=local-voice-start-begin result=0\nBOOT_STAGE ms=960 delta=0 stage=local-voice-start-end result=0\nBOOT_STAGE ms=990 delta=30 stage=materials-background-enabled result=0\nBOOT_STAGE ms=1010 delta=20 stage=font-background-read-begin result=0\nnsh> \u001b[Krpc: EVENT msg_id=773\n",
+  "runtime_xip": "desktop xip\n[psram-xip] ready=1 protected_cpus=3 flash_entries=4188 text_hash=2e3ea374 rodata_hash=04c7210e cache_policy=on spi1_mutex=1\nnsh> \u001b[K",
+  "runtime_identity": "c6ble idntity\ntype=static-random address=E2:B9:DF:B6:55:F4 name=OpenVela Mouse-DFB655F4\nnsh> \u001b[Krpc: WifiStaGetRssi tx pb=10 tlv=22\nrpc: WifiStaGetRssi pb bytes: 08 01 10 d5 02 18 07 aa 15 00\n\nBOOT_STAGE ms=16740 delta=15730 stage=font-background-read-en",
+  "startup_transport_samples": [
+    "c6probe tat\nc6probe: link_error=0\nc6probe: CMD52 ret=0 CCCR=0x32 IORDY=0x02\nc6: RX peak=387 large_batches=0 capacity=65536\nc6: counter_retries=4 counter_exhausted=0 hci_tx=0 hci_tx_errors=0 credit_waits=0 link_error=0\nc6probe: regs ret=0 TOKEN=00221000 PKTLEN=2d6006d5 INT=00ccf800\nnsh> \u001b[K"
+  ],
+  "runtime_transport": "c6probe tat\nc6probe: link_error=0\nc6probe: CMD52 ret=0 CCCR=0x32 IORDY=0x02\nc6: RX peak=387 large_batches=0 capacity=65536\nc6: counter_retries=4 counter_exhausted=0 hci_tx=0 hci_tx_errors=0 credit_waits=0 link_error=0\nc6probe: regs ret=0 TOKEN=00221000 PKTLEN=2d6006d5 INT=00ccf800\nnsh> \u001b[K",
+  "mounts": "mount\n  /data type smartfs\n  /proc type procfs\n  /sdcard type vfat\n  /tmp type tmpfs\nnsh> \u001b[K",
+  "interfaces": "fconfig\neth0\tLink encap:Ethernet HWaddr e8:f6:0a:e7:6f:f1 at UP mtu 1500\n\tinet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0\n\nwlan0\tLink encap:Ethernet HWaddr 98:88:e0:72:58:90 at RUNNING mtu 1500\n\tinet addr:192.168.31.33 DRaddr:192.168.31.1 Mask:255.255.255.0\n\n             IPv4   TCP   UDP  ICMP\nReceived     0005  0000  0005  0000\nDropped      0000  0000  0000  0000\n  IPv4        VHL: 0000   Frg: 0000\n  Checksum   0000  0000  0000  0000\n  TCP         ACK: 0000   SYN: 0000\n              RST: 0000  0000\n              HDR: 0000\n  Type       0000  ----  ----  0000\nSent         0006  0000  0006  0000\n  Rexmit     ----  0000  ----  ----\nnsh> \u001b[K",
+  "heap": "free\n      total       used       free    maxused    maxfree  nused  nfree name\n   25362432    7368248   17994184    7477424   17948608   4169      6 Umem\n     108656      62216      46440      65368      43696    263      7 Kmem\nnsh> \u001b[K"
+}

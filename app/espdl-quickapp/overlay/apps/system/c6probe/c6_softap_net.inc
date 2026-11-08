@@ -69,6 +69,7 @@ static void c6_softap_sync_carrier(void)
     {
       netdev_lock(&ap->net.dev);
       if (__atomic_load_n(&g_c6ap_requested, __ATOMIC_ACQUIRE) &&
+          esp_hosted_link_error() == 0 &&
           (ap->net.dev.d_flags & IFF_UP) != 0)
         {
           netdev_carrier_on(&ap->net.dev);

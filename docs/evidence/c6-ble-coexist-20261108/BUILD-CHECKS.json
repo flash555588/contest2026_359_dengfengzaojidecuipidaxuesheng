@@ -1,0 +1,103 @@
+{
+  "counter-snapshot": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_hosted_counter_snapshot.py"
+    ],
+    "returncode": 0,
+    "log": "counter-snapshot.log",
+    "passed": true
+  },
+  "ble-driver": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_ble_driver.py"
+    ],
+    "returncode": 0,
+    "log": "ble-driver.log",
+    "passed": true
+  },
+  "link-health": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_hosted_link_health.py"
+    ],
+    "returncode": 0,
+    "log": "link-health.log",
+    "passed": true
+  },
+  "carrier-health": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_hosted_carrier_health.py"
+    ],
+    "returncode": 0,
+    "log": "carrier-health.log",
+    "passed": true
+  },
+  "rx-batch": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_hosted_rx_batch.py"
+    ],
+    "returncode": 0,
+    "log": "rx-batch.log",
+    "passed": true
+  },
+  "ble-hosted": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_ble_hosted.py"
+    ],
+    "returncode": 0,
+    "log": "ble-hosted.log",
+    "passed": true
+  },
+  "ble-hosted-v3": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/tests/test_ble_hosted.py",
+      "--v3"
+    ],
+    "returncode": 0,
+    "log": "ble-hosted-v3.log",
+    "passed": true
+  },
+  "ble-central": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/test_ble_central.py",
+      "--output",
+      "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/c6-ble-coexist-20261108/board-candidate/ble-central"
+    ],
+    "returncode": 0,
+    "log": "ble-central.log",
+    "passed": true
+  },
+  "rx-burst": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/test_c6_rx_burst.py",
+      "--nuttx",
+      "/home/flash/vela-p4/camera-ime-fix-20261105/prepared/nuttx",
+      "--output",
+      "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/c6-ble-coexist-20261108/board-candidate/rx-burst"
+    ],
+    "returncode": 0,
+    "log": "rx-burst.log",
+    "passed": true
+  },
+  "softap": {
+    "command": [
+      "/usr/bin/python3",
+      "tools/test_c6_softap.py",
+      "--apps",
+      "/home/flash/vela-p4/camera-ime-fix-20261105/prepared/apps",
+      "--output",
+      "/mnt/c/Users/11937/Documents/ChatGPT/vela/output/c6-ble-coexist-20261108/board-candidate/softap"
+    ],
+    "returncode": 0,
+    "log": "softap.log",
+    "passed": true
+  }
+}

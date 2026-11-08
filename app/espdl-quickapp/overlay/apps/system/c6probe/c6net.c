@@ -32,6 +32,7 @@
 #include "c6_wifi_trial.h"
 #include "link_state.h"
 #include "esp_hosted.h"
+#include "c6_link_health.h"
 
 #ifndef CONFIG_NET_ETH_PKTSIZE
 #  define CONFIG_NET_ETH_PKTSIZE 1500
@@ -189,7 +190,8 @@ static void c6net_sync_carrier(struct net_driver_s *dev)
   netdev_lock(dev);
   if (c6_link_read(&g_c6link, &value) == 0)
     {
-      bool ready = value.initialized && value.ifup && value.associated;
+      bool ready = value.initialized && value.ifup && value.associated &&
+                   esp_hosted_link_error() == 0;
       if (ready) netdev_carrier_on(dev);
       else netdev_carrier_off(dev);
       if (c6_link_publish_carrier(&g_c6link, value.generation, ready) < 0)
@@ -276,7 +278,8 @@ static int c6net_txpoll(FAR struct net_driver_s *dev)
       dev->d_len = 0;
       /* A flat-buffer poll restarts its connection scan after every packet.
        * Release the network lock between bounded bursts, even if a socket
-       * keeps producing data. Keep the notification for the next pass. */
+       * keeps producing data. Keep the notification for the next pass.
+       */
 
       if (priv->tx_budget != 0 && --priv->tx_budget == 0)
         {
@@ -486,6 +489,8 @@ static int c6net_setup(FAR const char *ssid, FAR const char *password,
 
   if (c6net_is_initialized())
     {
+      ret = esp_hosted_link_error();
+      if (ret < 0) goto out;
       if (!associate) { ret = 0; goto out; }
       if (c6_wifi_trial_pending()) { ret = -EBUSY; goto out; }
       g_c6net_reconnect = true;
@@ -768,7 +773,8 @@ bool c6net_is_initialized(void)
 bool c6net_is_associated(void)
 {
   struct c6_link_snapshot value;
-  return c6_link_read(&g_c6link, &value) == 0 && value.initialized &&
+  return esp_hosted_link_error() == 0 &&
+         c6_link_read(&g_c6link, &value) == 0 && value.initialized &&
          value.ifup && value.associated && value.carrier_ready;
 }
 

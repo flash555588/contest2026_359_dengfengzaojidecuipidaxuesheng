@@ -6,6 +6,7 @@
 #endif
 #include "ble_hosted.h"
 #include "esp_hosted.h"
+#include "c6_link_health.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -53,7 +54,7 @@ static void *poll_hci(void *arg)
       require_success(pthread_mutex_unlock(&priv->lock));
       if (!running) break;
       int ret = esp_hosted_poll();
-      if (ret < 0)
+      if (ret < 0 && !c6_hosted_poll_retryable(ret))
         {
           require_success(pthread_mutex_lock(&priv->lock));
           priv->running = false;
@@ -70,6 +71,8 @@ static int start_hci(void *context, c6_ble_rx_t receive, void *arg)
   struct c6_ble_hosted_s *priv = context;
   if (!receive) return -EINVAL;
   if (priv->started) return -EBUSY;
+  int health = esp_hosted_link_error();
+  if (health < 0) return health;
   /* Capability memory must be stable: owner prepares Hosted before opening
    * BLE, and must not reset/reinitialize it while this transport is alive.
    */

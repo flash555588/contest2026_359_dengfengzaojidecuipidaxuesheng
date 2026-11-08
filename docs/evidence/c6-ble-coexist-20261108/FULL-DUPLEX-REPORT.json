@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-08",
+  "passed": true,
+  "scope": "PC BLE central <-> already-installed C6/P4 peripheral; independent sustained senders plus Wi-Fi HTTP",
+  "candidate_image_sha256": "40d0d18f83c7e05950803ff6b5b49daf324ef017e8a329021739f029019c3a0d",
+  "firmware_rebuilt_or_flashed_this_run": false,
+  "main_phase_seconds": 2087.053,
+  "main_board_to_pc_packets": 65536,
+  "total_pc_to_board_packets": 29849,
+  "total_pc_to_board_bytes_verified": 7283156,
+  "total_board_to_pc_packets": 65736,
+  "total_board_to_pc_bytes_verified": 1314720,
+  "payload_bytes": {
+    "pc_to_board": 244,
+    "board_to_pc": 20
+  },
+  "verification": {
+    "pc_to_board": "ordered per-frame FNV32 from complete board SD log; synthetic frame contains sequence and CRC32",
+    "board_to_pc": "every notification checked byte-for-byte including sequence and CRC32",
+    "accepted_writes_all_drained_and_verified": true,
+    "independent_receipt_and_stream_digest_audit": true
+  },
+  "flow_control": {
+    "queue_slots": 4,
+    "explicit_att_insufficient_resource_retries": 164,
+    "ambiguous_write_timeouts_retried": false,
+    "explanation": "Only explicit ATT 0x11 rejection is retried; queue backpressure is separate from link failure."
+  },
+  "wifi": {
+    "success": 6811,
+    "failures": [],
+    "max_ms": 12119.3
+  },
+  "bluetooth_unexpected_disconnects": 0,
+  "c6_unexpected_reset_markers": 0,
+  "c6_uart_fault_markers": [],
+  "shared_link_health_samples": 256,
+  "counter_retry_exhaustion": 0,
+  "hci_send_errors": 0,
+  "shared_link_error": 0,
+  "automatic_reconnects": 0,
+  "resets_requested": 0,
+  "final_transport": "c6probe stat\nc6probe: link_error=0\nc6probe: CMD52 ret=0 CCCR=0x32 IORDY=0x02\nc6: RX peak=28994 large_batches=108 capacity=65536\nc6: counter_retries=66050 counter_exhausted=0 hci_tx=96869 hci_tx_errors=0 credit_waits=0 link_error=0\nc6probe: regs ret=0 TOKEN=08550000 PKTLEN=4dc75707 INT=006cfa00\nnsh> \u001b[K",
+  "test_files_removed": true,
+  "pc_radio_restored": true,
+  "observed_c6_loss": false,
+  "limits": [
+    "This bounded run did not reproduce C6 loss; it does not prove the intermittent defect impossible.",
+    "Downstream frames are 20 bytes due to the existing 80-character console command limit; this is a sustained packet/concurrency test, not a maximum-throughput benchmark.",
+    "Reverse-role board-central to a real phone/peripheral is not covered.",
+    "No cold power cycle or physical screen acceptance was performed."
+  ],
+  "harness_notes": [
+    "Earlier pilots are retained separately and not counted as passed.",
+    "The HTTP file API rejects replacing an existing file; final phase scripts use unique names.",
+    "An earlier serial receipt missed sequence 104 although all logged checksums matched sent frames; complete SD receipts replace UART-only integrity evidence.",
+    "During this run the owned Python controller received a finish-only correction using Python 3.14 remote_exec. It pauses probes after pressure ends and refreshes the expired portal session; BLE traffic, integrity checking and failure detection during pressure were unchanged. The launch source and finish correction are included."
+  ],
+  "git": {
+    "new_production_code_changes": false,
+    "committed": false,
+    "pushed": false
+  }
+}
