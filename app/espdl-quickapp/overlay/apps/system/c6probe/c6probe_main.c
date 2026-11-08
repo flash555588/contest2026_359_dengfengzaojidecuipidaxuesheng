@@ -92,6 +92,7 @@ static int c6probe_tcp(FAR const char *host, FAR const char *service)
 #include "c6net.h"
 #include "c6_ota.h"
 #include "c6_rx_burst.h"
+#include "c6_link_health.h"
 #include "c6_rx_bench.inc"
 
 #ifdef CONFIG_NETDB_DNSCLIENT
@@ -204,6 +205,7 @@ int main(int argc, FAR char *argv[])
       int aret;
       int cret;
 
+      printf("c6probe: link_error=%d\n", esp_hosted_link_error());
       aret = esp_hosted_probe_alive(&cccr, &iordy);
       printf("c6probe: CMD52 ret=%d CCCR=0x%02x IORDY=0x%02x\n",
              aret, cccr, iordy);

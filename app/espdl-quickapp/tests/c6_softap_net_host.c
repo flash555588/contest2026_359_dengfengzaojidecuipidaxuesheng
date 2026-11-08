@@ -44,6 +44,8 @@ int netdev_ifdown(struct net_driver_s *dev)
   return 0;
 }
 static int send_error;
+static int link_error;
+int esp_hosted_link_error(void) { return link_error; }
 static bool fail_all, trial_pending, trial_fail;
 static bool trial_event, trial_reject;
 static int radio_mode = 1;

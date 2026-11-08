@@ -6,6 +6,7 @@ from pathlib import Path
 import socket
 import subprocess
 import threading
+import time
 import zlib
 from render_all_ui import function
 
@@ -20,6 +21,7 @@ out.mkdir(parents=True, exist_ok=True)
 text = (folder / 'esp_hosted.c').read_text()
 prefix = r'''
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
@@ -51,19 +53,20 @@ static void nxmutex_unlock(int *p){(void)p;}
 suffix = r'''
 int main(void){
  struct sdio_dev_s d;
+ bool submitted;
  for(unsigned n=1;n<=4;n++){
-  assert(!hosted_do_read_block(&d,0x1e123,n));
+  assert(!hosted_do_read_block(&d,0x1e123,n,&submitted) && submitted);
   assert(block_size==512&&block_count==n&&dma_bytes==n*512);
   assert((arg_seen&511)==n&&((arg_seen>>9)&0x1ffff)==0x1e123);
   assert((arg_seen&(1u<<27))&&(arg_seen&(1u<<26))&&!(arg_seen&(1u<<31)));
  }
- unsigned before=sends;assert(hosted_do_read_block(&d,0,0)==-EINVAL);
- assert(hosted_do_read_block(&d,0,5)==-EINVAL&&sends==before);
- setup_ret=-ENOMEM;cancels=0;assert(hosted_do_read_block(&d,0,4)==-ENOMEM&&cancels==1&&sends==before);
- setup_ret=0;send_ret=-EIO;cancels=0;assert(hosted_do_read_block(&d,0,4)==-EIO&&cancels==1);
- send_ret=0;test_event=SDIOWAIT_TIMEOUT;assert(hosted_do_read_block(&d,0,4)==-ETIMEDOUT);
- test_event=SDIOWAIT_ERROR;assert(hosted_do_read_block(&d,0,4)==-EIO);
- test_event=1;response_ret=-EILSEQ;assert(hosted_do_read_block(&d,0,4)==-EILSEQ);
+ unsigned before=sends;assert(hosted_do_read_block(&d,0,0,&submitted)==-EINVAL && !submitted);
+ assert(hosted_do_read_block(&d,0,5,&submitted)==-EINVAL&&sends==before && !submitted);
+ setup_ret=-ENOMEM;cancels=0;assert(hosted_do_read_block(&d,0,4,&submitted)==-ENOMEM&&cancels==1&&sends==before && !submitted);
+ setup_ret=0;send_ret=-EIO;cancels=0;assert(hosted_do_read_block(&d,0,4,&submitted)==-EIO&&cancels==1 && submitted);
+ send_ret=0;test_event=SDIOWAIT_TIMEOUT;assert(hosted_do_read_block(&d,0,4,&submitted)==-ETIMEDOUT && submitted);
+ test_event=SDIOWAIT_ERROR;assert(hosted_do_read_block(&d,0,4,&submitted)==-EIO && submitted);
+ test_event=1;response_ret=-EILSEQ;assert(hosted_do_read_block(&d,0,4,&submitted)==-EILSEQ && submitted);
  assert(esp_hosted_rx_block_limit(2)==-EINVAL&&g_rx_block_limit==4);
  lock_ret=-EAGAIN;assert(esp_hosted_rx_block_limit(1)==-EAGAIN&&g_rx_block_limit==4);
  lock_ret=0;assert(esp_hosted_rx_block_limit(1)==1&&g_rx_block_limit==1);
@@ -108,6 +111,8 @@ for label, actual in [('good', payload), ('short', payload[:-1]),
         with listener:
             conn, _ = listener.accept()
             with conn:
+                # Keep elapsed time measurable on a fast localhost peer.
+                time.sleep(0.005)
                 for at in range(0, len(actual), 511):
                     conn.sendall(actual[at:at+511])
     t = threading.Thread(target=serve, daemon=True)

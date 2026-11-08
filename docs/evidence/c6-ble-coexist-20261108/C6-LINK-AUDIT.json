@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "patch_revision": "v3",
+  "prepared_source_validation": "exact source text plus the verified SoftAP preparer augmentation",
+  "linked_symbols_verified": true,
+  "image_sha256": "40d0d18f83c7e05950803ff6b5b49daf324ef017e8a329021739f029019c3a0d"
+}

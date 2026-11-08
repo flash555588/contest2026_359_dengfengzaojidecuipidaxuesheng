@@ -40,7 +40,10 @@ static esp_hosted_rx_cb_t callback;
 static void *callback_arg;
 static bool entered, finish;
 static atomic_bool closed;
+static atomic_uint polls;
+static atomic_int poll_error, link_error;
 static int claims, releases;
+int esp_hosted_link_error(void) {return atomic_load(&link_error);}
 const struct esp_hosted_caps_s *esp_hosted_get_caps(void) {return &caps;}
 int esp_hosted_hci_claim(esp_hosted_rx_cb_t cb, void *arg) {
  pthread_mutex_lock(&dispatch);
@@ -56,6 +59,10 @@ int esp_hosted_hci_release(esp_hosted_rx_cb_t cb, void *arg) {
 }
 int esp_hosted_poll(void) {
  static const uint8_t data[]={14,4,1,3,12,0};
+ static const int errors[]={-EIO,-ETIMEDOUT,-EILSEQ,-EINTR,-EAGAIN,-ENOMEM};
+ unsigned attempt=atomic_fetch_add(&polls,1);
+ if(attempt<6) return errors[attempt];
+ int error=atomic_load(&poll_error);if(error) return error;
  pthread_mutex_lock(&dispatch);
  if(callback) callback(callback_arg,4,data,sizeof(data),4);
  pthread_mutex_unlock(&dispatch);return 0;
@@ -80,11 +87,15 @@ int main(void) {
  assert(ops->start(ops->context,receive,&owner)==-ENETDOWN);
  caps.valid=true;assert(ops->start(ops->context,receive,&owner)==-ENOTSUP);
  caps.capability=12;
+ link_error=-ENETRESET;
+ assert(ops->start(ops->context,receive,&owner)==-ENETRESET);
+ link_error=0;
  assert(!ops->start(ops->context,receive,&owner));
  assert(ops->start(ops->context,receive,&owner)==-EBUSY);
  pthread_mutex_lock(&gate);
  while(!entered) pthread_cond_wait(&condition,&gate);
  pthread_mutex_unlock(&gate);
+ assert(polls>=7);
  assert(!ops->send(ops->context,reset,4));
  pthread_t closer;assert(!pthread_create(&closer,NULL,close_transport,ops));
  struct c6_ble_hosted_s *priv=ops->context;
@@ -101,15 +112,28 @@ int main(void) {
  ops->stop(ops->context);assert(releases==1);
  assert(!ops->start(ops->context,receive,&owner));
  ops->stop(ops->context);assert(claims==2 && releases==2);
+ poll_error=-ENETRESET;
+ assert(!ops->start(ops->context,receive,&owner));
+ stopped=false;
+ for(int i=0;i<1000;i++) {
+  pthread_mutex_lock(&priv->lock);stopped=!priv->running;pthread_mutex_unlock(&priv->lock);
+  if(stopped) break;
+  usleep(1000);
+ }
+ assert(stopped);
+ assert(ops->send(ops->context,reset,4)==-ENOTCONN);
+ ops->stop(ops->context);assert(claims==3 && releases==3);
  c6_ble_hosted_destroy(ops);
  return 0;
 }
 ''')
         subprocess.run(['cc', '-std=gnu11', '-Wall', '-Wextra', '-Werror',
+                        '-fsanitize=address,undefined',
                         '-pthread', '-I', str(root), '-I', str(TOOLS / 'c6'),
+                        '-I', str(TOOLS.parent / 'app/espdl-quickapp/overlay/apps/system/c6probe'),
                         str(root / 'test.c'), '-o', str(root / 'test')], check=True)
         subprocess.run([str(root / 'test')], check=True, timeout=15)
-    print('PASS: actual Hosted binding capability gates, callback drain, send rejection and reopen')
+    print('PASS: actual Hosted binding transient retry, fatal stop, health gate, callback drain and reopen')
 
 
 if __name__ == '__main__':

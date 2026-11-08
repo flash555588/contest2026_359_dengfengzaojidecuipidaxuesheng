@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "ordered_board_rx_frames": 29849,
+  "board_send_successes": 65736,
+  "upstream_expected_stream_sha256": "05349629d206a4cae567e623aae656b4d9e8f0b0fba92decf3224bb8094044ad",
+  "downstream_expected_stream_sha256": "a19364125581155b1b89cd2f32269dc0b5388121b3f7468fa52d034c92ec432d",
+  "matches_live_controller_digests": true
+}

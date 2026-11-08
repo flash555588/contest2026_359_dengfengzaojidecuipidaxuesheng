@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-08",
+  "result": "passed in the tested shared transport scope; original intermittent root cause is not uniquely proven",
+  "patch_revision": "v3",
+  "patch_files": 14,
+  "base_image_sha256": "7fc37780eda29f108b9f6f5db7e626997ec68e8fa2fa7e7a41fa02175e6f754f",
+  "candidate_image_sha256": "40d0d18f83c7e05950803ff6b5b49daf324ef017e8a329021739f029019c3a0d",
+  "build": {
+    "full_p4_build": true,
+    "offline_test_groups": 10,
+    "all_offline_groups_passed": true,
+    "elf_partition_bss_audit": true,
+    "prepared_source_and_linked_symbols_verified": true,
+    "original_board_config_preserved": true
+  },
+  "deployment": {
+    "target": "P4 application only at 0x2000",
+    "independent_image_readback_verified": true,
+    "data_region_unchanged_before_candidate_boot": true,
+    "runtime_xip_hashes_verified": true,
+    "c6_firmware_written": false,
+    "c6_boot_elf_prefix": "a94207697",
+    "c6_controller_capacity": 8,
+    "receipt": "DEPLOYMENT2.json"
+  },
+  "physical_data_stress": {
+    "peer": "Windows PC acting as an encrypted BLE GATT client to the board peripheral",
+    "baseline": {
+      "rounds": 10,
+      "passed": true,
+      "original_fault_reproduced": false
+    },
+    "main": {
+      "bidirectional_byte_verified_rounds": 100,
+      "wifi_http_success": 287,
+      "wifi_http_failures": 0,
+      "seconds": 133.501,
+      "stable_connection_epoch": 1,
+      "fresh_identity_initially_paired": false,
+      "paired_and_encrypted": true,
+      "queue_full_rejection_and_recovery": true,
+      "transport_after": "c6probe stat\nc6probe: link_error=0\nc6probe: CMD52 ret=0 CCCR=0x32 IORDY=0x02\nc6: RX peak=3280 large_batches=0 capacity=65536\nc6: counter_retries=1182 counter_exhausted=0 hci_tx=399 hci_tx_errors=0 credit_waits=0 link_error=0\nc6probe: regs ret=0 TOKEN=029f1000 PKTLEN=16348442 INT=00ecfa00\nnsh> \u001b[K",
+      "receipt": "patched-stress.json"
+    },
+    "software_restart": {
+      "passed": true,
+      "cold_power_cycle": false,
+      "same_candidate_identity_reused": true,
+      "previous_pairing_reused": true,
+      "bidirectional_byte_verified_rounds": 10,
+      "wifi_http_success": 39,
+      "receipt": "after-restart-verified.json"
+    },
+    "bulk_wifi_with_ble": {
+      "put_bytes": 1310720,
+      "get_bytes": 1310720,
+      "sha256_matched": true,
+      "uncached_ble_reads": 376,
+      "ble_errors": 0,
+      "rx_counter_20bit_range_crossed_by_inbound_payload": true,
+      "owned_sd_fixture_removed": true,
+      "receipt": "BULK-WRAP.json"
+    },
+    "existing_hid_subscription": {
+      "passed": true,
+      "input_events_sent": 0,
+      "receipt": "HID-SUBSCRIPTION.json"
+    }
+  },
+  "c6_uart_capture": {
+    "seconds": 2093.424,
+    "passive_only": true,
+    "whitelisted_fault_lines": [],
+    "boots_during_capture": 5,
+    "boot_context": "controlled backup/flash/rollback/software restart; not an uninterrupted endurance run"
+  },
+  "final_state": {
+    "board_shared_link_healthy": true,
+    "board_test_hid_stopped": true,
+    "pc_bluetooth_restored_to_original_off": true,
+    "data_mounted": true,
+    "desktop_home_restored": true
+  },
+  "limits": {
+    "board_as_ble_central_to_real_external_peer": "not physically accepted: Windows test peripheral advertising status ABORTED",
+    "original_intermittent_root_cause_uniquely_proven": false,
+    "long_duration_soak_tested": false,
+    "cold_power_cycle_tested": false,
+    "physical_screen_observation": false,
+    "old_identity_pairing_compatibility_tested": false,
+    "ambiguous_fifo_completion": "persistent ENETRESET still requires whole-board restart; no automatic shared owner rebuild",
+    "simultaneous_peer_initiated_ble_streams": "not claimed; bidirectional round trips and notification/read overlap were tested"
+  },
+  "test_harness_notes": [
+    "First deployment receipt rolled back because the postboot probe ran before network startup; DEPLOYMENT2 waited for readiness and passed.",
+    "BLE discovery after restart raced Windows automatic HID reconnection; the already-connected exact identity was then selected and the verified repeat passed.",
+    "Early harness runs corrected radio-off, portal startup, expected ATT error matching, and HID cleanup log lifetime. These are not recorded as firmware failures."
+  ],
+  "git": {
+    "committed": false,
+    "pushed": false
+  },
+  "privacy": "full flash and user data backups excluded from public package; pairing OTP and HTTP tokens kept out of logs"
+}
